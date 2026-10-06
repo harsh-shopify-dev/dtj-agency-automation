@@ -52,7 +52,8 @@
   object-fit: cover;
 }
 
-.dtj-reels__toggle {
+.dtj-reels__toggle,
+.dtj-reels__sound {
   position: absolute;
   inset-block-start: 10px;
   inset-inline-end: 10px;
@@ -69,17 +70,25 @@
   cursor: pointer;
 }
 
-.dtj-reels__toggle svg {
+.dtj-reels__sound {
+  inset-block-start: 62px;
+}
+
+.dtj-reels__toggle svg,
+.dtj-reels__sound svg {
   width: 20px;
   height: 20px;
 }
 
 .dtj-reels__icon-pause,
-.dtj-reels__toggle.is-playing .dtj-reels__icon-play {
+.dtj-reels__icon-sound-on,
+.dtj-reels__toggle.is-playing .dtj-reels__icon-play,
+.dtj-reels__sound.is-on .dtj-reels__icon-sound-off {
   display: none;
 }
 
-.dtj-reels__toggle.is-playing .dtj-reels__icon-pause {
+.dtj-reels__toggle.is-playing .dtj-reels__icon-pause,
+.dtj-reels__sound.is-on .dtj-reels__icon-sound-on {
   display: block;
 }
 

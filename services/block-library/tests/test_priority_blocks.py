@@ -217,6 +217,21 @@ class ShoppableReelsTests(unittest.TestCase):
         self.assertIn('data-play-label="Chalao"', html)
         self.assertIn('data-pause-label="Roko"', html)
 
+    def test_video_cards_get_a_sound_button_that_starts_off_and_image_cards_do_not(self):
+        html = render(self.m, {"media_type_1": "video", "video_1": "video-file"})
+        self.assertEqual(html.count("data-sound data-target"), 1)
+        self.assertIn('aria-pressed="false"', html)
+        self.assertIn('aria-label="Turn sound on"', html)
+        self.assertNotIn("data-sound data-target", render(self.m, {"media_type_1": "image", "image_1": "x"}))
+
+    def test_sound_labels_default_to_english_and_can_be_translated(self):
+        html = render(self.m, {"image_1": "x"})
+        self.assertIn('data-sound-on-label="Turn sound on"', html)
+        self.assertIn('data-sound-off-label="Turn sound off"', html)
+        html = render(self.m, {"image_1": "x", "sound_on_label": "Awaaz chalu", "sound_off_label": "Awaaz band"})
+        self.assertIn('data-sound-on-label="Awaaz chalu"', html)
+        self.assertIn('data-sound-off-label="Awaaz band"', html)
+
     def test_heading_is_optional_and_escaped(self):
         self.assertNotIn("dtj-reels__heading", render(self.m, {"image_1": "x"}))
         html = render(self.m, {"image_1": "x", "heading": "<b>Hi</b>"})
@@ -363,6 +378,14 @@ class JavascriptTests(unittest.TestCase):
             self.skipTest("node is not installed")
         done = subprocess.run([node, str(ROOT / "tests" / "addons_logic.js")], capture_output=True, text=True, timeout=60)
         self.assertEqual(done.returncode, 0, done.stdout[-1500:] + done.stderr[-500:])
+        self.assertIn("ALL OK", done.stdout)
+
+    def test_the_reels_tap_and_sound_logic_runs_correctly_under_node(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not installed")
+        done = subprocess.run([node, str(ROOT / "tests" / "reels_logic.js")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stdout[-1500:] + done.stderr[-1500:])
         self.assertIn("ALL OK", done.stdout)
 
 

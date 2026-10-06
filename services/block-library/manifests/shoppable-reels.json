@@ -327,6 +327,18 @@
       "id": "pause_label",
       "label": "Pause button label for screen readers",
       "info": "Empty = Pause video."
+    },
+    {
+      "type": "text",
+      "id": "sound_on_label",
+      "label": "Sound-on button label for screen readers",
+      "info": "Shown to screen readers while a reel is silent. Empty = Turn sound on."
+    },
+    {
+      "type": "text",
+      "id": "sound_off_label",
+      "label": "Sound-off button label for screen readers",
+      "info": "Shown to screen readers while a reel has sound. Empty = Turn sound off."
     }
   ],
   "data_needs": [],

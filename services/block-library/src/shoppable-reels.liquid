@@ -19,7 +19,7 @@
     {%- if sr_heading != blank -%}
       <h3 class="dtj-reels__heading">{{ sr_heading | escape }}</h3>
     {%- endif -%}
-    <dtj-reels class="dtj-reels__track" data-play-label="{{ block.settings.play_label | default: 'Play video' | escape }}" data-pause-label="{{ block.settings.pause_label | default: 'Pause video' | escape }}">
+    <dtj-reels class="dtj-reels__track" data-play-label="{{ block.settings.play_label | default: 'Play video' | escape }}" data-pause-label="{{ block.settings.pause_label | default: 'Pause video' | escape }}" data-sound-on-label="{{ block.settings.sound_on_label | default: 'Turn sound on' | escape }}" data-sound-off-label="{{ block.settings.sound_off_label | default: 'Turn sound off' | escape }}">
       {%- for i in (1..6) -%}
         {%- liquid
           assign v_key = 'video_' | append: i
@@ -47,6 +47,10 @@
                 <button type="button" class="dtj-reels__toggle" data-toggle data-target="{{ sr_video_id }}" aria-label="{{ block.settings.play_label | default: 'Play video' | escape }}">
                   <svg class="dtj-reels__icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
                   <svg class="dtj-reels__icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <button type="button" class="dtj-reels__sound" data-sound data-target="{{ sr_video_id }}" aria-pressed="false" aria-label="{{ block.settings.sound_on_label | default: 'Turn sound on' | escape }}">
+                  <svg class="dtj-reels__icon-sound-off" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <svg class="dtj-reels__icon-sound-on" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
               {%- else -%}
                 <img class="dtj-reels__image" src="{{ sr_image | image_url: width: 480 }}" alt="{{ sr_image.alt | default: sr_product.title | escape }}" width="{{ sr_image.width }}" height="{{ sr_image.height }}" loading="lazy">

@@ -1,9 +1,13 @@
 /**
  * <dtj-reels>
- * Plays each reel video muted while at least 60% of it is on screen, pauses it
- * when it leaves, and lets the shopper tap to play with sound or pause.
- * A reel the shopper paused by hand is never resumed automatically.
- * Button labels come from data-play-label / data-pause-label (translatable in the block settings).
+ * Plays each reel video muted while at least 60% of it is on screen and pauses it
+ * when it leaves. Tapping a reel plays it with sound: a silent reel gets its sound
+ * turned on and keeps playing, a reel that already has sound is paused, a paused
+ * reel plays with sound. The sound button turns sound on or off without pausing.
+ * Only one reel has sound at a time. A reel the shopper paused by hand is never
+ * resumed automatically.
+ * Button labels come from data-play-label, data-pause-label, data-sound-on-label
+ * and data-sound-off-label (translatable in the block settings).
  */
 class DtjReels extends HTMLElement {
   connectedCallback() {
@@ -12,11 +16,19 @@ class DtjReels extends HTMLElement {
     this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     this.addEventListener('click', (event) => {
+      const soundButton = event.target.closest('[data-sound]');
+      if (soundButton) {
+        const target = document.getElementById(soundButton.dataset.target);
+        if (target) this.setSound(target, target.muted);
+        return;
+      }
       const button = event.target.closest('[data-toggle]');
       const video = button
         ? document.getElementById(button.dataset.target)
         : event.target.closest('video');
-      if (video) this.toggle(video);
+      if (!video) return;
+      if (button) this.playPause(video);
+      else this.tap(video);
     });
 
     if (this.videos.length === 0) return;
@@ -42,27 +54,56 @@ class DtjReels extends HTMLElement {
     this.observer?.disconnect();
   }
 
-  button(video) {
-    return this.querySelector(`[data-target="${video.id}"]`);
-  }
-
   sync(video) {
-    const button = this.button(video);
-    if (!button) return;
-    const playing = !video.paused;
-    button.classList.toggle('is-playing', playing);
-    button.setAttribute('aria-label', playing ? this.dataset.pauseLabel || 'Pause video' : this.dataset.playLabel || 'Play video');
+    const toggle = this.querySelector(`[data-toggle][data-target="${video.id}"]`);
+    if (toggle) {
+      const playing = !video.paused;
+      toggle.classList.toggle('is-playing', playing);
+      toggle.setAttribute('aria-label', playing ? this.dataset.pauseLabel || 'Pause video' : this.dataset.playLabel || 'Play video');
+    }
+    const sound = this.querySelector(`[data-sound][data-target="${video.id}"]`);
+    if (sound) {
+      const on = !video.muted;
+      sound.classList.toggle('is-on', on);
+      sound.setAttribute('aria-pressed', String(on));
+      sound.setAttribute('aria-label', on ? this.dataset.soundOffLabel || 'Turn sound off' : this.dataset.soundOnLabel || 'Turn sound on');
+    }
   }
 
-  toggle(video) {
-    if (video.paused) {
-      this.manuallyPaused.delete(video);
-      video.muted = false;
-      video.play().catch(() => {});
-    } else {
-      this.manuallyPaused.add(video);
-      video.pause();
+  play(video) {
+    this.manuallyPaused.delete(video);
+    this.setSound(video, true);
+    video.play().catch(() => {});
+    this.sync(video);
+  }
+
+  pause(video) {
+    this.manuallyPaused.add(video);
+    video.pause();
+    this.sync(video);
+  }
+
+  playPause(video) {
+    if (video.paused) this.play(video);
+    else this.pause(video);
+  }
+
+  tap(video) {
+    if (video.paused) this.play(video);
+    else if (video.muted) this.setSound(video, true);
+    else this.pause(video);
+  }
+
+  setSound(video, on) {
+    if (on) {
+      this.videos.forEach((other) => {
+        if (other !== video && !other.muted) {
+          other.muted = true;
+          this.sync(other);
+        }
+      });
     }
+    video.muted = !on;
     this.sync(video);
   }
 }
