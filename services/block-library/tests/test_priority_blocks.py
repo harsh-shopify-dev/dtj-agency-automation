@@ -371,6 +371,52 @@ class AddonsTests(unittest.TestCase):
         self.assertNotIn("<script>", render(self.m, {**self.ONE, "heading": "<script>x</script>", "s1_headline": "<script>y</script>"}))
 
 
+@unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
+class EmptyBlockNoteTests(unittest.TestCase):
+    """An empty block hides itself. In the theme editor only, it must say what to fill in, naming real settings."""
+
+    # block id -> labels the note must mention (each must also be a real setting label in the manifest)
+    NEEDS = {
+        "testimonials": ["Review 1 text"],
+        "shoppable-reels": ["Card 1 shows", "Card 1 video", "Card 1 image"],
+        "shade-picker": ["Option products"],
+        "addons": ["Add-on products"],
+    }
+
+    def test_empty_block_in_the_editor_says_what_to_fill_in(self):
+        for block_id, labels in self.NEEDS.items():
+            m = manifest(block_id)
+            real = {s.get("label") for s in m["settings"]}
+            html = render(m, {}, design_mode=True)
+            self.assertIn("is empty", html, block_id)
+            self.assertIn("editor only", html, block_id)
+            for label in labels:
+                self.assertIn(label, real, f"{block_id}: the note names a setting that does not exist: {label}")
+                self.assertIn(f'"{label}"', html, f"{block_id}: the note must name {label}")
+
+    def test_empty_block_on_the_storefront_still_prints_nothing(self):
+        for block_id in self.NEEDS:
+            self.assertEqual(render(manifest(block_id), {}, design_mode=False), "", block_id)
+
+    def test_a_block_with_content_never_shows_the_note(self):
+        samples = {m["id"]: m["test"]["sample"] for m in generated()}
+        for block_id in self.NEEDS:
+            html = render(manifest(block_id), samples[block_id], design_mode=True)
+            self.assertNotIn("is empty", html, block_id)
+
+    def test_with_the_licence_off_the_editor_shows_only_the_licence_note(self):
+        for block_id in self.NEEDS:
+            html = render(manifest(block_id), {}, metafield="inactive", design_mode=True)
+            self.assertIn("flag seen: inactive", html, block_id)
+            self.assertNotIn("is empty", html, block_id)
+
+    def test_reels_with_a_video_but_the_card_left_on_image_explains_itself(self):
+        # the exact situation seen on 6 Oct 2026: a video was chosen but "Card N shows" was still Image
+        html = render(manifest("shoppable-reels"), {"media_type_1": "image", "video_1": "video-file"}, design_mode=True)
+        self.assertIn("is empty", html)
+        self.assertNotIn("dtj-reels__slide", html)
+
+
 class JavascriptTests(unittest.TestCase):
     def test_the_add_ons_cart_logic_runs_correctly_under_node(self):
         node = shutil.which("node")

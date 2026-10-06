@@ -118,4 +118,6 @@
       {%- endfor -%}
     </div>
   </dtj-addons>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing).</p>
 {%- endif -%}

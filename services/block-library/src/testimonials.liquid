@@ -76,4 +76,6 @@
       {%- endif -%}
     </div>
   </dtj-testimonials>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Testimonials is empty. Type text into "Review 1 text" (editor only: shoppers see nothing).</p>
 {%- endif -%}

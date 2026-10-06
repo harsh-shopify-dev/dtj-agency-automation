@@ -69,4 +69,6 @@
       {%- endfor -%}
     </dtj-reels>
   </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Shoppable Reels is empty. For card 1, either set "Card 1 shows" to Video and choose a "Card 1 video", or choose a "Card 1 image" (editor only: shoppers see nothing).</p>
 {%- endif -%}
