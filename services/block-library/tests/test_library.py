@@ -129,6 +129,22 @@ class LibraryRuleTests(unittest.TestCase):
         self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
         self.assertEqual([p for p in self.problems() if "settings: an app block may have only 1" in p], [])
 
+    def test_reading_a_product_list_by_position_is_rejected(self):
+        # suspected cause of the Option Picker staying empty in the real theme editor (6 Oct 2026)
+        self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
+        self.edit_block("{%- capture dtj_content -%}", "{%- capture dtj_content -%}{%- assign lst = block.settings.pl -%}{{ lst[0].title }}")
+        self.assertTrue(any("by position" in p for p in self.problems()))
+
+    def test_reading_the_setting_itself_by_position_is_rejected(self):
+        self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
+        self.edit_block("{%- capture dtj_content -%}", "{%- capture dtj_content -%}{{ block.settings.pl[1].title }}")
+        self.assertTrue(any("by position" in p for p in self.problems()))
+
+    def test_looping_over_a_product_list_is_fine(self):
+        self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
+        self.edit_block("{%- capture dtj_content -%}", "{%- capture dtj_content -%}{%- for p in block.settings.pl limit: 4 -%}{{ p.title }}{%- endfor -%}")
+        self.assertEqual([p for p in self.problems() if "by position" in p], [])
+
     def test_long_block_name_is_rejected(self):
         self.edit_schema(lambda schema: schema.update({"name": "DTJ Option Picker (products)"}))
         self.assertTrue(any("allows 25" in p for p in self.problems()))

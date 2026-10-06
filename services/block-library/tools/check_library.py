@@ -135,6 +135,19 @@ def check_block(manifest_path: Path, root: Path = ROOT) -> list[str]:
         problems.append(f"output expression ends at a single '}}': {hit.group(0)[:60]!r} (keep literal braces in a {{% assign %}} tag)")
     if _CAPTURED_GATE.search(body):
         problems.append("block captures the licence snippet's output: the gate must wrap the content, never be compared")
+    # rule 18: a *_list setting (product_list, collection_list...) is read by looping over it, as Shopify documents. Reading it
+    # by position (list[0]) is the suspected cause of the Option Picker staying empty in the real theme editor on 6 Oct 2026
+    # with three valid products picked; the local engine accepts it, so only this rule catches it.
+    code = _COMMENT.sub("", body)
+    for s in settings:
+        sid, stype = s.get("id"), s.get("type", "")
+        if not sid or not stype.endswith("_list"):
+            continue
+        names = {f"block.settings.{sid}"}
+        names |= set(re.findall(rf"assign\s+(\w+)\s*=\s*block\.settings\.{re.escape(sid)}\b(?!\.)", code))
+        for name in sorted(names):
+            if re.search(rf"(?<![\w.]){re.escape(name)}\s*\[", code):
+                problems.append(f"{sid}: '{name}[...]' reads a {stype} by position: loop over it instead (for item in list)")
     for name in set(_RENDER.findall(body)):
         if not (root / "extensions" / "dtj-blocks" / "snippets" / f"{name}.liquid").is_file():
             problems.append(f"snippet '{name}' does not exist")

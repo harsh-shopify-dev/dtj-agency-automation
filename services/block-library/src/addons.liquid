@@ -1,9 +1,10 @@
+{%- comment -%} A product_list is read by looping over it in order (Shopify docs), never by position like ao_list[0]. {%- endcomment -%}
 {%- liquid
   assign ao_list = block.settings.products
   assign ao_has = false
-  for i in (1..4)
-    assign idx = i | minus: 1
-    assign first_p = ao_list[idx]
+  assign ao_seen = 0
+  for first_p in ao_list limit: 4
+    assign ao_seen = ao_seen | plus: 1
     if first_p and first_p != blank
       assign ao_has = true
     endif
@@ -31,20 +32,23 @@
     {%- endif -%}
     {%- if ao_sub != blank -%}<p class="dtj-addons__sub">{{ ao_sub | escape }}</p>{%- endif -%}
     <div class="dtj-addons__list">
-      {%- for i in (1..4) -%}
+      {%- for p_main in ao_list limit: 4 -%}
         {%- liquid
-          assign idx = i | minus: 1
+          assign i = forloop.index
           assign ak = 's' | append: i | append: '_alt'
           assign hk = 's' | append: i | append: '_headline'
           assign sk = 's' | append: i | append: '_subline'
           assign bk = 's' | append: i | append: '_badge'
           assign ck = 's' | append: i | append: '_show_compare'
-          assign p_main = ao_list[idx]
           assign alt_pos = block.settings[ak] | plus: 0
           assign p_alt = nil
           if alt_pos > 0 and alt_pos != i
-            assign alt_idx = alt_pos | minus: 1
-            assign p_alt = ao_list[alt_idx]
+            for q in ao_list limit: 8
+              if forloop.index == alt_pos
+                assign p_alt = q
+                break
+              endif
+            endfor
           endif
         -%}
         {%- if p_main and p_main != blank -%}
@@ -119,5 +123,5 @@
     </div>
   </dtj-addons>
 {%- elsif request.design_mode -%}
-  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing).</p>
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing). Products received: {{ ao_seen }}.</p>
 {%- endif -%}

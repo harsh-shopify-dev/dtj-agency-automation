@@ -24,11 +24,16 @@
         {%- liquid
           assign v_key = 'video_' | append: i
           assign i_key = 'image_' | append: i
-          assign p_idx = i | minus: 1
           assign m_key = 'media_type_' | append: i
           assign sr_video = block.settings[v_key]
           assign sr_image = block.settings[i_key]
-          assign sr_product = block.settings.products[p_idx]
+          assign sr_product = nil
+          for q in block.settings.products limit: 6
+            if forloop.index == i
+              assign sr_product = q
+              break
+            endif
+          endfor
           assign sr_show_video = false
           if block.settings[m_key] == 'video' and sr_video and sr_video != blank
             assign sr_show_video = true

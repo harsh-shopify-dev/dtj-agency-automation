@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from collections.abc import Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -238,6 +239,24 @@ class ShoppableReelsTests(unittest.TestCase):
         self.assertIn("&lt;b&gt;Hi&lt;/b&gt;", html)
 
 
+class LoopOnly(Sequence):
+    """Stand-in for Shopify's product_list: it can be looped over (as Shopify documents) but NOT read by position.
+    Reading item [0] gives nothing: the suspected cause of the empty Option Picker in the real editor on 6 Oct 2026.
+    It is a Sequence only because python-liquid loops over nothing else; __iter__ is used for loops, never __getitem__."""
+
+    def __init__(self, items):
+        self._items = list(items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __len__(self):
+        return len(self._items)
+
+    def __getitem__(self, index):
+        raise TypeError("a product_list cannot be read by position")
+
+
 def option(handle, title, available=True):
     return {"handle": handle, "title": title, "url": f"/products/{handle}", "featured_media": f"media-{handle}",
             "selected_or_first_available_variant": {"available": available}}
@@ -369,6 +388,42 @@ class AddonsTests(unittest.TestCase):
         self.assertIn("data-total", render(self.m, {**self.ONE, "show_total": True}))
         self.assertNotIn("data-total", render(self.m, {**self.ONE, "show_total": False}))
         self.assertNotIn("<script>", render(self.m, {**self.ONE, "heading": "<script>x</script>", "s1_headline": "<script>y</script>"}))
+
+
+@unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
+class LoopOnlyProductListTests(unittest.TestCase):
+    """The three blocks that take a product_list must work when the list can only be looped over, like Shopify's."""
+
+    def test_the_stand_in_really_cannot_be_read_by_position(self):
+        from tests.test_generated_blocks import Environment as Env
+        self.assertEqual(Env().from_string("{{ l[0].title }}").render(l=LoopOnly([{"title": "X"}])).strip(), "")
+
+    def test_option_picker_shows_every_picked_product_in_order(self):
+        products = LoopOnly([option("a", "Product A"), option("b", "Product B"), option("c", "Product C")])
+        html = render(manifest("shade-picker"), {"products": products, "s2_label": "Second name"}, product={"handle": "b"})
+        self.assertEqual(html.count("data-item"), 3)
+        # order of the option buttons (the current name also appears earlier, beside the label)
+        self.assertLess(html.index('data-label="Product A"'), html.index('data-label="Second name"'))
+        self.assertLess(html.index('data-label="Second name"'), html.index('data-label="Product C"'))
+        self.assertEqual(html.count('data-current="true"'), 1)
+
+    def test_add_ons_show_cards_and_the_swap_from_position_five(self):
+        five = LoopOnly([addon_product(i, f"P{i}", 1000 * i) for i in range(1, 5)] + [addon_product(9, "Alt Product", 60000)])
+        html = render(manifest("addons"), {"products": five, "s1_alt": "5"})
+        self.assertEqual(html.count("data-card"), 4)
+        self.assertIn('data-variant-alt="90"', html)
+        self.assertNotIn("P5", html)
+
+    def test_reels_link_each_card_to_the_product_in_the_same_position(self):
+        second = {"title": "Second product", "url": "/products/second", "price": 100}
+        html = render(manifest("shoppable-reels"), {"image_1": "a", "image_2": "b", "products": LoopOnly([ShoppableReelsTests.PRODUCT, second])})
+        self.assertEqual(html.count("dtj-reels__product"), 2)
+        self.assertLess(html.index("Sample product"), html.index("Second product"))
+
+    def test_the_editor_note_says_how_many_products_arrived(self):
+        self.assertIn("Products received: 0.", render(manifest("shade-picker"), {}, design_mode=True))
+        self.assertIn("Products received: 1.", render(manifest("shade-picker"), {"products": LoopOnly([None])}, design_mode=True))
+        self.assertIn("Products received: 0.", render(manifest("addons"), {}, design_mode=True))
 
 
 @unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
