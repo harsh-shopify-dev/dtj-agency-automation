@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+secrets/
+node_modules/
+__pycache__/
+*.pyc
+*.log
+output/
+.DS_Store
+.work/
+.venv/
+.shopify/

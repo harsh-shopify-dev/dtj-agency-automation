@@ -1,0 +1,8 @@
+# Keep line endings identical on every machine. The block library's
+# `build_blocks.py --check` compares generated files byte for byte, and
+# Shopify pushes should not carry CRLF noise.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary

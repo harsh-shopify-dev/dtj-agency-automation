@@ -1,0 +1,38 @@
+{
+  "id": "rotating-text",
+  "title": "DTJ Rotating Text",
+  "block_file": "extensions/dtj-blocks/blocks/dtj-rotating-text.liquid",
+  "placements": ["product", "home"],
+  "licence": true,
+  "min_filled_slots": 1,
+  "script": true,
+  "slots": [
+    { "id": "prefix_text", "type": "text", "required": false, "max_length": 40 },
+    { "id": "phrase_1", "type": "text", "required": true, "max_length": 50 },
+    { "id": "phrase_2", "type": "text", "required": false, "max_length": 50 },
+    { "id": "phrase_3", "type": "text", "required": false, "max_length": 50 },
+    { "id": "phrase_4", "type": "text", "required": false, "max_length": 50 },
+    { "id": "phrase_5", "type": "text", "required": false, "max_length": 50 },
+    { "id": "phrase_6", "type": "text", "required": false, "max_length": 50 }
+  ],
+  "standard_controls": ["spacing", "align", "colors", "text_size"],
+  "standard_defaults": { "text_size": 20, "padding_top": 4, "padding_bottom": 4 },
+  "settings": [
+    { "type": "text", "id": "prefix_text", "label": "Fixed text before the typed phrase", "info": "Optional." },
+    { "type": "text", "id": "phrase_1", "label": "Phrase 1", "info": "Typed out, deleted, then the next one. One phrase shows without moving." },
+    { "type": "text", "id": "phrase_2", "label": "Phrase 2" },
+    { "type": "text", "id": "phrase_3", "label": "Phrase 3" },
+    { "type": "text", "id": "phrase_4", "label": "Phrase 4" },
+    { "type": "text", "id": "phrase_5", "label": "Phrase 5" },
+    { "type": "text", "id": "phrase_6", "label": "Phrase 6" },
+    { "type": "header", "content": "Typing" },
+    { "type": "range", "id": "type_speed", "label": "Typing speed (ms per letter)", "min": 20, "max": 200, "step": 5, "unit": "ms", "default": 60 },
+    { "type": "range", "id": "delete_speed", "label": "Deleting speed (ms per letter)", "min": 10, "max": 150, "step": 5, "unit": "ms", "default": 30 },
+    { "type": "range", "id": "pause_time", "label": "Pause before deleting", "min": 500, "max": 5000, "step": 100, "unit": "ms", "default": 1800 },
+    { "type": "select", "id": "text_weight", "label": "Text weight", "default": "600", "options": [{ "value": "400", "label": "Regular" }, { "value": "500", "label": "Medium" }, { "value": "600", "label": "Semibold" }, { "value": "700", "label": "Bold" }] },
+    { "type": "color", "id": "prefix_color", "label": "Fixed text color", "info": "Empty = same as the typed text." }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": { "sample": { "prefix_text": "Always", "phrase_1": "Phrase one", "phrase_2": "Phrase two" }, "expect": ["Always", "Phrase one", "dtj-rotating-text", "data-phrases"] }
+}

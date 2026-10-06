@@ -1,0 +1,25 @@
+{%- comment -%}
+  The master theme's bullet icon: ONE solid circle with a tick drawn inside it (not a circled icon inside a circle).
+  Usage: {% render 'dtj-check-icon', name: 'check', image: image_or_blank, size: 26 %}
+  - image given: shows that image (custom icon) instead of the drawn one.
+  - name: check (the tick from the master theme's dtj-bullet-points), or a glyph drawn inside the same circle:
+    shield, truck, return, lock, star, heart. Unknown names fall back to the tick.
+  Colours come from CSS variables set by the block (--dtj-circle-color, --dtj-check-color); see src/_check-item.css.
+  The caller passes everything in: a snippet cannot see block settings (library rule 7).
+{%- endcomment -%}
+{%- if image and image != blank -%}
+  <img class="dtj-ci__img" src="{{ image | image_url: width: 96 }}" alt="" width="{{ size | default: 26 }}" height="{{ size | default: 26 }}" loading="lazy">
+{%- else -%}
+  <svg class="dtj-ci__svg" viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+    <circle class="dtj-ci__disc" cx="10" cy="10" r="10"/>
+    {%- case name -%}
+      {%- when 'shield' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></g>
+      {%- when 'truck' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M3 6h11v10H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></g>
+      {%- when 'return' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M4 9h11a5 5 0 010 10H8"/><path d="M8 5L4 9l4 4"/></g>
+      {%- when 'lock' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></g>
+      {%- when 'star' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/></g>
+      {%- when 'heart' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/></g>
+      {%- else -%}<path class="dtj-ci__glyph" d="M6 10.5L8.5 13L14 7"/>
+    {%- endcase -%}
+  </svg>
+{%- endif -%}

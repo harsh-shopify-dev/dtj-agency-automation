@@ -1,0 +1,79 @@
+{%- liquid
+  assign tt_count = 0
+  for i in (1..5)
+    assign q_key = 'quote_' | append: i
+    assign q_val = block.settings[q_key] | strip
+    if q_val != blank
+      assign tt_count = tt_count | plus: 1
+    endif
+  endfor
+  assign star_path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
+-%}
+{%- if tt_count > 0 -%}
+  <dtj-testimonials class="dtj-b dtj-testimonials" data-interval="{{ block.settings.interval }}" style="{{ dtj_std_style | strip_newlines }} --tt-pad: {{ block.settings.card_padding }}px; --tt-border-width: {{ block.settings.border_width }}px; --tt-quote-size: {{ block.settings.quote_size }}px; --tt-name-size: {{ block.settings.name_size }}px; --tt-interval: {{ block.settings.interval }}s;{% if block.settings.border_color != blank %} --tt-border-color: {{ block.settings.border_color }};{% endif %}{% if block.settings.accent_color != blank %} --tt-accent: {{ block.settings.accent_color }};{% endif %}{% if block.settings.star_color != blank %} --tt-star: {{ block.settings.star_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-testimonials__card" role="region" aria-roledescription="carousel">
+      <div class="dtj-testimonials__track" data-track>
+        {%- for i in (1..5) -%}
+          {%- liquid
+            assign q_key = 'quote_' | append: i
+            assign n_key = 'name_' | append: i
+            assign l_key = 'location_' | append: i
+            assign r_key = 'rating_' | append: i
+            assign b_key = 'badge_' | append: i
+            assign a_key = 'avatar_' | append: i
+            assign p_key = 'image_' | append: i
+            assign tt_quote = block.settings[q_key] | strip
+            assign tt_name = block.settings[n_key] | strip
+            assign tt_location = block.settings[l_key] | strip
+            assign tt_badge = block.settings[b_key] | strip
+            assign tt_avatar = block.settings[a_key]
+            assign tt_photo = block.settings[p_key]
+            assign tt_stars = block.settings[r_key] | plus: 0
+            assign tt_star_limit = tt_stars | plus: 1
+          -%}
+          {%- if tt_quote != blank -%}
+            <figure class="dtj-testimonials__slide" data-slide>
+              <div class="dtj-testimonials__avatar">
+                {%- if tt_avatar and tt_avatar != blank -%}
+                  <img src="{{ tt_avatar | image_url: width: 96 }}" alt="" width="48" height="48" loading="lazy">
+                {%- else -%}
+                  {{- tt_name | slice: 0 | escape -}}
+                {%- endif -%}
+              </div>
+              <div class="dtj-testimonials__content">
+                <div class="dtj-testimonials__header">
+                  {%- if tt_name != blank -%}<span class="dtj-testimonials__name">{{ tt_name | escape }}</span>{%- endif -%}
+                  {%- if tt_location != blank -%}<span class="dtj-testimonials__location">{{ tt_location | escape }}</span>{%- endif -%}
+                  {%- if tt_stars > 0 -%}
+                    <span class="dtj-testimonials__stars" role="img" aria-label="{{ tt_stars }} / 5">
+                      {%- for s in (1..5) -%}
+                        {%- if s < tt_star_limit -%}
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ star_path }}"/></svg>
+                        {%- else -%}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="{{ star_path }}"/></svg>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </span>
+                  {%- endif -%}
+                  {%- if tt_badge != blank -%}<span class="dtj-testimonials__badge">{{ tt_badge | escape }}</span>{%- endif -%}
+                </div>
+                <div class="dtj-testimonials__body">
+                  <blockquote class="dtj-testimonials__quote">{{ tt_quote | escape }}</blockquote>
+                  {%- if tt_photo and tt_photo != blank -%}
+                    <img class="dtj-testimonials__photo" src="{{ tt_photo | image_url: width: 150 }}" alt="" width="64" height="64" loading="lazy">
+                  {%- endif -%}
+                </div>
+              </div>
+            </figure>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      {%- if tt_count > 1 -%}
+        <button type="button" class="dtj-testimonials__next" data-next aria-label="{{ block.settings.next_label | default: 'Next' | escape }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        {%- if block.settings.show_progress -%}<div class="dtj-testimonials__progress" data-progress aria-hidden="true"></div>{%- endif -%}
+      {%- endif -%}
+    </div>
+  </dtj-testimonials>
+{%- endif -%}

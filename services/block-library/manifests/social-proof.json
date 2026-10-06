@@ -1,0 +1,38 @@
+{
+  "id": "social-proof",
+  "title": "DTJ Social Proof Line",
+  "block_file": "extensions/dtj-blocks/blocks/dtj-social-proof.liquid",
+  "placements": ["product"],
+  "licence": true,
+  "min_filled_slots": 1,
+  "slots": [
+    { "id": "proof_text_1", "type": "text", "required": false, "max_length": 60, "suggested_fact_keys": ["social_proof"] },
+    { "id": "proof_text_2", "type": "text", "required": false, "max_length": 60, "suggested_fact_keys": ["social_proof"] },
+    { "id": "low_stock_text", "type": "text", "required": false, "max_length": 60 },
+    { "id": "in_stock_text", "type": "text", "required": false, "max_length": 60 },
+    { "id": "rating_value", "type": "text", "required": false, "max_length": 4 }
+  ],
+  "standard_controls": ["spacing", "align", "colors", "text_size"],
+  "standard_defaults": { "text_size": 14, "padding_top": 4, "padding_bottom": 4 },
+  "settings": [
+    { "type": "header", "content": "Rating" },
+    { "type": "checkbox", "id": "show_stars", "label": "Show stars", "default": true },
+    { "type": "paragraph", "content": "Stars use the real rating from your review app when the product has one. Only if it has none is the number below used: type a rating you can prove." },
+    { "type": "text", "id": "rating_value", "label": "Rating to use when there is no review data", "info": "For example 4.8. Empty = no stars without review data." },
+    { "type": "checkbox", "id": "show_rating_number", "label": "Show the number next to the stars", "default": true },
+    { "type": "color", "id": "star_color", "label": "Star color", "info": "Empty = same as the text." },
+    { "type": "header", "content": "Real stock" },
+    { "type": "checkbox", "id": "show_stock", "label": "Show the stock line", "default": true },
+    { "type": "text", "id": "low_stock_text", "label": "Text when stock is low", "info": "Use {count} for the number, for example: Only {count} left. Shown only when stock is tracked. Empty = hidden." },
+    { "type": "text", "id": "in_stock_text", "label": "Text when stock is higher", "info": "Use {count}. Empty = hidden above the threshold." },
+    { "type": "range", "id": "stock_threshold", "label": "Low stock at or below", "min": 1, "max": 50, "step": 1, "default": 10 },
+    { "type": "color", "id": "urgency_color", "label": "Stock line color", "info": "Empty = same as the text." },
+    { "type": "header", "content": "Your own lines" },
+    { "type": "text", "id": "proof_text_1", "label": "Line 1", "info": "Only a figure you can prove. Empty = hidden." },
+    { "type": "text", "id": "proof_text_2", "label": "Line 2", "info": "Empty = hidden." },
+    { "type": "range", "id": "item_gap", "label": "Gap between items", "min": 4, "max": 32, "step": 2, "unit": "px", "default": 12 }
+  ],
+  "data_needs": ["product.metafields.reviews.rating (written by a review app)"],
+  "reference_image": null,
+  "test": { "sample": { "proof_text_1": "Proof line one", "proof_text_2": "Proof line two" }, "expect": ["Proof line one", "Proof line two", "dtj-social-proof"] }
+}

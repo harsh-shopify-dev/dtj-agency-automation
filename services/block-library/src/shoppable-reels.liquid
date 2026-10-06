@@ -1,0 +1,68 @@
+{%- liquid
+  assign sr_count = 0
+  for i in (1..6)
+    assign v_key = 'video_' | append: i
+    assign i_key = 'image_' | append: i
+    assign m_key = 'media_type_' | append: i
+    assign sr_video = block.settings[v_key]
+    assign sr_image = block.settings[i_key]
+    if block.settings[m_key] == 'video' and sr_video and sr_video != blank
+      assign sr_count = sr_count | plus: 1
+    elsif sr_image and sr_image != blank
+      assign sr_count = sr_count | plus: 1
+    endif
+  endfor
+  assign sr_heading = block.settings.heading | strip
+-%}
+{%- if sr_count > 0 -%}
+  <div class="dtj-b dtj-reels" style="{{ dtj_std_style | strip_newlines }} --sr-card: {{ block.settings.card_width }}px; --sr-card-m: {{ block.settings.card_width_mobile }}px; --sr-gap: {{ block.settings.card_gap }}px;{% if block.settings.price_color != blank %} --sr-price: {{ block.settings.price_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if sr_heading != blank -%}
+      <h3 class="dtj-reels__heading">{{ sr_heading | escape }}</h3>
+    {%- endif -%}
+    <dtj-reels class="dtj-reels__track" data-play-label="{{ block.settings.play_label | default: 'Play video' | escape }}" data-pause-label="{{ block.settings.pause_label | default: 'Pause video' | escape }}">
+      {%- for i in (1..6) -%}
+        {%- liquid
+          assign v_key = 'video_' | append: i
+          assign i_key = 'image_' | append: i
+          assign p_idx = i | minus: 1
+          assign m_key = 'media_type_' | append: i
+          assign sr_video = block.settings[v_key]
+          assign sr_image = block.settings[i_key]
+          assign sr_product = block.settings.products[p_idx]
+          assign sr_show_video = false
+          if block.settings[m_key] == 'video' and sr_video and sr_video != blank
+            assign sr_show_video = true
+          endif
+          assign sr_show_image = false
+          if sr_show_video == false and sr_image and sr_image != blank
+            assign sr_show_image = true
+          endif
+        -%}
+        {%- if sr_show_video or sr_show_image -%}
+          <div class="dtj-reels__slide">
+            <div class="dtj-reels__media">
+              {%- if sr_show_video -%}
+                {%- assign sr_video_id = 'dtj-reel-' | append: block.id | append: '-' | append: i -%}
+                {{ sr_video | video_tag: id: sr_video_id, autoplay: false, loop: true, muted: true, playsinline: true, controls: false, preload: 'none', class: 'dtj-reels__video' }}
+                <button type="button" class="dtj-reels__toggle" data-toggle data-target="{{ sr_video_id }}" aria-label="{{ block.settings.play_label | default: 'Play video' | escape }}">
+                  <svg class="dtj-reels__icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="dtj-reels__icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+              {%- else -%}
+                <img class="dtj-reels__image" src="{{ sr_image | image_url: width: 480 }}" alt="{{ sr_image.alt | default: sr_product.title | escape }}" width="{{ sr_image.width }}" height="{{ sr_image.height }}" loading="lazy">
+              {%- endif -%}
+              {%- if sr_product and sr_product != blank -%}
+                <div class="dtj-reels__product">
+                  <a href="{{ sr_product.url }}" class="dtj-reels__link">
+                    <span class="dtj-reels__title">{{ sr_product.title | escape }}</span>
+                    <span class="dtj-reels__price">{{ sr_product.price | money }}</span>
+                  </a>
+                </div>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </dtj-reels>
+  </div>
+{%- endif -%}

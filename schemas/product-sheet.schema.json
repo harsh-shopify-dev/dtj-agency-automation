@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://schemas/product-sheet.schema.json",
+  "title": "Product sheet (one simple product = one variant)",
+  "description": "Multi-variant products are not supported yet. Prices come from the sheet only; if unknown the row is rejected, not guessed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["products"],
+  "properties": {
+    "products": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 250,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["handle", "title", "price"],
+        "properties": {
+          "handle": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "description_html": { "type": "string" },
+          "vendor": { "type": "string" },
+          "product_type": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "price": { "type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$", "description": "Decimal string in the store currency" },
+          "compare_at_price": { "type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$" },
+          "sku": { "type": "string" },
+          "images": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "alt"],
+              "properties": {
+                "file": { "type": "string", "pattern": "^[^/\\\\]+\\.(jpg|jpeg|png|webp)$", "description": "File name inside the image folder, no paths" },
+                "alt": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

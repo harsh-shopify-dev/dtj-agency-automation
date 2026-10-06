@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://schemas/brand-config.schema.json",
+  "title": "Brand config for a store build",
+  "description": "Facts supplied by the team or client. Anything unknown must be the literal string [[TODO]], never a guess.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["client_id", "brand_name", "store_domain"],
+  "properties": {
+    "client_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,40}$" },
+    "brand_name": { "type": "string", "minLength": 1 },
+    "store_domain": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$" },
+    "niche": { "type": "string" },
+    "tone": { "type": "string" },
+    "theme_name": { "type": "string", "description": "Name for the new unpublished theme" },
+    "master_theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "ref"],
+      "properties": {
+        "repo": { "type": "string", "pattern": "^[\\w.-]+/[\\w.-]+$" },
+        "ref": { "type": "string", "minLength": 7, "description": "Commit SHA or tag. Not a branch name, so builds are repeatable." }
+      }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "All optional. Anything missing is filled in by provision/style.py and the log says what was provided, derived or defaulted.",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "primary": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "accent": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "background": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "text": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+          }
+        },
+        "fonts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "heading": { "type": "string", "pattern": "^[A-Za-z0-9 ]{2,40}$", "description": "A family name from Shopify's font library" },
+            "body": { "type": "string", "pattern": "^[A-Za-z0-9 ]{2,40}$" }
+          }
+        },
+        "logo": { "type": "string", "pattern": "^[^/\\\\]+\\.(png|jpg|jpeg|webp)$", "description": "File name inside the image folder. PNG with a transparent background is best." }
+      }
+    },
+    "home": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "product_list_collection": { "type": "string", "description": "Collection handle the home product list shows" },
+        "hero_image": { "type": "string", "description": "Image file name inside the image folder" }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "description": "Shipping, returns, offers. Each value is text or [[TODO]]. Never invented.",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

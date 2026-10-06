@@ -1,0 +1,34 @@
+{
+  "id": "hero-points",
+  "title": "DTJ Hero Points",
+  "block_file": "extensions/dtj-blocks/blocks/dtj-hero-points.liquid",
+  "placements": ["product", "home"],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": ["check-item"],
+  "slots": [
+    { "id": "eyebrow", "type": "text", "required": false, "max_length": 40 },
+    { "id": "subheading", "type": "inline_richtext", "required": false, "max_length": 200 },
+    { "id": "benefits", "type": "textarea", "required": false, "max_length": 400 }
+  ],
+  "standard_controls": ["spacing", "colors"],
+  "standard_defaults": { "padding_top": 4, "padding_bottom": 4 },
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow label", "info": "Small uppercase pill. Empty = hidden." },
+    { "type": "checkbox", "id": "show_star", "label": "Star inside the eyebrow", "default": true },
+    { "type": "inline_richtext", "id": "subheading", "label": "Subheading", "info": "Bold is allowed. Empty = hidden." },
+    { "type": "textarea", "id": "benefits", "label": "Benefits", "info": "One benefit per line, up to 8. Empty = hidden." },
+    { "type": "color", "id": "accent_color", "label": "Accent color", "info": "Eyebrow pill, star and tick circles. Empty = same as the text." },
+    { "type": "color", "id": "eyebrow_color", "label": "Eyebrow text color", "info": "Empty = same as the text." },
+    { "type": "header", "content": "Sizes and gaps" },
+    { "type": "range", "id": "eyebrow_size", "label": "Eyebrow text size", "min": 9, "max": 16, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "subheading_size", "label": "Subheading size", "min": 12, "max": 28, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "tick_size", "label": "Benefit text size", "min": 12, "max": 24, "step": 1, "unit": "px", "default": 14 },
+    { "type": "range", "id": "check_size", "label": "Tick circle size", "min": 14, "max": 36, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "gap", "label": "Space between the parts", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "tick_gap", "label": "Space between benefits", "min": 0, "max": 24, "step": 2, "unit": "px", "default": 8 }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": { "sample": { "eyebrow": "Eyebrow sample", "subheading": "Sub <strong>sample</strong> line", "benefits": "First benefit\nSecond benefit" }, "expect": ["Eyebrow sample", "sample</strong> line", "First benefit", "Second benefit", "dtj-ci__disc", "dtj-hero-points"] }
+}

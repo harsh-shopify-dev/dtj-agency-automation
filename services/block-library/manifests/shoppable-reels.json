@@ -1,0 +1,347 @@
+{
+  "id": "shoppable-reels",
+  "title": "DTJ Shoppable Reels",
+  "block_file": "extensions/dtj-blocks/blocks/dtj-shoppable-reels.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "script": true,
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "products",
+      "type": "product_list",
+      "required": false
+    },
+    {
+      "id": "video_1",
+      "type": "video",
+      "required": false
+    },
+    {
+      "id": "image_1",
+      "type": "image_picker",
+      "required": true
+    },
+    {
+      "id": "video_2",
+      "type": "video",
+      "required": false
+    },
+    {
+      "id": "image_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "video_3",
+      "type": "video",
+      "required": false
+    },
+    {
+      "id": "image_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "video_4",
+      "type": "video",
+      "required": false
+    },
+    {
+      "id": "image_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "video_5",
+      "type": "video",
+      "required": false
+    },
+    {
+      "id": "image_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "video_6",
+      "type": "video",
+      "required": false
+    },
+    {
+      "id": "image_6",
+      "type": "image_picker",
+      "required": false
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "shape",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "corner_radius": 12,
+    "text_size": 18,
+    "padding_top": 4,
+    "padding_bottom": 4
+  },
+  "settings": [
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Products for the cards",
+      "limit": 6,
+      "info": "Optional. Card 1 links to the first product, card 2 to the second, and so on. Shows its name and price over the card."
+    },
+    {
+      "type": "select",
+      "id": "media_type_1",
+      "label": "Card 1 shows",
+      "default": "image",
+      "options": [
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "video_1",
+      "label": "Card 1 video",
+      "info": "Used when the card shows a video. Empty card = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Card 1 image",
+      "info": "Tall (9:16) works best."
+    },
+    {
+      "type": "select",
+      "id": "media_type_2",
+      "label": "Card 2 shows",
+      "default": "image",
+      "options": [
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "video_2",
+      "label": "Card 2 video",
+      "info": "Used when the card shows a video. Empty card = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Card 2 image",
+      "info": "Tall (9:16) works best."
+    },
+    {
+      "type": "select",
+      "id": "media_type_3",
+      "label": "Card 3 shows",
+      "default": "image",
+      "options": [
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "video_3",
+      "label": "Card 3 video",
+      "info": "Used when the card shows a video. Empty card = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Card 3 image",
+      "info": "Tall (9:16) works best."
+    },
+    {
+      "type": "select",
+      "id": "media_type_4",
+      "label": "Card 4 shows",
+      "default": "image",
+      "options": [
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "video_4",
+      "label": "Card 4 video",
+      "info": "Used when the card shows a video. Empty card = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Card 4 image",
+      "info": "Tall (9:16) works best."
+    },
+    {
+      "type": "select",
+      "id": "media_type_5",
+      "label": "Card 5 shows",
+      "default": "image",
+      "options": [
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "video_5",
+      "label": "Card 5 video",
+      "info": "Used when the card shows a video. Empty card = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Card 5 image",
+      "info": "Tall (9:16) works best."
+    },
+    {
+      "type": "select",
+      "id": "media_type_6",
+      "label": "Card 6 shows",
+      "default": "image",
+      "options": [
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "video_6",
+      "label": "Card 6 video",
+      "info": "Used when the card shows a video. Empty card = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Card 6 image",
+      "info": "Tall (9:16) works best."
+    },
+    {
+      "type": "header",
+      "content": "Layout and style"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Optional. Empty = hidden."
+    },
+    {
+      "type": "range",
+      "id": "card_width",
+      "label": "Card width",
+      "min": 120,
+      "max": 280,
+      "step": 10,
+      "unit": "px",
+      "default": 180
+    },
+    {
+      "type": "range",
+      "id": "card_width_mobile",
+      "label": "Card width on mobile",
+      "min": 120,
+      "max": 240,
+      "step": 10,
+      "unit": "px",
+      "default": 150
+    },
+    {
+      "type": "range",
+      "id": "card_gap",
+      "label": "Gap between cards",
+      "min": 4,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "price_color",
+      "label": "Price color on the cards",
+      "info": "Empty = white."
+    },
+    {
+      "type": "text",
+      "id": "play_label",
+      "label": "Play button label for screen readers",
+      "info": "Empty = Play video."
+    },
+    {
+      "type": "text",
+      "id": "pause_label",
+      "label": "Pause button label for screen readers",
+      "info": "Empty = Pause video."
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "image_1": "reel-image-one",
+      "image_2": "reel-image-two",
+      "heading": "Heading sample"
+    },
+    "expect": [
+      "Heading sample",
+      "reel-image-one",
+      "reel-image-two",
+      "dtj-reels"
+    ]
+  }
+}

@@ -1,0 +1,483 @@
+{
+  "id": "shade-picker",
+  "title": "DTJ Option Picker",
+  "block_file": "extensions/dtj-blocks/blocks/dtj-shade-picker.liquid",
+  "placements": [
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 2,
+  "script": true,
+  "slots": [
+    {
+      "id": "products",
+      "type": "product_list",
+      "required": true
+    },
+    {
+      "id": "label_text",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s1_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s1_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s1_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s2_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s2_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s2_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s3_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s3_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s3_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s4_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s4_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s4_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s5_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s5_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s5_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s6_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s6_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s6_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s7_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s7_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s7_swatch",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "s8_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "s8_subtitle",
+      "type": "text",
+      "required": false,
+      "max_length": 50
+    },
+    {
+      "id": "s8_swatch",
+      "type": "image_picker",
+      "required": false
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "text_size": 12,
+    "padding_top": 6,
+    "padding_bottom": 6
+  },
+  "settings": [
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Option products",
+      "limit": 8,
+      "info": "Pick the products in the order they should show (up to 8). Option 1 is the first, and the name, subtitle and swatch below follow the same order."
+    },
+    {
+      "type": "text",
+      "id": "label_text",
+      "label": "Label above the options",
+      "info": "For example the name of the option family. Empty = no label."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_selected",
+      "label": "Show the current or hovered name beside the label",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "s1_label",
+      "label": "Option 1 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s1_subtitle",
+      "label": "Option 1 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s1_swatch",
+      "label": "Option 1 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s2_label",
+      "label": "Option 2 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s2_subtitle",
+      "label": "Option 2 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s2_swatch",
+      "label": "Option 2 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s3_label",
+      "label": "Option 3 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s3_subtitle",
+      "label": "Option 3 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s3_swatch",
+      "label": "Option 3 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s4_label",
+      "label": "Option 4 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s4_subtitle",
+      "label": "Option 4 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s4_swatch",
+      "label": "Option 4 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s5_label",
+      "label": "Option 5 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s5_subtitle",
+      "label": "Option 5 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s5_swatch",
+      "label": "Option 5 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s6_label",
+      "label": "Option 6 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s6_subtitle",
+      "label": "Option 6 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s6_swatch",
+      "label": "Option 6 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s7_label",
+      "label": "Option 7 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s7_subtitle",
+      "label": "Option 7 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s7_swatch",
+      "label": "Option 7 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "text",
+      "id": "s8_label",
+      "label": "Option 8 name",
+      "info": "Empty = the product title."
+    },
+    {
+      "type": "text",
+      "id": "s8_subtitle",
+      "label": "Option 8 subtitle",
+      "info": "Optional short line."
+    },
+    {
+      "type": "image_picker",
+      "id": "s8_swatch",
+      "label": "Option 8 swatch image",
+      "info": "Empty = the product's own image."
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Display style",
+      "default": "swatch",
+      "info": "Swatch = round product photo. Pill = text button.",
+      "options": [
+        {
+          "value": "swatch",
+          "label": "Swatch (round photo)"
+        },
+        {
+          "value": "pill",
+          "label": "Pill (text button)"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "swatch_size",
+      "label": "Swatch size",
+      "min": 24,
+      "max": 56,
+      "step": 2,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "checkbox",
+      "id": "show_caption",
+      "label": "Show the name beside the swatch",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "caption_size",
+      "label": "Name size",
+      "min": 11,
+      "max": 16,
+      "step": 1,
+      "unit": "px",
+      "default": 13
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "label": "Subtitle size",
+      "min": 9,
+      "max": 13,
+      "step": 1,
+      "unit": "px",
+      "default": 11
+    },
+    {
+      "type": "range",
+      "id": "pill_radius",
+      "label": "Pill corner radius",
+      "min": 4,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 6
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Gap between options",
+      "min": 4,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Selected option color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border color",
+      "info": "Empty = a faint tint of the text."
+    }
+  ],
+  "data_needs": [
+    "a product for each option (the options are separate products, not variants)"
+  ],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "label_text": "Label sample",
+      "products": [
+        {
+          "id": 1,
+          "handle": "h1",
+          "title": "Product A",
+          "url": "/products/h1",
+          "featured_media": "media-1",
+          "variants": [
+            {
+              "id": 10,
+              "price": 1000
+            }
+          ],
+          "selected_or_first_available_variant": {
+            "id": 10,
+            "price": 1000,
+            "compare_at_price": null,
+            "available": true,
+            "featured_media": null
+          }
+        },
+        {
+          "id": 2,
+          "handle": "h2",
+          "title": "Product B",
+          "url": "/products/h2",
+          "featured_media": "media-2",
+          "variants": [
+            {
+              "id": 20,
+              "price": 1000
+            }
+          ],
+          "selected_or_first_available_variant": {
+            "id": 20,
+            "price": 1000,
+            "compare_at_price": null,
+            "available": true,
+            "featured_media": null
+          }
+        }
+      ],
+      "s1_label": "Name A"
+    },
+    "expect": [
+      "Label sample",
+      "Name A",
+      "Product B",
+      "dtj-shade-picker",
+      "/products/h1"
+    ]
+  }
+}

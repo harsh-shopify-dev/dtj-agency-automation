@@ -1,0 +1,58 @@
+.dtj-social-proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: var(--dtj-justify, flex-start);
+  gap: 6px var(--dtj-sp-gap, 12px);
+  color: var(--dtj-text-color, inherit);
+  background: var(--dtj-background, transparent);
+  font-size: var(--dtj-text-size, 14px);
+  line-height: 1.4;
+}
+
+.dtj-social-proof__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* a thin divider between the parts, drawn once instead of in every conditional */
+.dtj-social-proof__part + .dtj-social-proof__part::before {
+  content: "";
+  align-self: stretch;
+  width: 1px;
+  margin-inline-end: calc(var(--dtj-sp-gap, 12px) - 6px);
+  background: currentcolor;
+  opacity: 0.25;
+}
+
+.dtj-social-proof__stars {
+  color: var(--dtj-sp-star, currentColor);
+  letter-spacing: 1px;
+}
+
+.dtj-social-proof__rating {
+  font-weight: 600;
+}
+
+.dtj-social-proof__stock {
+  color: var(--dtj-sp-urgency, currentColor);
+  font-weight: 600;
+}
+
+.dtj-social-proof__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dtj-social-proof__dot { animation: dtj-social-proof-pulse 1.8s ease-in-out infinite; }
+}
+
+@keyframes dtj-social-proof-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}

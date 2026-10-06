@@ -1,0 +1,121 @@
+{%- liquid
+  assign ao_list = block.settings.products
+  assign ao_has = false
+  for i in (1..4)
+    assign idx = i | minus: 1
+    assign first_p = ao_list[idx]
+    if first_p and first_p != blank
+      assign ao_has = true
+    endif
+  endfor
+  assign ao_main_variant = product.selected_or_first_available_variant
+  assign ao_prices = ''
+  for v in product.variants limit: 100
+    assign ao_prices = ao_prices | append: v.id | append: ':' | append: v.price | append: ','
+  endfor
+  assign ao_heading = block.settings.heading | strip
+  assign ao_sub = block.settings.subheading | strip
+-%}
+{%- if ao_has -%}
+  <dtj-addons class="dtj-b dtj-addons" data-after-add="{{ block.settings.after_add }}" data-money-format="{{ shop.money_format | escape }}" data-main-variant="{{ ao_main_variant.id }}" data-main-prices="{{ ao_prices }}" data-select-label="{{ block.settings.select_label | escape }}" data-selected-label="{{ block.settings.selected_label | escape }}" style="{{ dtj_std_style | strip_newlines }} --ao-heading: {{ block.settings.heading_size }}px; --ao-headline: {{ block.settings.headline_size }}px; --ao-price: {{ block.settings.price_size }}px;{% if block.settings.accent_color != blank %} --ao-accent: {{ block.settings.accent_color }};{% endif %}{% if block.settings.border_color != blank %} --ao-border: {{ block.settings.border_color }};{% endif %}{% if block.settings.card_bg != blank %} --ao-card-bg: {{ block.settings.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if ao_heading != blank or block.settings.show_total -%}
+      <div class="dtj-addons__head">
+        {%- if ao_heading != blank -%}<h3 class="dtj-addons__title">{{ ao_heading | escape }}</h3>{%- endif -%}
+        {%- if block.settings.show_total -%}
+          <div class="dtj-addons__total" data-total aria-live="polite">
+            <span data-total-value></span>
+            {%- if block.settings.total_label != blank -%}<small>{{ block.settings.total_label | escape }}</small>{%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if ao_sub != blank -%}<p class="dtj-addons__sub">{{ ao_sub | escape }}</p>{%- endif -%}
+    <div class="dtj-addons__list">
+      {%- for i in (1..4) -%}
+        {%- liquid
+          assign idx = i | minus: 1
+          assign ak = 's' | append: i | append: '_alt'
+          assign hk = 's' | append: i | append: '_headline'
+          assign sk = 's' | append: i | append: '_subline'
+          assign bk = 's' | append: i | append: '_badge'
+          assign ck = 's' | append: i | append: '_show_compare'
+          assign p_main = ao_list[idx]
+          assign alt_pos = block.settings[ak] | plus: 0
+          assign p_alt = nil
+          if alt_pos > 0 and alt_pos != i
+            assign alt_idx = alt_pos | minus: 1
+            assign p_alt = ao_list[alt_idx]
+          endif
+        -%}
+        {%- if p_main and p_main != blank -%}
+          {%- liquid
+            assign v_main = p_main.selected_or_first_available_variant
+            assign has_alt = false
+            if p_alt and p_alt != blank
+              assign has_alt = true
+              assign v_alt = p_alt.selected_or_first_available_variant
+            endif
+            assign ao_name = block.settings[hk] | strip | default: p_main.title
+            assign ao_line = block.settings[sk] | strip
+            assign ao_badge = block.settings[bk] | strip
+            assign compare_main = v_main.price
+            if v_main.compare_at_price and v_main.compare_at_price > v_main.price
+              assign compare_main = v_main.compare_at_price
+            endif
+            assign compare_alt = 0
+            if has_alt
+              assign compare_alt = v_alt.price
+              if v_alt.compare_at_price and v_alt.compare_at_price > v_alt.price
+                assign compare_alt = v_alt.compare_at_price
+              endif
+            endif
+            assign ao_sold_out = true
+            if v_main.available
+              assign ao_sold_out = false
+            endif
+            assign slot_text = i | append: ''
+            assign ao_recommended = false
+            if block.settings.recommended_slot == slot_text
+              assign ao_recommended = true
+            endif
+            assign ao_thumb = v_main.featured_media
+            if ao_thumb == blank
+              assign ao_thumb = p_main.featured_media
+            endif
+          -%}
+          <div class="dtj-addons__card" data-card data-selected="false" data-sold-out="{{ ao_sold_out }}" data-recommended="{{ ao_recommended }}" data-rec-label="{{ block.settings.recommended_label | escape }}" data-variant-main="{{ v_main.id }}"{% if has_alt %} data-variant-alt="{{ v_alt.id }}"{% endif %} data-price-main="{{ v_main.price }}"{% if has_alt %} data-price-alt="{{ v_alt.price }}"{% endif %} data-compare-main="{{ compare_main }}"{% if has_alt %} data-compare-alt="{{ compare_alt }}"{% endif %} data-show-compare="{{ block.settings[ck] }}" data-active-variant="main" role="button" tabindex="0" aria-pressed="false" aria-label="{{ ao_name | escape }}">
+            <span class="dtj-addons__radio" aria-hidden="true">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
+            </span>
+            <div class="dtj-addons__thumb" data-thumb>
+              {%- if ao_thumb and ao_thumb != blank -%}
+                <img src="{{ ao_thumb | image_url: width: 200 }}" alt="" width="64" height="64" loading="lazy">
+              {%- endif -%}
+            </div>
+            <div class="dtj-addons__body">
+              <p class="dtj-addons__headline" data-headline>{{ ao_name | escape }}</p>
+              {%- if ao_line != blank -%}<p class="dtj-addons__subline">{{ ao_line | escape }}</p>{%- endif -%}
+              <div class="dtj-addons__meta">
+                <span class="dtj-addons__price" data-price>{{ v_main.price | money }}</span>
+                {%- if block.settings[ck] -%}
+                  <span class="dtj-addons__compare" data-compare{% unless compare_main > v_main.price %} hidden{% endunless %}>{{ compare_main | money }}</span>
+                {%- endif -%}
+                {%- if ao_badge != blank -%}<span class="dtj-addons__badge">{{ ao_badge | escape }}</span>{%- endif -%}
+              </div>
+            </div>
+            {%- if has_alt -%}
+              <div class="dtj-addons__swap" role="group">
+                <button type="button" data-swap="main" aria-pressed="true" data-variant="{{ v_main.id }}" data-title="{{ ao_name | escape }}" data-image="{% if ao_thumb and ao_thumb != blank %}{{ ao_thumb | image_url: width: 200 }}{% endif %}">{{ ao_name | escape }}</button>
+                <button type="button" data-swap="alt" aria-pressed="false" data-variant="{{ v_alt.id }}" data-title="{{ p_alt.title | escape }}" data-image="{% if p_alt.featured_media %}{{ p_alt.featured_media | image_url: width: 200 }}{% endif %}">{{ p_alt.title | escape }}</button>
+              </div>
+            {%- endif -%}
+            <span class="dtj-addons__cta" aria-hidden="true">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
+              <span data-cta-label>{% if ao_sold_out %}{{ block.settings.sold_out_label | escape }}{% else %}{{ block.settings.select_label | escape }}{% endif %}</span>
+            </span>
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </dtj-addons>
+{%- endif -%}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://schemas/action.schema.json",
+  "title": "Action log row (RUNBOOK section 2.5)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ts", "run_id", "client_id", "automation", "tier", "mode", "target", "action", "reason", "result"],
+  "properties": {
+    "ts": { "type": "string", "description": "UTC time the row was written, ISO 8601" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "client_id": { "type": "string", "minLength": 1 },
+    "automation": { "type": "string", "minLength": 1 },
+    "tier": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "mode": { "enum": ["shadow", "approve", "auto"] },
+    "target": { "type": "string", "description": "What was touched: theme, product handle, file" },
+    "action": { "type": "string" },
+    "reason": { "type": "string" },
+    "evidence": { "description": "Query or command plus the values that justified the action" },
+    "before": {},
+    "after": {},
+    "approved_by": { "type": ["string", "null"] },
+    "approved_at": { "type": ["string", "null"] },
+    "result": { "enum": ["recommended", "dry_run", "blocked", "success", "failed"] },
+    "error": { "type": ["string", "null"] }
+  }
+}

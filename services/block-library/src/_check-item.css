@@ -1,0 +1,58 @@
+/* Shared "check item": the master theme's bullet design. Included in every block that lists items with a round tick icon. */
+.dtj-ci {
+  display: flex;
+  align-items: center;
+  gap: var(--dtj-ci-gap, 12px);
+  margin: 0;
+}
+
+.dtj-ci__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--dtj-ci-size, 26px);
+  height: var(--dtj-ci-size, 26px);
+}
+
+.dtj-ci__svg,
+.dtj-ci__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dtj-ci__img {
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.dtj-ci__disc {
+  fill: var(--dtj-circle-color, currentColor);
+}
+
+.dtj-ci__glyph {
+  fill: none;
+  stroke: var(--dtj-check-color, Canvas);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* glyphs are drawn on a 24-unit grid and scaled by 0.5, so the stroke is doubled to look the same */
+.dtj-ci__glyph--scaled {
+  stroke-width: 3.6;
+}
+
+.dtj-ci__text {
+  color: var(--dtj-text-color, inherit);
+  font-size: var(--dtj-text-size-m, var(--dtj-text-size, 14px));
+  font-weight: var(--dtj-ci-weight, 600);
+  line-height: 1.4;
+}
+
+@media screen and (min-width: 750px) {
+  .dtj-ci__text {
+    font-size: var(--dtj-text-size, 14px);
+  }
+}

@@ -1,0 +1,103 @@
+.dtj-shade-picker {
+  display: block;
+  color: var(--dtj-text-color, inherit);
+  background: var(--dtj-background, transparent);
+}
+
+.dtj-shade-picker__label {
+  margin: 0 0 8px;
+  font-size: var(--dtj-text-size, 12px);
+}
+
+.dtj-shade-picker__label strong {
+  font-weight: 700;
+}
+
+.dtj-shade-picker__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-gap, 12px);
+}
+
+.dtj-shade-picker__item,
+.dtj-shade-picker__pill {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dtj-shade-picker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dtj-shade-picker__swatch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: var(--sp-swatch, 32px);
+  height: var(--sp-swatch, 32px);
+  overflow: hidden;
+  border: 1px solid var(--sp-border, color-mix(in srgb, currentColor 20%, transparent));
+  border-radius: 50%;
+}
+
+.dtj-shade-picker__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+
+.dtj-shade-picker__item[data-current="true"] .dtj-shade-picker__swatch {
+  box-shadow: 0 0 0 2px Canvas, 0 0 0 4px var(--sp-accent, currentColor);
+}
+
+.dtj-shade-picker__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.dtj-shade-picker__caption {
+  font-size: var(--sp-caption, 13px);
+  font-weight: 600;
+}
+
+.dtj-shade-picker__subtitle {
+  font-size: var(--sp-subtitle, 11px);
+  opacity: 0.7;
+}
+
+.dtj-shade-picker__pill {
+  padding: 8px 14px;
+  border: 1px solid var(--sp-border, color-mix(in srgb, currentColor 20%, transparent));
+  border-radius: var(--sp-radius, 6px);
+  font-size: var(--sp-caption, 13px);
+  line-height: 1.2;
+}
+
+.dtj-shade-picker__pill[data-current="true"] {
+  border-color: var(--sp-accent, currentColor);
+  background: var(--sp-accent, currentColor);
+  color: Canvas;
+}
+
+/* sold out: dimmed with a diagonal line, and not clickable (the script also blocks the click) */
+.dtj-shade-picker [data-unavailable="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.dtj-shade-picker__pill[data-unavailable="true"] {
+  text-decoration: line-through;
+}
+
+.dtj-shade-picker__item[data-unavailable="true"] .dtj-shade-picker__swatch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top right, transparent calc(50% - 1px), currentcolor, transparent calc(50% + 1px));
+}

@@ -1,0 +1,110 @@
+import json
+import sys
+import tempfile
+import unittest
+from io import StringIO
+from pathlib import Path
+from unittest import mock
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import licence  # noqa: E402
+
+ENV = {licence.SECRET_ENV: "SUPERSECRET"}
+
+
+class FakeShopify:
+    def __init__(self, token_status=200, current=None, user_errors=None, gql_status=200):
+        self.calls, self.current, self.user_errors, self.token_status, self.gql_status = [], current, user_errors or [], token_status, gql_status
+
+    def __call__(self, url, payload, headers=None):
+        self.calls.append((url, payload, headers))
+        if url.endswith("/oauth/access_token"):
+            if self.token_status != 200:
+                return self.token_status, {"error": "shop_not_permitted", "error_description": "Client credentials cannot be performed on this shop."}
+            return 200, {"access_token": "TOKEN123", "expires_in": 86399}
+        if self.gql_status != 200:
+            return self.gql_status, {}
+        if "metafieldsSet" in payload["query"]:
+            self.current = payload["variables"]["metafields"][0]["value"]
+            return 200, {"data": {"metafieldsSet": {"metafields": [], "userErrors": self.user_errors}}}
+        return 200, {"data": {"shop": {"id": "gid://shopify/Shop/1"},
+                              "currentAppInstallation": {"id": "gid://shopify/AppInstallation/9", "app": {"handle": "dtj-blocks"},
+                                                         "licence": {"value": self.current} if self.current else None}}}
+
+
+def run(args, shop=None, env=ENV):
+    shop = shop or FakeShopify()
+    with tempfile.TemporaryDirectory() as d, mock.patch("sys.stdout", new_callable=StringIO) as out, mock.patch("sys.stderr", new_callable=StringIO) as err:
+        code = licence.main([*args, "--log", str(Path(d, "log.jsonl"))], env=env, post=shop)
+        log = Path(d, "log.jsonl").read_text(encoding="utf-8") if Path(d, "log.jsonl").exists() else ""
+    return code, out.getvalue(), err.getvalue(), log, shop
+
+
+S = ["--shop", "t.myshopify.com"]
+
+
+class LicenceToolTests(unittest.TestCase):
+    def test_status_is_read_only(self):
+        code, out, _, log, shop = run([*S, "--status"], FakeShopify(current="active"))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["licence"], "active")
+        self.assertEqual(log, "")
+        self.assertFalse(any("metafieldsSet" in (c[1] or {}).get("query", "") for c in shop.calls))
+
+    def test_set_needs_a_named_approver(self):
+        code, _, err, _, shop = run([*S, "--set", "inactive"])
+        self.assertEqual(code, 2)
+        self.assertIn("approved-by", err)
+        self.assertEqual(shop.calls, [])
+
+    def test_set_flips_the_flag_and_logs_it(self):
+        code, out, _, log, shop = run([*S, "--set", "inactive", "--approved-by", "Harsh"], FakeShopify(current="active"))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out), {"before": "active", "after": "inactive"})
+        row = json.loads(log)
+        self.assertEqual((row["approved_by"], row["result"], row["tier"]), ("Harsh", "success", 2))
+        sent = [c for c in shop.calls if "metafieldsSet" in (c[1] or {}).get("query", "")][0]
+        mf = sent[1]["variables"]["metafields"][0]
+        self.assertEqual((mf["ownerId"], mf["namespace"], mf["key"], mf["value"]),
+                         ("gid://shopify/AppInstallation/9", "dtj", "licence", "inactive"))  # on the installation, not the shop
+
+    def test_secret_and_token_never_appear_in_output_or_log(self):
+        code, out, err, log, _ = run([*S, "--set", "active", "--approved-by", "Harsh"])
+        for text in (out, err, log):
+            self.assertNotIn("SUPERSECRET", text)
+            self.assertNotIn("TOKEN123", text)
+
+    def test_missing_secret_stops_before_any_call(self):
+        code, _, err, _, shop = run([*S, "--status"], env={})
+        self.assertEqual(code, 2)
+        self.assertIn(licence.SECRET_ENV, err)
+        self.assertEqual(shop.calls, [])
+
+    def test_store_outside_the_org_gives_a_clear_message(self):
+        code, _, err, _, _ = run([*S, "--status"], FakeShopify(token_status=400))
+        self.assertEqual(code, 1)
+        self.assertIn("same Shopify organization", err)
+
+    def test_user_errors_are_a_failure_and_are_logged(self):
+        shop = FakeShopify(user_errors=[{"field": ["metafields", "0"], "message": "nope", "code": "X"}])
+        code, _, err, log, _ = run([*S, "--set", "active", "--approved-by", "Harsh"], shop)
+        self.assertEqual(code, 1)
+        self.assertEqual(json.loads(log)["result"], "failed")
+
+    def test_other_mutations_and_deletes_are_refused(self):
+        for q in ("mutation {\n  productDelete(input: {id: \"1\"}) { deletedProductId }\n}", "mutation {\n  themePublish(id: \"1\") { theme { id } }\n}"):
+            with self.assertRaises(licence.LicenceError):
+                licence.graphql("t.myshopify.com", "tok", q, post=FakeShopify())
+
+    def test_bad_shop_name_is_refused(self):
+        code, _, err, _, shop = run(["--shop", "evil.example.com", "--status"])
+        self.assertEqual(code, 2)
+        self.assertEqual(shop.calls, [])
+
+    def test_client_id_is_read_from_the_toml(self):
+        self.assertRegex(licence.client_id(), r"^[0-9a-f]{32}$")
+
+
+if __name__ == "__main__":
+    unittest.main()

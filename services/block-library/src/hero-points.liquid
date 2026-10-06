@@ -1,0 +1,34 @@
+{%- assign hp_eyebrow = block.settings.eyebrow | strip -%}
+{%- assign hp_sub = block.settings.subheading | strip -%}
+{%- assign hp_lines = block.settings.benefits | newline_to_br | split: '<br />' -%}
+{%- assign hp_count = 0 -%}
+{%- capture hp_items -%}
+  {%- for line in hp_lines limit: 40 -%}
+    {%- assign hp_line = line | strip -%}
+    {%- if hp_line != blank and hp_count < 8 -%}
+      {%- assign hp_count = hp_count | plus: 1 -%}
+      <li class="dtj-ci">
+        <span class="dtj-ci__icon" aria-hidden="true">{% render 'dtj-check-icon', name: 'check', size: block.settings.check_size %}</span>
+        <span class="dtj-ci__text">{{ hp_line | escape }}</span>
+      </li>
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
+{%- if hp_eyebrow != blank or hp_sub != blank or hp_items contains '<li' -%}
+  <div class="dtj-b dtj-hero-points" style="{{ dtj_std_style | strip_newlines }} --hp-gap: {{ block.settings.gap }}px; --hp-tick-gap: {{ block.settings.tick_gap }}px; --hp-eyebrow-size: {{ block.settings.eyebrow_size }}px; --hp-sub-size: {{ block.settings.subheading_size }}px; --hp-tick-size: {{ block.settings.tick_size }}px; --dtj-ci-size: {{ block.settings.check_size }}px; --dtj-ci-gap: 10px;{% if block.settings.accent_color != blank %} --hp-accent: {{ block.settings.accent_color }};{% endif %}{% if block.settings.eyebrow_color != blank %} --hp-eyebrow-color: {{ block.settings.eyebrow_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if hp_eyebrow != blank -%}
+      <span class="dtj-hero-points__eyebrow">
+        {%- if block.settings.show_star -%}
+          <svg class="dtj-hero-points__star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 7.1-1.01L12 2z"/></svg>
+        {%- endif -%}
+        {{ hp_eyebrow | escape }}
+      </span>
+    {%- endif -%}
+    {%- if hp_sub != blank -%}
+      <div class="dtj-hero-points__sub">{{ hp_sub }}</div>
+    {%- endif -%}
+    {%- if hp_items contains '<li' -%}
+      <ul class="dtj-hero-points__list">{{ hp_items }}</ul>
+    {%- endif -%}
+  </div>
+{%- endif -%}
