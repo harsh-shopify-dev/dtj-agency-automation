@@ -102,6 +102,15 @@ class LibraryRuleTests(unittest.TestCase):
         css.write_text(css.read_text(encoding="utf-8") + "\n.x-img { width: 20px; height: 20px; }\n", encoding="utf-8")
         self.assertEqual([p for p in self.problems() if "no explicit width" in p], [])
 
+    def test_colour_and_currentcolor_fill_in_one_css_rule_is_rejected(self):
+        # the Add-ons tick never showed (6 Oct 2026): `color: Canvas` and `background: currentColor` in one rule = white on white
+        css = self.root / "extensions/dtj-blocks/assets/dtj-hero-points.css"
+        original = css.read_text(encoding="utf-8")
+        css.write_text(original + "\n.x-dot { background: var(--a, currentColor); color: Canvas; }\n", encoding="utf-8")
+        self.assertTrue(any("currentColor background" in p for p in self.problems()))
+        css.write_text(original + "\n.x-dot { background: var(--a, currentColor); }\n.x-dot span { color: Canvas; }\n", encoding="utf-8")
+        self.assertEqual([p for p in self.problems() if "currentColor background" in p], [])
+
     def test_blank_range_unit_is_rejected(self):
         # Shopify refused a real deploy: 'settings: with id="stock_threshold" unit can't be blank'
         def blank_unit(schema):

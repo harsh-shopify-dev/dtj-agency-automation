@@ -5,13 +5,15 @@ Snippets are wrapped in the theme editor's HTML comments, as on a real store (se
 Shopify-only filters are stubbed.
 """
 import json
+import os
 import re
 import sys
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "tools"))
+TOOLS_HOME = Path(__file__).resolve().parents[1]  # services/block-library: the shared tools live here
+ROOT = Path(os.environ.get("DTJ_APP_ROOT") or TOOLS_HOME).resolve()  # the second app runs these generic tests with DTJ_APP_ROOT set
+sys.path.insert(0, str(TOOLS_HOME / "tools"))
 import build_blocks as bb  # noqa: E402
 import check_library as cl  # noqa: E402
 
@@ -20,7 +22,7 @@ try:
 except ImportError:
     Environment = None
 
-SNIPPETS = ROOT / "extensions/dtj-blocks/snippets"
+SNIPPETS = cl.ext_of(ROOT) / "snippets"
 STANDARD_IDS = {
     "spacing": {"padding_top", "padding_bottom", "padding_left", "padding_right", "margin_top", "margin_bottom"},
     "align": {"align"}, "colors": {"text_color", "background"}, "shape": {"corner_radius"}, "text_size": {"text_size"},
@@ -55,7 +57,7 @@ def render(manifest, overlay=None, metafield="active", design_mode=False, keep_c
     env = Environment(loader=DictLoader({p.stem: source(p) for p in SNIPPETS.glob("*.liquid")}))
     env.add_filter("image_url", lambda value, **kw: f"//img.example/{value}")
     env.add_filter("payment_type_img_url", lambda value: f"//pay.example/{value}.svg")
-    env.add_filter("json", lambda value: json.dumps(value, ensure_ascii=False))  # Shopify's json filter
+    env.add_filter("json", lambda value: json.dumps(value, ensure_ascii=False, default=str))  # Shopify's json filter
     env.add_filter("video_tag", lambda value, **kw: f'<video id="{kw.get("id")}" class="{kw.get("class")}" data-source="{value}"></video>')
     env.add_filter("money", lambda value: f"Rs. {value}")
     app = {"metafields": {"dtj": {"licence": {"value": metafield}}}} if metafield is not None else {"metafields": {}}

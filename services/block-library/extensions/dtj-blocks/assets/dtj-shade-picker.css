@@ -91,6 +91,10 @@
 .dtj-shade-picker__pill[data-current="true"] {
   border-color: var(--sp-accent, currentColor);
   background: var(--sp-accent, currentColor);
+}
+
+/* the white sits on the text, not on the pill: `color` on the pill would turn its currentColor fill white too */
+.dtj-shade-picker__pill[data-current="true"] span {
   color: Canvas;
 }
 

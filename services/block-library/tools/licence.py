@@ -2,11 +2,12 @@
 
     python tools/licence.py --shop NAME.myshopify.com --status
     python tools/licence.py --shop NAME.myshopify.com --set inactive --approved-by Harsh
+    python tools/licence.py --shop NAME.myshopify.com --status --app sections      (the DTJ Sections app: its own client id and secret)
 
 How it gets in: the app's own client credentials grant. This only works for stores in the SAME Shopify organization as
 the app. A client's store outside our org needs a hosted service that catches the install (authorization code grant)
 and keeps that client's token (see docs/block-library-design.md).
-Secrets: the client secret is read from the environment variable DTJ_BLOCKS_CLIENT_SECRET. It is never printed or logged.
+Secrets: the client secret is read from the environment variable DTJ_BLOCKS_CLIENT_SECRET (DTJ_SECTIONS_CLIENT_SECRET with --app sections). It is never printed or logged.
 Changing the flag is a tier 2 action: it needs --approved-by, and every change appends a row to the log.
 """
 from __future__ import annotations
@@ -23,6 +24,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SECRET_ENV = "DTJ_BLOCKS_CLIENT_SECRET"
+# one entry per app: its shopify.app.toml (holds the client id, not a secret) and the environment variable that holds ITS client secret
+APPS = {
+    "blocks": (ROOT / "shopify.app.toml", SECRET_ENV),
+    "sections": (ROOT.parent / "block-library-sections" / "shopify.app.toml", "DTJ_SECTIONS_CLIENT_SECRET"),
+}
 API_VERSION = "2026-07"
 STATUSES = ("active", "inactive")
 _SHOP = re.compile(r"^[a-z0-9][a-z0-9-]*\.myshopify\.com$")
@@ -43,6 +49,8 @@ class LicenceError(Exception):
 
 
 def client_id(toml_path: Path = ROOT / "shopify.app.toml") -> str:
+    if not toml_path.is_file():
+        raise LicenceError(f"{toml_path} not found: create and link the app first (`shopify app config link` in its folder)")
     match = re.search(r'^client_id\s*=\s*"([0-9a-f]+)"', toml_path.read_text(encoding="utf-8"), re.M)
     if not match:
         raise LicenceError("client_id not found in shopify.app.toml (run `shopify app config link`)")
@@ -124,6 +132,7 @@ def main(argv: list[str] | None = None, env=os.environ, post=post_json) -> int:
     group.add_argument("--status", action="store_true", help="read the current flag (read only)")
     group.add_argument("--set", choices=STATUSES)
     ap.add_argument("--approved-by")
+    ap.add_argument("--app", choices=sorted(APPS), default="blocks", help="which app's flag: blocks (DTJ Blocks, default) or sections (DTJ Sections)")
     ap.add_argument("--log", default=str(ROOT.parents[1] / ".work" / "out" / "licence-log.jsonl"))
     args = ap.parse_args(argv)
     if not _SHOP.match(args.shop):
@@ -132,12 +141,13 @@ def main(argv: list[str] | None = None, env=os.environ, post=post_json) -> int:
     if args.set and not args.approved_by:
         print("BLOCKED: changing the flag needs --approved-by NAME (tier 2)", file=sys.stderr)
         return 2
-    secret = env.get(SECRET_ENV)
+    toml_path, secret_env = APPS[args.app]
+    secret = env.get(secret_env)
     if not secret:
-        print(f"BLOCKED: {SECRET_ENV} is not set in the environment", file=sys.stderr)
+        print(f"BLOCKED: {secret_env} is not set in the environment", file=sys.stderr)
         return 2
     try:
-        token = get_token(args.shop, client_id(), secret, post)
+        token = get_token(args.shop, client_id(toml_path), secret, post)
         if args.status:
             print(json.dumps(read_status(args.shop, token, post)))
             return 0

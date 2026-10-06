@@ -19,12 +19,20 @@
 .dtj-testimonials__slide {
   display: flex;
   flex: 0 0 100%;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   box-sizing: border-box;
+  min-width: 0;
   margin: 0;
   padding: var(--tt-pad, 16px);
-  padding-inline-end: calc(var(--tt-pad, 16px) + 28px);
+}
+
+.dtj-testimonials__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-inline-end: 40px; /* room for the next arrow, top right */
 }
 
 .dtj-testimonials__avatar {
@@ -37,9 +45,13 @@
   overflow: hidden;
   border-radius: 50%;
   background: var(--tt-accent, currentColor);
-  color: Canvas;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+/* the initial is white; setting `color` on the avatar itself would turn its currentColor fill white too */
+.dtj-testimonials__avatar span {
+  color: Canvas;
 }
 
 .dtj-testimonials__avatar img {
@@ -50,13 +62,10 @@
   object-fit: cover;
 }
 
-.dtj-testimonials__content {
-  flex: 1;
-  min-width: 0;
-}
-
 .dtj-testimonials__header {
   display: flex;
+  flex: 1;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
@@ -94,13 +103,14 @@
 
 .dtj-testimonials__body {
   display: flex;
+  flex-wrap: wrap; /* the photo drops under the text when the card is narrow (phones) */
   align-items: flex-start;
   gap: 10px;
-  margin-top: 6px;
 }
 
 .dtj-testimonials__quote {
-  flex: 1;
+  flex: 1 1 240px;
+  min-width: 0;
   margin: 0;
   font-size: var(--tt-quote-size, 15px);
   line-height: 1.5;
@@ -118,8 +128,8 @@
 
 .dtj-testimonials__next {
   position: absolute;
-  inset-block-start: 50%;
-  inset-inline-end: 6px;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -130,7 +140,6 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
-  transform: translateY(-50%);
 }
 
 .dtj-testimonials__next svg {

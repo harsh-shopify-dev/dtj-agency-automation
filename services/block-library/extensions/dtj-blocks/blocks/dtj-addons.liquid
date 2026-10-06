@@ -91,9 +91,6 @@
             endif
           -%}
           <div class="dtj-addons__card" data-card data-selected="false" data-sold-out="{{ ao_sold_out }}" data-recommended="{{ ao_recommended }}" data-rec-label="{{ block.settings.recommended_label | escape }}" data-variant-main="{{ v_main.id }}"{% if has_alt %} data-variant-alt="{{ v_alt.id }}"{% endif %} data-price-main="{{ v_main.price }}"{% if has_alt %} data-price-alt="{{ v_alt.price }}"{% endif %} data-compare-main="{{ compare_main }}"{% if has_alt %} data-compare-alt="{{ compare_alt }}"{% endif %} data-show-compare="{{ block.settings[ck] }}" data-active-variant="main" role="button" tabindex="0" aria-pressed="false" aria-label="{{ ao_name | escape }}">
-            <span class="dtj-addons__radio" aria-hidden="true">
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
-            </span>
             <div class="dtj-addons__thumb" data-thumb>
               {%- if ao_thumb and ao_thumb != blank -%}
                 <img src="{{ ao_thumb | image_url: width: 200 }}" alt="" width="64" height="64" loading="lazy">
@@ -112,12 +109,12 @@
             </div>
             {%- if has_alt -%}
               <div class="dtj-addons__swap" role="group">
-                <button type="button" data-swap="main" aria-pressed="true" data-variant="{{ v_main.id }}" data-title="{{ ao_name | escape }}" data-image="{% if ao_thumb and ao_thumb != blank %}{{ ao_thumb | image_url: width: 200 }}{% endif %}">{{ ao_name | escape }}</button>
-                <button type="button" data-swap="alt" aria-pressed="false" data-variant="{{ v_alt.id }}" data-title="{{ p_alt.title | escape }}" data-image="{% if p_alt.featured_media %}{{ p_alt.featured_media | image_url: width: 200 }}{% endif %}">{{ p_alt.title | escape }}</button>
+                <button type="button" data-swap="main" aria-pressed="true" data-variant="{{ v_main.id }}" data-title="{{ ao_name | escape }}" data-image="{% if ao_thumb and ao_thumb != blank %}{{ ao_thumb | image_url: width: 200 }}{% endif %}"><span>{{ ao_name | escape }}</span></button>
+                <button type="button" data-swap="alt" aria-pressed="false" data-variant="{{ v_alt.id }}" data-title="{{ p_alt.title | escape }}" data-image="{% if p_alt.featured_media %}{{ p_alt.featured_media | image_url: width: 200 }}{% endif %}"><span>{{ p_alt.title | escape }}</span></button>
               </div>
             {%- endif -%}
             <span class="dtj-addons__cta" aria-hidden="true">
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3" pathLength="1"/></svg>
               <span data-cta-label>{% if ao_sold_out %}{{ block.settings.sold_out_label | escape }}{% else %}{{ block.settings.select_label | escape }}{% endif %}</span>
             </span>
           </div>
@@ -126,7 +123,7 @@
     </div>
   </dtj-addons>
 {%- elsif request.design_mode -%}
-  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing). Products received: {{ ao_seen }}.</p>
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing). Products received: {{ ao_seen }}. Raw list size: {{ block.settings.products.size | default: 'none' }}; list: {{ block.settings.products | json | truncate: 150 | escape }}; settings: {{ block.settings | json | truncate: 260 | escape }}</p>
 {%- endif -%}
 {%- endcapture -%}
 

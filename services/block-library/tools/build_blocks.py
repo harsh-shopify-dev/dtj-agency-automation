@@ -17,12 +17,30 @@ Every block gets the same standard controls, so no block ships with missing sett
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-BLOCKS = ROOT / "extensions" / "dtj-blocks" / "blocks"
-ASSETS = ROOT / "extensions" / "dtj-blocks" / "assets"
+TOOLS_HOME = Path(__file__).resolve().parents[1]  # the folder these shared tools live in (services/block-library)
+
+
+def extension_dir(root: Path) -> Path:
+    """The app's single theme extension folder (one extension per app), e.g. extensions/dtj-blocks."""
+    found = [p for p in (root / "extensions").iterdir() if p.is_dir()] if (root / "extensions").is_dir() else []
+    if len(found) != 1:
+        raise SystemExit(f"{root}: expected exactly one folder under extensions/, found {[p.name for p in found]}")
+    return found[0]
+
+
+def use_root(root: Path) -> None:
+    """Point the builder at an app folder. Default = the first app; the second app sets DTJ_APP_ROOT or passes --root."""
+    global ROOT, BLOCKS, ASSETS
+    ROOT = Path(root).resolve()
+    BLOCKS = extension_dir(ROOT) / "blocks"
+    ASSETS = extension_dir(ROOT) / "assets"
+
+
+use_root(os.environ.get("DTJ_APP_ROOT") or TOOLS_HOME)
 
 # ---- standard controls (single definition, used by every generated block) ----
 
@@ -132,6 +150,8 @@ def targets() -> list[tuple[Path, str]]:
 
 
 def main(argv: list[str]) -> int:
+    if "--root" in argv:
+        use_root(Path(argv[argv.index("--root") + 1]))
     check = "--check" in argv
     stale = []
     for path, text in targets():

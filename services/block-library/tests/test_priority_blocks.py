@@ -45,6 +45,21 @@ class HeroPointsTests(unittest.TestCase):
         self.assertNotIn("--hp-accent", render(self.m, {"eyebrow": "New"}))
         self.assertIn("--hp-accent: rgb(1, 2, 3)", render(self.m, {"eyebrow": "New", "accent_color": "rgb(1, 2, 3)"}))
 
+    def test_one_column_is_the_default_and_two_columns_is_opt_in(self):
+        self.assertIn("--hp-cols: 1;", render(self.m, {"benefits": "A\nB"}))
+        html = render(self.m, {"benefits": "A\nB\nC", "columns": "2"})
+        self.assertIn("--hp-cols: 2;", html)
+        self.assertIn('data-columns="2"', html)
+        self.assertEqual(html.count("<li"), 3)  # same items, only the layout changes
+
+    def test_an_unknown_column_value_falls_back_to_one(self):
+        self.assertIn("--hp-cols: 1;", render(self.m, {"benefits": "A\nB", "columns": "7"}))
+
+    def test_stacking_on_phones_only_applies_to_two_columns(self):
+        self.assertIn("dtj-hero-points--stack", render(self.m, {"benefits": "A\nB", "columns": "2", "stack_mobile": True}))
+        self.assertNotIn("dtj-hero-points--stack", render(self.m, {"benefits": "A\nB", "columns": "2", "stack_mobile": False}))
+        self.assertNotIn("dtj-hero-points--stack", render(self.m, {"benefits": "A\nB", "columns": "1", "stack_mobile": True}))
+
     def test_each_part_is_optional(self):
         self.assertNotIn("dtj-hero-points__list", render(self.m, {"eyebrow": "Only eyebrow"}))
         self.assertNotIn("dtj-hero-points__eyebrow", render(self.m, {"subheading": "Only sub"}))

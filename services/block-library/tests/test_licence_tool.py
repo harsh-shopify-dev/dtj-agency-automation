@@ -105,6 +105,34 @@ class LicenceToolTests(unittest.TestCase):
     def test_client_id_is_read_from_the_toml(self):
         self.assertRegex(licence.client_id(), r"^[0-9a-f]{32}$")
 
+    def test_the_sections_app_uses_its_own_secret_variable_never_the_blocks_one(self):
+        # only the blocks secret is set: asking for the sections app must stop before any call, naming ITS variable
+        code, _, err, _, shop = run([*S, "--status", "--app", "sections"])
+        self.assertEqual(code, 2)
+        self.assertIn("DTJ_SECTIONS_CLIENT_SECRET", err)
+        self.assertEqual(shop.calls, [])
+
+    def test_the_sections_app_needs_to_be_linked_before_its_flag_can_be_touched(self):
+        with tempfile.TemporaryDirectory() as d:
+            missing = Path(d, "shopify.app.toml")
+            with mock.patch.dict(licence.APPS, {"sections": (missing, "DTJ_SECTIONS_CLIENT_SECRET")}):
+                code, _, err, _, shop = run([*S, "--status", "--app", "sections"], env={"DTJ_SECTIONS_CLIENT_SECRET": "OTHERSECRET"})
+        self.assertEqual(code, 1)
+        self.assertIn("link the app first", err)
+        self.assertEqual(shop.calls, [])
+
+    def test_the_sections_app_uses_its_own_client_id_and_secret(self):
+        with tempfile.TemporaryDirectory() as d:
+            toml = Path(d, "shopify.app.toml")
+            toml.write_text('client_id = "' + "ab" * 16 + '"\n', encoding="utf-8")
+            with mock.patch.dict(licence.APPS, {"sections": (toml, "DTJ_SECTIONS_CLIENT_SECRET")}):
+                code, out, err, log, shop = run([*S, "--status", "--app", "sections"], FakeShopify(current="active"), env={"DTJ_SECTIONS_CLIENT_SECRET": "OTHERSECRET"})
+        self.assertEqual(code, 0)
+        token_call = [c for c in shop.calls if c[0].endswith("/oauth/access_token")][0]
+        self.assertIn("ab" * 16, json.dumps(token_call[1]))
+        self.assertIn("OTHERSECRET", json.dumps(token_call[1]))
+        self.assertNotIn("OTHERSECRET", out + err + log)
+
 
 if __name__ == "__main__":
     unittest.main()

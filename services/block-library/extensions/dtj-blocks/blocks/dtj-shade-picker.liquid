@@ -49,7 +49,7 @@
         -%}
         {%- if p and p != blank -%}
           {%- if block.settings.style == 'pill' -%}
-            <a class="dtj-shade-picker__pill" href="{{ p.url }}" data-item data-label="{{ sp_text | escape }}" data-current="{{ sp_is_current }}" data-unavailable="{{ sp_sold_out }}"{% if sp_is_current %} aria-current="page"{% endif %}{% if sp_sold_out %} aria-disabled="true"{% endif %}>{{ sp_text | escape }}</a>
+            <a class="dtj-shade-picker__pill" href="{{ p.url }}" data-item data-label="{{ sp_text | escape }}" data-current="{{ sp_is_current }}" data-unavailable="{{ sp_sold_out }}"{% if sp_is_current %} aria-current="page"{% endif %}{% if sp_sold_out %} aria-disabled="true"{% endif %}><span>{{ sp_text | escape }}</span></a>
           {%- else -%}
             <a class="dtj-shade-picker__item" href="{{ p.url }}" data-item data-label="{{ sp_text | escape }}" data-current="{{ sp_is_current }}" data-unavailable="{{ sp_sold_out }}" title="{{ sp_text | escape }}"{% if sp_is_current %} aria-current="page"{% endif %}{% if sp_sold_out %} aria-disabled="true"{% endif %}>
               <span class="dtj-shade-picker__swatch">
@@ -72,7 +72,7 @@
     </div>
   </dtj-shade-picker>
 {%- elsif request.design_mode -%}
-  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Option Picker is empty. Choose at least one product under "Option products" (editor only: shoppers see nothing). Products received: {{ sp_seen }}.</p>
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Option Picker is empty. Choose at least one product under "Option products" (editor only: shoppers see nothing). Products received: {{ sp_seen }}. Raw list size: {{ block.settings.products.size | default: 'none' }}; list: {{ block.settings.products | json | truncate: 150 | escape }}; settings: {{ block.settings | json | truncate: 260 | escape }}</p>
 {%- endif -%}
 {%- endcapture -%}
 

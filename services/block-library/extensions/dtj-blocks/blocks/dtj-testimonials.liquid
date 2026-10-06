@@ -36,14 +36,14 @@
           -%}
           {%- if tt_quote != blank -%}
             <figure class="dtj-testimonials__slide" data-slide>
-              <div class="dtj-testimonials__avatar">
-                {%- if tt_avatar and tt_avatar != blank -%}
-                  <img src="{{ tt_avatar | image_url: width: 96 }}" alt="" width="48" height="48" loading="lazy">
-                {%- else -%}
-                  {{- tt_name | slice: 0 | escape -}}
-                {%- endif -%}
-              </div>
-              <div class="dtj-testimonials__content">
+              <div class="dtj-testimonials__top">
+                <div class="dtj-testimonials__avatar">
+                  {%- if tt_avatar and tt_avatar != blank -%}
+                    <img src="{{ tt_avatar | image_url: width: 96 }}" alt="" width="48" height="48" loading="lazy">
+                  {%- else -%}
+                    <span>{{- tt_name | slice: 0 | escape -}}</span>
+                  {%- endif -%}
+                </div>
                 <div class="dtj-testimonials__header">
                   {%- if tt_name != blank -%}<span class="dtj-testimonials__name">{{ tt_name | escape }}</span>{%- endif -%}
                   {%- if tt_location != blank -%}<span class="dtj-testimonials__location">{{ tt_location | escape }}</span>{%- endif -%}
@@ -60,12 +60,12 @@
                   {%- endif -%}
                   {%- if tt_badge != blank -%}<span class="dtj-testimonials__badge">{{ tt_badge | escape }}</span>{%- endif -%}
                 </div>
-                <div class="dtj-testimonials__body">
-                  <blockquote class="dtj-testimonials__quote">{{ tt_quote | escape }}</blockquote>
-                  {%- if tt_photo and tt_photo != blank -%}
-                    <img class="dtj-testimonials__photo" src="{{ tt_photo | image_url: width: 150 }}" alt="" width="64" height="64" loading="lazy">
-                  {%- endif -%}
-                </div>
+              </div>
+              <div class="dtj-testimonials__body">
+                <blockquote class="dtj-testimonials__quote">{{ tt_quote | escape }}</blockquote>
+                {%- if tt_photo and tt_photo != blank -%}
+                  <img class="dtj-testimonials__photo" src="{{ tt_photo | image_url: width: 150 }}" alt="" width="64" height="64" loading="lazy">
+                {%- endif -%}
               </div>
             </figure>
           {%- endif -%}

@@ -59,85 +59,57 @@
 .dtj-addons__list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px; /* room for the BEST tag that straddles a card's top edge */
 }
 
 .dtj-addons__card {
   position: relative;
   display: grid;
-  grid-template-columns: 20px 64px 1fr auto;
-  grid-template-rows: auto auto;
-  align-items: start;
-  gap: 10px 14px;
-  min-height: 88px;
-  padding: 14px;
-  border: 1px solid var(--ao-border, color-mix(in srgb, currentColor 20%, transparent));
-  border-radius: var(--dtj-radius, 8px);
+  grid-template-columns: 64px minmax(0, 1fr) auto; /* only one explicit row: the swap row exists only on cards that have one */
+  align-items: center;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--ao-border, color-mix(in srgb, currentColor 16%, transparent));
+  border-radius: var(--dtj-radius, 12px);
   background: var(--ao-card-bg, transparent);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.dtj-addons__radio { align-self: center; }
-.dtj-addons__thumb { grid-row: 1; align-self: center; }
-.dtj-addons__body { grid-row: 1; grid-column: 3; align-self: center; }
-.dtj-addons__cta { grid-row: 1; grid-column: 4; align-self: center; }
-.dtj-addons__swap { grid-row: 2; grid-column: 2 / -1; width: 100%; margin-top: 2px; }
+.dtj-addons__thumb { grid-row: 1; grid-column: 1; }
+.dtj-addons__body { grid-row: 1; grid-column: 2; }
+.dtj-addons__cta { grid-row: 1; grid-column: 3; }
+.dtj-addons__swap { grid-row: 2; grid-column: 1 / -1; width: 100%; }
 
 .dtj-addons__card:hover {
   border-color: color-mix(in srgb, var(--ao-accent, currentColor) 35%, transparent);
 }
 
+.dtj-addons__card:focus-visible {
+  outline: 2px solid var(--ao-accent, currentColor);
+  outline-offset: 2px;
+}
+
+/* selected: a crisp 2px edge (1px border + 1px ring, so nothing shifts) and a soft lift instead of a grey wash */
 .dtj-addons__card[data-selected="true"] {
   border-color: var(--ao-accent, currentColor);
+  box-shadow: 0 0 0 1px var(--ao-accent, currentColor), 0 6px 16px -6px color-mix(in srgb, currentColor 22%, transparent);
 }
 
 .dtj-addons__card[data-recommended="true"][data-rec-label]:not([data-rec-label=""])::before {
   content: attr(data-rec-label);
   position: absolute;
-  top: -8px;
-  left: 12px;
-  padding: 2px 8px;
+  top: -9px;
+  left: 14px;
+  padding: 3px 9px;
   border: 1px solid var(--ao-accent, currentColor);
-  border-radius: var(--dtj-radius, 8px);
+  border-radius: 999px;
   background: var(--ao-card-bg, Canvas);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
-}
-
-.dtj-addons__radio {
-  position: relative;
-  flex: none;
-  justify-self: center;
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid var(--ao-border, color-mix(in srgb, currentColor 20%, transparent));
-  border-radius: 50%;
-  background: Canvas;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.dtj-addons__card[data-selected="true"] .dtj-addons__radio {
-  border-color: var(--ao-accent, currentColor);
-  background: var(--ao-accent, currentColor);
-}
-
-.dtj-addons__radio svg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 10px;
-  height: 10px;
-  color: Canvas;
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.15s ease;
-}
-
-.dtj-addons__card[data-selected="true"] .dtj-addons__radio svg {
-  transform: translate(-50%, -50%) scale(1);
 }
 
 .dtj-addons__thumb {
@@ -146,7 +118,7 @@
   height: 64px;
   overflow: hidden;
   border: 1px solid var(--ao-border, color-mix(in srgb, currentColor 20%, transparent));
-  border-radius: var(--dtj-radius, 8px);
+  border-radius: calc(var(--dtj-radius, 12px) - 2px);
 }
 
 .dtj-addons__thumb img {
@@ -260,8 +232,11 @@
 
 .dtj-addons__swap button[aria-pressed="true"] {
   background: var(--ao-accent, currentColor);
-  color: Canvas;
   font-weight: 600;
+}
+
+.dtj-addons__swap button[aria-pressed="true"] span {
+  color: Canvas;
 }
 
 .dtj-addons__swap button[aria-pressed="true"]::before {
@@ -270,56 +245,89 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: currentcolor;
+  background: Canvas;
 }
 
+/* The selection control: an empty round ring when off, a filled circle with a tick when on.
+   If the merchant types button text it becomes a pill ("Add" / "Added") with the tick beside the text. */
 .dtj-addons__cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   justify-self: end;
-  gap: 4px;
-  min-height: 36px;
-  padding: 8px 16px;
-  border: 1px solid var(--ao-accent, currentColor);
-  border-radius: var(--dtj-radius, 8px);
+  box-sizing: border-box;
+  gap: 6px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1.5px solid var(--ao-border, color-mix(in srgb, currentColor 28%, transparent));
+  border-radius: 999px;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.dtj-addons__cta:has([data-cta-label]:empty) {
-  min-width: 36px;
-  padding: 8px;
+/* an empty label would still take a flex slot and its gap, pushing the tick off the circle's centre */
+.dtj-addons__cta [data-cta-label]:empty {
+  display: none;
+}
+
+.dtj-addons__cta:has([data-cta-label]:not(:empty)) {
+  height: 32px;
+  padding: 0 14px;
+  border-color: var(--ao-accent, currentColor);
 }
 
 @media (hover: hover) {
   .dtj-addons__card:not([data-selected="true"]):hover .dtj-addons__cta {
-    background: color-mix(in srgb, currentColor 5%, transparent);
+    border-color: var(--ao-accent, currentColor);
   }
 }
 
+/* The fill is the control's own text colour, so the white must sit on the children (tick, label): setting
+   `color` here would also change what "currentColor" means for the fill and paint it white. */
 .dtj-addons__card[data-selected="true"] .dtj-addons__cta {
   border-color: var(--ao-accent, currentColor);
   background: var(--ao-accent, currentColor);
+}
+
+.dtj-addons__card[data-selected="true"] .dtj-addons__cta svg,
+.dtj-addons__card[data-selected="true"] .dtj-addons__cta [data-cta-label] {
   color: Canvas;
 }
 
 .dtj-addons__cta svg {
-  display: none;
+  display: block;
   flex: none;
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+}
+
+/* the tick draws itself in (pathLength is 1 in the markup) */
+.dtj-addons__cta svg polyline {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.28s ease 0.06s;
+}
+
+.dtj-addons__cta:has([data-cta-label]:not(:empty)) svg {
   width: 12px;
   height: 12px;
 }
 
-.dtj-addons__card[data-selected="true"] .dtj-addons__cta svg {
-  display: inline-block;
+.dtj-addons__card:not([data-selected="true"]) .dtj-addons__cta:has([data-cta-label]:not(:empty)) svg {
+  display: none;
+}
+
+.dtj-addons__card[data-selected="true"] .dtj-addons__cta svg polyline {
+  stroke-dashoffset: 0;
 }
 
 .dtj-addons__card[data-sold-out="true"] {
@@ -335,21 +343,18 @@
 
 @media screen and (max-width: 749px) {
   .dtj-addons__card {
-    grid-template-columns: 20px 56px 1fr auto;
-    gap: 10px;
-    min-height: 44px;
-    padding: 12px;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 10px 12px;
+    padding: 12px 14px;
   }
 
   .dtj-addons__thumb { width: 56px; height: 56px; }
   .dtj-addons__headline { font-size: calc(var(--ao-headline, 14px) - 1px); }
-  .dtj-addons__cta { min-height: 44px; padding: 8px 12px; font-size: 11px; }
-  .dtj-addons__swap { grid-column: 1 / -1; }
   .dtj-addons__swap button { min-height: 44px; padding: 10px 8px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dtj-addons__card,
-  .dtj-addons__radio,
-  .dtj-addons__radio svg { transition: none; }
+  .dtj-addons__cta,
+  .dtj-addons__cta svg polyline { transition: none; }
 }
