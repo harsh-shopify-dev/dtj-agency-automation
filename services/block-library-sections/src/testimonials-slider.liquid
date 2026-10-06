@@ -1,0 +1,104 @@
+{%- liquid
+  assign ts_count = 0
+  for i in (1..8)
+    assign tk = 'text_' | append: i
+    assign tv = block.settings[tk] | strip
+    if tv != blank
+      assign ts_count = ts_count | plus: 1
+    endif
+  endfor
+  assign ts_heading = block.settings.heading | strip
+  assign ts_sub = block.settings.subheading | strip
+  assign ts_summary = block.settings.summary_line | strip
+  assign ts_cta = block.settings.cta_text | strip
+  assign ts_per = block.settings.per_view | plus: 0
+  if ts_per < 1 or ts_per > 4
+    assign ts_per = 3
+  endif
+  assign ts_per_m = block.settings.per_view_mobile | plus: 0
+  if ts_per_m < 1 or ts_per_m > 2
+    assign ts_per_m = 1
+  endif
+  assign ts_shape = 'circle'
+  if block.settings.image_shape == 'rounded' or block.settings.image_shape == 'square'
+    assign ts_shape = block.settings.image_shape
+  endif
+  assign star_path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
+  assign ts_nav = false
+  if ts_count > 1
+    if block.settings.show_arrows or block.settings.show_dots
+      assign ts_nav = true
+    endif
+  endif
+-%}
+{%- if ts_count > 0 or ts_heading != blank or ts_sub != blank or ts_summary != blank -%}
+  <dtj-ts class="dtj-b dtj-ts dtj-ts--{{ ts_shape }}" style="{{ dtj_std_style | strip_newlines }} --ts-per: {{ ts_per }}; --ts-per-m: {{ ts_per_m }}; --ts-img: {{ block.settings.image_size }}px;{% if block.settings.star_color != blank %} --ts-star: {{ block.settings.star_color }};{% endif %}{% if block.settings.accent_color != blank %} --ts-accent: {{ block.settings.accent_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if ts_summary != blank or ts_heading != blank or ts_sub != blank -%}
+      <div class="dtj-ts__intro">
+        {%- if ts_summary != blank -%}<p class="dtj-ts__summary">{{ ts_summary | escape }}</p>{%- endif -%}
+        {%- if ts_heading != blank -%}<h2 class="dtj-ts__head">{{ ts_heading | escape }}</h2>{%- endif -%}
+        {%- if ts_sub != blank -%}<p class="dtj-ts__sub">{{ ts_sub }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if ts_count > 0 -%}
+      <div class="dtj-ts__track" data-track tabindex="0">
+        {%- for i in (1..8) -%}
+          {%- liquid
+            assign tk = 'text_' | append: i
+            assign hk = 'heading_' | append: i
+            assign ak = 'author_' | append: i
+            assign sk = 'stars_' | append: i
+            assign ik = 'image_' | append: i
+            assign ts_text = block.settings[tk] | strip
+            assign ts_title = block.settings[hk] | strip
+            assign ts_author = block.settings[ak] | strip
+            assign ts_image = block.settings[ik]
+            assign ts_stars = block.settings[sk] | plus: 0
+            assign ts_star_limit = ts_stars | plus: 1
+          -%}
+          {%- if ts_text != blank -%}
+            <figure class="dtj-ts__card" data-slide>
+              {%- if ts_stars > 0 -%}
+                <span class="dtj-ts__stars" role="img" aria-label="{{ ts_stars }} / 5">
+                  {%- for s in (1..5) -%}
+                    {%- if s < ts_star_limit -%}
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ star_path }}"/></svg>
+                    {%- else -%}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="{{ star_path }}"/></svg>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </span>
+              {%- endif -%}
+              {%- if ts_title != blank -%}<h3 class="dtj-ts__title">{{ ts_title | escape }}</h3>{%- endif -%}
+              <blockquote class="dtj-ts__text">{{ ts_text | escape }}</blockquote>
+              {%- if ts_author != blank or ts_image != blank -%}
+                <figcaption class="dtj-ts__who">
+                  {%- if ts_image and ts_image != blank -%}
+                    <img class="dtj-ts__photo" src="{{ ts_image | image_url: width: 160 }}" alt="" width="56" height="56" loading="lazy">
+                  {%- endif -%}
+                  {%- if ts_author != blank -%}<span class="dtj-ts__author">{{ ts_author | escape }}</span>{%- endif -%}
+                </figcaption>
+              {%- endif -%}
+            </figure>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      {%- if ts_nav -%}
+        <div class="dtj-ts__nav" data-nav hidden>
+          {%- if block.settings.show_arrows -%}
+            <button type="button" class="dtj-ts__arrow" data-prev aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+          {%- endif -%}
+          {%- if block.settings.show_dots -%}<div class="dtj-ts__dots" data-dots></div>{%- endif -%}
+          {%- if block.settings.show_arrows -%}
+            <button type="button" class="dtj-ts__arrow" data-next aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    {%- endif -%}
+    {%- if ts_cta != blank -%}
+      <div class="dtj-ts__cta-wrap"><a class="dtj-ts__cta" href="{{ block.settings.cta_url | default: '#' }}"><span>{{ ts_cta | escape }}</span></a></div>
+    {%- endif -%}
+  </dtj-ts>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Testimonials Slider is empty. Type text into "Review 1 text" (editor only: shoppers see nothing).</p>
+{%- endif -%}

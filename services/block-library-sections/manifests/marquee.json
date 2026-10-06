@@ -1,0 +1,322 @@
+{
+  "id": "marquee",
+  "title": "DTJ Marquee",
+  "block_file": "extensions/dtj-sections/blocks/dtj-marquee.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "text_1",
+      "type": "text",
+      "required": true,
+      "max_length": 80
+    },
+    {
+      "id": "image_1",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_6",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_7",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_7",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_8",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_8",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_9",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_9",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_10",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_10",
+      "type": "image_picker",
+      "required": false
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "padding_top": 14,
+    "padding_bottom": 14,
+    "text_size": 14
+  },
+  "settings": [
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Seconds per loop",
+      "min": 10,
+      "max": 80,
+      "step": 1,
+      "unit": "s",
+      "default": 30,
+      "info": "Lower = faster."
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_on_hover",
+      "label": "Pause when hovered",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "uppercase",
+      "label": "Uppercase text",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "letter_spacing",
+      "label": "Letter spacing",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "%",
+      "default": 2,
+      "info": "In hundredths of the text size."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_default_icon",
+      "label": "Tick icon when an item has no image",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dividers",
+      "label": "Dot between items",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Tick icons and dots. Empty = same as the text."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between items",
+      "min": 16,
+      "max": 100,
+      "step": 2,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 12,
+      "max": 60,
+      "step": 1,
+      "unit": "px",
+      "default": 18
+    },
+    {
+      "type": "text",
+      "id": "text_1",
+      "label": "Item 1 text",
+      "info": "An item only shows when it has text."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Item 1 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_2",
+      "label": "Item 2 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Item 2 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_3",
+      "label": "Item 3 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Item 3 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_4",
+      "label": "Item 4 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Item 4 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_5",
+      "label": "Item 5 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Item 5 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_6",
+      "label": "Item 6 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Item 6 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_7",
+      "label": "Item 7 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_7",
+      "label": "Item 7 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_8",
+      "label": "Item 8 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_8",
+      "label": "Item 8 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_9",
+      "label": "Item 9 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_9",
+      "label": "Item 9 icon image"
+    },
+    {
+      "type": "text",
+      "id": "text_10",
+      "label": "Item 10 text"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_10",
+      "label": "Item 10 icon image"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "text_1": "First item",
+      "text_2": "Second item"
+    },
+    "expect": [
+      "First item",
+      "Second item",
+      "dtj-mq__set"
+    ]
+  }
+}

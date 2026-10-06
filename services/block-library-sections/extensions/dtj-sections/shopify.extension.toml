@@ -1,0 +1,4 @@
+name = "DTJ Sections"
+type = "theme"
+uid = "5f373637-31f9-7d32-2a2f-90337f190e5c9459a568"
+# `uid` is added by the Shopify CLI the first time this extension is deployed from the linked app.

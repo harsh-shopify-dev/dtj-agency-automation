@@ -1,0 +1,302 @@
+{
+  "id": "comparison-table",
+  "title": "DTJ Comparison Table",
+  "block_file": "extensions/dtj-sections/blocks/dtj-comparison-table.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "our_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "our_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "other_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "other_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "our_1",
+      "type": "inline_richtext",
+      "required": true
+    },
+    {
+      "id": "other_1",
+      "type": "inline_richtext",
+      "required": true
+    },
+    {
+      "id": "our_2",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_2",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "our_3",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_3",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "our_4",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_4",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "our_5",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_5",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "our_6",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_6",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "our_7",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_7",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "our_8",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "other_8",
+      "type": "inline_richtext",
+      "required": false
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "shape",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "corner_radius": 14,
+    "text_size": 14
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "our_label",
+      "label": "Our column title"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image",
+      "label": "Our column image"
+    },
+    {
+      "type": "text",
+      "id": "other_label",
+      "label": "Other column title"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image",
+      "label": "Other column image"
+    },
+    {
+      "type": "checkbox",
+      "id": "highlight_ours",
+      "label": "Highlight our column",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_marks",
+      "label": "Show a tick / cross beside each row",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Our column highlight and ticks. Empty = same as the text."
+    },
+    {
+      "type": "range",
+      "id": "image_height",
+      "label": "Column image height",
+      "min": 40,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading size",
+      "min": 20,
+      "max": 48,
+      "step": 1,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_1",
+      "label": "Row 1: our side",
+      "info": "A row shows when either side has text."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_1",
+      "label": "Row 1: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_2",
+      "label": "Row 2: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_2",
+      "label": "Row 2: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_3",
+      "label": "Row 3: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_3",
+      "label": "Row 3: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_4",
+      "label": "Row 4: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_4",
+      "label": "Row 4: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_5",
+      "label": "Row 5: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_5",
+      "label": "Row 5: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_6",
+      "label": "Row 6: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_6",
+      "label": "Row 6: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_7",
+      "label": "Row 7: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_7",
+      "label": "Row 7: other side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "our_8",
+      "label": "Row 8: our side"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "other_8",
+      "label": "Row 8: other side"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "our_label": "Ours",
+      "other_label": "Others",
+      "our_1": "Our row one",
+      "other_1": "Their row one",
+      "our_2": "Our row two"
+    },
+    "expect": [
+      "Heading sample",
+      "Ours",
+      "Others",
+      "Our row one",
+      "Their row one",
+      "Our row two",
+      "dtj-cmp__table"
+    ]
+  }
+}

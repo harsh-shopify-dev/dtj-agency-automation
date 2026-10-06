@@ -1,0 +1,494 @@
+{
+  "id": "whats-inside",
+  "title": "DTJ Whats Inside",
+  "block_file": "extensions/dtj-sections/blocks/dtj-whats-inside.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "eyebrow",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "highlight_word",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subheading",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_1",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "name_1",
+      "type": "text",
+      "required": true,
+      "max_length": 80
+    },
+    {
+      "id": "description_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "dose_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "benefits_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "name_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "dose_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "benefits_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "name_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "dose_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "benefits_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "name_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "dose_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "benefits_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "name_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "dose_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "benefits_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_6",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "name_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "dose_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "benefits_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "text_size": 14
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "info": "Small line above the heading. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "highlight_word",
+      "label": "Highlighted part of the heading",
+      "info": "Type it exactly as it appears in the heading. It is shown on its own line in the highlight color."
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Columns on desktop",
+      "default": "3",
+      "options": [
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        }
+      ],
+      "info": "On phones the cards swipe sideways."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dividers",
+      "label": "Show dividers between cards",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Eyebrow, dose pill and check marks. Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "Highlight color",
+      "info": "The highlighted heading line. Empty = accent color."
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading size",
+      "min": 24,
+      "max": 64,
+      "step": 2,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "image_size",
+      "label": "Image size",
+      "min": 48,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 88
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "Ingredient name size",
+      "min": 14,
+      "max": 26,
+      "step": 1,
+      "unit": "px",
+      "default": 17
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Ingredient 1 image"
+    },
+    {
+      "type": "text",
+      "id": "name_1",
+      "label": "Ingredient 1 name",
+      "info": "A card only shows when it has a name."
+    },
+    {
+      "type": "text",
+      "id": "description_1",
+      "label": "Ingredient 1 description"
+    },
+    {
+      "type": "text",
+      "id": "dose_1",
+      "label": "Ingredient 1 dose pill",
+      "info": "Short label, for example the amount. Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "benefits_1",
+      "label": "Ingredient 1 benefits",
+      "info": "One benefit per line, up to 4."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Ingredient 2 image"
+    },
+    {
+      "type": "text",
+      "id": "name_2",
+      "label": "Ingredient 2 name"
+    },
+    {
+      "type": "text",
+      "id": "description_2",
+      "label": "Ingredient 2 description"
+    },
+    {
+      "type": "text",
+      "id": "dose_2",
+      "label": "Ingredient 2 dose pill"
+    },
+    {
+      "type": "textarea",
+      "id": "benefits_2",
+      "label": "Ingredient 2 benefits"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Ingredient 3 image"
+    },
+    {
+      "type": "text",
+      "id": "name_3",
+      "label": "Ingredient 3 name"
+    },
+    {
+      "type": "text",
+      "id": "description_3",
+      "label": "Ingredient 3 description"
+    },
+    {
+      "type": "text",
+      "id": "dose_3",
+      "label": "Ingredient 3 dose pill"
+    },
+    {
+      "type": "textarea",
+      "id": "benefits_3",
+      "label": "Ingredient 3 benefits"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Ingredient 4 image"
+    },
+    {
+      "type": "text",
+      "id": "name_4",
+      "label": "Ingredient 4 name"
+    },
+    {
+      "type": "text",
+      "id": "description_4",
+      "label": "Ingredient 4 description"
+    },
+    {
+      "type": "text",
+      "id": "dose_4",
+      "label": "Ingredient 4 dose pill"
+    },
+    {
+      "type": "textarea",
+      "id": "benefits_4",
+      "label": "Ingredient 4 benefits"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Ingredient 5 image"
+    },
+    {
+      "type": "text",
+      "id": "name_5",
+      "label": "Ingredient 5 name"
+    },
+    {
+      "type": "text",
+      "id": "description_5",
+      "label": "Ingredient 5 description"
+    },
+    {
+      "type": "text",
+      "id": "dose_5",
+      "label": "Ingredient 5 dose pill"
+    },
+    {
+      "type": "textarea",
+      "id": "benefits_5",
+      "label": "Ingredient 5 benefits"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Ingredient 6 image"
+    },
+    {
+      "type": "text",
+      "id": "name_6",
+      "label": "Ingredient 6 name"
+    },
+    {
+      "type": "text",
+      "id": "description_6",
+      "label": "Ingredient 6 description"
+    },
+    {
+      "type": "text",
+      "id": "dose_6",
+      "label": "Ingredient 6 dose pill"
+    },
+    {
+      "type": "textarea",
+      "id": "benefits_6",
+      "label": "Ingredient 6 benefits"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "eyebrow": "Eyebrow sample",
+      "heading": "Heading sample here",
+      "highlight_word": "sample",
+      "name_1": "Ingredient One",
+      "description_1": "Describes one",
+      "dose_1": "50 mg",
+      "benefits_1": "First benefit\nSecond benefit",
+      "name_2": "Ingredient Two"
+    },
+    "expect": [
+      "Eyebrow sample",
+      "dtj-wi__hl",
+      "Ingredient One",
+      "Describes one",
+      "50 mg",
+      "First benefit",
+      "Ingredient Two",
+      "dtj-wi__track"
+    ]
+  }
+}

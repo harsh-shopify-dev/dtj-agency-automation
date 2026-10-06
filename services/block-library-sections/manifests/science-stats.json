@@ -1,0 +1,391 @@
+{
+  "id": "science-stats",
+  "title": "DTJ Science Stats Grid",
+  "block_file": "extensions/dtj-sections/blocks/dtj-science-stats.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subheading",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "number_1",
+      "type": "text",
+      "required": true,
+      "max_length": 80
+    },
+    {
+      "id": "description_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_1",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "alt_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "number_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "alt_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "number_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "alt_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "number_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "alt_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "number_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "alt_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "number_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "description_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image_6",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "alt_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "shape",
+    "align"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "corner_radius": 16,
+    "align": "center"
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Columns on desktop",
+      "default": "3",
+      "options": [
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "image_shape",
+      "label": "Card image shape",
+      "default": "portrait",
+      "options": [
+        {
+          "value": "portrait",
+          "label": "Portrait"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        },
+        {
+          "value": "landscape",
+          "label": "Landscape"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "hover_lift",
+      "label": "Cards lift when hovered",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_shadow",
+      "label": "Soft shadow on cards",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "number_color",
+      "label": "Number color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "number_color_2",
+      "label": "Number color, second",
+      "info": "Optional: the number fades from the first color to this one."
+    },
+    {
+      "type": "text",
+      "id": "number_1",
+      "label": "Card 1 number",
+      "info": "Only type figures you can prove. A card only shows when it has a number."
+    },
+    {
+      "type": "textarea",
+      "id": "description_1",
+      "label": "Card 1 description"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Card 1 image"
+    },
+    {
+      "type": "text",
+      "id": "alt_1",
+      "label": "Card 1 image description",
+      "info": "Read aloud for screen readers. Empty = decorative."
+    },
+    {
+      "type": "text",
+      "id": "number_2",
+      "label": "Card 2 number"
+    },
+    {
+      "type": "textarea",
+      "id": "description_2",
+      "label": "Card 2 description"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Card 2 image"
+    },
+    {
+      "type": "text",
+      "id": "alt_2",
+      "label": "Card 2 image description"
+    },
+    {
+      "type": "text",
+      "id": "number_3",
+      "label": "Card 3 number"
+    },
+    {
+      "type": "textarea",
+      "id": "description_3",
+      "label": "Card 3 description"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Card 3 image"
+    },
+    {
+      "type": "text",
+      "id": "alt_3",
+      "label": "Card 3 image description"
+    },
+    {
+      "type": "text",
+      "id": "number_4",
+      "label": "Card 4 number"
+    },
+    {
+      "type": "textarea",
+      "id": "description_4",
+      "label": "Card 4 description"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Card 4 image"
+    },
+    {
+      "type": "text",
+      "id": "alt_4",
+      "label": "Card 4 image description"
+    },
+    {
+      "type": "text",
+      "id": "number_5",
+      "label": "Card 5 number"
+    },
+    {
+      "type": "textarea",
+      "id": "description_5",
+      "label": "Card 5 description"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Card 5 image"
+    },
+    {
+      "type": "text",
+      "id": "alt_5",
+      "label": "Card 5 image description"
+    },
+    {
+      "type": "text",
+      "id": "number_6",
+      "label": "Card 6 number"
+    },
+    {
+      "type": "textarea",
+      "id": "description_6",
+      "label": "Card 6 description"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Card 6 image"
+    },
+    {
+      "type": "text",
+      "id": "alt_6",
+      "label": "Card 6 image description"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "subheading": "Sub sample",
+      "number_1": "NUM1",
+      "description_1": "Describes one",
+      "number_2": "NUM2"
+    },
+    "expect": [
+      "Heading sample",
+      "Sub sample",
+      "NUM1",
+      "Describes one",
+      "NUM2",
+      "dtj-ss__grid"
+    ]
+  }
+}

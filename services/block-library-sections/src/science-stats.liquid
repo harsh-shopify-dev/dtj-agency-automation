@@ -1,0 +1,63 @@
+{%- liquid
+  assign ss_count = 0
+  for i in (1..6)
+    assign nk = 'number_' | append: i
+    assign nv = block.settings[nk] | strip
+    if nv != blank
+      assign ss_count = ss_count | plus: 1
+    endif
+  endfor
+  assign ss_heading = block.settings.heading | strip
+  assign ss_sub = block.settings.subheading | strip
+  assign ss_cols = 3
+  if block.settings.columns == '2'
+    assign ss_cols = 2
+  endif
+  assign ss_shape = 'portrait'
+  if block.settings.image_shape == 'square' or block.settings.image_shape == 'landscape'
+    assign ss_shape = block.settings.image_shape
+  endif
+  assign ss_grad = false
+  if block.settings.number_color != blank and block.settings.number_color_2 != blank
+    assign ss_grad = true
+  endif
+-%}
+{%- if ss_count > 0 or ss_heading != blank or ss_sub != blank -%}
+  <div class="dtj-b dtj-ss dtj-ss--{{ ss_shape }}{% if block.settings.hover_lift %} dtj-ss--lift{% endif %}{% if block.settings.show_shadow %} dtj-ss--shadow{% endif %}{% if ss_grad %} dtj-ss--grad{% endif %}" style="{{ dtj_std_style | strip_newlines }} --ss-cols: {{ ss_cols }};{% if block.settings.number_color != blank %} --ss-n1: {{ block.settings.number_color }};{% endif %}{% if block.settings.number_color_2 != blank %} --ss-n2: {{ block.settings.number_color_2 }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if ss_heading != blank or ss_sub != blank -%}
+      <div class="dtj-ss__intro">
+        {%- if ss_heading != blank -%}<h2 class="dtj-ss__head">{{ ss_heading | escape }}</h2>{%- endif -%}
+        {%- if ss_sub != blank -%}<p class="dtj-ss__sub">{{ ss_sub | escape }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if ss_count > 0 -%}
+      <div class="dtj-ss__grid">
+        {%- for i in (1..6) -%}
+          {%- liquid
+            assign nk = 'number_' | append: i
+            assign dk = 'description_' | append: i
+            assign ik = 'image_' | append: i
+            assign ak = 'alt_' | append: i
+            assign ss_num = block.settings[nk] | strip
+            assign ss_desc = block.settings[dk] | strip
+            assign ss_image = block.settings[ik]
+            assign ss_alt = block.settings[ak] | strip
+          -%}
+          {%- if ss_num != blank -%}
+            <article class="dtj-ss__card">
+              {%- if ss_image and ss_image != blank -%}
+                <img class="dtj-ss__img" src="{{ ss_image | image_url: width: 640 }}" alt="{{ ss_alt | escape }}" width="320" height="400" loading="lazy">
+              {%- endif -%}
+              <div class="dtj-ss__body">
+                <p class="dtj-ss__num">{{ ss_num | escape }}</p>
+                {%- if ss_desc != blank -%}<p class="dtj-ss__desc">{{ ss_desc | escape }}</p>{%- endif -%}
+              </div>
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Science Stats Grid is empty. Type a figure into "Card 1 number" (editor only: shoppers see nothing).</p>
+{%- endif -%}

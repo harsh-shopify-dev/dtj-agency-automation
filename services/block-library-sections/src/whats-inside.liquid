@@ -1,0 +1,74 @@
+{%- liquid
+  assign wi_heading = block.settings.heading | strip | escape
+  assign wi_hl = block.settings.highlight_word | strip | escape
+  if wi_hl != blank and wi_heading contains wi_hl
+    assign wi_wrapped = '<span class="dtj-wi__hl">' | append: wi_hl | append: '</span>'
+    assign wi_heading = wi_heading | replace: wi_hl, wi_wrapped
+  endif
+  assign wi_eyebrow = block.settings.eyebrow | strip
+  assign wi_sub = block.settings.subheading | strip
+  assign wi_cols = block.settings.columns | plus: 0
+  if wi_cols < 2 or wi_cols > 4
+    assign wi_cols = 3
+  endif
+  assign wi_cards = 0
+  for i in (1..6)
+    assign nk = 'name_' | append: i
+    assign nv = block.settings[nk] | strip
+    if nv != blank
+      assign wi_cards = wi_cards | plus: 1
+    endif
+  endfor
+-%}
+{%- if wi_cards > 0 or wi_heading != blank or wi_eyebrow != blank or wi_sub != blank -%}
+  <div class="dtj-b dtj-wi{% unless block.settings.show_dividers %} dtj-wi--plain{% endunless %}" data-cols="{{ wi_cols }}" style="{{ dtj_std_style | strip_newlines }} --wi-cols: {{ wi_cols }}; --wi-h: {{ block.settings.heading_size }}px; --wi-img: {{ block.settings.image_size }}px; --wi-title: {{ block.settings.title_size }}px;{% if block.settings.accent_color != blank %} --wi-accent: {{ block.settings.accent_color }};{% endif %}{% if block.settings.highlight_color != blank %} --wi-hl: {{ block.settings.highlight_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if wi_eyebrow != blank or wi_heading != blank or wi_sub != blank -%}
+      <div class="dtj-wi__intro">
+        {%- if wi_eyebrow != blank -%}<span class="dtj-wi__eyebrow">{{ wi_eyebrow | escape }}</span>{%- endif -%}
+        {%- if wi_heading != blank -%}<h2 class="dtj-wi__head">{{ wi_heading }}</h2>{%- endif -%}
+        {%- if wi_sub != blank -%}<p class="dtj-wi__sub">{{ wi_sub | escape }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if wi_cards > 0 -%}
+      <div class="dtj-wi__track">
+        {%- for i in (1..6) -%}
+          {%- liquid
+            assign nk = 'name_' | append: i
+            assign dk = 'description_' | append: i
+            assign ok = 'dose_' | append: i
+            assign bk = 'benefits_' | append: i
+            assign ik = 'image_' | append: i
+            assign wi_name = block.settings[nk] | strip
+            assign wi_desc = block.settings[dk] | strip
+            assign wi_dose = block.settings[ok] | strip
+            assign wi_image = block.settings[ik]
+            assign wi_lines = block.settings[bk] | newline_to_br | split: '<br />'
+            assign wi_shown = 0
+          -%}
+          {%- if wi_name != blank -%}
+            <article class="dtj-wi__card">
+              {%- if wi_image and wi_image != blank -%}
+                <img class="dtj-wi__img" src="{{ wi_image | image_url: width: 320 }}" alt="" width="88" height="88" loading="lazy">
+              {%- endif -%}
+              <h3 class="dtj-wi__title">{{ wi_name | escape }}</h3>
+              {%- if wi_desc != blank -%}<p class="dtj-wi__desc">{{ wi_desc | escape }}</p>{%- endif -%}
+              {%- if wi_dose != blank -%}<span class="dtj-wi__dose">{{ wi_dose | escape }}</span>{%- endif -%}
+              {%- capture wi_items -%}
+                {%- for line in wi_lines limit: 12 -%}
+                  {%- assign wi_line = line | strip -%}
+                  {%- if wi_line != blank and wi_shown < 4 -%}
+                    {%- assign wi_shown = wi_shown | plus: 1 -%}
+                    <li><svg class="dtj-wi__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><span>{{ wi_line | escape }}</span></li>
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endcapture -%}
+              {%- if wi_items contains '<li' -%}<ul class="dtj-wi__list">{{ wi_items }}</ul>{%- endif -%}
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Whats Inside is empty. Type a name into "Ingredient 1 name" (editor only: shoppers see nothing).</p>
+{%- endif -%}

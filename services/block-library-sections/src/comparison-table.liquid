@@ -1,0 +1,76 @@
+{%- liquid
+  assign cm_heading = block.settings.heading | strip
+  assign cm_our = block.settings.our_label | strip
+  assign cm_other = block.settings.other_label | strip
+  assign cm_rows = 0
+  for i in (1..8)
+    assign ok = 'our_' | append: i
+    assign tk = 'other_' | append: i
+    assign ov = block.settings[ok] | strip
+    assign tv = block.settings[tk] | strip
+    if ov != blank or tv != blank
+      assign cm_rows = cm_rows | plus: 1
+    endif
+  endfor
+  assign cm_head_row = false
+  if cm_our != blank or cm_other != blank or block.settings.our_image != blank or block.settings.other_image != blank
+    assign cm_head_row = true
+  endif
+-%}
+{%- if cm_rows > 0 -%}
+  <div class="dtj-b dtj-cmp{% if block.settings.highlight_ours %} dtj-cmp--hl{% endif %}" style="{{ dtj_std_style | strip_newlines }} --cm-h: {{ block.settings.heading_size }}px; --cm-img: {{ block.settings.image_height }}px;{% if block.settings.accent_color != blank %} --cm-accent: {{ block.settings.accent_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if cm_heading != blank -%}<h2 class="dtj-cmp__head">{{ cm_heading | escape }}</h2>{%- endif -%}
+    <table class="dtj-cmp__table">
+      {%- if cm_head_row -%}
+        <thead>
+          <tr>
+            <th scope="col" class="dtj-cmp__our">
+              {%- if block.settings.our_image and block.settings.our_image != blank -%}
+                <img class="dtj-cmp__img" src="{{ block.settings.our_image | image_url: width: 400 }}" alt="" width="96" height="96" loading="lazy">
+              {%- endif -%}
+              {%- if cm_our != blank -%}<span class="dtj-cmp__label">{{ cm_our | escape }}</span>{%- endif -%}
+            </th>
+            <th scope="col" class="dtj-cmp__other">
+              {%- if block.settings.other_image and block.settings.other_image != blank -%}
+                <img class="dtj-cmp__img" src="{{ block.settings.other_image | image_url: width: 400 }}" alt="" width="96" height="96" loading="lazy">
+              {%- endif -%}
+              {%- if cm_other != blank -%}<span class="dtj-cmp__label">{{ cm_other | escape }}</span>{%- endif -%}
+            </th>
+          </tr>
+        </thead>
+      {%- endif -%}
+      <tbody>
+        {%- for i in (1..8) -%}
+          {%- liquid
+            assign ok = 'our_' | append: i
+            assign tk = 'other_' | append: i
+            assign cm_o = block.settings[ok] | strip
+            assign cm_t = block.settings[tk] | strip
+          -%}
+          {%- if cm_o != blank or cm_t != blank -%}
+            <tr>
+              <td class="dtj-cmp__our">
+                <span class="dtj-cmp__cell">
+                  {%- if block.settings.show_marks -%}
+                    <svg class="dtj-cmp__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle class="dtj-cmp__yes-bg" cx="12" cy="12" r="12"/><path class="dtj-cmp__yes" d="M7 12.5l3.2 3.2L17 8.8"/></svg>
+                  {%- endif -%}
+                  <span class="dtj-cmp__text">{{ cm_o }}</span>
+                </span>
+              </td>
+              <td class="dtj-cmp__other">
+                <span class="dtj-cmp__cell">
+                  {%- if block.settings.show_marks -%}
+                    <svg class="dtj-cmp__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle class="dtj-cmp__no-bg" cx="12" cy="12" r="12"/><path class="dtj-cmp__no" d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>
+                  {%- endif -%}
+                  <span class="dtj-cmp__text">{{ cm_t }}</span>
+                </span>
+              </td>
+            </tr>
+          {%- endif -%}
+        {%- endfor -%}
+      </tbody>
+    </table>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Comparison Table is empty. Type text into "Row 1: our side" and "Row 1: other side" (editor only: shoppers see nothing).</p>
+{%- endif -%}

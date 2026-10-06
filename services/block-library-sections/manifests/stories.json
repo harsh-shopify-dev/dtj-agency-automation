@@ -1,0 +1,555 @@
+{
+  "id": "stories",
+  "title": "DTJ Stories",
+  "block_file": "extensions/dtj-sections/blocks/dtj-stories.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subheading",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "proof_line",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "verified_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "cta_text",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "cta_url",
+      "type": "url",
+      "required": false
+    },
+    {
+      "id": "trust_text",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "name_1",
+      "type": "text",
+      "required": true,
+      "max_length": 80
+    },
+    {
+      "id": "photo_1",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "tag_1_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_1_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_1_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "quote_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "name_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "photo_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "tag_2_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_2_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_2_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "quote_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "name_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "photo_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "tag_3_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_3_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_3_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "quote_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "name_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "photo_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "tag_4_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_4_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_4_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "quote_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "name_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "photo_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "tag_5_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_5_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_5_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "quote_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "name_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "photo_6",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "tag_6_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_6_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "tag_6_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "quote_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "shape"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "corner_radius": 14
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "proof_line",
+      "label": "Line above the heading",
+      "info": "Your own words, for example a customer count you can prove. Empty = hidden. No stars are added."
+    },
+    {
+      "type": "text",
+      "id": "verified_label",
+      "label": "Badge text on each card",
+      "info": "Only type this if it is true for every card. Empty = no badge."
+    },
+    {
+      "type": "select",
+      "id": "photo_shape",
+      "label": "Photo shape",
+      "default": "portrait",
+      "options": [
+        {
+          "value": "portrait",
+          "label": "Portrait"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        },
+        {
+          "value": "landscape",
+          "label": "Landscape"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "card_width",
+      "label": "Card width",
+      "min": 240,
+      "max": 400,
+      "step": 5,
+      "unit": "px",
+      "default": 300
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Tags and badge. Empty = same as the text."
+    },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "Button text",
+      "info": "Empty = no button."
+    },
+    {
+      "type": "url",
+      "id": "cta_url",
+      "label": "Button link"
+    },
+    {
+      "type": "text",
+      "id": "trust_text",
+      "label": "Small text under the button",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "name_1",
+      "label": "Card 1 name",
+      "info": "A card only shows when it has a name."
+    },
+    {
+      "type": "image_picker",
+      "id": "photo_1",
+      "label": "Card 1 photo"
+    },
+    {
+      "type": "text",
+      "id": "tag_1_1",
+      "label": "Card 1 tag 1"
+    },
+    {
+      "type": "text",
+      "id": "tag_1_2",
+      "label": "Card 1 tag 2"
+    },
+    {
+      "type": "text",
+      "id": "tag_1_3",
+      "label": "Card 1 tag 3"
+    },
+    {
+      "type": "textarea",
+      "id": "quote_1",
+      "label": "Card 1 quote"
+    },
+    {
+      "type": "text",
+      "id": "name_2",
+      "label": "Card 2 name"
+    },
+    {
+      "type": "image_picker",
+      "id": "photo_2",
+      "label": "Card 2 photo"
+    },
+    {
+      "type": "text",
+      "id": "tag_2_1",
+      "label": "Card 2 tag 1"
+    },
+    {
+      "type": "text",
+      "id": "tag_2_2",
+      "label": "Card 2 tag 2"
+    },
+    {
+      "type": "text",
+      "id": "tag_2_3",
+      "label": "Card 2 tag 3"
+    },
+    {
+      "type": "textarea",
+      "id": "quote_2",
+      "label": "Card 2 quote"
+    },
+    {
+      "type": "text",
+      "id": "name_3",
+      "label": "Card 3 name"
+    },
+    {
+      "type": "image_picker",
+      "id": "photo_3",
+      "label": "Card 3 photo"
+    },
+    {
+      "type": "text",
+      "id": "tag_3_1",
+      "label": "Card 3 tag 1"
+    },
+    {
+      "type": "text",
+      "id": "tag_3_2",
+      "label": "Card 3 tag 2"
+    },
+    {
+      "type": "text",
+      "id": "tag_3_3",
+      "label": "Card 3 tag 3"
+    },
+    {
+      "type": "textarea",
+      "id": "quote_3",
+      "label": "Card 3 quote"
+    },
+    {
+      "type": "text",
+      "id": "name_4",
+      "label": "Card 4 name"
+    },
+    {
+      "type": "image_picker",
+      "id": "photo_4",
+      "label": "Card 4 photo"
+    },
+    {
+      "type": "text",
+      "id": "tag_4_1",
+      "label": "Card 4 tag 1"
+    },
+    {
+      "type": "text",
+      "id": "tag_4_2",
+      "label": "Card 4 tag 2"
+    },
+    {
+      "type": "text",
+      "id": "tag_4_3",
+      "label": "Card 4 tag 3"
+    },
+    {
+      "type": "textarea",
+      "id": "quote_4",
+      "label": "Card 4 quote"
+    },
+    {
+      "type": "text",
+      "id": "name_5",
+      "label": "Card 5 name"
+    },
+    {
+      "type": "image_picker",
+      "id": "photo_5",
+      "label": "Card 5 photo"
+    },
+    {
+      "type": "text",
+      "id": "tag_5_1",
+      "label": "Card 5 tag 1"
+    },
+    {
+      "type": "text",
+      "id": "tag_5_2",
+      "label": "Card 5 tag 2"
+    },
+    {
+      "type": "text",
+      "id": "tag_5_3",
+      "label": "Card 5 tag 3"
+    },
+    {
+      "type": "textarea",
+      "id": "quote_5",
+      "label": "Card 5 quote"
+    },
+    {
+      "type": "text",
+      "id": "name_6",
+      "label": "Card 6 name"
+    },
+    {
+      "type": "image_picker",
+      "id": "photo_6",
+      "label": "Card 6 photo"
+    },
+    {
+      "type": "text",
+      "id": "tag_6_1",
+      "label": "Card 6 tag 1"
+    },
+    {
+      "type": "text",
+      "id": "tag_6_2",
+      "label": "Card 6 tag 2"
+    },
+    {
+      "type": "text",
+      "id": "tag_6_3",
+      "label": "Card 6 tag 3"
+    },
+    {
+      "type": "textarea",
+      "id": "quote_6",
+      "label": "Card 6 quote"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "name_1": "Customer One",
+      "tag_1_1": "Tag A",
+      "quote_1": "Quote one",
+      "name_2": "Customer Two",
+      "cta_text": "Button",
+      "cta_url": "/x"
+    },
+    "expect": [
+      "Heading sample",
+      "Customer One",
+      "Tag A",
+      "Quote one",
+      "Customer Two",
+      "dtj-st__cta"
+    ]
+  }
+}

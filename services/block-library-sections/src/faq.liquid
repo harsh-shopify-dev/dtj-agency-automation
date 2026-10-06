@@ -1,0 +1,73 @@
+{%- liquid
+  assign fq_count = 0
+  for i in (1..10)
+    assign qk = 'question_' | append: i
+    assign qv = block.settings[qk] | strip
+    if qv != blank
+      assign fq_count = fq_count | plus: 1
+    endif
+  endfor
+  assign fq_heading = block.settings.heading | strip
+  assign fq_accent = block.settings.heading_accent | strip
+  assign fq_sub = block.settings.subheading | strip
+  assign fq_cats = 0
+  for c in (1..4)
+    assign ck = 'category_' | append: c
+    assign cv = block.settings[ck] | strip
+    if cv != blank
+      assign fq_cats = fq_cats | plus: 1
+    endif
+  endfor
+  assign fq_filters = false
+  if block.settings.show_filters and fq_cats > 0
+    assign fq_filters = true
+  endif
+-%}
+{%- if fq_count > 0 or fq_heading != blank or fq_accent != blank or fq_sub != blank -%}
+  <dtj-faq class="dtj-b dtj-faq" style="{{ dtj_std_style | strip_newlines }} --fq-h: {{ block.settings.heading_size }}px;{% if block.settings.accent_color != blank %} --fq-accent: {{ block.settings.accent_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if fq_heading != blank or fq_accent != blank or fq_sub != blank -%}
+      <div class="dtj-faq__intro">
+        {%- if fq_heading != blank -%}<h2 class="dtj-faq__head">{{ fq_heading | escape }}</h2>{%- endif -%}
+        {%- if fq_accent != blank -%}<h2 class="dtj-faq__head dtj-faq__head--accent">{{ fq_accent | escape }}</h2>{%- endif -%}
+        {%- if fq_sub != blank -%}<p class="dtj-faq__sub">{{ fq_sub | escape }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if fq_filters -%}
+      <div class="dtj-faq__filters" role="group">
+        <button type="button" class="dtj-faq__pill" data-cat="all" aria-pressed="true"><span>{{ block.settings.all_label | strip | default: 'All' | escape }}</span></button>
+        {%- for c in (1..4) -%}
+          {%- assign ck = 'category_' | append: c -%}
+          {%- assign cv = block.settings[ck] | strip -%}
+          {%- if cv != blank -%}
+            <button type="button" class="dtj-faq__pill" data-cat="{{ c }}" aria-pressed="false"><span>{{ cv | escape }}</span></button>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+    {%- if fq_count > 0 -%}
+      <div class="dtj-faq__list">
+        {%- assign fq_shown = 0 -%}
+        {%- for i in (1..10) -%}
+          {%- liquid
+            assign qk = 'question_' | append: i
+            assign ak = 'answer_' | append: i
+            assign kk = 'cat_' | append: i
+            assign fq_q = block.settings[qk] | strip
+          -%}
+          {%- if fq_q != blank -%}
+            {%- assign fq_shown = fq_shown | plus: 1 -%}
+            <details class="dtj-faq__item" data-cat="{{ block.settings[kk] }}"{% if fq_shown == 1 and block.settings.first_open %} open{% endif %}>
+              <summary class="dtj-faq__q">
+                <span class="dtj-faq__qtext">{{ fq_q | escape }}</span>
+                <span class="dtj-faq__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path class="dtj-faq__v" d="M12 5v14"/></svg></span>
+              </summary>
+              <div class="dtj-faq__a">{{ block.settings[ak] }}</div>
+            </details>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </dtj-faq>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ FAQ is empty. Type a question into "Question 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

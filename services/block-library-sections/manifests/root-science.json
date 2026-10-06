@@ -1,0 +1,619 @@
+{
+  "id": "root-science",
+  "title": "DTJ Root Science",
+  "block_file": "extensions/dtj-sections/blocks/dtj-root-science.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subheading",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "image_alt",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "custom_icon_1",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_1",
+      "type": "textarea",
+      "required": true,
+      "max_length": 300
+    },
+    {
+      "id": "custom_icon_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "custom_icon_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "custom_icon_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "custom_icon_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "custom_icon_6",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "text_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "colors",
+    "shape",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "corner_radius": 16,
+    "text_size": 15
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Large image"
+    },
+    {
+      "type": "text",
+      "id": "image_alt",
+      "label": "Image description",
+      "info": "Read aloud for screen readers. Empty = decorative."
+    },
+    {
+      "type": "select",
+      "id": "image_side",
+      "label": "Image position",
+      "default": "end",
+      "options": [
+        {
+          "value": "end",
+          "label": "Right"
+        },
+        {
+          "value": "start",
+          "label": "Left"
+        }
+      ],
+      "info": "On phones the image goes below the features."
+    },
+    {
+      "type": "checkbox",
+      "id": "image_shadow",
+      "label": "Soft shadow on the image",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon circle size",
+      "min": 36,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 52
+    },
+    {
+      "type": "select",
+      "id": "icon_1",
+      "label": "Feature 1 icon",
+      "default": "sparkles",
+      "options": [
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield focus"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind calm"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check"
+        },
+        {
+          "value": "custom",
+          "label": "My own image"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_icon_1",
+      "label": "Feature 1 own icon image",
+      "info": "Used when the icon above is My own image."
+    },
+    {
+      "type": "textarea",
+      "id": "text_1",
+      "label": "Feature 1 text",
+      "info": "A feature only shows when it has text."
+    },
+    {
+      "type": "select",
+      "id": "icon_2",
+      "label": "Feature 2 icon",
+      "default": "sparkles",
+      "options": [
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield focus"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind calm"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check"
+        },
+        {
+          "value": "custom",
+          "label": "My own image"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_icon_2",
+      "label": "Feature 2 own icon image"
+    },
+    {
+      "type": "textarea",
+      "id": "text_2",
+      "label": "Feature 2 text"
+    },
+    {
+      "type": "select",
+      "id": "icon_3",
+      "label": "Feature 3 icon",
+      "default": "sparkles",
+      "options": [
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield focus"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind calm"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check"
+        },
+        {
+          "value": "custom",
+          "label": "My own image"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_icon_3",
+      "label": "Feature 3 own icon image"
+    },
+    {
+      "type": "textarea",
+      "id": "text_3",
+      "label": "Feature 3 text"
+    },
+    {
+      "type": "select",
+      "id": "icon_4",
+      "label": "Feature 4 icon",
+      "default": "sparkles",
+      "options": [
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield focus"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind calm"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check"
+        },
+        {
+          "value": "custom",
+          "label": "My own image"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_icon_4",
+      "label": "Feature 4 own icon image"
+    },
+    {
+      "type": "textarea",
+      "id": "text_4",
+      "label": "Feature 4 text"
+    },
+    {
+      "type": "select",
+      "id": "icon_5",
+      "label": "Feature 5 icon",
+      "default": "sparkles",
+      "options": [
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield focus"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind calm"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check"
+        },
+        {
+          "value": "custom",
+          "label": "My own image"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_icon_5",
+      "label": "Feature 5 own icon image"
+    },
+    {
+      "type": "textarea",
+      "id": "text_5",
+      "label": "Feature 5 text"
+    },
+    {
+      "type": "select",
+      "id": "icon_6",
+      "label": "Feature 6 icon",
+      "default": "sparkles",
+      "options": [
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield focus"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind calm"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check"
+        },
+        {
+          "value": "custom",
+          "label": "My own image"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_icon_6",
+      "label": "Feature 6 own icon image"
+    },
+    {
+      "type": "textarea",
+      "id": "text_6",
+      "label": "Feature 6 text"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "subheading": "Sub sample",
+      "text_1": "Feature one",
+      "text_2": "Feature two",
+      "icon_2": "brain"
+    },
+    "expect": [
+      "Heading sample",
+      "Sub sample",
+      "Feature one",
+      "Feature two",
+      "dtj-rs__features"
+    ]
+  }
+}

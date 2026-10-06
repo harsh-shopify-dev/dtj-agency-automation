@@ -1,0 +1,133 @@
+.dtj-faq {
+  display: block;
+  color: var(--dtj-text-color, inherit);
+  background: var(--dtj-background, transparent);
+  font-size: var(--dtj-text-size, 15px);
+}
+
+.dtj-faq__intro {
+  margin-bottom: 22px;
+}
+
+.dtj-faq__head {
+  margin: 0;
+  font-size: clamp(20px, 6vw, var(--fq-h, 30px));
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.dtj-faq__head--accent {
+  color: var(--fq-accent, currentColor);
+}
+
+.dtj-faq__sub {
+  margin: 10px 0 0;
+  line-height: 1.5;
+  opacity: 0.72;
+}
+
+.dtj-faq__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+/* the pill keeps its own colour; the white text of the active pill is set on the inner span (a `color` change on the pill
+   itself would also turn its currentColor fill white) */
+.dtj-faq__pill {
+  appearance: none;
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9em;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.dtj-faq__pill[aria-pressed="true"] {
+  border-color: var(--fq-accent, currentColor);
+  background: var(--fq-accent, currentColor);
+}
+
+.dtj-faq__pill[aria-pressed="true"] span {
+  color: Canvas;
+}
+
+.dtj-faq__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dtj-faq__item {
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: var(--dtj-radius, 12px);
+  background: var(--dtj-card-bg, transparent);
+  transition: border-color 0.2s ease;
+}
+
+.dtj-faq__item[hidden] { display: none; }
+
+.dtj-faq__item[open] {
+  border-color: var(--fq-accent, currentColor);
+}
+
+.dtj-faq__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  cursor: pointer;
+  font-size: 1.05em;
+  font-weight: 600;
+  line-height: 1.35;
+  list-style: none;
+}
+
+.dtj-faq__q::-webkit-details-marker { display: none; }
+
+.dtj-faq__qtext { min-width: 0; overflow-wrap: anywhere; }
+
+.dtj-faq__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--fq-accent, currentColor);
+}
+
+.dtj-faq__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* plus becomes minus: the vertical stroke collapses when the item is open */
+.dtj-faq__v {
+  transform-origin: center;
+  transition: transform 0.2s ease;
+}
+
+.dtj-faq__item[open] .dtj-faq__v { transform: scaleY(0); }
+
+.dtj-faq__a {
+  padding: 0 18px 18px;
+  line-height: 1.65;
+  opacity: 0.85;
+}
+
+.dtj-faq__a p { margin: 0 0 0.8em; }
+.dtj-faq__a p:last-child { margin-bottom: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-faq__item,
+  .dtj-faq__pill,
+  .dtj-faq__v { transition: none; }
+}

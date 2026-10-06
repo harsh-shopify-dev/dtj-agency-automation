@@ -1,0 +1,102 @@
+.dtj-ss {
+  display: block;
+  color: var(--dtj-text-color, inherit);
+  background: var(--dtj-background, transparent);
+}
+
+.dtj-ss__intro {
+  max-width: 680px;
+  margin: 0 auto 28px;
+}
+
+.dtj-ss__head {
+  margin: 0;
+  font-size: clamp(22px, 6.5vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.dtj-ss__sub {
+  margin: 10px 0 0;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.dtj-ss__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--ss-cols, 3), minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dtj-ss__card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: var(--dtj-radius, 16px);
+  background: var(--dtj-card-bg, transparent);
+  text-align: start;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.dtj-ss--shadow .dtj-ss__card {
+  box-shadow: 0 8px 24px -12px color-mix(in srgb, currentColor 28%, transparent);
+}
+
+@media (hover: hover) {
+  .dtj-ss--lift .dtj-ss__card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 30px -14px color-mix(in srgb, currentColor 32%, transparent);
+  }
+}
+
+.dtj-ss__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  object-fit: cover;
+}
+
+.dtj-ss--portrait .dtj-ss__img { aspect-ratio: 4 / 5; }
+.dtj-ss--square .dtj-ss__img { aspect-ratio: 1 / 1; }
+.dtj-ss--landscape .dtj-ss__img { aspect-ratio: 4 / 3; }
+
+.dtj-ss__body { padding: 18px 20px 22px; }
+
+.dtj-ss__num {
+  margin: 0 0 6px;
+  color: var(--ss-n1, inherit);
+  font-size: clamp(30px, 8vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+/* a gradient number: only when both number colours are chosen (otherwise it stays one solid colour) */
+.dtj-ss--grad .dtj-ss__num {
+  background: linear-gradient(135deg, var(--ss-n1), var(--ss-n2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dtj-ss__desc {
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+@media screen and (max-width: 749px) {
+  .dtj-ss__grid { grid-template-columns: minmax(0, 1fr); }
+  /* a full-width portrait picture would fill the whole phone screen: shorten it */
+  .dtj-ss--portrait .dtj-ss__img { aspect-ratio: 4 / 3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-ss__card { transition: none; }
+  .dtj-ss--lift .dtj-ss__card:hover { transform: none; }
+}
