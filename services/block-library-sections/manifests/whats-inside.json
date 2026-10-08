@@ -211,13 +211,15 @@
   ],
   "standard_controls": [
     "spacing_v",
+    "gutter",
     "colors",
     "text_size"
   ],
   "standard_defaults": {
     "padding_top": 24,
     "padding_bottom": 24,
-    "text_size": 14
+    "text_size": 14,
+    "side_padding": 16
   },
   "settings": [
     {

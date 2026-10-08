@@ -163,13 +163,15 @@
   ],
   "standard_controls": [
     "spacing_v",
+    "gutter",
     "align",
     "colors"
   ],
   "standard_defaults": {
     "padding_top": 24,
     "padding_bottom": 24,
-    "align": "center"
+    "align": "center",
+    "side_padding": 16
   },
   "settings": [
     {

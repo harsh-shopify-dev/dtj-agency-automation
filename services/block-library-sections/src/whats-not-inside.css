@@ -10,6 +10,7 @@
 
 .dtj-wni__head {
   margin: 0 0 8px;
+  color: inherit; /* themes colour h2 themselves, which ignored the block's text colour on a dark background */
   font-size: clamp(20px, 6vw, var(--wn-h, 30px));
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -28,6 +29,7 @@
 
 .dtj-wni__sub {
   margin: 0;
+  color: inherit;
   font-size: 0.95em;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -110,6 +112,7 @@
 }
 
 .dtj-wni__name {
+  color: inherit;
   font-size: 0.9em;
   font-weight: 700;
   letter-spacing: 0.02em;

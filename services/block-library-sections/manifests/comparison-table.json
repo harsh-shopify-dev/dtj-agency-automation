@@ -267,11 +267,13 @@
   ],
   "standard_controls": [
     "spacing_v",
+    "gutter",
     "colors"
   ],
   "standard_defaults": {
     "padding_top": 40,
-    "padding_bottom": 40
+    "padding_bottom": 40,
+    "side_padding": 16
   },
   "settings": [
     {
