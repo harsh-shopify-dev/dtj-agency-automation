@@ -1,0 +1,95 @@
+{%- liquid
+  assign fs_left = 0
+  assign fs_right = 0
+  for i in (1..6)
+    assign tk = 'f' | append: i | append: '_title'
+    assign xk = 'f' | append: i | append: '_text'
+    assign mk = 'f' | append: i | append: '_image'
+    assign tv = bs[tk] | strip
+    assign xv = bs[xk] | strip
+    assign mv = bs[mk]
+    if tv != blank or xv != blank or mv != blank
+      if i < 4
+        assign fs_left = fs_left | plus: 1
+      else
+        assign fs_right = fs_right | plus: 1
+      endif
+    endif
+  endfor
+  assign fs_total = fs_left | plus: fs_right
+  assign fs_rows = fs_left
+  if fs_right > fs_left
+    assign fs_rows = fs_right
+  endif
+  assign fs_heading = bs.heading | strip
+  assign fs_sub = bs.subheading | strip
+  assign fs_image = bs.image
+  assign fs_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3' or 'h4' or 'p'
+      assign fs_tag = bs.heading_tag
+  endcase
+  assign fs_title_tag = 'p'
+  if fs_tag == 'h2'
+    assign fs_title_tag = 'h3'
+  endif
+  assign fs_has_image = false
+  if fs_image and fs_image != blank
+    assign fs_has_image = true
+  endif
+-%}
+{%- if fs_total > 0 or fs_heading != blank or fs_sub != blank or fs_has_image -%}
+  <div class="dtj-b dtj-fs{% unless fs_has_image %} dtj-fs--noimg{% endunless %}{% if bs.heading_align == 'left' %} dtj-fs--head-left{% endif %}{% if bs.feature_align == 'left' %} dtj-fs--text-left{% endif %}{% if bs.image_shadow %} dtj-fs--shadow{% endif %}{% if bs.mobile_image == 'bottom' %} dtj-fs--img-last{% endif %}" style="{{ dtj_std_style | strip_newlines }} --fs-w: {{ bs.container_width }}px; --fs-h-d: {{ bs.heading_size_desktop }}px; --fs-h-m: {{ bs.heading_size_mobile }}px; --fs-iw-d: {{ bs.image_width_desktop }}px; --fs-iw-m: {{ bs.image_width_mobile }}px; --fs-ir: {{ bs.image_radius }}px; --fs-t-d: {{ bs.title_size_desktop }}px; --fs-t-m: {{ bs.title_size_mobile }}px; --fs-x-d: {{ bs.text_size_desktop }}px; --fs-x-m: {{ bs.text_size_mobile }}px; --fs-is: {{ bs.icon_size }}px; --fs-fw: {{ bs.feature_width }}px; --fs-fg: {{ bs.feature_gap }}px; --fs-cg: {{ bs.column_gap }}px; --fs-mc: {% if bs.mobile_columns == '1' %}1{% else %}2{% endif %};{% if bs.heading_color != blank %} --fs-hc: {{ bs.heading_color }};{% endif %}{% if bs.title_color != blank %} --fs-tc: {{ bs.title_color }};{% endif %}{% if bs.desc_color != blank %} --fs-xc: {{ bs.desc_color }};{% endif %}{% if bs.icon_color != blank %} --fs-ic: {{ bs.icon_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-fs__wrap">
+      {%- if fs_heading != blank or fs_sub != blank -%}
+        <div class="dtj-fs__intro">
+          {%- if fs_heading != blank -%}<{{ fs_tag }} class="dtj-fs__heading">{{ fs_heading | escape }}</{{ fs_tag }}>{%- endif -%}
+          {%- if fs_sub != blank -%}<p class="dtj-fs__sub">{{ fs_sub | escape }}</p>{%- endif -%}
+        </div>
+      {%- endif -%}
+      <div class="dtj-fs__grid">
+        {%- if fs_has_image -%}
+          <div class="dtj-fs__media" style="--fs-span: {{ fs_rows | at_least: 1 }};"><img class="dtj-fs__img" src="{{ fs_image | image_url: width: 900 }}" alt="{{ fs_image.alt | default: fs_heading | escape }}" width="{{ fs_image.width | default: 600 }}" height="{{ fs_image.height | default: 600 }}" loading="lazy"></div>
+        {%- endif -%}
+        {%- assign fs_lc = 0 -%}
+        {%- assign fs_rc = 0 -%}
+        {%- for i in (1..6) -%}
+          {%- liquid
+            assign tk = 'f' | append: i | append: '_title'
+            assign xk = 'f' | append: i | append: '_text'
+            assign mk = 'f' | append: i | append: '_image'
+            assign ik = 'f' | append: i | append: '_icon'
+            assign fs_t = bs[tk] | strip
+            assign fs_x = bs[xk] | strip
+            assign fs_m = bs[mk]
+            assign fs_i = bs[ik] | default: 'none'
+          -%}
+          {%- if fs_t != blank or fs_x != blank or fs_m != blank -%}
+            {%- if i < 4 -%}
+              {%- assign fs_lc = fs_lc | plus: 1 -%}
+              {%- assign fs_pos = fs_lc -%}
+              {%- assign fs_col = 1 -%}
+              {%- assign fs_ord = fs_lc | times: 2 | minus: 1 -%}
+            {%- else -%}
+              {%- assign fs_rc = fs_rc | plus: 1 -%}
+              {%- assign fs_pos = fs_rc -%}
+              {%- assign fs_col = 3 -%}
+              {%- assign fs_ord = fs_rc | times: 2 -%}
+            {%- endif -%}
+            <div class="dtj-fs__feature" style="--fs-col: {{ fs_col }}; --fs-row: {{ fs_pos }}; --fs-ord: {{ fs_ord }};">
+              {%- if fs_m and fs_m != blank -%}
+                <span class="dtj-fs__icon"><img class="dtj-fs__icon-img" src="{{ fs_m | image_url: width: 160 }}" alt="" width="64" height="64" loading="lazy"></span>
+              {%- elsif fs_i != 'none' -%}
+                <span class="dtj-fs__icon" aria-hidden="true">{% render 'dtj-feature-icon', name: fs_i %}</span>
+              {%- endif -%}
+              {%- if fs_t != blank -%}<{{ fs_title_tag }} class="dtj-fs__title">{{ fs_t | escape }}</{{ fs_title_tag }}>{%- endif -%}
+              {%- if fs_x != blank -%}<p class="dtj-fs__text">{{ fs_x | escape }}</p>{%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Feature Showcase is empty. Add an image or type a title into "Left 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

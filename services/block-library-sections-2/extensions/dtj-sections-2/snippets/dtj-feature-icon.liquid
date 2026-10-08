@@ -1,0 +1,15 @@
+{%- comment -%} Icon shapes for the DTJ Feature Showcase block (stroke icons on a 24 grid, sized by the caller's CSS). Called as: render 'dtj-feature-icon', name: .... The caller passes the name in (library rule 7). {%- endcomment -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{%- case name -%}
+{%- when 'sparkles' -%}<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 15l.88 2.62L22.5 18.5l-2.62.88L19 22l-.88-2.62L15.5 18.5l2.62-.88L19 15z"/>
+{%- when 'brain' -%}<path d="M12 2a5 5 0 0 1 4.8 3.6A4 4 0 0 1 20 9.5a4 4 0 0 1-1 7.2A5 5 0 0 1 12 22a5 5 0 0 1-7-5.3A4 4 0 0 1 4 9.5a4 4 0 0 1 3.2-3.9A5 5 0 0 1 12 2z"/><path d="M12 2v20"/>
+{%- when 'leaf' -%}<path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25"/><path d="M7 14c3.22-2.78 6-3.5 9-4.5"/>
+{%- when 'flask' -%}<path d="M9 2v6l-5 9a2 2 0 0 0 1.8 3h12.4a2 2 0 0 0 1.8-3l-5-9V2"/><line x1="9" y1="2" x2="15" y2="2"/><line x1="6" y1="15" x2="18" y2="15"/>
+{%- when 'pill' -%}<path d="M10.5 1.5l-8 8a5.66 5.66 0 0 0 8 8l8-8a5.66 5.66 0 0 0-8-8z"/><line x1="6" y1="14" x2="14" y2="6"/>
+{%- when 'microscope' -%}<path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-1-13"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/>
+{%- when 'heart_pulse' -%}<path d="M19.5 12.572l-7.5 7.428-7.5-7.428A5 5 0 1 1 12 6.006a5 5 0 1 1 7.5 6.572z"/><path d="M6 10h3l1.5-2 2 4 1.5-2h3" stroke-width="1.2"/>
+{%- when 'shield_plus' -%}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/>
+{%- when 'shield_focus' -%}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/><circle cx="12" cy="11" r="1"/>
+{%- when 'wind_calm' -%}<path d="M17.7 7.7A2.5 2.5 0 1 1 19 12H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
+{%- when 'eye' -%}<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><path d="M17 17c-1.5 1-3.2 1.5-5 1.5S8.5 18 7 17" stroke-width="1.2"/>
+{%- when 'check' -%}<path d="M20 6 9 17l-5-5"/>
+{%- else -%}<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 15l.88 2.62L22.5 18.5l-2.62.88L19 22l-.88-2.62L15.5 18.5l2.62-.88L19 15z"/>{%- endcase -%}</svg>
