@@ -44,6 +44,7 @@ elif block == "shade-picker":
     product = {"handle": "b"}
 else:
     settings.update(m["test"]["sample"])  # any other block: its own test sample
+    product = m["test"].get("product")
 def picture(n, ratio):
     """A placeholder picture object with a chosen shape (width / height), like Shopify's image object."""
     h = 200
@@ -71,7 +72,8 @@ if os.environ.get("PREVIEW_AUTO_IMAGES", "1") != "0":  # numbered items get a pl
 env = Environment(loader=DictLoader({p.stem: p.read_text(encoding="utf-8") for p in tg.SNIPPETS.glob("*.liquid")}))
 env.add_filter("image_url", lambda value, **kw: value["src"] if isinstance(value, dict) else value)  # a picture object or a plain URL
 env.add_filter("json", lambda v: json.dumps(v, default=str))
-env.add_filter("money", lambda v: f"Rs. {v}")
+env.add_filter("money", lambda v: f"Rs. {int(v) / 100:,.2f}" if block == "price" else f"Rs. {v}")
+env.add_filter("money_without_trailing_zeros", lambda v: f"Rs. {int(v) / 100:,.0f}" if block == "price" else f"Rs. {v}")
 template = env.from_string(tg.cl.strip_schema(tg.block_text(m)), globals={"request": {"design_mode": False}})
 ctx = {"app": {"metafields": {"dtj": {"licence": {"value": "active"}}}}, "block": {"settings": settings, "shopify_attributes": ""}}
 if product:

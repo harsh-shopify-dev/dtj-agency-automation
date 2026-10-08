@@ -103,6 +103,7 @@
       "items": {
         "enum": [
           "spacing", "spacing_v",
+          "gutter",
           "align",
           "colors",
           "shape",
@@ -138,6 +139,10 @@
         "sample": {
           "type": "object",
           "description": "Settings that make the block render"
+        },
+        "product": {
+          "type": "object",
+          "description": "Optional product object the tests and previews hand to the block (for blocks that read the product)"
         },
         "expect": {
           "type": "array",
