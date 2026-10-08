@@ -12,7 +12,8 @@ param(
     [Parameter(Mandatory = $true, Position = 0)][ValidateSet('status', 'hide', 'show')][string]$Action,
     [ValidateSet('all', 'blocks', 'sections', 'sections2')][string]$App = 'all',
     [string]$Shop = 'elevate-with-harsh.myshopify.com',
-    [string]$ApprovedBy = 'Harsh'
+    [string]$ApprovedBy = 'Harsh',
+    [switch]$DryRun   # print the exact command instead of running it (no secret is shown, nothing is sent)
 )
 $ErrorActionPreference = 'Stop'
 
@@ -25,11 +26,11 @@ $secretVars = [ordered]@{ blocks = 'DTJ_BLOCKS_CLIENT_SECRET'; sections = 'DTJ_S
 $apps = if ($App -eq 'all') { @($secretVars.Keys) } else { @($App) }
 $niceName = @{ blocks = 'DTJ Blocks'; sections = 'DTJ Sections'; sections2 = 'DTJ Sections 2' }
 
-$toolArgs = switch ($Action) {
-    'status' { @('--status') }
-    'hide'   { @('--set', 'inactive', '--approved-by', $ApprovedBy) }
-    'show'   { @('--set', 'active', '--approved-by', $ApprovedBy) }
-}
+# an explicit string array: a one-item result (status) would otherwise collapse into a plain string and the action word got lost
+[string[]]$actionArgs = @()
+if ($Action -eq 'status') { $actionArgs = @('--status') }
+elseif ($Action -eq 'hide') { $actionArgs = @('--set', 'inactive', '--approved-by', $ApprovedBy) }
+else { $actionArgs = @('--set', 'active', '--approved-by', $ApprovedBy) }
 
 $failed = @()
 try {
@@ -50,7 +51,14 @@ try {
             continue
         }
         Set-Item -Path "Env:$var" -Value $secret
-        & $python $tool --shop $Shop @toolArgs --app $a
+        [string[]]$argList = @($tool, '--shop', $Shop) + $actionArgs + @('--app', $a)
+        if ($DryRun) {
+            Write-Host "DRY RUN: python $($argList -join ' ')" -ForegroundColor DarkGray
+            $global:LASTEXITCODE = 0
+        }
+        else {
+            & $python $argList
+        }
         if ($LASTEXITCODE -ne 0) {
             $failed += $a
             if ($LASTEXITCODE -eq 1) {
