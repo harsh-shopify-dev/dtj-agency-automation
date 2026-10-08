@@ -107,6 +107,11 @@ def check_block(manifest_path: Path, root: Path = ROOT) -> list[str]:
         count = sum(1 for s in settings if s.get("type") == picker)
         if count > 1:
             problems.append(f"{count} '{picker}' settings: an app block may have only 1 (use one product_list and per-position settings)")
+    # rule 20: at most 75 interactive settings (everything except header/paragraph) in an app block. Shopify refused a real deploy:
+    # "settings: must have a maximum of 75 for interactive settings" (6 Oct 2026, faithful Science Stats port; the own settings + the standard controls count).
+    interactive = [s for s in settings if s.get("type") not in ("header", "paragraph")]
+    if len(interactive) > 75:
+        problems.append(f"{len(interactive)} interactive settings: Shopify allows at most 75 in an app block")
     non_interactive = [s for s in settings if s.get("type") in ("header", "paragraph")]
     if len(non_interactive) > 6:
         problems.append(f"{len(non_interactive)} header/paragraph settings: Shopify allows at most 6 non-interactive settings in an app block")

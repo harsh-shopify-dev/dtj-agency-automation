@@ -111,6 +111,19 @@ class LibraryRuleTests(unittest.TestCase):
         css.write_text(original + "\n.x-dot { background: var(--a, currentColor); }\n.x-dot span { color: Canvas; }\n", encoding="utf-8")
         self.assertEqual([p for p in self.problems() if "currentColor background" in p], [])
 
+    def test_more_than_75_interactive_settings_are_rejected(self):
+        # Shopify refused a real deploy (6 Oct 2026): 'settings: must have a maximum of 75 for interactive settings'
+        def too_many(schema):
+            schema["settings"] += [{"type": "text", "id": f"extra_{n}", "label": f"Extra {n}"} for n in range(80)]
+        self.edit_schema(too_many)
+        self.assertTrue(any("at most 75" in p for p in self.problems()))
+
+    def test_headers_do_not_count_as_interactive_settings(self):
+        def headers(schema):
+            schema["settings"] = [{"type": "header", "content": "H"}] * 3 + schema["settings"]
+        self.edit_schema(headers)
+        self.assertEqual([p for p in self.problems() if "interactive" in p], [])
+
     def test_blank_range_unit_is_rejected(self):
         # Shopify refused a real deploy: 'settings: with id="stock_threshold" unit can't be blank'
         def blank_unit(schema):

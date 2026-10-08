@@ -1,6 +1,6 @@
 {%- comment -%} A product_list is read by looping over it in order (Shopify docs), never by position like sp_list[0]. {%- endcomment -%}
 {%- liquid
-  assign sp_list = block.settings.products
+  assign sp_list = bs.products
   assign sp_current = product.handle | default: ''
   assign sp_has = false
   assign sp_seen = 0
@@ -11,18 +11,18 @@
     if p and p != blank
       assign sp_has = true
       if p.handle == sp_current
-        assign sp_selected = block.settings[lk] | strip | default: p.title
+        assign sp_selected = bs[lk] | strip | default: p.title
       endif
     endif
   endfor
-  assign sp_label = block.settings.label_text | strip
+  assign sp_label = bs.label_text | strip
 -%}
 {%- if sp_has -%}
-  <dtj-shade-picker class="dtj-b dtj-shade-picker dtj-shade-picker--{{ block.settings.style }}" style="{{ dtj_std_style | strip_newlines }} --sp-swatch: {{ block.settings.swatch_size }}px; --sp-caption: {{ block.settings.caption_size }}px; --sp-subtitle: {{ block.settings.subtitle_size }}px; --sp-radius: {{ block.settings.pill_radius }}px; --sp-gap: {{ block.settings.gap }}px;{% if block.settings.accent_color != blank %} --sp-accent: {{ block.settings.accent_color }};{% endif %}{% if block.settings.border_color != blank %} --sp-border: {{ block.settings.border_color }};{% endif %}" {{ block.shopify_attributes }}>
-    {%- if sp_label != blank or block.settings.show_selected and sp_selected != blank -%}
+  <dtj-shade-picker class="dtj-b dtj-shade-picker dtj-shade-picker--{{ bs.style }}" style="{{ dtj_std_style | strip_newlines }} --sp-swatch: {{ bs.swatch_size }}px; --sp-caption: {{ bs.caption_size }}px; --sp-subtitle: {{ bs.subtitle_size }}px; --sp-radius: {{ bs.pill_radius }}px; --sp-gap: {{ bs.gap }}px;{% if bs.accent_color != blank %} --sp-accent: {{ bs.accent_color }};{% endif %}{% if bs.border_color != blank %} --sp-border: {{ bs.border_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if sp_label != blank or bs.show_selected and sp_selected != blank -%}
       <p class="dtj-shade-picker__label">
         {{- sp_label | escape -}}
-        {%- if block.settings.show_selected and sp_selected != blank %} <strong data-selected>{{ sp_selected | escape }}</strong>{% endif -%}
+        {%- if bs.show_selected and sp_selected != blank %} <strong data-selected>{{ sp_selected | escape }}</strong>{% endif -%}
       </p>
     {%- endif -%}
     <div class="dtj-shade-picker__row">
@@ -32,9 +32,9 @@
           assign lk = 's' | append: i | append: '_label'
           assign tk = 's' | append: i | append: '_subtitle'
           assign wk = 's' | append: i | append: '_swatch'
-          assign sp_text = block.settings[lk] | strip | default: p.title
-          assign sp_sub = block.settings[tk] | strip
-          assign sp_img = block.settings[wk]
+          assign sp_text = bs[lk] | strip | default: p.title
+          assign sp_sub = bs[tk] | strip
+          assign sp_img = bs[wk]
           assign sp_is_current = false
           if p.handle == sp_current
             assign sp_is_current = true
@@ -45,7 +45,7 @@
           endif
         -%}
         {%- if p and p != blank -%}
-          {%- if block.settings.style == 'pill' -%}
+          {%- if bs.style == 'pill' -%}
             <a class="dtj-shade-picker__pill" href="{{ p.url }}" data-item data-label="{{ sp_text | escape }}" data-current="{{ sp_is_current }}" data-unavailable="{{ sp_sold_out }}"{% if sp_is_current %} aria-current="page"{% endif %}{% if sp_sold_out %} aria-disabled="true"{% endif %}><span>{{ sp_text | escape }}</span></a>
           {%- else -%}
             <a class="dtj-shade-picker__item" href="{{ p.url }}" data-item data-label="{{ sp_text | escape }}" data-current="{{ sp_is_current }}" data-unavailable="{{ sp_sold_out }}" title="{{ sp_text | escape }}"{% if sp_is_current %} aria-current="page"{% endif %}{% if sp_sold_out %} aria-disabled="true"{% endif %}>
@@ -56,7 +56,7 @@
                   <img class="dtj-shade-picker__img" src="{{ p.featured_media | image_url: width: 200 }}" alt="" width="200" height="200" loading="lazy">
                 {%- endif -%}
               </span>
-              {%- if block.settings.show_caption -%}
+              {%- if bs.show_caption -%}
                 <span class="dtj-shade-picker__text">
                   <span class="dtj-shade-picker__caption">{{ sp_text | escape }}</span>
                   {%- if sp_sub != blank -%}<span class="dtj-shade-picker__subtitle">{{ sp_sub | escape }}</span>{%- endif -%}
@@ -69,5 +69,5 @@
     </div>
   </dtj-shade-picker>
 {%- elsif request.design_mode -%}
-  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Option Picker is empty. Choose at least one product under "Option products" (editor only: shoppers see nothing). Products received: {{ sp_seen }}. Raw list size: {{ block.settings.products.size | default: 'none' }}; list: {{ block.settings.products | json | truncate: 150 | escape }}; settings: {{ block.settings | json | truncate: 260 | escape }}</p>
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Option Picker is empty. Choose at least one product under "Option products" (editor only: shoppers see nothing). Products received: {{ sp_seen }}. Raw list size: {{ bs.products.size | default: 'none' }}; list: {{ bs.products | json | truncate: 150 | escape }}; settings: {{ bs | json | truncate: 260 | escape }}</p>
 {%- endif -%}

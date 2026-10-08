@@ -44,16 +44,32 @@ elif block == "shade-picker":
     product = {"handle": "b"}
 else:
     settings.update(m["test"]["sample"])  # any other block: its own test sample
-settings.update({k: (swatch(1) if v == "SWATCH" else v) for k, v in extra.items()})  # "image=SWATCH" gives a placeholder picture
+def picture(n, ratio):
+    """A placeholder picture object with a chosen shape (width / height), like Shopify's image object."""
+    h = 200
+    w = round(h * ratio)
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}"><rect width="{w}" height="{h}" fill="{COLOURS[n % 4]}"/><circle cx="{w // 2}" cy="{h // 2}" r="{min(w, h) // 4}" fill="#fff" opacity=".5"/></svg>'
+    return {"src": "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode(), "aspect_ratio": ratio, "alt": "", "width": w, "height": h}
+
+
+def resolve(key, value):
+    if value == "SWATCH":
+        return swatch(1)
+    if isinstance(value, str) and value.startswith("SWATCH:"):  # "SWATCH:0.6" = a tall picture, "SWATCH:1.8" = a wide one
+        return picture(int(key.rsplit("_", 1)[-1]) if key.rsplit("_", 1)[-1].isdigit() else 1, float(value.split(":")[1]))
+    return value
+
+
+settings.update({k: resolve(k, v) for k, v in extra.items()})
 if os.environ.get("PREVIEW_AUTO_IMAGES", "1") != "0":  # numbered items get a placeholder picture unless one was given (set PREVIEW_AUTO_IMAGES=0 to skip)
     for n in range(1, 13):
-        if any(settings.get(f"{p}_{n}") for p in ("name", "text", "number")):
+        if any(settings.get(f"{p}_{n}") for p in ("name", "text", "number", "description")):
             for picture in (f"image_{n}", f"photo_{n}"):
                 if picture in settings and not settings[picture]:
                     settings[picture] = swatch(n)
 
 env = Environment(loader=DictLoader({p.stem: p.read_text(encoding="utf-8") for p in tg.SNIPPETS.glob("*.liquid")}))
-env.add_filter("image_url", lambda value, **kw: value)
+env.add_filter("image_url", lambda value, **kw: value["src"] if isinstance(value, dict) else value)  # a picture object or a plain URL
 env.add_filter("json", lambda v: json.dumps(v, default=str))
 env.add_filter("money", lambda v: f"Rs. {v}")
 template = env.from_string(tg.cl.strip_schema(tg.block_text(m)), globals={"request": {"design_mode": False}})
@@ -69,8 +85,16 @@ H = int(os.environ.get("PREVIEW_HEIGHT", "420"))
 css = (assets / f"dtj-{block}.css").read_text(encoding="utf-8")
 js_path = assets / f"dtj-{block}.js"
 js = js_path.read_text(encoding="utf-8") if js_path.exists() else ""
+# PREVIEW_THEME=1: render inside the real Horizon wrapper (flex column, app block wrapper) with the theme's own stylesheet loaded
+THEME = os.environ.get("PREVIEW_THEME", "0") == "1"
+theme_css = ""
+if THEME:
+    theme_css = (Path(__file__).resolve().parents[3] / ".work" / "master-packs" / "assets" / "base.css").read_text(encoding="utf-8")
+    html = ('<div class="layout-panel-flex layout-panel-flex--column section-content-wrapper mobile-column" '
+            'style="--horizontal-alignment:center;--vertical-alignment:flex-start;--gap:20px;--flex-wrap:nowrap;--flex-direction:column">'
+            '<div class="shopify-block shopify-app-block">' + html + '</div></div>')
 doc = f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html{{color-scheme:light}}body{{margin:0;padding:16px;width:{W - 32}px;background:#fff;color:#121212;font:14px/1.4 Inter,"Segoe UI",system-ui,sans-serif}}
+<style>{theme_css}</style><style>html{{color-scheme:light}}body{{margin:0;padding:16px;width:{W - 32}px;background:#fff;color:#121212;font:14px/1.4 Inter,"Segoe UI",system-ui,sans-serif}}
 img{{max-width:100%}}*{{transition:none!important;animation:none!important}}</style><style>{css}</style></head>
 <body>{html}<script>{js}</script></body></html>"""
 import html as htmllib  # noqa: E402

@@ -3,30 +3,30 @@
   assign sp_qty = sp_variant.inventory_quantity | default: 0
   assign sp_token = '{count}'
   assign sp_stock_line = ''
-  if block.settings.show_stock and sp_variant.inventory_management == 'shopify' and sp_qty > 0
-    if sp_qty <= block.settings.stock_threshold
-      assign sp_stock_line = block.settings.low_stock_text | strip
+  if bs.show_stock and sp_variant.inventory_management == 'shopify' and sp_qty > 0
+    if sp_qty <= bs.stock_threshold
+      assign sp_stock_line = bs.low_stock_text | strip
     else
-      assign sp_stock_line = block.settings.in_stock_text | strip
+      assign sp_stock_line = bs.in_stock_text | strip
     endif
   endif
   assign sp_rating = product.metafields.reviews.rating.value.rating
   if sp_rating == nil or sp_rating == blank
-    assign sp_rating = block.settings.rating_value | strip
+    assign sp_rating = bs.rating_value | strip
   endif
   assign sp_rating_num = sp_rating | times: 1.0
   assign sp_stars = sp_rating_num | plus: 0.5 | floor
   assign sp_star_limit = sp_stars | plus: 1
-  assign sp_line_1 = block.settings.proof_text_1 | strip
-  assign sp_line_2 = block.settings.proof_text_2 | strip
+  assign sp_line_1 = bs.proof_text_1 | strip
+  assign sp_line_2 = bs.proof_text_2 | strip
 -%}
 {%- capture sp_parts -%}
-  {%- if block.settings.show_stars and sp_rating_num > 0 -%}
+  {%- if bs.show_stars and sp_rating_num > 0 -%}
     <span class="dtj-social-proof__part">
       <span class="dtj-social-proof__stars" role="img" aria-label="{{ sp_rating_num }} / 5">
         {%- for i in (1..5) -%}{%- if i < sp_star_limit -%}&#9733;{%- else -%}&#9734;{%- endif -%}{%- endfor -%}
       </span>
-      {%- if block.settings.show_rating_number -%}<span class="dtj-social-proof__rating">{{ sp_rating_num }}</span>{%- endif -%}
+      {%- if bs.show_rating_number -%}<span class="dtj-social-proof__rating">{{ sp_rating_num }}</span>{%- endif -%}
     </span>
   {%- endif -%}
   {%- if sp_stock_line != blank -%}
@@ -38,7 +38,7 @@
   {%- if sp_line_2 != blank -%}<span class="dtj-social-proof__part">{{ sp_line_2 | escape }}</span>{%- endif -%}
 {%- endcapture -%}
 {%- if sp_parts contains 'dtj-social-proof__part' -%}
-  <div class="dtj-b dtj-social-proof" style="{{ dtj_std_style | strip_newlines }} --dtj-sp-gap: {{ block.settings.item_gap }}px;{% if block.settings.star_color != blank %} --dtj-sp-star: {{ block.settings.star_color }};{% endif %}{% if block.settings.urgency_color != blank %} --dtj-sp-urgency: {{ block.settings.urgency_color }};{% endif %}" {{ block.shopify_attributes }}>
+  <div class="dtj-b dtj-social-proof" style="{{ dtj_std_style | strip_newlines }} --dtj-sp-gap: {{ bs.item_gap }}px;{% if bs.star_color != blank %} --dtj-sp-star: {{ bs.star_color }};{% endif %}{% if bs.urgency_color != blank %} --dtj-sp-urgency: {{ bs.urgency_color }};{% endif %}" {{ block.shopify_attributes }}>
     {{- sp_parts -}}
   </div>
 {%- endif -%}

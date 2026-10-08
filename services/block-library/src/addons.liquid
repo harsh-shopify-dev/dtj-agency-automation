@@ -1,6 +1,6 @@
 {%- comment -%} A product_list is read by looping over it in order (Shopify docs), never by position like ao_list[0]. {%- endcomment -%}
 {%- liquid
-  assign ao_list = block.settings.products
+  assign ao_list = bs.products
   assign ao_has = false
   assign ao_seen = 0
   for first_p in ao_list limit: 4
@@ -14,18 +14,18 @@
   for v in product.variants limit: 100
     assign ao_prices = ao_prices | append: v.id | append: ':' | append: v.price | append: ','
   endfor
-  assign ao_heading = block.settings.heading | strip
-  assign ao_sub = block.settings.subheading | strip
+  assign ao_heading = bs.heading | strip
+  assign ao_sub = bs.subheading | strip
 -%}
 {%- if ao_has -%}
-  <dtj-addons class="dtj-b dtj-addons" data-after-add="{{ block.settings.after_add }}" data-money-format="{{ shop.money_format | escape }}" data-main-variant="{{ ao_main_variant.id }}" data-main-prices="{{ ao_prices }}" data-select-label="{{ block.settings.select_label | escape }}" data-selected-label="{{ block.settings.selected_label | escape }}" style="{{ dtj_std_style | strip_newlines }} --ao-heading: {{ block.settings.heading_size }}px; --ao-headline: {{ block.settings.headline_size }}px; --ao-price: {{ block.settings.price_size }}px;{% if block.settings.accent_color != blank %} --ao-accent: {{ block.settings.accent_color }};{% endif %}{% if block.settings.border_color != blank %} --ao-border: {{ block.settings.border_color }};{% endif %}{% if block.settings.card_bg != blank %} --ao-card-bg: {{ block.settings.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
-    {%- if ao_heading != blank or block.settings.show_total -%}
+  <dtj-addons class="dtj-b dtj-addons" data-after-add="{{ bs.after_add }}" data-money-format="{{ shop.money_format | escape }}" data-main-variant="{{ ao_main_variant.id }}" data-main-prices="{{ ao_prices }}" data-select-label="{{ bs.select_label | escape }}" data-selected-label="{{ bs.selected_label | escape }}" style="{{ dtj_std_style | strip_newlines }} --ao-heading: {{ bs.heading_size }}px; --ao-headline: {{ bs.headline_size }}px; --ao-price: {{ bs.price_size }}px;{% if bs.accent_color != blank %} --ao-accent: {{ bs.accent_color }};{% endif %}{% if bs.border_color != blank %} --ao-border: {{ bs.border_color }};{% endif %}{% if bs.card_bg != blank %} --ao-card-bg: {{ bs.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if ao_heading != blank or bs.show_total -%}
       <div class="dtj-addons__head">
         {%- if ao_heading != blank -%}<h3 class="dtj-addons__title">{{ ao_heading | escape }}</h3>{%- endif -%}
-        {%- if block.settings.show_total -%}
+        {%- if bs.show_total -%}
           <div class="dtj-addons__total" data-total aria-live="polite">
             <span data-total-value></span>
-            {%- if block.settings.total_label != blank -%}<small>{{ block.settings.total_label | escape }}</small>{%- endif -%}
+            {%- if bs.total_label != blank -%}<small>{{ bs.total_label | escape }}</small>{%- endif -%}
           </div>
         {%- endif -%}
       </div>
@@ -40,7 +40,7 @@
           assign sk = 's' | append: i | append: '_subline'
           assign bk = 's' | append: i | append: '_badge'
           assign ck = 's' | append: i | append: '_show_compare'
-          assign alt_pos = block.settings[ak] | plus: 0
+          assign alt_pos = bs[ak] | plus: 0
           assign p_alt = nil
           if alt_pos > 0 and alt_pos != i
             for q in ao_list limit: 8
@@ -59,9 +59,9 @@
               assign has_alt = true
               assign v_alt = p_alt.selected_or_first_available_variant
             endif
-            assign ao_name = block.settings[hk] | strip | default: p_main.title
-            assign ao_line = block.settings[sk] | strip
-            assign ao_badge = block.settings[bk] | strip
+            assign ao_name = bs[hk] | strip | default: p_main.title
+            assign ao_line = bs[sk] | strip
+            assign ao_badge = bs[bk] | strip
             assign compare_main = v_main.price
             if v_main.compare_at_price and v_main.compare_at_price > v_main.price
               assign compare_main = v_main.compare_at_price
@@ -79,7 +79,7 @@
             endif
             assign slot_text = i | append: ''
             assign ao_recommended = false
-            if block.settings.recommended_slot == slot_text
+            if bs.recommended_slot == slot_text
               assign ao_recommended = true
             endif
             assign ao_thumb = v_main.featured_media
@@ -87,7 +87,7 @@
               assign ao_thumb = p_main.featured_media
             endif
           -%}
-          <div class="dtj-addons__card" data-card data-selected="false" data-sold-out="{{ ao_sold_out }}" data-recommended="{{ ao_recommended }}" data-rec-label="{{ block.settings.recommended_label | escape }}" data-variant-main="{{ v_main.id }}"{% if has_alt %} data-variant-alt="{{ v_alt.id }}"{% endif %} data-price-main="{{ v_main.price }}"{% if has_alt %} data-price-alt="{{ v_alt.price }}"{% endif %} data-compare-main="{{ compare_main }}"{% if has_alt %} data-compare-alt="{{ compare_alt }}"{% endif %} data-show-compare="{{ block.settings[ck] }}" data-active-variant="main" role="button" tabindex="0" aria-pressed="false" aria-label="{{ ao_name | escape }}">
+          <div class="dtj-addons__card" data-card data-selected="false" data-sold-out="{{ ao_sold_out }}" data-recommended="{{ ao_recommended }}" data-rec-label="{{ bs.recommended_label | escape }}" data-variant-main="{{ v_main.id }}"{% if has_alt %} data-variant-alt="{{ v_alt.id }}"{% endif %} data-price-main="{{ v_main.price }}"{% if has_alt %} data-price-alt="{{ v_alt.price }}"{% endif %} data-compare-main="{{ compare_main }}"{% if has_alt %} data-compare-alt="{{ compare_alt }}"{% endif %} data-show-compare="{{ bs[ck] }}" data-active-variant="main" role="button" tabindex="0" aria-pressed="false" aria-label="{{ ao_name | escape }}">
             <div class="dtj-addons__thumb" data-thumb>
               {%- if ao_thumb and ao_thumb != blank -%}
                 <img src="{{ ao_thumb | image_url: width: 200 }}" alt="" width="64" height="64" loading="lazy">
@@ -98,7 +98,7 @@
               {%- if ao_line != blank -%}<p class="dtj-addons__subline">{{ ao_line | escape }}</p>{%- endif -%}
               <div class="dtj-addons__meta">
                 <span class="dtj-addons__price" data-price>{{ v_main.price | money }}</span>
-                {%- if block.settings[ck] -%}
+                {%- if bs[ck] -%}
                   <span class="dtj-addons__compare" data-compare{% unless compare_main > v_main.price %} hidden{% endunless %}>{{ compare_main | money }}</span>
                 {%- endif -%}
                 {%- if ao_badge != blank -%}<span class="dtj-addons__badge">{{ ao_badge | escape }}</span>{%- endif -%}
@@ -112,7 +112,7 @@
             {%- endif -%}
             <span class="dtj-addons__cta" aria-hidden="true">
               <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3" pathLength="1"/></svg>
-              <span data-cta-label>{% if ao_sold_out %}{{ block.settings.sold_out_label | escape }}{% else %}{{ block.settings.select_label | escape }}{% endif %}</span>
+              <span data-cta-label>{% if ao_sold_out %}{{ bs.sold_out_label | escape }}{% else %}{{ bs.select_label | escape }}{% endif %}</span>
             </span>
           </div>
         {%- endif -%}
@@ -120,5 +120,5 @@
     </div>
   </dtj-addons>
 {%- elsif request.design_mode -%}
-  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing). Products received: {{ ao_seen }}. Raw list size: {{ block.settings.products.size | default: 'none' }}; list: {{ block.settings.products | json | truncate: 150 | escape }}; settings: {{ block.settings | json | truncate: 260 | escape }}</p>
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Add-ons is empty. Choose at least one product under "Add-on products" (editor only: shoppers see nothing). Products received: {{ ao_seen }}. Raw list size: {{ bs.products.size | default: 'none' }}; list: {{ bs.products | json | truncate: 150 | escape }}; settings: {{ bs | json | truncate: 260 | escape }}</p>
 {%- endif -%}
