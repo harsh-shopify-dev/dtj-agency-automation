@@ -102,7 +102,7 @@
       "type": "array",
       "items": {
         "enum": [
-          "spacing",
+          "spacing", "spacing_v",
           "align",
           "colors",
           "shape",

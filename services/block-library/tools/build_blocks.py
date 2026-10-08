@@ -59,6 +59,11 @@ def standard_controls(defaults: dict) -> dict:
             _range("margin_top", "Top margin", -40, 100, 2, d("margin_top", 0)),
             _range("margin_bottom", "Bottom margin", -40, 100, 2, d("margin_bottom", 0)),
         ],
+        # top and bottom padding only: the section already controls the sides, and every setting costs bytes (100 KB cap) and one of 75 slots
+        "spacing_v": [
+            _range("padding_top", "Top padding", 0, 100, 2, d("padding_top", 0)),
+            _range("padding_bottom", "Bottom padding", 0, 100, 2, d("padding_bottom", 0)),
+        ],
         "align": [
             {"type": "select", "id": "align", "label": "Alignment", "default": d("align", "start"),
              "options": [{"value": "start", "label": "Left"}, {"value": "center", "label": "Center"}, {"value": "end", "label": "Right"}]},
@@ -77,6 +82,7 @@ PRELUDE = {
     "spacing": ("--dtj-pad-top: {{ bs.padding_top | default: 0 }}px; --dtj-pad-bottom: {{ bs.padding_bottom | default: 0 }}px; "
                 "--dtj-pad-left: {{ bs.padding_left | default: 0 }}px; --dtj-pad-right: {{ bs.padding_right | default: 0 }}px; "
                 "--dtj-margin-top: {{ bs.margin_top | default: 0 }}px; --dtj-margin-bottom: {{ bs.margin_bottom | default: 0 }}px;"),
+    "spacing_v": "--dtj-pad-top: {{ bs.padding_top | default: 0 }}px; --dtj-pad-bottom: {{ bs.padding_bottom | default: 0 }}px;",
     "align": ("--dtj-align: {{ bs.align | default: 'start' }}; "
               "--dtj-justify: {% case bs.align %}{% when 'center' %}center{% when 'end' %}flex-end{% else %}flex-start{% endcase %};"),
     "colors": ("{% if bs.text_color != blank %}--dtj-text-color: {{ bs.text_color }};{% endif %} "

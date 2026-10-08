@@ -121,6 +121,19 @@ class LicenceToolTests(unittest.TestCase):
         self.assertIn("link the app first", err)
         self.assertEqual(shop.calls, [])
 
+    def test_the_second_sections_app_has_its_own_secret_variable_and_needs_linking(self):
+        code, _, err, _, shop = run([*S, "--status", "--app", "sections2"], env={"DTJ_SECTIONS_CLIENT_SECRET": "NOT_THE_RIGHT_ONE"})
+        self.assertEqual(code, 2)
+        self.assertIn("DTJ_SECTIONS2_CLIENT_SECRET", err)
+        self.assertEqual(shop.calls, [])
+        with tempfile.TemporaryDirectory() as d:
+            missing = Path(d, "shopify.app.toml")
+            with mock.patch.dict(licence.APPS, {"sections2": (missing, "DTJ_SECTIONS2_CLIENT_SECRET")}):
+                code, _, err, _, shop = run([*S, "--status", "--app", "sections2"], env={"DTJ_SECTIONS2_CLIENT_SECRET": "THIRD"})
+        self.assertEqual(code, 1)
+        self.assertIn("link the app first", err)
+        self.assertEqual(shop.calls, [])
+
     def test_the_sections_app_uses_its_own_client_id_and_secret(self):
         with tempfile.TemporaryDirectory() as d:
             toml = Path(d, "shopify.app.toml")

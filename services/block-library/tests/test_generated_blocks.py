@@ -25,6 +25,7 @@ except ImportError:
 SNIPPETS = cl.ext_of(ROOT) / "snippets"
 STANDARD_IDS = {
     "spacing": {"padding_top", "padding_bottom", "padding_left", "padding_right", "margin_top", "margin_bottom"},
+    "spacing_v": {"padding_top", "padding_bottom"},
     "align": {"align"}, "colors": {"text_color", "background"}, "shape": {"corner_radius"}, "text_size": {"text_size"},
 }
 

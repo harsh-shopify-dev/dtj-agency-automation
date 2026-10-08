@@ -2,7 +2,7 @@
 
 Design: `docs/block-library-design.md`. Status 5 Oct 2026: app "DTJ Blocks" (Dev Dashboard) is installed on the dev store `elevate-with-harsh`. The licence kill switch is proven there (editor). Blocks are GENERATED from manifests.
 
-Current blocks (7, released as `dtj-blocks-12`, 69.4 KB of 100 KB): **Hero Points**, **Rotating Text**, **Social Proof Line**, **Testimonials**, **Shoppable Reels**, **Option Picker**, **Add-ons**. Full details, rules and errors: `docs/HANDOFF.md`. (The seven first-built blocks, Trust Row, Highlighted Text, Offer Pill, Offer Callout, Urgency Line, Bullet Points and Secure Checkout, were removed at Harsh's request on 5 Oct 2026 to free size budget for the priority pack blocks; their files were deleted.)
+Current blocks (7, live release `dtj-blocks-23`, 70.9 KB of 100 KB): **Hero Points**, **Rotating Text**, **Social Proof Line**, **Testimonials**, **Shoppable Reels**, **Option Picker**, **Add-ons**. Full-width sections live in the other apps (`services/block-library-sections`, `services/block-library-sections-2`). Full details, rules and errors: `docs/HANDOFF.md`. (The seven first-built blocks, Trust Row, Highlighted Text, Offer Pill, Offer Callout, Urgency Line, Bullet Points and Secure Checkout, were removed at Harsh's request on 5 Oct 2026 to free size budget for the priority pack blocks; their files were deleted.)
 
 ## Layout
 ```
