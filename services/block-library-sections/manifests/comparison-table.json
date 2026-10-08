@@ -14,16 +14,22 @@
       "id": "heading",
       "type": "text",
       "required": false,
-      "max_length": 80
+      "max_length": 120
     },
     {
-      "id": "our_label",
+      "id": "review_text",
       "type": "text",
       "required": false,
-      "max_length": 80
+      "max_length": 120
     },
     {
-      "id": "our_image",
+      "id": "brand_label",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_brand_image",
       "type": "image_picker",
       "required": false
     },
@@ -31,107 +37,247 @@
       "id": "other_label",
       "type": "text",
       "required": false,
-      "max_length": 80
+      "max_length": 120
     },
     {
-      "id": "other_image",
+      "id": "other_brand_image",
       "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_1",
-      "type": "inline_richtext",
-      "required": true
+      "id": "our_text_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
     },
     {
-      "id": "other_1",
-      "type": "inline_richtext",
-      "required": true
-    },
-    {
-      "id": "our_2",
-      "type": "inline_richtext",
+      "id": "our_image_1",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_2",
-      "type": "inline_richtext",
+      "id": "other_text_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_1",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_3",
-      "type": "inline_richtext",
+      "id": "our_text_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_2",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_3",
-      "type": "inline_richtext",
+      "id": "other_text_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_2",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_4",
-      "type": "inline_richtext",
+      "id": "our_text_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_3",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_4",
-      "type": "inline_richtext",
+      "id": "other_text_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_3",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_5",
-      "type": "inline_richtext",
+      "id": "our_text_4",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_4",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_5",
-      "type": "inline_richtext",
+      "id": "other_text_4",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_4",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_6",
-      "type": "inline_richtext",
+      "id": "our_text_5",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_5",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_6",
-      "type": "inline_richtext",
+      "id": "other_text_5",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_5",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_7",
-      "type": "inline_richtext",
+      "id": "our_text_6",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_6",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_7",
-      "type": "inline_richtext",
+      "id": "other_text_6",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_6",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "our_8",
-      "type": "inline_richtext",
+      "id": "our_text_7",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_7",
+      "type": "image_picker",
       "required": false
     },
     {
-      "id": "other_8",
-      "type": "inline_richtext",
+      "id": "other_text_7",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_7",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "our_text_8",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_8",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "other_text_8",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_8",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "our_text_9",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_9",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "other_text_9",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_9",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "our_text_10",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "our_image_10",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "other_text_10",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "other_image_10",
+      "type": "image_picker",
       "required": false
     }
   ],
   "standard_controls": [
-    "spacing",
-    "colors",
-    "shape",
-    "text_size"
+    "spacing_v",
+    "colors"
   ],
   "standard_defaults": {
-    "padding_top": 24,
-    "padding_bottom": 24,
-    "corner_radius": 14,
-    "text_size": 14
+    "padding_top": 40,
+    "padding_bottom": 40
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
     {
       "type": "text",
       "id": "heading",
@@ -140,142 +286,420 @@
     },
     {
       "type": "text",
-      "id": "our_label",
-      "label": "Our column title"
-    },
-    {
-      "type": "image_picker",
-      "id": "our_image",
-      "label": "Our column image"
-    },
-    {
-      "type": "text",
-      "id": "other_label",
-      "label": "Other column title"
-    },
-    {
-      "type": "image_picker",
-      "id": "other_image",
-      "label": "Other column image"
+      "id": "review_text",
+      "label": "Line under the heading",
+      "info": "For example your own review count. Only type what is true. Empty = hidden."
     },
     {
       "type": "checkbox",
-      "id": "highlight_ours",
+      "id": "show_stars",
+      "label": "Show five stars before that line",
+      "default": false,
+      "info": "Only tick this if the line states a real rating."
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "muted_color",
+      "label": "Line under the heading: color",
+      "info": "Empty = a softer shade of the text."
+    },
+    {
+      "type": "select",
+      "id": "header_layout",
+      "label": "Heading position",
+      "default": "side",
+      "options": [
+        {
+          "value": "side",
+          "label": "Left of the table (wide screens)"
+        },
+        {
+          "value": "top",
+          "label": "Above the table"
+        }
+      ],
+      "info": "Use Above the table in a narrow column, such as beside a product."
+    },
+    {
+      "type": "range",
+      "id": "header_col_width",
+      "label": "Heading column width",
+      "min": 220,
+      "max": 480,
+      "step": 10,
+      "unit": "px",
+      "default": 300
+    },
+    {
+      "type": "range",
+      "id": "header_gap",
+      "label": "Space between heading and table",
+      "min": 24,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 56
+    },
+    {
+      "type": "header",
+      "content": "Our column"
+    },
+    {
+      "type": "text",
+      "id": "brand_label",
+      "label": "Our column name",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "our_brand_image",
+      "label": "Our product image"
+    },
+    {
+      "type": "range",
+      "id": "our_image_height",
+      "label": "Our image max height",
+      "min": 50,
+      "max": 400,
+      "step": 10,
+      "unit": "px",
+      "default": 140
+    },
+    {
+      "type": "checkbox",
+      "id": "highlight_our_brand",
       "label": "Highlight our column",
       "default": true
     },
     {
-      "type": "checkbox",
-      "id": "show_marks",
-      "label": "Show a tick / cross beside each row",
-      "default": true
+      "type": "color",
+      "id": "our_bg_color",
+      "label": "Our column background",
+      "info": "Empty = a soft tint of the text color."
     },
     {
       "type": "color",
-      "id": "accent_color",
-      "label": "Accent color",
-      "info": "Our column highlight and ticks. Empty = same as the text."
+      "id": "our_text_color",
+      "label": "Our column text color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Other column"
+    },
+    {
+      "type": "text",
+      "id": "other_label",
+      "label": "Other column name",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "other_brand_image",
+      "label": "Other product image"
     },
     {
       "type": "range",
-      "id": "image_height",
-      "label": "Column image height",
-      "min": 40,
-      "max": 200,
-      "step": 4,
+      "id": "other_image_height",
+      "label": "Other image max height",
+      "min": 50,
+      "max": 400,
+      "step": 10,
       "unit": "px",
-      "default": 96
+      "default": 140
+    },
+    {
+      "type": "color",
+      "id": "other_bg_color",
+      "label": "Other column background",
+      "info": "Empty = transparent."
+    },
+    {
+      "type": "color",
+      "id": "other_text_color",
+      "label": "Other column text color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Layout"
     },
     {
       "type": "range",
-      "id": "heading_size",
-      "label": "Heading size",
-      "min": 20,
-      "max": 48,
+      "id": "max_width",
+      "label": "Max width",
+      "min": 300,
+      "max": 1280,
+      "step": 20,
+      "unit": "px",
+      "default": 1080
+    },
+    {
+      "type": "color",
+      "id": "line_color",
+      "label": "Divider line color",
+      "info": "Empty = a soft line."
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Column corner radius",
+      "min": 0,
+      "max": 40,
       "step": 1,
       "unit": "px",
-      "default": 28
+      "default": 24
     },
     {
-      "type": "inline_richtext",
-      "id": "our_1",
-      "label": "Row 1: our side",
-      "info": "A row shows when either side has text."
+      "type": "range",
+      "id": "card_padding",
+      "label": "Column side padding",
+      "min": 10,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 24
     },
     {
-      "type": "inline_richtext",
-      "id": "other_1",
-      "label": "Row 1: other side"
+      "type": "range",
+      "id": "row_spacing",
+      "label": "Space between rows",
+      "min": 10,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 24
     },
     {
-      "type": "inline_richtext",
-      "id": "our_2",
-      "label": "Row 2: our side"
+      "type": "range",
+      "id": "our_row_image_height",
+      "label": "Our row image max height",
+      "min": 20,
+      "max": 300,
+      "step": 5,
+      "unit": "px",
+      "default": 120
     },
     {
-      "type": "inline_richtext",
-      "id": "other_2",
-      "label": "Row 2: other side"
+      "type": "range",
+      "id": "other_row_image_height",
+      "label": "Other row image max height",
+      "min": 20,
+      "max": 300,
+      "step": 5,
+      "unit": "px",
+      "default": 120
     },
     {
-      "type": "inline_richtext",
-      "id": "our_3",
-      "label": "Row 3: our side"
+      "type": "header",
+      "content": "Rows (up to 10)"
     },
     {
-      "type": "inline_richtext",
-      "id": "other_3",
-      "label": "Row 3: other side"
+      "type": "text",
+      "id": "our_text_1",
+      "label": "Row 1: our text",
+      "info": "A row shows when any of its four fields is filled."
     },
     {
-      "type": "inline_richtext",
-      "id": "our_4",
-      "label": "Row 4: our side"
+      "type": "image_picker",
+      "id": "our_image_1",
+      "label": "Row 1: our image (optional)"
     },
     {
-      "type": "inline_richtext",
-      "id": "other_4",
-      "label": "Row 4: other side"
+      "type": "text",
+      "id": "other_text_1",
+      "label": "Row 1: other text"
     },
     {
-      "type": "inline_richtext",
-      "id": "our_5",
-      "label": "Row 5: our side"
+      "type": "image_picker",
+      "id": "other_image_1",
+      "label": "Row 1: other image (optional)"
     },
     {
-      "type": "inline_richtext",
-      "id": "other_5",
-      "label": "Row 5: other side"
+      "type": "text",
+      "id": "our_text_2",
+      "label": "Row 2: our text"
     },
     {
-      "type": "inline_richtext",
-      "id": "our_6",
-      "label": "Row 6: our side"
+      "type": "image_picker",
+      "id": "our_image_2",
+      "label": "Row 2: our image (optional)"
     },
     {
-      "type": "inline_richtext",
-      "id": "other_6",
-      "label": "Row 6: other side"
+      "type": "text",
+      "id": "other_text_2",
+      "label": "Row 2: other text"
     },
     {
-      "type": "inline_richtext",
-      "id": "our_7",
-      "label": "Row 7: our side"
+      "type": "image_picker",
+      "id": "other_image_2",
+      "label": "Row 2: other image (optional)"
     },
     {
-      "type": "inline_richtext",
-      "id": "other_7",
-      "label": "Row 7: other side"
+      "type": "text",
+      "id": "our_text_3",
+      "label": "Row 3: our text"
     },
     {
-      "type": "inline_richtext",
-      "id": "our_8",
-      "label": "Row 8: our side"
+      "type": "image_picker",
+      "id": "our_image_3",
+      "label": "Row 3: our image (optional)"
     },
     {
-      "type": "inline_richtext",
-      "id": "other_8",
-      "label": "Row 8: other side"
+      "type": "text",
+      "id": "other_text_3",
+      "label": "Row 3: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_3",
+      "label": "Row 3: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_4",
+      "label": "Row 4: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_4",
+      "label": "Row 4: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_4",
+      "label": "Row 4: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_4",
+      "label": "Row 4: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_5",
+      "label": "Row 5: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_5",
+      "label": "Row 5: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_5",
+      "label": "Row 5: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_5",
+      "label": "Row 5: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_6",
+      "label": "Row 6: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_6",
+      "label": "Row 6: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_6",
+      "label": "Row 6: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_6",
+      "label": "Row 6: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_7",
+      "label": "Row 7: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_7",
+      "label": "Row 7: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_7",
+      "label": "Row 7: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_7",
+      "label": "Row 7: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_8",
+      "label": "Row 8: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_8",
+      "label": "Row 8: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_8",
+      "label": "Row 8: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_8",
+      "label": "Row 8: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_9",
+      "label": "Row 9: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_9",
+      "label": "Row 9: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_9",
+      "label": "Row 9: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_9",
+      "label": "Row 9: other image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "our_text_10",
+      "label": "Row 10: our text"
+    },
+    {
+      "type": "image_picker",
+      "id": "our_image_10",
+      "label": "Row 10: our image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "other_text_10",
+      "label": "Row 10: other text"
+    },
+    {
+      "type": "image_picker",
+      "id": "other_image_10",
+      "label": "Row 10: other image (optional)"
     }
   ],
   "data_needs": [],
@@ -283,20 +707,23 @@
   "test": {
     "sample": {
       "heading": "Heading sample",
-      "our_label": "Ours",
-      "other_label": "Others",
-      "our_1": "Our row one",
-      "other_1": "Their row one",
-      "our_2": "Our row two"
+      "review_text": "Line sample",
+      "brand_label": "Ours",
+      "other_label": "Theirs",
+      "our_text_1": "Our point one",
+      "other_text_1": "Their point one",
+      "our_text_2": "Our point two"
     },
     "expect": [
       "Heading sample",
+      "Line sample",
       "Ours",
-      "Others",
-      "Our row one",
-      "Their row one",
-      "Our row two",
-      "dtj-cmp__table"
+      "Theirs",
+      "Our point one",
+      "Their point one",
+      "Our point two",
+      "dtj-ct__grid",
+      "dtj-ct__card-bg--our"
     ]
   }
 }

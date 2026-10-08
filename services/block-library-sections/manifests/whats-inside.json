@@ -210,7 +210,7 @@
     }
   ],
   "standard_controls": [
-    "spacing",
+    "spacing_v",
     "colors",
     "text_size"
   ],

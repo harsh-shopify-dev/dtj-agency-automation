@@ -4,25 +4,27 @@ The second app of the block library. Why it exists: one app can hold only 100 KB
 (`services/block-library`, "DTJ Blocks") is at ~73 KB. This app takes the full-width section blocks. Design and limits:
 `docs/block-library-design.md`, state and history: `docs/HANDOFF.md`.
 
-**Status (6 Oct 2026): app created and linked (app id 432103260161), released as `dtj-sections-2` (refused nothing). NOT installed on any store yet.**
-Steps 1-3 of "First-time setup" below are done; continue at step 4 (install). When running `shopify app config link`, check that the prompt path
-ends in `block-library-sections`: it rewrites that folder's `shopify.app.toml`.
+**Status (8 Oct 2026): app id 432103260161, installed on the test store (elevate-with-harsh), licence flag `active`. Active release `dtj-sections-9` (faithful FAQ / Comparison Table / Stories, light spacing controls).** When running `shopify app config link`, check that the prompt path ends in `block-library-sections`: it rewrites that folder's `shopify.app.toml`.
 
-## Blocks (4 of the 16 still-unbuilt pack items; 37.5 KB of 100 KB)
+## Blocks (8; 94.8 KB of 100 KB, so the next faithful ports need a third app)
 | Block (file `dtj-<id>`) | Editor name | Notes |
 |---|---|---|
-| `whats-inside` | DTJ Whats Inside | up to 6 ingredient cards (image, name, description, dose pill, up to 4 benefits); 2-4 columns on desktop, a swipeable row on phones; optional dividers; highlighted part of the heading |
-| `whats-not-inside` | DTJ Not Inside | up to 12 items (image + name) with an optional cross badge and circle frame; heading with a wavy-underlined word |
-| `faq` | DTJ FAQ | up to 10 questions (rich-text answers), optional category pills (4 categories), first question can start open |
-| `comparison-table` | DTJ Comparison Table | up to 8 rows, our column vs another, optional tick/cross marks and an outlined highlight column. The pack's per-row images and the fixed star line were dropped (no invented ratings) |
+| `faq` | DTJ FAQ | port of the pack's `dtj-beauty-faq`: two-line heading, category pills, round toggle accordion; 12 questions, 6 categories |
+| `comparison-table` | DTJ Comparison Table | port of `dtj-comparison-table`: two tall columns, picture rows, sticky heading beside the table (or above it); 10 rows |
+| `stories` | DTJ Stories | port of `dtj-beauty-customer-stories`: rating strip, swipe row of photo cards with tags, CTA, trust line; 8 cards, tags comma-separated |
+| `science-stats` | DTJ Science Stats Grid | port of `dtj-science-stats`, with an "Adapt to each image" option |
+| `testimonials-slider` | DTJ Testimonials Slider | redesigned to match the pack section |
+| `whats-inside` | DTJ Whats Inside | still designed from the settings list, NOT yet compared with its original |
+| `whats-not-inside` | DTJ Not Inside | same: not yet compared with its original |
+| `marquee` | DTJ Marquee | same: not yet compared with its original |
 
-Lists use fixed numbered slots (no child blocks in app blocks). No default copy, no hard-coded colours. Every block runs the licence gate.
+Lists use fixed numbered slots (no child blocks in app blocks). No default copy, no hard-coded colours. Every block runs the licence gate. Standard controls: top/bottom padding (`spacing_v`) and text/background colour. To port a block faithfully: render the ORIGINAL first (`tools/render_pack_section.py`), read all of its markup and CSS, port it line by line, then compare phone and desktop renders. The removed block `root-science` is in git history (commit 13532d9).
 
 ## Daily commands (from `services/block-library-sections`, venv python)
 ```
 python ../block-library/tools/build_blocks.py --root .            # write generated files (add --check to only verify)
 DTJ_APP_ROOT=$PWD python ../block-library/tools/check_library.py   # library rules + size budget (PowerShell: $env:DTJ_APP_ROOT=(Get-Location).Path)
-../../.work/.venv/Scripts/python -m unittest discover -s tests -t .   # generic tests + tests/test_sections.py (35 tests)
+../../.work/.venv/Scripts/python -m unittest discover -s tests -t .   # generic tests + tests/test_sections.py (77 tests)
 shopify theme check --path extensions/dtj-sections
 ```
 Preview a block in a real browser (from `services/block-library`, `DTJ_APP_ROOT` pointing at this folder; `PREVIEW_WIDTH`/`PREVIEW_HEIGHT` optional):

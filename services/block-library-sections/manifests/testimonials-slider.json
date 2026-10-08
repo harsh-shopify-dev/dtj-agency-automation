@@ -248,7 +248,7 @@
     }
   ],
   "standard_controls": [
-    "spacing",
+    "spacing_v",
     "colors",
     "shape",
     "align"

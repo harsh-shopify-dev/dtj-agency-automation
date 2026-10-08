@@ -26,123 +26,198 @@
   min-width: 0;
 }
 
-.dtj-cmp {
+/* Comparison Table: a port of the pack's dtj-comparison-table (two tall columns, ours tinted, brand name and picture on top, rows of picture + text;
+   on wide screens the heading and the line under it sit to the left and stay in view while the table scrolls).
+   Differences: colours are settings (empty = the theme's own), the heading column can be turned off ("Above the table") for narrow places, the
+   original's "highlight" checkbox now really switches the tint, and the five stars only show when the merchant ticks them. */
+.dtj-ct {
   display: block;
-  color: var(--dtj-text-color, inherit);
   background: var(--dtj-background, transparent);
-  font-size: var(--dtj-text-size, 14px);
+  color: var(--dtj-text-color, inherit);
 }
 
-.dtj-cmp__head {
-  margin: 0 0 20px;
-  font-size: clamp(20px, 6vw, var(--cm-h, 28px));
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
-  text-wrap: balance;
-}
-
-.dtj-cmp__table {
+.dtj-ct__inner {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
+  max-width: var(--ct-w, 1080px);
+  margin: 0 auto;
+  text-align: center;
 }
 
-.dtj-cmp__table th,
-.dtj-cmp__table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-  text-align: start;
-  vertical-align: middle;
+.dtj-ct__heading {
+  max-width: 760px;
+  margin: 0 auto;
+  color: var(--ct-heading, inherit);
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
-.dtj-cmp__table th {
-  padding-block: 18px 14px;
+.dtj-ct__reviews {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+  color: var(--ct-muted, color-mix(in srgb, currentColor 55%, transparent));
+  font-size: 13px;
   font-weight: 700;
-  vertical-align: bottom;
+  line-height: 1;
 }
 
-.dtj-cmp__img {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  height: var(--cm-img, 96px);
-  margin: 0 0 10px;
-  object-fit: contain;
-  object-position: left bottom;
+/* a star tile's fill is the heading colour; the star itself is on an inner element so it can take the page colour */
+.dtj-ct__stars {
+  display: inline-flex;
+  gap: 2px;
 }
 
-.dtj-cmp__label {
-  display: block;
-  font-size: 1.1em;
+.dtj-ct__stars span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  background: var(--ct-heading, currentColor);
+}
+
+.dtj-ct__stars i {
+  color: Canvas;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.dtj-ct__table {
+  position: relative;
+  margin: 56px auto 0;
+}
+
+.dtj-ct__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  position: relative;
+}
+
+.dtj-ct__card-bg {
+  z-index: 1;
+  border-radius: var(--ct-r, 24px);
+  pointer-events: none;
+}
+
+.dtj-ct__card-bg--our { background: var(--ct-our-bg, color-mix(in srgb, currentColor 7%, transparent)); }
+.dtj-ct__card-bg--other { background: var(--ct-other-bg, transparent); }
+
+.dtj-ct__cell {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(12px, 2vw, var(--ct-row, 24px)) clamp(10px, 2.5vw, var(--ct-pad, 24px));
+  border-bottom: 1px solid var(--ct-line, color-mix(in srgb, currentColor 18%, transparent));
+  text-align: center;
+}
+
+.dtj-ct__cell--our { color: var(--ct-our-text, inherit); }
+.dtj-ct__cell--other { color: var(--ct-other-text, inherit); }
+
+.dtj-ct__cell--header {
+  padding-top: calc(clamp(10px, 2.5vw, var(--ct-pad, 24px)) + 12px);
+  padding-bottom: clamp(16px, 2vw, 24px);
+}
+
+.dtj-ct__brand {
+  margin: 0;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: clamp(20px, 2.5vw, 32px);
+  font-weight: 800;
   line-height: 1.2;
 }
 
-.dtj-cmp__cell {
+.dtj-ct__pic {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20px;
 }
 
-.dtj-cmp__text {
-  min-width: 0;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
+.dtj-ct__pic--row {
+  margin-top: 0;
+  margin-bottom: 16px;
 }
 
-.dtj-cmp__other .dtj-cmp__text { opacity: 0.72; }
-
-/* tick and cross: the circle and the symbol are separate shapes, each with its own colour */
-.dtj-cmp__mark {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin-top: 0.05em;
+.dtj-ct__img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  /* lets a product photo on a white background sit on the tinted column */
+  mix-blend-mode: multiply;
 }
 
-.dtj-cmp__yes-bg { fill: var(--cm-accent, currentColor); }
-.dtj-cmp__no-bg { fill: color-mix(in srgb, currentColor 12%, transparent); }
-
-.dtj-cmp__yes,
-.dtj-cmp__no {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.4;
+.dtj-ct__cell--row {
+  font-size: clamp(15px, 1.6vw, 18px);
+  font-weight: 500;
+  line-height: 1.45;
 }
 
-.dtj-cmp__yes { stroke: Canvas; }
-.dtj-cmp__no { stroke: currentColor; opacity: 0.6; }
-
-/* our column: a tinted card with an accent outline that wraps the whole column */
-.dtj-cmp--hl .dtj-cmp__our {
-  border-inline: 1.5px solid var(--cm-accent, currentColor);
-  background: color-mix(in srgb, var(--cm-accent, currentColor) 4%, transparent);
+.dtj-ct__cell--row:last-child,
+.dtj-ct__cell--row:nth-last-child(2) {
+  padding-bottom: calc(clamp(10px, 2.5vw, var(--ct-pad, 24px)) + 24px);
+  border-bottom: none;
 }
-
-.dtj-cmp--hl thead .dtj-cmp__our {
-  border-top: 1.5px solid var(--cm-accent, currentColor);
-  border-start-start-radius: var(--dtj-radius, 14px);
-  border-start-end-radius: var(--dtj-radius, 14px);
-}
-
-.dtj-cmp--hl tbody tr:last-child .dtj-cmp__our {
-  border-bottom: 1.5px solid var(--cm-accent, currentColor);
-  border-end-start-radius: var(--dtj-radius, 14px);
-  border-end-end-radius: var(--dtj-radius, 14px);
-}
-
-.dtj-cmp--hl:not(:has(thead)) tbody tr:first-child .dtj-cmp__our {
-  border-top: 1.5px solid var(--cm-accent, currentColor);
-  border-start-start-radius: var(--dtj-radius, 14px);
-  border-start-end-radius: var(--dtj-radius, 14px);
-}
-
-.dtj-cmp tbody tr:last-child td { border-bottom-color: transparent; }
-.dtj-cmp--hl tbody tr:last-child .dtj-cmp__our { border-bottom-color: var(--cm-accent, currentColor); }
 
 @media screen and (max-width: 749px) {
-  .dtj-cmp__table th,
-  .dtj-cmp__table td { padding: 12px 10px; }
+  .dtj-ct__heading { font-size: 28px; }
+  .dtj-ct__reviews { margin-top: 16px; }
+  .dtj-ct__table { margin-top: 36px; }
+}
+
+/* wide screens, heading beside the table */
+@media screen and (min-width: 900px) {
+  .dtj-ct--side .dtj-ct__inner {
+    display: grid;
+    grid-template-columns: var(--ct-hw, 300px) minmax(0, 1fr);
+    gap: var(--ct-hg, 56px);
+    align-items: start;
+    text-align: left;
+  }
+
+  .dtj-ct--side .dtj-ct__header {
+    position: sticky;
+    top: 24px;
+    min-width: 0;
+  }
+
+  .dtj-ct--side .dtj-ct__heading {
+    max-width: none;
+    margin: 0;
+    text-align: left;
+  }
+
+  .dtj-ct--side .dtj-ct__reviews {
+    justify-content: flex-start;
+    margin-top: 20px;
+  }
+
+  .dtj-ct--side .dtj-ct__table {
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* a more compact table on wide screens */
+  .dtj-ct__cell { padding: 12px 18px; }
+  .dtj-ct__cell--header { padding-top: 20px; padding-bottom: 14px; }
+  .dtj-ct__cell--row { font-size: 15px; }
+  .dtj-ct__brand { font-size: 22px; }
+  .dtj-ct__pic { margin-top: 12px; }
+  .dtj-ct__pic--row { margin-top: 0; }
+  /* the picture under the column name is capped so a big height setting cannot bloat the first row */
+  .dtj-ct__cell--header .dtj-ct__img { max-height: 140px !important; }
+  .dtj-ct__cell--row:last-child,
+  .dtj-ct__cell--row:nth-last-child(2) { padding-bottom: 22px; }
 }

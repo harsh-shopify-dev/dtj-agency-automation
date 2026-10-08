@@ -162,7 +162,7 @@
     }
   ],
   "standard_controls": [
-    "spacing",
+    "spacing_v",
     "align",
     "colors"
   ],

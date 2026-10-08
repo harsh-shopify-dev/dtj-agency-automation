@@ -132,7 +132,7 @@
     }
   ],
   "standard_controls": [
-    "spacing",
+    "spacing_v",
     "colors"
   ],
   "standard_defaults": {

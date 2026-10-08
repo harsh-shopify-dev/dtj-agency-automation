@@ -92,11 +92,11 @@ class FaqTests(unittest.TestCase):
         self.assertEqual(html.count("<details"), 1)
         self.assertNotIn("orphan answer", html)
 
-    def test_up_to_ten_questions_and_answers_keep_their_formatting(self):
-        sample = {f"question_{i}": f"Q{i}" for i in range(1, 11)}
+    def test_up_to_twelve_questions_and_answers_keep_their_formatting(self):
+        sample = {f"question_{i}": f"Q{i}" for i in range(1, 14)}
         sample["answer_1"] = "<p>Answer with <strong>bold</strong></p>"
         html = render(self.m, sample)
-        self.assertEqual(html.count("<details"), 10)
+        self.assertEqual(html.count("<details"), 12)
         self.assertIn("<strong>bold</strong>", html)
 
     def test_questions_are_escaped(self):
@@ -107,11 +107,22 @@ class FaqTests(unittest.TestCase):
         self.assertEqual(render(self.m, {**sample, "first_open": True}).count(" open"), 1)
         self.assertEqual(render(self.m, {**sample, "first_open": False}).count(" open"), 0)
 
-    def test_pills_need_the_switch_and_at_least_one_category(self):
-        base = {"question_1": "A", "category_1": "Shipping"}
+    def test_pills_need_the_switch_a_label_and_a_question_in_that_category(self):
+        base = {"question_1": "A", "category_1": "Shipping", "cat_1": "1"}
         self.assertIn("dtj-faq__pill", render(self.m, {**base, "show_filters": True}))
         self.assertNotIn("dtj-faq__pill", render(self.m, {**base, "show_filters": False}))
-        self.assertNotIn("dtj-faq__pill", render(self.m, {"question_1": "A", "show_filters": True}))
+        self.assertNotIn("dtj-faq__pill", render(self.m, {"question_1": "A", "cat_1": "1", "show_filters": True}))  # no label
+        self.assertNotIn("dtj-faq__pill", render(self.m, {"question_1": "A", "category_1": "Shipping", "show_filters": True}))  # nobody in it
+
+    def test_a_pill_for_an_empty_category_is_not_shown(self):
+        html = render(self.m, {"question_1": "A", "cat_1": "2", "category_1": "Empty", "category_2": "Usage", "show_filters": True})
+        self.assertIn(">Usage<", html)
+        self.assertNotIn(">Empty<", html)
+
+    def test_the_heading_is_one_h2_with_two_lines(self):
+        html = render(self.m, {"heading": "Line one", "heading_accent": "Line two"})
+        self.assertEqual(html.count("<h2"), 1)
+        self.assertIn("dtj-faq__line--accent", html)
 
     def test_the_all_pill_has_a_neutral_fallback_label_and_every_item_carries_its_category(self):
         html = render(self.m, {"question_1": "A", "category_2": "Usage", "cat_1": "2", "show_filters": True})
@@ -124,30 +135,48 @@ class FaqTests(unittest.TestCase):
 class ComparisonTableTests(unittest.TestCase):
     m = manifest("comparison-table")
 
-    def test_a_row_shows_when_either_side_has_text(self):
-        html = render(self.m, {"our_1": "ours only", "other_2": "theirs only"})
-        self.assertEqual(html.count("<tr>"), 2)  # two body rows, no header row (no labels or images)
+    def test_a_row_shows_when_any_of_its_fields_has_content(self):
+        html = render(self.m, {"our_text_1": "ours only", "other_text_2": "theirs only", "our_image_4": "pic"})
+        self.assertEqual(html.count("dtj-ct__cell--our"), 1 + 3)  # header cell + three rows
+        self.assertEqual(html.count("dtj-ct__cell--row dtj-ct__cell--other"), 3)
 
-    def test_nothing_renders_without_any_row(self):
-        self.assertEqual(render(self.m, {"heading": "Only a heading"}), "")
+    def test_rows_are_numbered_without_gaps(self):
+        html = render(self.m, {"our_text_1": "A", "our_text_5": "B"})
+        self.assertIn("grid-row: 2;", html)
+        self.assertIn("grid-row: 3;", html)
+        self.assertNotIn("grid-row: 6;", html)
+        self.assertIn("grid-row: 1 / span 3;", html)  # the two tall column backgrounds cover the header + 2 rows
 
-    def test_the_header_row_needs_a_label_or_an_image(self):
-        self.assertNotIn("<thead", render(self.m, {"our_1": "A"}))
-        self.assertIn("<thead", render(self.m, {"our_1": "A", "our_label": "Ours"}))
+    def test_nothing_renders_without_any_content(self):
+        self.assertEqual(render(self.m, {}), "")
 
-    def test_up_to_eight_rows(self):
-        sample = {f"our_{i}": f"Row {i}" for i in range(1, 9)}
-        self.assertEqual(render(self.m, sample).count("<tr>"), 8)
+    def test_the_heading_and_line_come_only_from_what_is_typed(self):
+        html = render(self.m, {"our_text_1": "A"})
+        self.assertNotIn("dtj-ct__heading", html)
+        self.assertNotIn("dtj-ct__reviews", html)
+        self.assertNotIn("dtj-ct__brand", html)
 
-    def test_marks_and_highlight_are_options(self):
-        base = {"our_1": "A", "other_1": "B"}
-        self.assertIn("dtj-cmp__yes", render(self.m, {**base, "show_marks": True}))
-        self.assertNotIn("dtj-cmp__yes", render(self.m, {**base, "show_marks": False}))
-        self.assertIn("dtj-cmp--hl", render(self.m, {**base, "highlight_ours": True}))
-        self.assertNotIn("dtj-cmp--hl", render(self.m, {**base, "highlight_ours": False}))
+    def test_stars_need_the_tick_and_a_line_of_text(self):
+        base = {"our_text_1": "A", "review_text": "Our own line"}
+        self.assertNotIn("dtj-ct__stars", render(self.m, base))
+        self.assertIn("dtj-ct__stars", render(self.m, {**base, "show_stars": True}))
+        self.assertNotIn("dtj-ct__stars", render(self.m, {"our_text_1": "A", "show_stars": True}))
 
-    def test_rich_text_cells_keep_their_formatting(self):
-        self.assertIn("<strong>big</strong>", render(self.m, {"our_1": "a <strong>big</strong> win"}))
+    def test_up_to_ten_rows(self):
+        sample = {f"our_text_{i}": f"Row {i}" for i in range(1, 12)}
+        self.assertEqual(render(self.m, sample).count("dtj-ct__cell--row dtj-ct__cell--our"), 10)
+
+    def test_the_highlight_switch_controls_the_tint(self):
+        base = {"our_text_1": "A", "our_bg_color": "red"}
+        self.assertIn("--ct-our-bg: red", render(self.m, {**base, "highlight_our_brand": True}))
+        self.assertIn("--ct-our-bg: transparent", render(self.m, {**base, "highlight_our_brand": False}))
+
+    def test_the_heading_sits_beside_the_table_unless_set_to_top(self):
+        self.assertIn("dtj-ct--side", render(self.m, {"our_text_1": "A", "header_layout": "side"}))
+        self.assertNotIn("dtj-ct--side", render(self.m, {"our_text_1": "A", "header_layout": "top"}))
+
+    def test_text_is_escaped(self):
+        self.assertNotIn("<script>", render(self.m, {"our_text_1": "<script>x</script>", "heading": "<b>x</b>"}))
 
 
 @unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
@@ -185,32 +214,47 @@ class MarqueeTests(unittest.TestCase):
 class StoriesTests(unittest.TestCase):
     m = manifest("stories")
 
-    def test_a_card_only_shows_when_it_has_a_name(self):
-        html = render(self.m, {"name_1": "A", "quote_2": "orphan quote"})
-        self.assertEqual(html.count("<article"), 1)
-        self.assertNotIn("orphan quote", html)
+    def test_a_card_shows_when_it_has_a_name_photo_tags_or_quote(self):
+        html = render(self.m, {"name_1": "A", "quote_2": "only a quote", "tags_3": "Only tags", "photo_4": "pic", "tags_6": ""})
+        self.assertEqual(html.count("<article"), 4)
 
-    def test_up_to_six_cards_and_three_tags(self):
-        sample = {f"name_{i}": f"Person {i}" for i in range(1, 7)}
-        sample.update({"tag_1_1": "T1", "tag_1_2": "T2", "tag_1_3": "T3"})
-        html = render(self.m, sample)
-        self.assertEqual(html.count("<article"), 6)
-        self.assertEqual(html.count('class="dtj-st__tag"'), 3)
+    def test_up_to_eight_cards(self):
+        self.assertEqual(render(self.m, {f"name_{i}": f"Person {i}" for i in range(1, 10)}).count("<article"), 8)
+
+    def test_tags_are_one_comma_separated_field_with_at_most_three(self):
+        html = render(self.m, {"name_1": "A", "tags_1": "One, Two ,Three, Four,, "})
+        self.assertEqual(html.count('class="dtj-cs__tag"'), 3)
+        self.assertIn(">One<", html.replace("</span>", ">").replace(">>", ">"))
+        self.assertNotIn("Four", html)
 
     def test_the_badge_text_comes_only_from_the_merchant_so_nothing_is_claimed_by_default(self):
-        self.assertNotIn("dtj-st__badge", render(self.m, {"name_1": "A"}))
-        self.assertIn(">Mine<", render(self.m, {"name_1": "A", "verified_label": "Mine"}).replace("</svg>", ">").replace(">>", ">"))
+        self.assertNotIn("dtj-cs__badge", render(self.m, {"name_1": "A"}))
+        self.assertIn("dtj-cs__badge", render(self.m, {"name_1": "A", "verified_label": "Mine"}))
+        self.assertIn("Mine", render(self.m, {"name_1": "A", "verified_label": "Mine"}))
 
-    def test_no_invented_star_line(self):
-        self.assertNotIn("<svg", render(self.m, {"name_1": "A", "proof_line": "A line of my own", "heading": "H"}).split("<article")[0])
+    def test_the_stars_need_the_tick_and_the_line_is_only_what_is_typed(self):
+        self.assertNotIn("dtj-cs__rating", render(self.m, {"name_1": "A", "rating_text": "A line of my own"}))
+        html = render(self.m, {"name_1": "A", "show_rating": True, "rating_text": "A line of my own"})
+        self.assertEqual(html.count("<svg viewBox=\"0 0 24 24\"><path d=\"M12 2l2.9"), 5)
+        self.assertIn("A line of my own", html)
+        self.assertNotIn("dtj-cs__rating-text", render(self.m, {"name_1": "A", "show_rating": True}))
 
     def test_the_button_needs_text_and_gets_a_safe_default_link(self):
-        self.assertNotIn("dtj-st__cta", render(self.m, {"name_1": "A"}))
+        self.assertNotIn("dtj-cs__cta\"", render(self.m, {"name_1": "A"}))
         self.assertIn('href="#"', render(self.m, {"name_1": "A", "cta_text": "Go"}))
-        self.assertIn('href="/shop"', render(self.m, {"name_1": "A", "cta_text": "Go", "cta_url": "/shop"}))
+        self.assertIn('href="/shop"', render(self.m, {"name_1": "A", "cta_text": "Go", "cta_link": "/shop"}))
 
-    def test_quotes_and_names_are_escaped(self):
-        self.assertNotIn("<script>", render(self.m, {"name_1": "<script>", "quote_1": "<script>"}))
+    def test_the_trust_line_is_only_what_is_typed(self):
+        self.assertNotIn("dtj-cs__trust", render(self.m, {"name_1": "A", "cta_text": "Go"}))
+        self.assertIn("dtj-cs__trust", render(self.m, {"name_1": "A", "trust_text": "Mine"}))
+
+    def test_the_photo_description_comes_from_the_image_then_the_name(self):
+        html = render(self.m, {"name_1": "Asha", "photo_1": "pic"})
+        self.assertIn('alt="Asha"', html)
+
+    def test_quotes_names_and_tags_are_escaped(self):
+        html = render(self.m, {"name_1": "<script>", "quote_1": "<script>", "tags_1": "<script>", "heading": "<script>"})
+        self.assertNotIn("<script>", html)
 
 
 @unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
