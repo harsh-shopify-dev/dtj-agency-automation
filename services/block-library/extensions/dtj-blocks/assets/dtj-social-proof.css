@@ -54,6 +54,71 @@
   opacity: 0.25;
 }
 
+/* the badge sits first and needs no divider after it */
+.dtj-social-proof__part--badge + .dtj-social-proof__part::before { display: none; }
+
+.dtj-social-proof__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 12px 4px 8px;
+  border: 1px solid color-mix(in srgb, currentcolor 18%, transparent);
+  border-radius: 999px;
+  background: var(--dtj-sp-badge-bg, color-mix(in srgb, currentcolor 6%, transparent));
+  color: var(--dtj-sp-badge-color, inherit);
+  font-size: 0.86em;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.dtj-social-proof__badge svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: var(--dtj-sp-badge-icon, currentcolor);
+}
+
+.dtj-social-proof__stars--single {
+  font-size: 1.2em;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+/* with a badge or photos (and no extra text lines) the row stays on ONE line: the badge text shortens with an ellipsis before anything wraps */
+.dtj-social-proof--one-line { flex-wrap: nowrap; }
+
+.dtj-social-proof--one-line .dtj-social-proof__part {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.dtj-social-proof--one-line .dtj-social-proof__part--keep { flex: none; }
+
+.dtj-social-proof--one-line .dtj-social-proof__badge { min-width: 0; }
+
+.dtj-social-proof--one-line .dtj-social-proof__badge span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* round customer photos that overlap, each with a ring in the page colour */
+.dtj-social-proof__part--avatars { gap: 0; }
+
+.dtj-social-proof__avatar {
+  flex: none;
+  width: var(--dtj-sp-av, 32px);
+  height: var(--dtj-sp-av, 32px);
+  border: 2px solid Canvas;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dtj-social-proof__avatar + .dtj-social-proof__avatar { margin-inline-start: calc(var(--dtj-sp-av, 32px) * -0.3); }
+
 .dtj-social-proof__stars {
   color: var(--dtj-sp-star, currentColor);
   letter-spacing: 1px;

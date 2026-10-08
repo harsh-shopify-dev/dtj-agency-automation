@@ -1,0 +1,37 @@
+/* Price: the real price, the compare-at price struck through and a small dark discount badge, on one tidy baseline. */
+.dtj-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: var(--dtj-justify, flex-start);
+  gap: 6px var(--pr-gap, 10px);
+  color: var(--dtj-text-color, inherit);
+  background: var(--dtj-background, transparent);
+  line-height: 1.2;
+}
+
+.dtj-price__now {
+  font-size: var(--pr-size, 26px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dtj-price__was {
+  color: var(--pr-was, color-mix(in srgb, currentcolor 55%, transparent));
+  font-size: var(--pr-compare, 16px);
+  font-weight: 500;
+  text-decoration: line-through;
+}
+
+/* the badge is a self-contained dark label (system colours, so no colour is hard-coded) */
+.dtj-price__badge {
+  padding: 4px 8px;
+  border-radius: var(--pr-r, 4px);
+  background: var(--pr-badge-bg, CanvasText);
+  color: var(--pr-badge-color, Canvas);
+  font-size: var(--pr-badge, 12px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}

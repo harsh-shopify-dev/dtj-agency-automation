@@ -2,37 +2,258 @@
   "id": "social-proof",
   "title": "DTJ Social Proof Line",
   "block_file": "extensions/dtj-blocks/blocks/dtj-social-proof.liquid",
-  "placements": ["product"],
+  "placements": [
+    "product"
+  ],
   "licence": true,
   "min_filled_slots": 1,
   "slots": [
-    { "id": "proof_text_1", "type": "text", "required": false, "max_length": 60, "suggested_fact_keys": ["social_proof"] },
-    { "id": "proof_text_2", "type": "text", "required": false, "max_length": 60, "suggested_fact_keys": ["social_proof"] },
-    { "id": "low_stock_text", "type": "text", "required": false, "max_length": 60 },
-    { "id": "in_stock_text", "type": "text", "required": false, "max_length": 60 },
-    { "id": "rating_value", "type": "text", "required": false, "max_length": 4 }
+    {
+      "id": "proof_text_1",
+      "type": "text",
+      "required": false,
+      "max_length": 60,
+      "suggested_fact_keys": [
+        "social_proof"
+      ]
+    },
+    {
+      "id": "proof_text_2",
+      "type": "text",
+      "required": false,
+      "max_length": 60,
+      "suggested_fact_keys": [
+        "social_proof"
+      ]
+    },
+    {
+      "id": "low_stock_text",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "in_stock_text",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "rating_value",
+      "type": "text",
+      "required": false,
+      "max_length": 4
+    },
+    {
+      "id": "badge_text",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    }
   ],
-  "standard_controls": ["spacing", "align", "colors", "text_size"],
-  "standard_defaults": { "text_size": 14, "padding_top": 4, "padding_bottom": 4 },
+  "standard_controls": [
+    "spacing",
+    "align",
+    "colors",
+    "text_size"
+  ],
+  "standard_defaults": {
+    "text_size": 14,
+    "padding_top": 4,
+    "padding_bottom": 4
+  },
   "settings": [
-    { "type": "header", "content": "Rating" },
-    { "type": "checkbox", "id": "show_stars", "label": "Show stars", "default": true },
-    { "type": "paragraph", "content": "Stars use the real rating from your review app when the product has one. Only if it has none is the number below used: type a rating you can prove." },
-    { "type": "text", "id": "rating_value", "label": "Rating to use when there is no review data", "info": "For example 4.8. Empty = no stars without review data." },
-    { "type": "checkbox", "id": "show_rating_number", "label": "Show the number next to the stars", "default": true },
-    { "type": "color", "id": "star_color", "label": "Star color", "info": "Empty = same as the text." },
-    { "type": "header", "content": "Real stock" },
-    { "type": "checkbox", "id": "show_stock", "label": "Show the stock line", "default": true },
-    { "type": "text", "id": "low_stock_text", "label": "Text when stock is low", "info": "Use {count} for the number, for example: Only {count} left. Shown only when stock is tracked. Empty = hidden." },
-    { "type": "text", "id": "in_stock_text", "label": "Text when stock is higher", "info": "Use {count}. Empty = hidden above the threshold." },
-    { "type": "range", "id": "stock_threshold", "label": "Low stock at or below", "min": 1, "max": 50, "step": 1, "default": 10 },
-    { "type": "color", "id": "urgency_color", "label": "Stock line color", "info": "Empty = same as the text." },
-    { "type": "header", "content": "Your own lines" },
-    { "type": "text", "id": "proof_text_1", "label": "Line 1", "info": "Only a figure you can prove. Empty = hidden." },
-    { "type": "text", "id": "proof_text_2", "label": "Line 2", "info": "Empty = hidden." },
-    { "type": "range", "id": "item_gap", "label": "Gap between items", "min": 4, "max": 32, "step": 2, "unit": "px", "default": 12 }
+    {
+      "type": "header",
+      "content": "Badge and customer photos"
+    },
+    {
+      "type": "text",
+      "id": "badge_text",
+      "label": "Badge text",
+      "info": "A small rounded label with a shield, for example a category or a promise you can keep. Empty = no badge."
+    },
+    {
+      "type": "checkbox",
+      "id": "badge_icon",
+      "label": "Show the shield in the badge",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "badge_bg",
+      "label": "Badge background",
+      "info": "Empty = a soft tint of the text color."
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "Badge text color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "badge_icon_color",
+      "label": "Shield color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "image_picker",
+      "id": "avatar_1",
+      "label": "Customer photo 1",
+      "info": "Only photos of real customers who agreed to it. Round, overlapping, after the rating. Empty = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "avatar_2",
+      "label": "Customer photo 2"
+    },
+    {
+      "type": "image_picker",
+      "id": "avatar_3",
+      "label": "Customer photo 3"
+    },
+    {
+      "type": "image_picker",
+      "id": "avatar_4",
+      "label": "Customer photo 4"
+    },
+    {
+      "type": "image_picker",
+      "id": "avatar_5",
+      "label": "Customer photo 5"
+    },
+    {
+      "type": "range",
+      "id": "avatar_size",
+      "label": "Customer photo size",
+      "min": 24,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "header",
+      "content": "Rating"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_stars",
+      "label": "Show stars",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "rating_style",
+      "label": "Rating style",
+      "default": "five",
+      "options": [
+        {
+          "value": "five",
+          "label": "Five stars and the number"
+        },
+        {
+          "value": "single",
+          "label": "One star and the number (compact)"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "rating_value",
+      "label": "Rating to use when there is no review data",
+      "info": "Stars use the real rating from your review app when the product has one. Only if it has none is this number used: type a rating you can prove, for example 4.8. Empty = no stars without review data."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating_number",
+      "label": "Show the number next to the stars",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Real stock"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_stock",
+      "label": "Show the stock line",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "low_stock_text",
+      "label": "Text when stock is low",
+      "info": "Use {count} for the number, for example: Only {count} left. Shown only when stock is tracked. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "in_stock_text",
+      "label": "Text when stock is higher",
+      "info": "Use {count}. Empty = hidden above the threshold."
+    },
+    {
+      "type": "range",
+      "id": "stock_threshold",
+      "label": "Low stock at or below",
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "type": "color",
+      "id": "urgency_color",
+      "label": "Stock line color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Your own lines"
+    },
+    {
+      "type": "text",
+      "id": "proof_text_1",
+      "label": "Line 1",
+      "info": "Only a figure you can prove. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "proof_text_2",
+      "label": "Line 2",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "range",
+      "id": "item_gap",
+      "label": "Gap between items",
+      "min": 4,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 12
+    }
   ],
-  "data_needs": ["product.metafields.reviews.rating (written by a review app)"],
+  "data_needs": [
+    "product.metafields.reviews.rating (written by a review app)"
+  ],
   "reference_image": null,
-  "test": { "sample": { "proof_text_1": "Proof line one", "proof_text_2": "Proof line two" }, "expect": ["Proof line one", "Proof line two", "dtj-social-proof"] }
+  "test": {
+    "sample": {
+      "proof_text_1": "Proof line one",
+      "proof_text_2": "Proof line two"
+    },
+    "expect": [
+      "Proof line one",
+      "Proof line two",
+      "dtj-social-proof"
+    ]
+  }
 }

@@ -20,14 +20,36 @@
   assign sp_line_1 = bs.proof_text_1 | strip
   assign sp_line_2 = bs.proof_text_2 | strip
 -%}
+{%- assign sp_badge = bs.badge_text | strip -%}
+{%- capture sp_avatars -%}
+  {%- for i in (1..5) -%}
+    {%- assign ak = 'avatar_' | append: i -%}
+    {%- assign av = bs[ak] -%}
+    {%- if av != blank -%}<img class="dtj-social-proof__avatar" src="{{ av | image_url: width: 120 }}" alt="" width="{{ bs.avatar_size }}" height="{{ bs.avatar_size }}" loading="lazy">{%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
 {%- capture sp_parts -%}
+  {%- if sp_badge != blank -%}
+    <span class="dtj-social-proof__part dtj-social-proof__part--badge"><span class="dtj-social-proof__badge">
+      {%- if bs.badge_icon -%}<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2 4 5.2v6.2c0 4.7 3.2 8.9 8 10.6 4.8-1.7 8-5.9 8-10.6V5.2L12 2Z"/></svg>{%- endif -%}
+      <span>{{ sp_badge | escape }}</span>
+    </span></span>
+  {%- endif -%}
   {%- if bs.show_stars and sp_rating_num > 0 -%}
-    <span class="dtj-social-proof__part">
-      <span class="dtj-social-proof__stars" role="img" aria-label="{{ sp_rating_num }} / 5">
-        {%- for i in (1..5) -%}{%- if i < sp_star_limit -%}&#9733;{%- else -%}&#9734;{%- endif -%}{%- endfor -%}
-      </span>
-      {%- if bs.show_rating_number -%}<span class="dtj-social-proof__rating">{{ sp_rating_num }}</span>{%- endif -%}
+    <span class="dtj-social-proof__part dtj-social-proof__part--keep">
+      {%- if bs.rating_style == 'single' -%}
+        <span class="dtj-social-proof__stars dtj-social-proof__stars--single" role="img" aria-label="{{ sp_rating_num }} / 5">&#9733;</span>
+        <span class="dtj-social-proof__rating">{{ sp_rating_num }}</span>
+      {%- else -%}
+        <span class="dtj-social-proof__stars" role="img" aria-label="{{ sp_rating_num }} / 5">
+          {%- for i in (1..5) -%}{%- if i < sp_star_limit -%}&#9733;{%- else -%}&#9734;{%- endif -%}{%- endfor -%}
+        </span>
+        {%- if bs.show_rating_number -%}<span class="dtj-social-proof__rating">{{ sp_rating_num }}</span>{%- endif -%}
+      {%- endif -%}
     </span>
+  {%- endif -%}
+  {%- if sp_avatars contains 'avatar' -%}
+    <span class="dtj-social-proof__part dtj-social-proof__part--keep dtj-social-proof__part--avatars" aria-hidden="true">{{ sp_avatars }}</span>
   {%- endif -%}
   {%- if sp_stock_line != blank -%}
     <span class="dtj-social-proof__part dtj-social-proof__stock">
@@ -38,7 +60,11 @@
   {%- if sp_line_2 != blank -%}<span class="dtj-social-proof__part">{{ sp_line_2 | escape }}</span>{%- endif -%}
 {%- endcapture -%}
 {%- if sp_parts contains 'dtj-social-proof__part' -%}
-  <div class="dtj-b dtj-social-proof" style="{{ dtj_std_style | strip_newlines }} --dtj-sp-gap: {{ bs.item_gap }}px;{% if bs.star_color != blank %} --dtj-sp-star: {{ bs.star_color }};{% endif %}{% if bs.urgency_color != blank %} --dtj-sp-urgency: {{ bs.urgency_color }};{% endif %}" {{ block.shopify_attributes }}>
+  {%- assign sp_one_line = false -%}
+  {%- if sp_badge != blank or sp_avatars contains 'avatar' -%}
+    {%- if sp_line_1 == blank and sp_line_2 == blank and sp_stock_line == blank -%}{%- assign sp_one_line = true -%}{%- endif -%}
+  {%- endif -%}
+  <div class="dtj-b dtj-social-proof{% if sp_one_line %} dtj-social-proof--one-line{% endif %}" style="{{ dtj_std_style | strip_newlines }} --dtj-sp-gap: {{ bs.item_gap }}px; --dtj-sp-av: {{ bs.avatar_size }}px;{% if bs.badge_bg != blank %} --dtj-sp-badge-bg: {{ bs.badge_bg }};{% endif %}{% if bs.badge_color != blank %} --dtj-sp-badge-color: {{ bs.badge_color }};{% endif %}{% if bs.badge_icon_color != blank %} --dtj-sp-badge-icon: {{ bs.badge_icon_color }};{% endif %}{% if bs.star_color != blank %} --dtj-sp-star: {{ bs.star_color }};{% endif %}{% if bs.urgency_color != blank %} --dtj-sp-urgency: {{ bs.urgency_color }};{% endif %}" {{ block.shopify_attributes }}>
     {{- sp_parts -}}
   </div>
 {%- endif -%}

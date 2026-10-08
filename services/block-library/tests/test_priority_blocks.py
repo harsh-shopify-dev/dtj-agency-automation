@@ -127,12 +127,96 @@ class SocialProofTests(unittest.TestCase):
     def test_stars_can_be_turned_off(self):
         self.assertEqual(render(self.m, {"show_stars": False}, product=product(rating="4.5")), "")
 
+    def test_badge_is_optional_escaped_and_can_drop_its_shield(self):
+        self.assertEqual(render(self.m, {}, product=product()), "")
+        html = render(self.m, {"badge_text": "<b>Tag</b>", "badge_icon": True})
+        self.assertIn("dtj-social-proof__badge", html)
+        self.assertIn("&lt;b&gt;Tag&lt;/b&gt;", html)
+        self.assertIn("<svg", html)
+        self.assertNotIn("<svg", render(self.m, {"badge_text": "Tag", "badge_icon": False}))
+
+    def test_single_star_style_shows_one_star_and_the_number(self):
+        html = render(self.m, {"rating_style": "single", "show_rating_number": False}, product=product(rating="4.5"))
+        self.assertEqual(html.count("&#9733;"), 1)
+        self.assertNotIn("&#9734;", html)
+        self.assertIn(">4.5<", html)
+        self.assertEqual(render(self.m, {"rating_style": "single"}, product=product()), "")  # still no invented rating
+
+    def test_customer_photos_show_only_when_set_and_are_decorative(self):
+        self.assertNotIn("dtj-social-proof__avatar", render(self.m, {"proof_text_1": "Line"}))
+        html = render(self.m, {"avatar_1": "face-1", "avatar_3": "face-3", "avatar_size": 32})
+        self.assertEqual(html.count("dtj-social-proof__avatar\""), 2)
+        self.assertIn('alt=""', html)
+        self.assertIn('aria-hidden="true"', html)
+
+    def test_badge_or_photos_keep_the_row_on_one_line(self):
+        self.assertIn("dtj-social-proof--one-line", render(self.m, {"badge_text": "Tag"}))
+        self.assertIn("dtj-social-proof--one-line", render(self.m, {"avatar_1": "face-1"}))
+        self.assertNotIn("dtj-social-proof--one-line", render(self.m, {"proof_text_1": "Line"}))  # plain lines may still wrap
+
     def test_works_off_the_product_page(self):
         self.assertIn("Proof line", render(self.m, {"proof_text_1": "Proof line"}))  # no product object at all
 
     def test_count_placeholder_text_is_escaped(self):
         html = render(self.m, {**self.TEXTS, "low_stock_text": "<b>{count}</b>"}, product=product(qty=2))
         self.assertIn("&lt;b&gt;2&lt;/b&gt;", html)
+
+
+def priced(price, compare=None):
+    variant = {"price": price}
+    if compare is not None:
+        variant["compare_at_price"] = compare
+    return {"selected_or_first_available_variant": variant}
+
+
+@unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
+class PriceTests(unittest.TestCase):
+    m = manifest("price")
+
+    def test_shows_the_real_price_compare_price_and_worked_out_percentage(self):
+        html = render(self.m, {}, product=priced(3800, 4800))
+        self.assertIn("Rs. 3800", html)
+        self.assertIn("Rs. 4800", html)
+        self.assertIn("-21%", html)  # (4800 - 3800) / 4800 = 20.8 % rounds to 21, like the reference screenshot
+
+    def test_no_discount_means_no_compare_price_and_no_badge(self):
+        for compare in (None, 0, 3800, 2000):
+            html = render(self.m, {}, product=priced(3800, compare))
+            self.assertIn("dtj-price__now", html)
+            self.assertNotIn("dtj-price__was", html)
+            self.assertNotIn("dtj-price__badge", html)
+
+    def test_a_tiny_discount_never_shows_as_zero_percent(self):
+        self.assertIn("-1%", render(self.m, {}, product=priced(99999, 100000)))
+
+    def test_amount_badge_uses_the_real_difference(self):
+        html = render(self.m, {"badge_type": "amount"}, product=priced(3800, 4800))
+        self.assertIn("-Rs. 1000", html)
+        self.assertNotIn("%", html)
+
+    def test_parts_can_be_switched_off(self):
+        html = render(self.m, {"show_compare": False, "show_badge": False}, product=priced(3800, 4800))
+        self.assertNotIn("dtj-price__was", html)
+        self.assertNotIn("dtj-price__badge", html)
+        self.assertIn("dtj-price__now", html)
+
+    def test_suffix_is_optional_and_escaped(self):
+        self.assertIn("-21% OFF", render(self.m, {"badge_suffix": "OFF"}, product=priced(3800, 4800)))
+        self.assertNotIn("OFF", render(self.m, {"badge_suffix": ""}, product=priced(3800, 4800)))
+        self.assertIn("&lt;b&gt;", render(self.m, {"badge_suffix": "<b>"}, product=priced(3800, 4800)))
+
+    def test_colours_are_set_only_when_chosen(self):
+        plain = render(self.m, {}, product=priced(3800, 4800))
+        for var in ("--pr-badge-bg", "--pr-badge-color", "--pr-was"):
+            self.assertNotIn(var, plain)
+        html = render(self.m, {"badge_bg": "rgb(1, 2, 3)", "badge_color": "rgb(4, 5, 6)", "compare_color": "rgb(7, 8, 9)"}, product=priced(3800, 4800))
+        self.assertIn("--pr-badge-bg: rgb(1, 2, 3)", html)
+        self.assertIn("--pr-badge-color: rgb(4, 5, 6)", html)
+        self.assertIn("--pr-was: rgb(7, 8, 9)", html)
+
+    def test_nothing_without_a_product_and_a_placeholder_in_the_editor(self):
+        self.assertEqual(render(self.m, {}, product={}), "")
+        self.assertIn("DTJ Price shows", render(self.m, {}, product={}, design_mode=True))
 
 
 @unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
