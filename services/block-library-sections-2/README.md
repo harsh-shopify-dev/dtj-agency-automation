@@ -3,14 +3,17 @@
 Why it exists: one app holds at most 100 KB of Liquid and one extension. DTJ Blocks (7 blocks, 70.9 KB) and DTJ Sections (8 blocks, 94.8 KB) are
 nearly full, so the next full-width sections go here. Design and limits: `docs/block-library-design.md`; state and history: `docs/HANDOFF.md`.
 
-**Status (8 Oct 2026): app created (app id 432980918273, Custom distribution, org Harsh), linked, and released as `dtj-sections-2-2` (confirmed ACTIVE with the version list; the first release Shopify accepted without refusing anything). NOT yet installed on the test store and the licence flag is not set: steps 4 and 5 below are still open.**
+**Status (8 Oct 2026): app created (app id 432980918273, Custom distribution, org Harsh), linked, active release `dtj-sections-2-6` (Feature Showcase, Split Story Card, Stat Cards, Measured Results; confirmed with the version list). Installed on the test store with the licence flag active.**
 
-## Blocks (1; 18.9 KB of 100 KB)
+## Blocks (4; 52.9 KB of 100 KB)
 | Block (file `dtj-<id>`) | Editor name | Notes |
 |---|---|---|
 | `feature-showcase` | DTJ Feature Showcase | heading, a centre image, up to 3 features each side (icon, title, text); 12 built-in icons or the merchant's own; desktop = three columns, phones = image then a 1 or 2 column grid. Built from Harsh's "Why ROSEE sinks in" screenshot (no original code existed) |
+| `split-story` | DTJ Split Story Card | one rounded card: photo on one side (left or right, cropped to fit, focus setting), tinted panel with a two-tone heading, a paragraph, up to 5 round check points and a white review card (avatar, quote, stars, name); phones = photo on top, compact panel. Built from Harsh's "Another cream? We hear you." screenshot |
+| `stat-cards` | DTJ Stat Cards | a centred heading whose accent part has a brush underline, then up to 6 soft cards (big figure, bold line, small footnote); desktop = one row (1-4 per row, automatic), phones = stacked or a swipe row. Built from Harsh's "From greasy, to gone, to still there" screenshot |
+| `measured-results` | DTJ Measured Results | a dark rounded panel: left a picture card (two-tone heading with an italic part, a line, one big figure; the picture sits below the text, or under it with the overlay option), right a heading with an accent word, a subheading, up to 5 rows (big figure, title, text) and a dashed footnote box. Built from Harsh's "Measured, not promised" screenshot |
 
-Standard controls: top/bottom padding (`spacing_v`) and text/background colour. No default copy, no hard-coded colours, every block runs the licence gate.
+Standard controls: top/bottom padding (`spacing_v`), side space (`gutter`, default 16 px, keeps a full-width section off the screen edges) and text/background colour. No default copy, no hard-coded colours, every block runs the licence gate.
 A theme app extension can only deliver app blocks (never a standalone theme section): the merchant adds it from the Apps list. Put it in a FULL-WIDTH section for the edge-to-edge look.
 
 ## First-time setup (Harsh, once; each step is his or needs his approval)

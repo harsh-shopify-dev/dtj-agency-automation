@@ -84,3 +84,182 @@ class FeatureShowcaseTests(unittest.TestCase):
         self.assertIn("dtj-fs--img-last", html)
         self.assertIn("--fs-mc: 1;", html)
         self.assertIn("--fs-mc: 2;", render(self.m, {"f1_title": "A"}))
+
+
+
+@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
+class SplitStoryTests(unittest.TestCase):
+    m = manifest("split-story")
+
+    def test_nothing_renders_empty_and_nothing_is_claimed_by_default(self):
+        self.assertEqual(render(self.m, {}), "")
+        html = render(self.m, {"heading": "H"})
+        for part in ("dtj-ss__review", "dtj-ss__stars", "dtj-ss__points", "dtj-ss__body", "dtj-ss__media"):
+            self.assertNotIn(part, html)
+
+    def test_the_heading_has_two_parts_with_a_space_between_and_one_tag(self):
+        html = render(self.m, {"heading": "First", "heading_accent": "Second"})
+        self.assertEqual(html.count("<h2"), 1)
+        self.assertIn("</span> <span class=\"dtj-ss__h2\">", html)
+        self.assertNotIn(" <span class=\"dtj-ss__h2\">", render(self.m, {"heading_accent": "Only second"}).replace("<span class=\"dtj-ss__h2\">Only", "").replace("</span>", ""))
+
+    def test_up_to_five_points_each_needs_text(self):
+        html = render(self.m, {**{f"bullet_{i}": f"Point {i}" for i in range(1, 8)}, "bullet_2": ""})
+        self.assertEqual(html.count('class="dtj-ss__point"'), 4)
+
+    def test_the_review_card_needs_a_review_or_a_name(self):
+        self.assertNotIn("dtj-ss__review", render(self.m, {"heading": "H", "review_stars": "5"}))
+        self.assertIn("dtj-ss__review", render(self.m, {"review_text": "A review"}))
+        self.assertIn("dtj-ss__review", render(self.m, {"review_name": "A name"}))
+
+    def test_stars_are_exactly_the_chosen_rating_and_none_by_default(self):
+        base = {"review_text": "R", "review_name": "N"}
+        self.assertNotIn("dtj-ss__stars", render(self.m, base))
+        for n in (1, 3, 5):
+            html = render(self.m, {**base, "review_stars": str(n)})
+            self.assertEqual(html.count("<path d=\"M12 2l2.9"), n)
+
+    def test_the_photo_and_avatar_are_optional(self):
+        self.assertIn("dtj-ss__avatar", render(self.m, {"review_text": "R", "review_image": "pic"}))
+        self.assertNotIn("dtj-ss__avatar", render(self.m, {"review_text": "R"}))
+        self.assertIn("dtj-ss__card--noimg", render(self.m, {"heading": "H"}))
+        self.assertIn("dtj-ss__card--notext", render(self.m, {"image": "pic"}))
+
+    def test_the_image_side_the_focus_and_the_phone_shape_are_safe_choices(self):
+        self.assertIn("dtj-ss__card--flip", render(self.m, {"heading": "H", "image_side": "end"}))
+        self.assertNotIn("dtj-ss__card--flip", render(self.m, {"heading": "H", "image_side": "start"}))
+        self.assertIn("--ss-focus: top;", render(self.m, {"heading": "H", "image_focus": "top"}))
+        self.assertIn("--ss-focus: center;", render(self.m, {"heading": "H", "image_focus": "evil;"}))
+        self.assertIn("--ss-ratio: 1 / 1;", render(self.m, {"heading": "H", "image_ratio_mobile": "1 / 1"}))
+        self.assertIn("<h2", render(self.m, {"heading": "H", "heading_tag": "script"}))
+
+    def test_text_is_escaped(self):
+        html = render(self.m, {"heading": "<script>", "heading_accent": "<script>", "body": "<script>", "bullet_1": "<script>",
+                               "review_text": "<script>", "review_name": "<script>"})
+        self.assertNotIn("<script>", html)
+
+
+@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
+class StatCardsTests(unittest.TestCase):
+    m = manifest("stat-cards")
+
+    def test_nothing_renders_empty_and_nothing_is_claimed_by_default(self):
+        self.assertEqual(render(self.m, {}), "")
+        html = render(self.m, {"heading": "H"})
+        for part in ("dtj-sc__card", "dtj-sc__number", "dtj-sc__note", "dtj-sc__grid"):
+            self.assertNotIn(part, html)
+
+    def test_a_card_shows_when_it_has_a_figure_a_line_or_a_footnote(self):
+        html = render(self.m, {"number_1": "1", "label_2": "only a line", "note_3": "only a note", "number_5": ""})
+        self.assertEqual(html.count('class="dtj-sc__card"'), 3)
+
+    def test_up_to_six_cards(self):
+        self.assertEqual(render(self.m, {f"number_{i}": f"N{i}" for i in range(1, 9)}).count('class="dtj-sc__card"'), 6)
+
+    def test_columns_follow_the_number_of_cards_up_to_four_then_three(self):
+        for n, cols in ((1, 1), (3, 3), (4, 4), (5, 3), (6, 3)):
+            html = render(self.m, {f"number_{i}": f"N{i}" for i in range(1, n + 1)})
+            self.assertIn(f"--sc-cols: {cols};", html, f"{n} cards")
+        self.assertIn("--sc-cols: 2;", render(self.m, {"number_1": "A", "number_2": "B", "number_3": "C", "columns": "2"}))
+        self.assertIn("--sc-cols: 3;", render(self.m, {"number_1": "A", "columns": "evil"}) .replace("--sc-cols: 1;", "--sc-cols: 3;"))
+
+    def test_the_heading_has_two_parts_with_a_space_between_one_tag_and_an_optional_underline(self):
+        html = render(self.m, {"heading": "First", "heading_accent": "Second", "underline": True})
+        self.assertEqual(html.count("<h2"), 1)
+        self.assertIn("</span> <span class=\"dtj-sc__accent\">", html)
+        self.assertIn("dtj-sc__underline", html)
+        self.assertNotIn("dtj-sc__underline", render(self.m, {"heading": "First", "heading_accent": "Second", "underline": False}))
+        self.assertNotIn("dtj-sc__underline", render(self.m, {"heading": "First", "underline": True}))  # nothing to underline
+
+    def test_the_phone_layout_and_the_shadow_are_options(self):
+        base = {"number_1": "A"}
+        self.assertIn("dtj-sc--swipe", render(self.m, {**base, "mobile_layout": "swipe"}))
+        self.assertNotIn("dtj-sc--swipe", render(self.m, {**base, "mobile_layout": "stack"}))
+        self.assertIn("dtj-sc--shadow", render(self.m, {**base, "card_shadow": True}))
+        self.assertNotIn("dtj-sc--shadow", render(self.m, {**base, "card_shadow": False}))
+
+    def test_the_heading_tag_is_a_safe_choice(self):
+        self.assertIn("<h3", render(self.m, {"heading": "H", "heading_tag": "h3"}))
+        self.assertIn("<h2", render(self.m, {"heading": "H", "heading_tag": "script"}))
+
+    def test_text_is_escaped(self):
+        html = render(self.m, {"heading": "<script>", "heading_accent": "<script>", "number_1": "<script>", "label_1": "<script>", "note_1": "<script>"})
+        self.assertNotIn("<script>", html)
+
+
+@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
+class MeasuredResultsTests(unittest.TestCase):
+    m = manifest("measured-results")
+
+    def test_nothing_renders_empty_and_no_claim_is_shipped_by_default(self):
+        self.assertEqual(render(self.m, {}), "")
+        html = render(self.m, {"heading": "H"})
+        for part in ("dtj-mr__row", "dtj-mr__card", "dtj-mr__note", "dtj-mr__figure"):
+            self.assertNotIn(part, html)
+
+    def test_a_row_shows_when_it_has_a_figure_a_title_or_a_text(self):
+        html = render(self.m, {"figure_1": "1", "title_2": "only a title", "text_3": "only a text", "figure_5": ""})
+        self.assertEqual(html.count('class="dtj-mr__row"'), 3)
+
+    def test_up_to_five_rows(self):
+        self.assertEqual(render(self.m, {f"figure_{i}": f"F{i}" for i in range(1, 9)}).count('class="dtj-mr__row"'), 5)
+
+    def test_both_headings_have_two_parts_with_a_space_between_them(self):
+        html = render(self.m, {"heading": "First", "heading_accent": "Second", "card_heading": "Card", "card_heading_accent": "Italic"})
+        self.assertEqual(html.count("<h2"), 1)
+        self.assertRegex(html, r"First</span> <span[^>]*>Second")
+        self.assertRegex(html, r"Card</span> <em>Italic")
+
+    def test_heading_tag_only_allows_known_tags(self):
+        self.assertIn("<h3", render(self.m, {"heading": "H", "heading_tag": "h3"}))
+        self.assertIn("<h2", render(self.m, {"heading": "H", "heading_tag": "script"}))
+
+    def test_card_only_and_side_only_each_render_without_the_other(self):
+        card = render(self.m, {"card_figure": "48h"})
+        self.assertIn("dtj-mr__card", card)
+        self.assertNotIn("dtj-mr__side", card)
+        self.assertIn("dtj-mr--single", card)
+        side = render(self.m, {"figure_1": "5 sec"})
+        self.assertIn("dtj-mr__side", side)
+        self.assertNotIn("dtj-mr__card", side)
+
+    def test_picture_shows_only_when_set_and_is_decorative(self):
+        self.assertNotIn("<img", render(self.m, {"card_figure": "1"}))
+        html = render(self.m, {"image": "photo-file"})
+        self.assertIn("dtj-mr__img", html)
+        self.assertIn('alt=""', html)
+
+    def test_picture_sits_below_the_text_unless_overlay_is_chosen(self):
+        html = render(self.m, {"card_heading": "Card", "image": "photo-file"})
+        self.assertNotIn("dtj-mr__card--over", html)
+        self.assertLess(html.index("dtj-mr__card-text"), html.index("dtj-mr__img"))  # text first, picture after it: they never overlap
+        over = render(self.m, {"card_heading": "Card", "image": "photo-file", "image_overlay": True, "card_scrim": True})
+        self.assertIn("dtj-mr__card--over", over)
+        self.assertIn("dtj-mr__card--scrim", over)
+        self.assertNotIn("dtj-mr__card--scrim", render(self.m, {"card_heading": "Card", "image": "photo-file", "card_scrim": True}))  # a haze only makes sense over the picture
+
+    def test_footnote_has_an_icon_and_is_escaped(self):
+        html = render(self.m, {"footnote": "<b>Source</b>"})
+        self.assertIn("dtj-mr__note-icon", html)
+        self.assertIn("&lt;b&gt;Source&lt;/b&gt;", html)
+
+    def test_colours_are_set_only_when_chosen(self):
+        plain = render(self.m, {"heading": "H"})
+        for var in ("--mr-accent", "--mr-card-color", "--mr-card-accent", "--mr-card-bg"):
+            self.assertNotIn(var, plain)
+        html = render(self.m, {"heading": "H", "accent_color": "rgb(1, 2, 3)", "card_text_color": "rgb(4, 5, 6)"})
+        self.assertIn("--mr-accent: rgb(1, 2, 3)", html)
+        self.assertIn("--mr-card-color: rgb(4, 5, 6)", html)
+
+
+@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
+class SideSpaceTests(unittest.TestCase):
+    """Every full-width section keeps off the screen edges by default (16 px a side) and the merchant can change it."""
+
+    def test_default_is_16px_each_side_and_it_can_be_changed(self):
+        for block in ("stat-cards", "split-story", "feature-showcase", "measured-results"):
+            m = manifest(block)
+            html = render(m, m["test"]["sample"])
+            self.assertIn("--dtj-pad-left: 16px; --dtj-pad-right: 16px;", html, block)
+            self.assertIn("--dtj-pad-left: 4px; --dtj-pad-right: 4px;", render(m, {**m["test"]["sample"], "side_padding": 4}), block)
+            self.assertIn("--dtj-pad-left: 0px; --dtj-pad-right: 0px;", render(m, {**m["test"]["sample"], "side_padding": 0}), block)

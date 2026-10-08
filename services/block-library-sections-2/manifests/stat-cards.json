@@ -1,0 +1,523 @@
+{
+  "id": "stat-cards",
+  "title": "DTJ Stat Cards",
+  "block_file": "extensions/dtj-sections-2/blocks/dtj-stat-cards.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading_accent",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "number_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "label_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "note_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "number_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "label_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "note_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "number_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "label_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "note_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "number_4",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "label_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "note_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "number_5",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "label_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "note_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "number_6",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "label_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "note_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 32,
+    "padding_bottom": 32,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading, first part",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "heading_accent",
+      "label": "Heading, accent part",
+      "info": "Continues the heading in the accent color. Empty = hidden."
+    },
+    {
+      "type": "checkbox",
+      "id": "underline",
+      "label": "Brush underline under the accent part",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h1",
+          "label": "H1"
+        },
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        },
+        {
+          "value": "p",
+          "label": "Paragraph"
+        }
+      ],
+      "info": "For search engines."
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 20,
+      "max": 56,
+      "step": 1,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phone",
+      "min": 18,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "heading_gap",
+      "label": "Space under the heading",
+      "min": 12,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Accent part, underline and the figures. Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Cards"
+    },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Cards per row on desktop",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Automatic (one row, up to 4)"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "Cards on phones",
+      "default": "stack",
+      "options": [
+        {
+          "value": "stack",
+          "label": "One under another"
+        },
+        {
+          "value": "swipe",
+          "label": "Swipe sideways"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Content width",
+      "min": 500,
+      "max": 1400,
+      "step": 20,
+      "unit": "px",
+      "default": 1000
+    },
+    {
+      "type": "range",
+      "id": "card_gap",
+      "label": "Space between cards",
+      "min": 8,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Card corner radius",
+      "min": 0,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "checkbox",
+      "id": "card_shadow",
+      "label": "Soft shadow on cards",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "card_padding_desktop",
+      "label": "Card padding, desktop",
+      "min": 16,
+      "max": 64,
+      "step": 2,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "card_padding_mobile",
+      "label": "Card padding, phone",
+      "min": 12,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 22
+    },
+    {
+      "type": "range",
+      "id": "number_size_desktop",
+      "label": "Figure size, desktop",
+      "min": 28,
+      "max": 96,
+      "step": 2,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "number_size_mobile",
+      "label": "Figure size, phone",
+      "min": 24,
+      "max": 64,
+      "step": 2,
+      "unit": "px",
+      "default": 38
+    },
+    {
+      "type": "range",
+      "id": "label_size",
+      "label": "Line size",
+      "min": 13,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "note_size",
+      "label": "Footnote size",
+      "min": 10,
+      "max": 16,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card background",
+      "info": "Empty = a soft tint of the accent color."
+    },
+    {
+      "type": "color",
+      "id": "number_color",
+      "label": "Figure color",
+      "info": "Empty = the accent color."
+    },
+    {
+      "type": "color",
+      "id": "label_color",
+      "label": "Line color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "note_color",
+      "label": "Footnote color",
+      "info": "Empty = a softer shade of the text."
+    },
+    {
+      "type": "header",
+      "content": "Stats (up to 6)"
+    },
+    {
+      "type": "text",
+      "id": "number_1",
+      "label": "Card 1: figure",
+      "info": "Only figures you can prove. A card shows when it has a figure, a line or a footnote."
+    },
+    {
+      "type": "textarea",
+      "id": "label_1",
+      "label": "Card 1: line"
+    },
+    {
+      "type": "textarea",
+      "id": "note_1",
+      "label": "Card 1: footnote",
+      "info": "Where the figure comes from, for example the study it is based on."
+    },
+    {
+      "type": "text",
+      "id": "number_2",
+      "label": "Card 2: figure"
+    },
+    {
+      "type": "textarea",
+      "id": "label_2",
+      "label": "Card 2: line"
+    },
+    {
+      "type": "textarea",
+      "id": "note_2",
+      "label": "Card 2: footnote"
+    },
+    {
+      "type": "text",
+      "id": "number_3",
+      "label": "Card 3: figure"
+    },
+    {
+      "type": "textarea",
+      "id": "label_3",
+      "label": "Card 3: line"
+    },
+    {
+      "type": "textarea",
+      "id": "note_3",
+      "label": "Card 3: footnote"
+    },
+    {
+      "type": "text",
+      "id": "number_4",
+      "label": "Card 4: figure"
+    },
+    {
+      "type": "textarea",
+      "id": "label_4",
+      "label": "Card 4: line"
+    },
+    {
+      "type": "textarea",
+      "id": "note_4",
+      "label": "Card 4: footnote"
+    },
+    {
+      "type": "text",
+      "id": "number_5",
+      "label": "Card 5: figure"
+    },
+    {
+      "type": "textarea",
+      "id": "label_5",
+      "label": "Card 5: line"
+    },
+    {
+      "type": "textarea",
+      "id": "note_5",
+      "label": "Card 5: footnote"
+    },
+    {
+      "type": "text",
+      "id": "number_6",
+      "label": "Card 6: figure"
+    },
+    {
+      "type": "textarea",
+      "id": "label_6",
+      "label": "Card 6: line"
+    },
+    {
+      "type": "textarea",
+      "id": "note_6",
+      "label": "Card 6: footnote"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "heading_accent": "Accent sample",
+      "number_1": "FIG1",
+      "label_1": "Line one",
+      "note_1": "Note one",
+      "number_2": "FIG2",
+      "label_2": "Line two"
+    },
+    "expect": [
+      "Heading sample",
+      "Accent sample",
+      "FIG1",
+      "Line one",
+      "Note one",
+      "FIG2",
+      "Line two",
+      "dtj-sc__card",
+      "dtj-sc__underline"
+    ]
+  }
+}
