@@ -23,27 +23,27 @@
       "max_length": 300
     },
     {
+      "id": "bg_overlay_gradient",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
       "id": "number_1",
       "type": "text",
-      "required": true,
+      "required": false,
       "max_length": 80
     },
     {
       "id": "description_1",
       "type": "textarea",
-      "required": false,
+      "required": true,
       "max_length": 300
     },
     {
       "id": "image_1",
       "type": "image_picker",
       "required": false
-    },
-    {
-      "id": "alt_1",
-      "type": "text",
-      "required": false,
-      "max_length": 80
     },
     {
       "id": "number_2",
@@ -63,12 +63,6 @@
       "required": false
     },
     {
-      "id": "alt_2",
-      "type": "text",
-      "required": false,
-      "max_length": 80
-    },
-    {
       "id": "number_3",
       "type": "text",
       "required": false,
@@ -84,12 +78,6 @@
       "id": "image_3",
       "type": "image_picker",
       "required": false
-    },
-    {
-      "id": "alt_3",
-      "type": "text",
-      "required": false,
-      "max_length": 80
     },
     {
       "id": "number_4",
@@ -109,12 +97,6 @@
       "required": false
     },
     {
-      "id": "alt_4",
-      "type": "text",
-      "required": false,
-      "max_length": 80
-    },
-    {
       "id": "number_5",
       "type": "text",
       "required": false,
@@ -132,12 +114,6 @@
       "required": false
     },
     {
-      "id": "alt_5",
-      "type": "text",
-      "required": false,
-      "max_length": 80
-    },
-    {
       "id": "number_6",
       "type": "text",
       "required": false,
@@ -153,27 +129,21 @@
       "id": "image_6",
       "type": "image_picker",
       "required": false
-    },
-    {
-      "id": "alt_6",
-      "type": "text",
-      "required": false,
-      "max_length": 80
     }
   ],
   "standard_controls": [
     "spacing",
-    "colors",
-    "shape",
-    "align"
+    "colors"
   ],
   "standard_defaults": {
-    "padding_top": 24,
-    "padding_bottom": 24,
-    "corner_radius": 16,
-    "align": "center"
+    "padding_top": 64,
+    "padding_bottom": 80
   },
   "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
     {
       "type": "text",
       "id": "heading",
@@ -188,57 +158,228 @@
     },
     {
       "type": "select",
-      "id": "columns",
-      "label": "Columns on desktop",
-      "default": "3",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
       "options": [
         {
-          "value": "2",
-          "label": "2"
+          "value": "h1",
+          "label": "H1"
         },
         {
-          "value": "3",
-          "label": "3"
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        },
+        {
+          "value": "p",
+          "label": "Paragraph"
+        }
+      ],
+      "info": "For search engines."
+    },
+    {
+      "type": "select",
+      "id": "heading_alignment",
+      "label": "Heading alignment",
+      "default": "center",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
         }
       ]
     },
     {
       "type": "select",
-      "id": "image_shape",
-      "label": "Card image shape",
-      "default": "portrait",
+      "id": "heading_font_style",
+      "label": "Heading style",
+      "default": "italic",
       "options": [
         {
-          "value": "portrait",
-          "label": "Portrait"
+          "value": "normal",
+          "label": "Normal"
         },
         {
-          "value": "square",
-          "label": "Square"
-        },
-        {
-          "value": "landscape",
-          "label": "Landscape"
+          "value": "italic",
+          "label": "Italic"
         }
       ]
     },
     {
-      "type": "checkbox",
-      "id": "hover_lift",
-      "label": "Cards lift when hovered",
-      "default": true
+      "type": "select",
+      "id": "heading_font_weight",
+      "label": "Heading weight",
+      "default": "400",
+      "options": [
+        {
+          "value": "400",
+          "label": "400"
+        },
+        {
+          "value": "500",
+          "label": "500"
+        },
+        {
+          "value": "600",
+          "label": "600"
+        },
+        {
+          "value": "700",
+          "label": "700"
+        },
+        {
+          "value": "800",
+          "label": "800"
+        },
+        {
+          "value": "900",
+          "label": "900"
+        }
+      ]
     },
     {
-      "type": "checkbox",
-      "id": "show_shadow",
-      "label": "Soft shadow on cards",
-      "default": false
+      "type": "range",
+      "id": "heading_letter_spacing",
+      "label": "Heading letter spacing",
+      "min": -5,
+      "max": 10,
+      "step": 1,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "Sizes (desktop / phone)"
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading, desktop",
+      "min": 24,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading, phone",
+      "min": 20,
+      "max": 48,
+      "step": 1,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "subheading_size_desktop",
+      "label": "Subheading, desktop",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "subheading_size_mobile",
+      "label": "Subheading, phone",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "stat_number_size_desktop",
+      "label": "Number, desktop",
+      "min": 24,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "stat_number_size_mobile",
+      "label": "Number, phone",
+      "min": 20,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "stat_text_size_desktop",
+      "label": "Card text, desktop",
+      "min": 11,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "default": 13
+    },
+    {
+      "type": "range",
+      "id": "stat_text_size_mobile",
+      "label": "Card text, phone",
+      "min": 11,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 13
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "heading_text_color",
+      "label": "Heading color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "subheading_text_color",
+      "label": "Subheading color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "card_bg_color",
+      "label": "Text card color",
+      "info": "Empty = white."
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Text card text color",
+      "info": "Empty = dark."
     },
     {
       "type": "color",
       "id": "number_color",
       "label": "Number color",
-      "info": "Empty = same as the text."
+      "info": "Empty = the card text color."
     },
     {
       "type": "color",
@@ -247,26 +388,278 @@
       "info": "Optional: the number fades from the first color to this one."
     },
     {
+      "type": "color",
+      "id": "wave_color",
+      "label": "Wave color",
+      "info": "Use the color of the section below. Empty = white."
+    },
+    {
+      "type": "header",
+      "content": "Layout and effects"
+    },
+    {
+      "type": "select",
+      "id": "card_image_aspect_ratio",
+      "label": "Card image shape",
+      "default": "4 / 5",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to each image"
+        },
+        {
+          "value": "4 / 5",
+          "label": "4 / 5"
+        },
+        {
+          "value": "3 / 4",
+          "label": "3 / 4"
+        },
+        {
+          "value": "1 / 1",
+          "label": "1 / 1"
+        },
+        {
+          "value": "16 / 9",
+          "label": "16 / 9"
+        }
+      ],
+      "info": "Adapt: the row follows each picture's own shape, on phones too. Other shapes apply on desktop."
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "label": "Card corner radius",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_gap_desktop",
+      "label": "Space between cards, desktop",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_gap_mobile",
+      "label": "Space between cards, phone",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "card_padding_desktop",
+      "label": "Text card padding, desktop",
+      "min": 8,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_padding_mobile",
+      "label": "Text card padding, phone",
+      "min": 8,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "header_bottom_spacing_desktop",
+      "label": "Space under heading, desktop",
+      "min": 8,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "header_bottom_spacing_mobile",
+      "label": "Space under heading, phone",
+      "min": 8,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "label": "Top padding on phones",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "label": "Bottom padding on phones",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 56
+    },
+    {
+      "type": "range",
+      "id": "container_max_width",
+      "label": "Content width",
+      "min": 900,
+      "max": 1600,
+      "step": 20,
+      "unit": "px",
+      "default": 1280
+    },
+    {
+      "type": "checkbox",
+      "id": "card_hover_lift",
+      "label": "Cards lift when hovered",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "card_shadow_enable",
+      "label": "Shadow on cards",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_y",
+      "label": "Shadow down",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_blur",
+      "label": "Shadow blur",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_opacity",
+      "label": "Shadow strength",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "%",
+      "default": 10
+    },
+    {
+      "type": "checkbox",
+      "id": "bg_overlay_enable",
+      "label": "Gradient over the background",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "bg_overlay_gradient",
+      "label": "Gradient (CSS)",
+      "info": "For example: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(0,0,0,0.1))"
+    },
+    {
+      "type": "range",
+      "id": "bg_overlay_opacity",
+      "label": "Gradient strength",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "checkbox",
+      "id": "show_wave_divider",
+      "label": "Wave at the bottom",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "wave_style",
+      "label": "Wave shape",
+      "default": "smooth",
+      "options": [
+        {
+          "value": "smooth",
+          "label": "Smooth"
+        },
+        {
+          "value": "gentle",
+          "label": "Gentle"
+        },
+        {
+          "value": "pointed",
+          "label": "Pointed"
+        },
+        {
+          "value": "layered",
+          "label": "Layered"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "wave_height_desktop",
+      "label": "Wave height, desktop",
+      "min": 20,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "wave_height_mobile",
+      "label": "Wave height, phone",
+      "min": 16,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "header",
+      "content": "Cards (up to 6)"
+    },
+    {
       "type": "text",
       "id": "number_1",
       "label": "Card 1 number",
-      "info": "Only type figures you can prove. A card only shows when it has a number."
+      "info": "Only figures you can prove. A card shows when it has a number, text or image."
     },
     {
       "type": "textarea",
       "id": "description_1",
-      "label": "Card 1 description"
+      "label": "Card 1 text"
     },
     {
       "type": "image_picker",
       "id": "image_1",
-      "label": "Card 1 image"
-    },
-    {
-      "type": "text",
-      "id": "alt_1",
-      "label": "Card 1 image description",
-      "info": "Read aloud for screen readers. Empty = decorative."
+      "label": "Card 1 image",
+      "info": "The image description set in Shopify (Content, Files) is read aloud for screen readers."
     },
     {
       "type": "text",
@@ -276,17 +669,12 @@
     {
       "type": "textarea",
       "id": "description_2",
-      "label": "Card 2 description"
+      "label": "Card 2 text"
     },
     {
       "type": "image_picker",
       "id": "image_2",
       "label": "Card 2 image"
-    },
-    {
-      "type": "text",
-      "id": "alt_2",
-      "label": "Card 2 image description"
     },
     {
       "type": "text",
@@ -296,17 +684,12 @@
     {
       "type": "textarea",
       "id": "description_3",
-      "label": "Card 3 description"
+      "label": "Card 3 text"
     },
     {
       "type": "image_picker",
       "id": "image_3",
       "label": "Card 3 image"
-    },
-    {
-      "type": "text",
-      "id": "alt_3",
-      "label": "Card 3 image description"
     },
     {
       "type": "text",
@@ -316,17 +699,12 @@
     {
       "type": "textarea",
       "id": "description_4",
-      "label": "Card 4 description"
+      "label": "Card 4 text"
     },
     {
       "type": "image_picker",
       "id": "image_4",
       "label": "Card 4 image"
-    },
-    {
-      "type": "text",
-      "id": "alt_4",
-      "label": "Card 4 image description"
     },
     {
       "type": "text",
@@ -336,17 +714,12 @@
     {
       "type": "textarea",
       "id": "description_5",
-      "label": "Card 5 description"
+      "label": "Card 5 text"
     },
     {
       "type": "image_picker",
       "id": "image_5",
       "label": "Card 5 image"
-    },
-    {
-      "type": "text",
-      "id": "alt_5",
-      "label": "Card 5 image description"
     },
     {
       "type": "text",
@@ -356,17 +729,12 @@
     {
       "type": "textarea",
       "id": "description_6",
-      "label": "Card 6 description"
+      "label": "Card 6 text"
     },
     {
       "type": "image_picker",
       "id": "image_6",
       "label": "Card 6 image"
-    },
-    {
-      "type": "text",
-      "id": "alt_6",
-      "label": "Card 6 image description"
     }
   ],
   "data_needs": [],
@@ -377,7 +745,8 @@
       "subheading": "Sub sample",
       "number_1": "NUM1",
       "description_1": "Describes one",
-      "number_2": "NUM2"
+      "number_2": "NUM2",
+      "description_2": "Describes two"
     },
     "expect": [
       "Heading sample",
@@ -385,7 +754,9 @@
       "NUM1",
       "Describes one",
       "NUM2",
-      "dtj-ss__grid"
+      "dtj-ssg__card-pair",
+      "dtj-ssg__card--text",
+      "dtj-ssg__card--image"
     ]
   }
 }

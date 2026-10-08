@@ -2,101 +2,128 @@
   assign ts_count = 0
   for i in (1..8)
     assign tk = 'text_' | append: i
-    assign tv = block.settings[tk] | strip
+    assign tv = bs[tk] | strip
     if tv != blank
       assign ts_count = ts_count | plus: 1
     endif
   endfor
-  assign ts_heading = block.settings.heading | strip
-  assign ts_sub = block.settings.subheading | strip
-  assign ts_summary = block.settings.summary_line | strip
-  assign ts_cta = block.settings.cta_text | strip
-  assign ts_per = block.settings.per_view | plus: 0
-  if ts_per < 1 or ts_per > 4
+  assign ts_heading = bs.heading | strip
+  assign ts_sub = bs.subheading | strip
+  assign ts_label = bs.rating_label | strip
+  assign ts_value = bs.rating_value | strip
+  assign ts_note = bs.rating_note | strip
+  assign ts_rating_stars = bs.rating_stars | plus: 0
+  assign ts_cta = bs.cta_text | strip
+  assign ts_more = bs.more_label | strip | default: 'View more'
+  assign ts_less = bs.less_label | strip | default: 'View less'
+  assign ts_words = bs.words | plus: 0
+  assign ts_per = bs.per_view | plus: 0
+  if ts_per < 2 or ts_per > 4
     assign ts_per = 3
   endif
-  assign ts_per_m = block.settings.per_view_mobile | plus: 0
-  if ts_per_m < 1 or ts_per_m > 2
-    assign ts_per_m = 1
+  assign ts_per_m = '1.2'
+  if bs.per_view_mobile == '1' or bs.per_view_mobile == '2'
+    assign ts_per_m = bs.per_view_mobile
   endif
   assign ts_shape = 'circle'
-  if block.settings.image_shape == 'rounded' or block.settings.image_shape == 'square'
-    assign ts_shape = block.settings.image_shape
+  if bs.image_shape == 'rounded' or bs.image_shape == 'square'
+    assign ts_shape = bs.image_shape
   endif
-  assign star_path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
-  assign ts_nav = false
+  assign ts_rating = false
+  if ts_label != blank or ts_value != blank or ts_note != blank or ts_rating_stars > 0
+    assign ts_rating = true
+  endif
+  assign ts_arrows = false
+  assign ts_dots = false
   if ts_count > 1
-    if block.settings.show_arrows or block.settings.show_dots
-      assign ts_nav = true
+    if bs.show_arrows
+      assign ts_arrows = true
+    endif
+    if bs.show_dots
+      assign ts_dots = true
     endif
   endif
+  assign tile_path = 'M9.20283 27L16.001 21.807L22.7972 27L20.2018 18.596L27 13.403H18.5984L16.001 5L13.4037 13.403H5L11.7982 18.596L9.20283 27Z'
 -%}
-{%- if ts_count > 0 or ts_heading != blank or ts_sub != blank or ts_summary != blank -%}
-  <dtj-ts class="dtj-b dtj-ts dtj-ts--{{ ts_shape }}" style="{{ dtj_std_style | strip_newlines }} --ts-per: {{ ts_per }}; --ts-per-m: {{ ts_per_m }}; --ts-img: {{ block.settings.image_size }}px;{% if block.settings.star_color != blank %} --ts-star: {{ block.settings.star_color }};{% endif %}{% if block.settings.accent_color != blank %} --ts-accent: {{ block.settings.accent_color }};{% endif %}" {{ block.shopify_attributes }}>
-    {%- if ts_summary != blank or ts_heading != blank or ts_sub != blank -%}
+{%- if ts_count > 0 or ts_heading != blank or ts_sub != blank or ts_rating -%}
+  <dtj-ts class="dtj-b dtj-ts dtj-ts--{{ ts_shape }}" data-more="{{ ts_more | escape }}" data-less="{{ ts_less | escape }}" style="{{ dtj_std_style | strip_newlines }} --ts-per: {{ ts_per }}; --ts-per-m: {{ ts_per_m }}; --ts-img: {{ bs.image_size }}px;{% if bs.tile_color != blank %} --ts-tile: {{ bs.tile_color }};{% endif %}{% if bs.card_bg != blank %} --ts-card: {{ bs.card_bg }};{% endif %}{% if bs.card_glow != blank %} --ts-glow: {{ bs.card_glow }};{% endif %}{% if bs.button_color != blank %} --ts-btn: {{ bs.button_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if ts_heading != blank or ts_sub != blank or ts_rating -%}
       <div class="dtj-ts__intro">
-        {%- if ts_summary != blank -%}<p class="dtj-ts__summary">{{ ts_summary | escape }}</p>{%- endif -%}
         {%- if ts_heading != blank -%}<h2 class="dtj-ts__head">{{ ts_heading | escape }}</h2>{%- endif -%}
         {%- if ts_sub != blank -%}<p class="dtj-ts__sub">{{ ts_sub }}</p>{%- endif -%}
+        {%- if ts_label != blank or ts_value != blank or ts_rating_stars > 0 -%}
+          <p class="dtj-ts__rating">
+            {%- if ts_label != blank -%}<span class="dtj-ts__rating-label">{{ ts_label | escape }}</span>{%- endif -%}
+            {%- if ts_value != blank -%}<strong class="dtj-ts__rating-value">{{ ts_value | escape }}</strong>{%- endif -%}
+            {%- if ts_rating_stars > 0 -%}
+              <span class="dtj-ts__tiles" role="img" aria-label="{{ ts_rating_stars }} / 5">
+                {%- for s in (1..ts_rating_stars) -%}<svg class="dtj-ts__tile" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32"/><path d="{{ tile_path }}"/></svg>{%- endfor -%}
+              </span>
+            {%- endif -%}
+          </p>
+        {%- endif -%}
+        {%- if ts_note != blank -%}<p class="dtj-ts__note">{{ ts_note | escape }}</p>{%- endif -%}
       </div>
     {%- endif -%}
     {%- if ts_count > 0 -%}
-      <div class="dtj-ts__track" data-track tabindex="0">
-        {%- for i in (1..8) -%}
-          {%- liquid
-            assign tk = 'text_' | append: i
-            assign hk = 'heading_' | append: i
-            assign ak = 'author_' | append: i
-            assign sk = 'stars_' | append: i
-            assign ik = 'image_' | append: i
-            assign ts_text = block.settings[tk] | strip
-            assign ts_title = block.settings[hk] | strip
-            assign ts_author = block.settings[ak] | strip
-            assign ts_image = block.settings[ik]
-            assign ts_stars = block.settings[sk] | plus: 0
-            assign ts_star_limit = ts_stars | plus: 1
-          -%}
-          {%- if ts_text != blank -%}
-            <figure class="dtj-ts__card" data-slide>
-              {%- if ts_stars > 0 -%}
-                <span class="dtj-ts__stars" role="img" aria-label="{{ ts_stars }} / 5">
-                  {%- for s in (1..5) -%}
-                    {%- if s < ts_star_limit -%}
-                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ star_path }}"/></svg>
-                    {%- else -%}
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="{{ star_path }}"/></svg>
+      <div class="dtj-ts__stage">
+        <div class="dtj-ts__track" data-track tabindex="0">
+          {%- for i in (1..8) -%}
+            {%- liquid
+              assign tk = 'text_' | append: i
+              assign hk = 'heading_' | append: i
+              assign ak = 'author_' | append: i
+              assign sk = 'stars_' | append: i
+              assign ik = 'image_' | append: i
+              assign ts_text = bs[tk] | strip
+              assign ts_title = bs[hk] | strip
+              assign ts_author = bs[ak] | strip
+              assign ts_image = bs[ik]
+              assign ts_stars = bs[sk] | plus: 0
+              assign ts_cut = false
+              if ts_words > 0
+                assign ts_total = ts_text | split: ' ' | size
+                if ts_total > ts_words
+                  assign ts_cut = true
+                  assign ts_short = ts_text | truncatewords: ts_words
+                endif
+              endif
+            -%}
+            {%- if ts_text != blank -%}
+              <figure class="dtj-ts__card" data-slide>
+                {%- if ts_image != blank or ts_stars > 0 or ts_title != blank -%}
+                  <div class="dtj-ts__top">
+                    {%- if ts_image and ts_image != blank -%}
+                      <img class="dtj-ts__photo" src="{{ ts_image | image_url: width: 240 }}" alt="" width="64" height="64" loading="lazy">
                     {%- endif -%}
-                  {%- endfor -%}
-                </span>
-              {%- endif -%}
-              {%- if ts_title != blank -%}<h3 class="dtj-ts__title">{{ ts_title | escape }}</h3>{%- endif -%}
-              <blockquote class="dtj-ts__text">{{ ts_text | escape }}</blockquote>
-              {%- if ts_author != blank or ts_image != blank -%}
-                <figcaption class="dtj-ts__who">
-                  {%- if ts_image and ts_image != blank -%}
-                    <img class="dtj-ts__photo" src="{{ ts_image | image_url: width: 160 }}" alt="" width="56" height="56" loading="lazy">
-                  {%- endif -%}
-                  {%- if ts_author != blank -%}<span class="dtj-ts__author">{{ ts_author | escape }}</span>{%- endif -%}
-                </figcaption>
-              {%- endif -%}
-            </figure>
-          {%- endif -%}
-        {%- endfor -%}
-      </div>
-      {%- if ts_nav -%}
-        <div class="dtj-ts__nav" data-nav hidden>
-          {%- if block.settings.show_arrows -%}
-            <button type="button" class="dtj-ts__arrow" data-prev aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
-          {%- endif -%}
-          {%- if block.settings.show_dots -%}<div class="dtj-ts__dots" data-dots></div>{%- endif -%}
-          {%- if block.settings.show_arrows -%}
-            <button type="button" class="dtj-ts__arrow" data-next aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-          {%- endif -%}
+                    {%- if ts_stars > 0 -%}
+                      <span class="dtj-ts__tiles" role="img" aria-label="{{ ts_stars }} / 5">
+                        {%- for s in (1..ts_stars) -%}<svg class="dtj-ts__tile" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32"/><path d="{{ tile_path }}"/></svg>{%- endfor -%}
+                      </span>
+                    {%- endif -%}
+                    {%- if ts_title != blank -%}<h3 class="dtj-ts__title">{{ ts_title | escape }}</h3>{%- endif -%}
+                  </div>
+                {%- endif -%}
+                {%- if ts_cut -%}
+                  <blockquote class="dtj-ts__text"><span data-short>{{ ts_short | escape }}</span><span data-full hidden>{{ ts_text | escape }}</span></blockquote>
+                  <button type="button" class="dtj-ts__more" data-more-toggle aria-expanded="false">{{ ts_more | escape }}</button>
+                {%- else -%}
+                  <blockquote class="dtj-ts__text">{{ ts_text | escape }}</blockquote>
+                {%- endif -%}
+                {%- if ts_author != blank -%}<figcaption class="dtj-ts__author">{{ ts_author | escape }}</figcaption>{%- endif -%}
+              </figure>
+            {%- endif -%}
+          {%- endfor -%}
         </div>
-      {%- endif -%}
+        {%- if ts_arrows -%}
+          <button type="button" class="dtj-ts__arrow dtj-ts__arrow--prev" data-prev aria-label="Previous" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+          <button type="button" class="dtj-ts__arrow dtj-ts__arrow--next" data-next aria-label="Next" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+        {%- endif -%}
+      </div>
+      {%- if ts_dots -%}<div class="dtj-ts__dots" data-dots hidden></div>{%- endif -%}
     {%- endif -%}
     {%- if ts_cta != blank -%}
-      <div class="dtj-ts__cta-wrap"><a class="dtj-ts__cta" href="{{ block.settings.cta_url | default: '#' }}"><span>{{ ts_cta | escape }}</span></a></div>
+      <div class="dtj-ts__cta-wrap"><a class="dtj-ts__cta" href="{{ bs.cta_url | default: '#' }}"><span>{{ ts_cta | escape }}</span></a></div>
     {%- endif -%}
   </dtj-ts>
 {%- elsif request.design_mode -%}

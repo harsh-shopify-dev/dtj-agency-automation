@@ -226,81 +226,132 @@ class TestimonialsSliderTests(unittest.TestCase):
         self.assertEqual(render(self.m, {f"text_{i}": f"Review {i}" for i in range(1, 10)}).count("<figure"), 8)
 
     def test_no_stars_unless_chosen_never_an_invented_five(self):
-        self.assertNotIn("dtj-ts__stars", render(self.m, {"text_1": "A"}))
-        html = render(self.m, {"text_1": "A", "stars_1": "3"})
-        self.assertIn("dtj-ts__stars", html)
-        self.assertEqual(html.count('fill="currentColor"'), 3)  # 3 filled, 2 outlined
+        self.assertNotIn("dtj-ts__tile", render(self.m, {"text_1": "A"}))
+        self.assertEqual(render(self.m, {"text_1": "A", "stars_1": "3"}).count('<svg class="dtj-ts__tile"'), 3)
+
+    def test_the_rating_line_shows_only_what_the_merchant_typed(self):
+        self.assertNotIn("dtj-ts__rating", render(self.m, {"text_1": "A"}))  # no invented score, no stars, no review count
+        html = render(self.m, {"text_1": "A", "rating_label": "Typed word", "rating_value": "9.9", "rating_note": "typed note"})
+        for needle in ("Typed word", "9.9", "typed note"):
+            self.assertIn(needle, html)
+        self.assertEqual(render(self.m, {"text_1": "A", "rating_stars": "4"}).count('<svg class="dtj-ts__tile"'), 4)
+
+    def test_long_reviews_are_cut_with_a_view_more_link_only_above_the_limit(self):
+        long_text = " ".join(f"word{n}" for n in range(1, 31))
+        html = render(self.m, {"text_1": long_text, "words": 10})
+        self.assertIn("data-more-toggle", html)
+        self.assertIn("word10", html.split("data-full")[0])  # the short part
+        self.assertNotIn("word11", html.split("data-full")[0])
+        self.assertIn("word30", html)  # the full text is still there, hidden
+        self.assertNotIn("data-more-toggle", render(self.m, {"text_1": "short review", "words": 10}))
+        self.assertNotIn("data-more-toggle", render(self.m, {"text_1": long_text, "words": 0}))  # 0 = never cut
+
+    def test_view_more_labels_have_neutral_fallbacks_and_can_be_changed(self):
+        long_text = " ".join(f"w{n}" for n in range(1, 40))
+        self.assertIn(">View more<", render(self.m, {"text_1": long_text, "words": 5}))
+        self.assertIn(">Mehr<", render(self.m, {"text_1": long_text, "words": 5, "more_label": "Mehr"}))
 
     def test_cards_in_view_fall_back_to_sane_values(self):
         self.assertIn("--ts-per: 3;", render(self.m, {"text_1": "A", "per_view": "9"}))
         self.assertIn("--ts-per: 2;", render(self.m, {"text_1": "A", "per_view": "2"}))
-        self.assertIn("--ts-per-m: 1;", render(self.m, {"text_1": "A", "per_view_mobile": "5"}))
+        self.assertIn("--ts-per-m: 1.2;", render(self.m, {"text_1": "A", "per_view_mobile": "5"}))
+        self.assertIn("--ts-per-m: 2;", render(self.m, {"text_1": "A", "per_view_mobile": "2"}))
 
-    def test_controls_exist_only_with_more_than_one_review_and_when_switched_on(self):
-        self.assertNotIn("data-nav", render(self.m, {"text_1": "A", "show_arrows": True}))
-        self.assertIn("data-prev", render(self.m, {"text_1": "A", "text_2": "B", "show_arrows": True, "show_dots": False}))
-        self.assertNotIn("data-dots", render(self.m, {"text_1": "A", "text_2": "B", "show_arrows": True, "show_dots": False}))
-        self.assertNotIn("data-nav", render(self.m, {"text_1": "A", "text_2": "B", "show_arrows": False, "show_dots": False}))
+    def test_arrows_and_dots_exist_only_with_more_than_one_review_and_when_switched_on(self):
+        one = {"text_1": "A"}
+        two = {"text_1": "A", "text_2": "B"}
+        self.assertNotIn("data-prev", render(self.m, {**one, "show_arrows": True}))
+        self.assertIn("data-prev", render(self.m, {**two, "show_arrows": True}))
+        self.assertNotIn("data-prev", render(self.m, {**two, "show_arrows": False}))
+        self.assertIn("data-dots", render(self.m, {**two, "show_dots": True}))
+        self.assertNotIn("data-dots", render(self.m, {**two, "show_dots": False}))
+
+    def test_the_button_needs_text_and_gets_a_safe_default_link(self):
+        self.assertNotIn("dtj-ts__cta", render(self.m, {"text_1": "A"}))
+        self.assertIn('href="#"', render(self.m, {"text_1": "A", "cta_text": "Go"}))
 
     def test_reviews_are_escaped(self):
-        self.assertNotIn("<script>", render(self.m, {"text_1": "<script>x</script>", "author_1": "<script>"}))
+        self.assertNotIn("<script>", render(self.m, {"text_1": "<script>x</script>", "author_1": "<script>", "heading_1": "<script>"}))
 
 
 @unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
 class ScienceStatsTests(unittest.TestCase):
+    """The block is a port of the pack's dtj-science-stats: each card is a PAIR (a text card + an image card)."""
     m = manifest("science-stats")
 
-    def test_a_card_only_shows_when_it_has_a_number(self):
-        html = render(self.m, {"number_1": "N1", "description_2": "orphan"})
-        self.assertEqual(html.count("<article"), 1)
-        self.assertNotIn("orphan", html)
+    def test_a_card_shows_when_it_has_a_number_text_or_image(self):
+        html = render(self.m, {"number_1": "N1", "description_2": "only text", "image_3": "pic", "alt_4": "orphan alt"})
+        self.assertEqual(html.count('class="dtj-ssg__card-pair"'), 3)
+        self.assertNotIn("orphan alt", html)
+
+    def test_every_pair_is_a_text_card_and_an_image_card(self):
+        html = render(self.m, {"number_1": "N1", "description_1": "D1"})
+        self.assertEqual(html.count("dtj-ssg__card--text"), 1)
+        self.assertEqual(html.count("dtj-ssg__card--image"), 1)
 
     def test_no_numbers_are_invented(self):
-        self.assertEqual(render(self.m, {"heading": "Only a heading"}).count("dtj-ss__num"), 0)
+        self.assertEqual(render(self.m, {"heading": "Only a heading"}).count("dtj-ssg__stat-number"), 0)
+        self.assertEqual(render(self.m, {"description_1": "Only text"}).count("dtj-ssg__stat-number"), 0)
 
-    def test_up_to_six_cards_and_two_or_three_columns(self):
-        self.assertEqual(render(self.m, {f"number_{i}": f"N{i}" for i in range(1, 8)}).count("<article"), 6)
-        self.assertIn("--ss-cols: 3;", render(self.m, {"number_1": "N", "columns": "9"}))
-        self.assertIn("--ss-cols: 2;", render(self.m, {"number_1": "N", "columns": "2"}))
+    def test_up_to_six_cards(self):
+        self.assertEqual(render(self.m, {f"number_{i}": f"N{i}" for i in range(1, 8)}).count('class="dtj-ssg__card-pair"'), 6)
 
-    def test_the_gradient_needs_both_colours(self):
-        self.assertNotIn("dtj-ss--grad", render(self.m, {"number_1": "N", "number_color": "rgb(1, 2, 3)"}))
-        self.assertIn("dtj-ss--grad", render(self.m, {"number_1": "N", "number_color": "rgb(1, 2, 3)", "number_color_2": "rgb(4, 5, 6)"}))
+    def test_the_gradient_needs_both_number_colours(self):
+        self.assertNotIn("dtj-ssg--grad", render(self.m, {"number_1": "N", "number_color": "rgb(1, 2, 3)"}))
+        self.assertIn("dtj-ssg--grad", render(self.m, {"number_1": "N", "number_color": "rgb(1, 2, 3)", "number_color_2": "rgb(4, 5, 6)"}))
 
-    def test_image_description_is_the_screen_reader_text_and_is_escaped(self):
-        html = render(self.m, {"number_1": "N", "image_1": "pic", "alt_1": 'Say "hi"'})
-        self.assertIn('alt="Say &quot;hi&quot;"', html)
-        self.assertIn('alt=""', render(self.m, {"number_1": "N", "image_1": "pic"}))
+    def test_image_description_comes_from_shopify_is_escaped_and_falls_back_to_the_number(self):
+        # the picture's own description (set in Shopify's Files) is used; there is no per-card setting any more (Shopify caps settings at 75)
+        self.assertIn('alt="Say &quot;hi&quot;"', render(self.m, {"number_1": "N", "image_1": {"alt": 'Say "hi"'}}))
+        self.assertIn('alt="42"', render(self.m, {"number_1": "42", "image_1": "pic"}))
+        self.assertIn('alt=""', render(self.m, {"description_1": "text", "image_1": "pic"}))
 
+    def test_the_block_stays_under_shopifys_75_interactive_settings(self):
+        import check_library as cl
+        schema = cl.extract_schema((tg.ROOT / self.m["block_file"]).read_text(encoding="utf-8"))
+        self.assertLessEqual(len([x for x in schema["settings"] if x["type"] not in ("header", "paragraph")]), 75)
 
-@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
-class RootScienceTests(unittest.TestCase):
-    m = manifest("root-science")
+    def test_adapt_makes_each_row_follow_its_own_picture(self):
+        tall = {"aspect_ratio": 0.6, "alt": ""}
+        wide = {"aspect_ratio": 1.8, "alt": ""}
+        html = render(self.m, {"number_1": "N", "image_1": tall, "number_2": "M", "image_2": wide, "card_image_aspect_ratio": "adapt"})
+        self.assertIn("dtj-ssg--adapt", html)
+        self.assertIn("--ssg-card-aspect: 0.6;", html)
+        self.assertIn("--ssg-card-aspect: 1.8;", html)
 
-    def test_a_feature_only_shows_when_it_has_text(self):
-        html = render(self.m, {"text_1": "Real", "icon_2": "brain"})
-        self.assertEqual(html.count('class="dtj-rs__feature"'), 1)
+    def test_adapt_falls_back_when_a_card_has_no_picture_and_is_off_by_default(self):
+        html = render(self.m, {"number_1": "N", "card_image_aspect_ratio": "adapt"})
+        self.assertIn("--ssg-card-aspect: 4 / 5;", html)  # no picture: the normal shape, not a broken value
+        plain = render(self.m, {"number_1": "N", "image_1": {"aspect_ratio": 0.6, "alt": ""}})
+        self.assertNotIn("dtj-ssg--adapt", plain)
+        self.assertIn("--ssg-card-aspect: 4 / 5;", plain)  # a fixed shape ignores the picture's own shape
 
-    def test_up_to_six_features(self):
-        self.assertEqual(render(self.m, {f"text_{i}": f"F{i}" for i in range(1, 8)}).count('class="dtj-rs__feature"'), 6)
+    def test_a_card_without_an_image_gets_the_neutral_placeholder(self):
+        self.assertIn("dtj-ssg__image-placeholder", render(self.m, {"number_1": "N"}))
 
-    def test_preset_icons_come_from_the_shared_snippet_and_custom_uses_the_picture(self):
-        self.assertIn("dtj-rs__svg", render(self.m, {"text_1": "A", "icon_1": "brain"}))
-        html = render(self.m, {"text_1": "A", "icon_1": "custom", "custom_icon_1": "mine"})
-        self.assertIn("dtj-rs__icon-img", html)
-        self.assertNotIn("dtj-rs__svg", html)
-        self.assertNotIn("dtj-rs__icon-img", render(self.m, {"text_1": "A", "icon_1": "custom"}))
+    def test_heading_tag_alignment_and_image_shape_fall_back_to_safe_values(self):
+        base = {"heading": "H", "number_1": "N"}
+        self.assertIn("<h2 ", render(self.m, base))
+        self.assertIn("<h3 ", render(self.m, {**base, "heading_tag": "h3"}))
+        self.assertNotIn("<script", render(self.m, {**base, "heading_tag": "script"}))
+        self.assertIn("<h2 ", render(self.m, {**base, "heading_tag": "script"}))
+        self.assertIn("--ssg-align: center;", render(self.m, {**base, "heading_alignment": "bogus"}))
+        self.assertIn("--ssg-card-aspect: 4 / 5;", render(self.m, {**base, "card_image_aspect_ratio": "bogus"}))
+        self.assertIn("--ssg-card-aspect: 1 / 1;", render(self.m, {**base, "card_image_aspect_ratio": "1 / 1"}))
 
-    def test_every_preset_icon_in_the_manifest_has_a_drawing(self):
-        snippet = (tg.SNIPPETS / "dtj-feature-icon.liquid").read_text(encoding="utf-8")
-        options = [o["value"] for s in self.m["settings"] if s["id"] == "icon_1" for o in s["options"] if o["value"] != "custom"]
-        for name in options:
-            self.assertIn(f"when '{name}'", snippet)
+    def test_wave_overlay_shadow_and_lift_are_options(self):
+        base = {"number_1": "N"}
+        self.assertNotIn("dtj-ssg__wave", render(self.m, {**base, "show_wave_divider": False}))
+        self.assertIn("dtj-ssg__wave", render(self.m, {**base, "show_wave_divider": True, "wave_style": "layered"}))
+        self.assertNotIn("dtj-ssg--overlay", render(self.m, {**base, "bg_overlay_enable": True}))  # needs a gradient too
+        self.assertIn("dtj-ssg--overlay", render(self.m, {**base, "bg_overlay_enable": True, "bg_overlay_gradient": "linear-gradient(red, blue)"}))
+        self.assertNotIn("--ssg-shadow", render(self.m, {**base, "card_shadow_enable": False}))
+        self.assertIn("--ssg-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);", render(self.m, {**base, "card_shadow_enable": True}))
+        self.assertIn("dtj-ssg--lift", render(self.m, {**base, "card_hover_lift": True}))
+        self.assertNotIn("dtj-ssg--lift", render(self.m, {**base, "card_hover_lift": False}))
 
-    def test_image_position_and_description(self):
-        self.assertIn("dtj-rs--img-start", render(self.m, {"text_1": "A", "image_side": "start"}))
-        self.assertIn("dtj-rs--img-end", render(self.m, {"text_1": "A", "image_side": "bogus"}))
-        self.assertIn('alt="Described"', render(self.m, {"text_1": "A", "image": "pic", "image_alt": "Described"}))
+    def test_text_is_escaped(self):
+        self.assertNotIn("<script>", render(self.m, {"heading": "<script>x</script>", "number_1": "<script>", "description_1": "<script>"}))
 
 
 if __name__ == "__main__":

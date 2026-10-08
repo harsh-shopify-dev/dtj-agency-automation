@@ -22,7 +22,31 @@
       "required": false
     },
     {
-      "id": "summary_line",
+      "id": "rating_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "rating_value",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "rating_note",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "more_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "less_label",
       "type": "text",
       "required": false,
       "max_length": 80
@@ -226,12 +250,14 @@
   "standard_controls": [
     "spacing",
     "colors",
-    "shape"
+    "shape",
+    "align"
   ],
   "standard_defaults": {
     "padding_top": 24,
     "padding_bottom": 24,
-    "corner_radius": 14
+    "corner_radius": 16,
+    "align": "center"
   },
   "settings": [
     {
@@ -248,9 +274,53 @@
     },
     {
       "type": "text",
-      "id": "summary_line",
-      "label": "Summary line",
-      "info": "Your own words, for example a rating you can prove. Empty = hidden. No stars are added here."
+      "id": "rating_label",
+      "label": "Rating word",
+      "info": "For example the word beside the score. Only type what is true. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "rating_value",
+      "label": "Rating score",
+      "info": "Typed by you, never calculated. Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "rating_stars",
+      "label": "Stars beside the rating",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "rating_note",
+      "label": "Line under the rating",
+      "info": "For example how many reviews it is based on. Empty = hidden."
     },
     {
       "type": "select",
@@ -258,10 +328,6 @@
       "label": "Cards in view on desktop",
       "default": "3",
       "options": [
-        {
-          "value": "1",
-          "label": "1"
-        },
         {
           "value": "2",
           "label": "2"
@@ -280,11 +346,15 @@
       "type": "select",
       "id": "per_view_mobile",
       "label": "Cards in view on phones",
-      "default": "1",
+      "default": "1.2",
       "options": [
         {
           "value": "1",
           "label": "1"
+        },
+        {
+          "value": "1.2",
+          "label": "1 and a peek of the next"
         },
         {
           "value": "2",
@@ -295,14 +365,14 @@
     {
       "type": "checkbox",
       "id": "show_arrows",
-      "label": "Arrows",
+      "label": "Arrows on desktop",
       "default": true
     },
     {
       "type": "checkbox",
       "id": "show_dots",
       "label": "Dots",
-      "default": true
+      "default": false
     },
     {
       "type": "select",
@@ -332,19 +402,54 @@
       "max": 120,
       "step": 4,
       "unit": "px",
-      "default": 56
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "words",
+      "label": "Cut long reviews after",
+      "min": 0,
+      "max": 60,
+      "step": 2,
+      "unit": "w",
+      "default": 20,
+      "info": "Number of words. 0 = never cut. A cut review gets a view more link."
+    },
+    {
+      "type": "text",
+      "id": "more_label",
+      "label": "View more link text",
+      "info": "Empty = View more."
+    },
+    {
+      "type": "text",
+      "id": "less_label",
+      "label": "View less link text",
+      "info": "Empty = View less."
     },
     {
       "type": "color",
-      "id": "star_color",
-      "label": "Star color",
+      "id": "tile_color",
+      "label": "Star tile color",
+      "info": "The square behind each star. Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card color",
+      "info": "Empty = the block background, or white."
+    },
+    {
+      "type": "color",
+      "id": "card_glow",
+      "label": "Glow around the cards",
+      "info": "Soft colored shadow. Empty = a neutral shadow."
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button color",
       "info": "Empty = same as the text."
-    },
-    {
-      "type": "color",
-      "id": "accent_color",
-      "label": "Accent color",
-      "info": "Dots and the button. Empty = same as the text."
     },
     {
       "type": "text",
@@ -781,19 +886,31 @@
   "test": {
     "sample": {
       "heading": "Heading sample",
+      "rating_label": "Label",
+      "rating_value": "4.5 / 5",
+      "rating_stars": "5",
+      "rating_note": "Note sample",
       "text_1": "Review one",
       "author_1": "Author One",
       "stars_1": "4",
+      "heading_1": "Title one",
       "text_2": "Review two",
-      "text_3": "Review three"
+      "text_3": "Review three",
+      "cta_text": "Button",
+      "cta_url": "/x"
     },
     "expect": [
       "Heading sample",
+      "Label",
+      "4.5 / 5",
+      "Note sample",
       "Review one",
       "Author One",
+      "Title one",
       "Review two",
       "Review three",
-      "dtj-ts__track"
+      "dtj-ts__track",
+      "dtj-ts__cta"
     ]
   },
   "script": true

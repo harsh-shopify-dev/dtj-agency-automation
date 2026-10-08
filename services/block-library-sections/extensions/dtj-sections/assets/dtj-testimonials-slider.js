@@ -1,28 +1,44 @@
 /**
  * <dtj-ts>
- * Arrows and dots for the testimonials slider. The cards are a native scroll-snap row (swipe works with no script);
- * this adds the buttons and the dots, one dot per "page" (a screenful of cards). Markup contract: [data-track] is the
- * scrolling row, [data-nav] the (initially hidden) controls, [data-prev] / [data-next] the arrows, [data-dots] the dot holder.
+ * Testimonials slider extras. The cards are a native scroll-snap row (swipe works with no script); this adds the arrows, the dots
+ * and the "view more" links. Markup contract: [data-track] is the scrolling row, [data-prev] / [data-next] the arrows, [data-dots]
+ * the dot holder (all start hidden and are shown only when there is more than one page), [data-more-toggle] a button inside a card
+ * whose text has a [data-short] and a [data-full] part. Link labels come from this element's data-more / data-less attributes.
  */
 class DtjTs extends HTMLElement {
   connectedCallback() {
     this.track = this.querySelector('[data-track]');
-    this.nav = this.querySelector('[data-nav]');
-    if (!this.track || !this.nav) return;
+    if (!this.track) return;
     this.prev = this.querySelector('[data-prev]');
     this.next = this.querySelector('[data-next]');
     this.dots = this.querySelector('[data-dots]');
+    this.controls = [this.prev, this.next, this.dots].filter(Boolean);
 
     this.prev?.addEventListener('click', () => this.page(-1));
     this.next?.addEventListener('click', () => this.page(1));
     this.track.addEventListener('scroll', () => this.update(), { passive: true });
-    this.resizer = new ResizeObserver(() => this.rebuild());
-    this.resizer.observe(this.track);
-    this.rebuild();
+    this.querySelectorAll('[data-more-toggle]').forEach((button) => button.addEventListener('click', () => this.toggle(button)));
+
+    if (this.controls.length) {
+      this.resizer = new ResizeObserver(() => this.rebuild());
+      this.resizer.observe(this.track);
+      this.rebuild();
+    }
   }
 
   disconnectedCallback() {
     this.resizer?.disconnect();
+  }
+
+  toggle(button) {
+    const card = button.closest('[data-slide]');
+    const short = card.querySelector('[data-short]');
+    const full = card.querySelector('[data-full]');
+    const open = full.hidden; // currently showing the short text: open the full one
+    full.hidden = !open;
+    short.hidden = open;
+    button.setAttribute('aria-expanded', String(open));
+    button.textContent = open ? this.dataset.less : this.dataset.more;
   }
 
   pages() {
@@ -31,13 +47,14 @@ class DtjTs extends HTMLElement {
   }
 
   page(step) {
-    const width = this.track.clientWidth;
-    this.track.scrollTo({ left: this.track.scrollLeft + step * width, behavior: 'smooth' });
+    this.track.scrollTo({ left: this.track.scrollLeft + step * this.track.clientWidth, behavior: 'smooth' });
   }
 
   rebuild() {
     const count = this.pages();
-    this.nav.hidden = count < 2; // everything already fits: no controls
+    this.controls.forEach((control) => {
+      control.hidden = count < 2; // everything already fits: no controls
+    });
     if (this.dots) {
       this.dots.replaceChildren(
         ...Array.from({ length: count }, (_, index) => {
@@ -56,7 +73,7 @@ class DtjTs extends HTMLElement {
   update() {
     const width = this.track.clientWidth || 1;
     const atEnd = this.track.scrollLeft + width >= this.track.scrollWidth - 2;
-    const current = atEnd ? this.pages() - 1 : Math.round(this.track.scrollLeft / width); // the last page cannot scroll a full width, so it is "at the end"
+    const current = atEnd ? this.pages() - 1 : Math.round(this.track.scrollLeft / width); // the last page cannot scroll a full width
     this.dots?.querySelectorAll('.dtj-ts__dot').forEach((dot, index) => dot.setAttribute('aria-current', String(index === current)));
     this.prev?.setAttribute('aria-disabled', String(this.track.scrollLeft <= 2));
     this.next?.setAttribute('aria-disabled', String(atEnd));
