@@ -3,11 +3,281 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+**LATEST (9 Oct 2026): Harsh decided the project is now run from the Claude DESKTOP-APP session, not from `claude-a`/`claude-b` terminals.** That session took on the section A mission and wrote **`docs/automation-plan.md`** (draft for Harsh's approval: kill switch + wider automation, decisions D0-D10, phases K0-K8, sourced costs and Shopify facts). Key new fact: a **custom-distribution app installs on one store (or one Plus organization) only**, so the three apps cannot serve many clients as they are (decision D0). Baseline 9 Oct: 361 tests pass (146/77/50/88; store builder needs Pillow, not declared). Git: 28 commits not on GitHub + 13 uncommitted files. The two page-builder scripts were copied from another session's temp folder to `.work/rescued/` (not in git yet). n8n (own server `n8n.srv1969859.hstgr.cloud`) was added as an MCP server in this project's local Claude config and **needs Harsh's sign-in**. This session's Shopify CLI login still has to be fixed (visible-window sign-in, see line ~269). Nothing was built, deployed or changed on any store on 9 Oct.
+
 ---------------------------------------------------------------------------------------------------
+
+## MAIN TASK: READ THIS FIRST (Harsh, 9 Oct 2026; every Claude session must follow it before anything else in this file)
+
+**The goal of this whole project is a STORE FACTORY, in two parts. Everything else is support.**
+
+1. **AI builds the client's store pages with OUR blocks.** Once our apps are installed on a client's store, an automation that uses the **Claude API (with an API key)** takes the client's brand and product facts and designs the pages from our blocks and sections: it **adapts to the client's brand** (colour palette, fonts, shape language, tone) and follows **high-converting conversion-agency structure** (the kind of product pages agencies such as ConversionWise build), instead of one fixed template. The hand-built TOILOVA page is the quality bar and the first example; the automation must reproduce that judgment every time, for any brand. A person approves before anything reaches a store.
+2. **The licence kill switch, fully automated.** A hosted service holds the client secrets and runs the commands; Harsh controls it from Telegram (or another channel) with **no terminal and no secret ever typed**.
+
+**What is NOT the main task:** n8n workflows for alerts, heartbeats, lead-audit intake, reports, ad guard or billing. They are supporting parts and are built only when they serve part 1 or part 2. A previous desktop session drifted into them (its `docs/automation-plan.md` ranks audit-to-pitch ahead of page assembly): that ordering is **superseded** by this section.
+
+**Where it stands (9 Oct 2026)**
+- Part 1: `services/store-builder/page_builder/` (new, 37 tests) holds the design JUDGMENT as code: `direction.py` (brand -> palette roles with checked contrast, shape language, type treatment, density, motion, one emphasised section per category, each choice with its reason), `recipes/pdp.json` (conversion-minded section order per category), `sections.py` (facts -> block settings; missing facts OMIT a section, nothing is invented), `rules.py` (lint rules L01-L12: contrast, gutters, rhythm, band alternation, one dark band, reviews under the buy buttons, provenance of every text, traceable numbers, demo gating, accent budget), `copy_contract.py` + `prompts/system.md` (the ONLY job a Claude step has: rewrite structural signposts, validated by code), `catalog.py` (checks every setting against the real block definitions), `examples/` (TOILOVA real facts + four synthetic brands that prove it adapts). Not built yet: the Claude API call itself, a screenshot review loop, writing the file to a theme (a Tier 2 push a person approves), per-client app registry, a home-page recipe.
+- Part 2: `licence.py` and `tools/dtj-licence.ps1` work for our own dev store; the hosted service, token vault and Telegram control are NOT started. How the apps reach client stores is decision D0/D9 (duplicate custom apps per client via collaborator access, or public limited-visibility apps; see section A.1.3b).
+- Blocks: 20 blocks in three apps plus the new DTJ Slideshow Pro (released, store verification waiting for Harsh's terminal push).
+
+**Order of work (recommended, Harsh confirms)**
+1. Back everything up (push the feature branch, set `main` protection; Harsh approves the commands).
+2. Finish part 1: screenshot review loop, Claude API copy step, per-client config, the push step with approval; then a real client-like trial on a dev store.
+3. Part 2: control service + Telegram kill switch for our own store, then the client install route.
+4. Supporting automations only when they serve 1 or 2.
+
+---
+
+## A. ACCOUNT B MISSION: analyse the whole project, plan the full AI automation and the automated kill switch (added 8 Oct 2026, READ BEFORE SECTION 0)
+
+*(Numbering inside section A is A.0 to A.12: a reference such as "section 9" or "1.4" written inside A means A.9 or A.1.4. References to RUNBOOK sections say RUNBOOK.)*
+
+Written 8 Oct 2026 by the Claude session ("Account A") that built the block library from the start, for Harsh to hand to Account B.
+Account B has no memory of our conversations. Everything it needs is in this HANDOFF file plus the files it points to. **Read this section first, then `CLAUDE.md`, `RUNBOOK.md`, the newest UPDATES below (they are stacked newest first right after section 0.2) and `docs/block-library-design.md`.**
+Facts below are what was verified on 8 Oct 2026. Anything marked **[VERIFY]** is unproven and must be checked against Shopify's current docs or a real call before it is relied on.
+
+---
+
+### 0. The ask in one paragraph
+
+Today the licence kill switch works, but a human runs commands in a terminal and types three client secrets by hand (one per app). Harsh wants it **automated**: the client secrets and all commands live in a hosted service, and the switch can be flipped from **Telegram (or another channel) with no terminal and no secret ever typed**, for any store and for all three apps in one action. Beyond the kill switch, Harsh wants Account B to analyse the whole repository and **plan the full AI automation** of the agency's repeatable work (the existing RUNBOOK), using this block library as the first productised asset.
+
+Your first deliverable is a **written plan for Harsh's approval**, not code. Do not build, deploy, flip a flag, or touch a store before Harsh approves the plan and the decisions in section 9.
+
+---
+
+### 1. What exists today (verified)
+
+#### 1.1 The product
+A proprietary Shopify block/section library for Digital Tushar Joshi (DTJ), delivered as **theme app extensions** (app blocks, `target: "section"`), with a **per-store licence flag** that hides every block when set to `inactive`.
+
+| App (Dev Dashboard, org Harsh) | Folder | Client id starts | Blocks | Active release (8 Oct) |
+|---|---|---|---|---|
+| DTJ Blocks | `services/block-library` | 5952b6 | 8: Hero Points, Rotating Text, Option Picker, Add-ons, Shoppable Reels, Social Proof Line, Testimonials, **Price** | `dtj-blocks-26` |
+| DTJ Sections | `services/block-library-sections` | c10a9d | 8: FAQ, Comparison Table, Stories, What's Inside, Not Inside, Science Stats, Marquee, Testimonials Slider | `dtj-sections-11` (95.8 KB of the 100 KB cap) |
+| DTJ Sections 2 | `services/block-library-sections-2` | a25789 | 4: Feature Showcase, Split Story Card, Stat Cards, Measured Results | `dtj-sections-2-6` |
+
+- Three apps exist only because Shopify caps one app at **100 KB of Liquid** and one extension. Each app has its **own client id and client secret** (Shopify issues no master key).
+- Source of truth: `manifests/<id>.json` + `src/<id>.liquid/.css/.js`. `services/block-library/tools/build_blocks.py` generates `extensions/<ext>/blocks/dtj-<id>.liquid` and `assets/`. Never edit generated files. Shared tools live only in `services/block-library/tools` (build, rule checker `check_library.py` rules 1-20, `licence.py`, preview renderers).
+- Tests: DTJ Blocks 146 (incl. licence tool), DTJ Sections 77, DTJ Sections 2 50. Run with the venv python `D:\CODE CONTAINERR\WEB DEV\dtj-agency-automation\.work\.venv\Scripts\python` (use the ABSOLUTE path: a relative one failed silently twice). Run Sections apps with `DTJ_APP_ROOT=<app folder>`.
+- Deploy: `shopify app deploy --path "services/<app>" --allow-updates --message "..." --no-color`, then **always** confirm with `shopify app versions list --path services/<app> --no-color` (the star = active). CLI 4.8.5. Both are slow; use long timeouts.
+- Test store (the ONLY store we work in): `elevate-with-harsh.myshopify.com`. Live theme `188778578093` is never touched. Test theme `188893495469` ("DTJ master 4.2.0 test 1", unpublished). Test page: `/products/toilova-1?view=claude-test`, built by a throwaway generator (see 1.4).
+
+#### 1.2 How the kill switch works now
+1. Every block starts with `{% render 'dtj-licence', value: app.metafields.dtj.licence.value, ... %}` (generated; see `snippets/dtj-licence.liquid`). The value is an **app-data metafield** `dtj.licence`, stored on the **app installation** (per app, per store). `active` shows the block; anything else, including a fresh install with no value, **shows nothing** (fail closed). In the theme editor an inactive block shows "flag seen: inactive".
+2. Writing the flag needs an access token for that store and app. `services/block-library/tools/licence.py` gets one with the **client credentials grant** (client id from `shopify.app.toml`, secret from an environment variable), then reads/sets the metafield with `metafieldsSet` (the only mutation it may send). Every change needs `--approved-by` and appends a row to `.work/out/licence-log.jsonl`.
+3. Harsh's terminal flow: `services/block-library/tools/dtj-licence.cmd|.ps1` (`hide`, `show`, `status`, `-App`, `-DryRun`) asks for each app's secret hidden. `licence.py --app all` loops the three apps.
+4. Proven on 8 Oct 2026: flag flips work on the test store for all three apps (Harsh ran them).
+
+#### 1.3 Why this is not enough
+- **Client credentials only work for stores in OUR Shopify organization.** A paying client's store is outside it. Shopify's docs say client credentials cannot reach a client's store. For client stores we need the **authorization-code (OAuth) install flow** caught by a hosted backend that stores each store's **offline token** in a vault. Without that, "instant revoke" is a promise we cannot keep (we would depend on the client uninstalling).
+- **Human toil and risk:** 3 secrets typed by hand; one HTTP 400 loop came from a secret of another app; one secret was exposed in a screenshot on 8 Oct 2026 (**the DTJ Sections client secret `shpss_194d...` must be rotated in the Dev Dashboard**, plus treat any other secret ever pasted into a chat as burnt).
+- No monitoring, no billing link, no audit beyond a local jsonl file, no fallback if Harsh is unreachable.
+
+#### 1.3b CORRECTION (9 Oct 2026, verified in shopify.dev docs "About app distribution" and "Select a distribution method"): OUR THREE APPS CANNOT SERVE MANY CLIENT STORES
+Harsh was told by another Claude session that "we can't use our apps in other stores". **That is correct for the apps as they exist today**, and earlier text in this repo (the "client stores" paragraph of `docs/block-library-design.md`, and the client-install flow A in section 4 below) assumed otherwise. Facts from Shopify's docs:
+- All three apps (DTJ Blocks, DTJ Sections, DTJ Sections 2) were created with **Custom distribution**. A custom app can be installed on **one single store, or several stores of the SAME Plus organization, or development stores** (our own test store is a dev store in our org, which is why it works). It is meant for one merchant.
+- **The distribution method cannot be changed after it is chosen.** These three apps can never become public.
+- **Public distribution** is the model for many merchants: it needs a Shopify App Store listing and **Shopify's review**. The listing can have **limited visibility** (not searchable; merchants install from its App Store URL). Only public apps can be listed. Theme-app-extension-only apps are the normal shape of a public app, and Shopify requires theme app extensions for App Store apps that touch themes. Public apps get tokens through the authorization code grant (or token exchange if embedded) and must meet App Store requirements (for example privacy/compliance webhooks **[VERIFY the current list]**).
+- Consequence for the licence kill switch: the hosted service + token vault in this plan only makes sense for stores that can install our app. Today that means **our own dev stores and at most one merchant per app**.
+Options for serving many clients (Harsh must choose, see decision D9): (1) NEW apps with Public distribution and limited-visibility listings (re-publish the same blocks; three apps because of the 100 KB cap; review time and App Store rules apply); (2) one custom app (or set of three) PER client store (every release repeated per client: not scalable); (3) ship the sections as THEME CODE inside each client's theme (portable and no app install, but no Shopify-enforced kill switch; a licence check would have to call our server or use a theme setting); (4) a client that is a Plus organization with several stores can share one custom app. Account B must evaluate these before building P4/P5.
+**Harsh's idea, confirmed possible (docs "About stores", 9 Oct 2026): per-client duplicates of our apps installed through COLLABORATOR access.** When a merchant grants our organization collaborator access, their store appears in our Dev Dashboard Stores list as a "Collaboration" store, and the docs table says installing custom apps there "depends on merchant permissions". (Client-transfer stores cannot take custom apps; dev stores can.) So for a client: create 3 NEW custom apps in OUR organization (same code, new client id and secret each), link the same code folders to them with a per-client config file (`shopify app config link`, a `shopify.app.<client>.toml`; **[VERIFY]** the CLI's multi-config workflow), `shopify app deploy` each one, generate the install link for that client's store and have the client (or our collaborator account if the permission allows) install it. Costs: 3 apps and 3 installs per client, every release repeated per client (script it in CI, Telegram-approved), 3 secrets per client for the licence service, and an app-count limit **[VERIFY]**. Nothing built so far is wasted: the blocks, tests, tools and templates are unchanged; only app records, deploy loops and the secret map multiply. Public limited-visibility apps remove the per-client multiplication but need Shopify's review.
+
+
+#### 1.4 Other assets built in this stretch (productise later)
+- `gen_toilova_page.py` and `validate_template.py` (kept in the Claude session scratchpad, NOT in git): generate a Horizon product-page template (`templates/product.claude-test.json`) from product data and DTJ block references, then validate every setting id/option/range against the real block schemas. **Account B should move these into the repo** (e.g. `services/store-builder/page_builder/`) with tests: this is the seed of the "page assembly" automation.
+- Screenshot-to-block workflow used repeatedly: read the image, write a manifest + liquid + css, build, run rules and tests, render in headless Edge against the image, fix, deploy. Candidate for the Claude-API pipeline in section 8.
+- Local preview tools: `preview_block.py` (iframe phone width, `PREVIEW_THEME=1` real Horizon wrapper), `preview_overflow.py` (9 layouts), the page screenshot method (local copy of the preview HTML with a `<base>` tag, framed at 390/320 px).
+
+#### 1.5 State of the repo and the stores
+- Git: branch `feature/reels-sound-button`, **local only, never pushed**. `main` does not exist on GitHub yet and **branch protection is not set** (Harsh must create `main` and protect it: PR + review required). `.claude/settings.json` denies pushes to main, force push, `reset --hard`, `rm -rf`, any command containing `--allow-live`, reading `.env`/secrets.
+- Untracked and not mine: `docs/hopenskin-website-brief/`.
+- Everything in the Toilova page is **demo content** (reviews, 4.8 rating, photos, "TOILOVA (Copy)" test products in the pickers). Remove before any real store.
+- Known unverified: real theme editor look of the newest blocks, multi-variant price switching for DTJ Price, Add-ons cart flow incl. Buy now, Option Picker with real products, Reels sound, extension uuid on a second store, storefront with the flag off (page source must not contain `class="dtj-b`).
+
+---
+
+### 2. Standing rules Account B must keep (do not relax)
+
+- Work ONLY in `elevate-with-harsh.myshopify.com`. Shopify MCP currently points at `sagarchudesara.com`, a real store of another seller: **never write to it**. Meta Ads MCP has write access to client accounts: do not use.
+- Never push to a live theme; narrow pushes `--only <file> --nodelete` to the test theme, pull and diff first, read back after. Never run `shopify auth logout` (signs out every store). Never read the CLI login file `%APPDATA%\shopify-cli-kit-nodejs\Config\config.json`.
+- Risk ladder (RUNBOOK 1.1): Tier 0 read-only free; Tier 1 reversible within caps and logged; **Tier 2 (deploy/release an app version, push a theme, change products, flip the licence flag, send a message) needs Harsh's approval of the EXACT action each time**; Tier 3 (delete, force-push, remove access) never. A notification or "it's not showing" is not approval.
+- No invented prices, offers, claims, ratings, reviews, scarcity, policies or numbers. Demo content only where Harsh says so, labelled "Demo".
+- Secrets never in files, chat, logs, screenshots or workflow JSON. Do not open `.env`. Unattended AI steps use the **Claude API with an API key**, never a subscription login.
+- Git: feature branch + PR, never commit to `main`, never force-push, commit only when asked. Update `docs/HANDOFF.md` at the end of every session. Report what was and was not verified.
+- Harsh's quality rules: re-verify visually; for a ported original, copy the original exactly; after every deploy confirm the active version; plain founder-friendly language, result first.
+
+---
+
+### 3. Requirements for the automated kill switch
+
+| # | Requirement |
+|---|---|
+| R1 | One action hides or shows **all three apps** on one store (and a "panic" action for ALL stores). Per-app control stays available. |
+| R2 | Triggered from **Telegram** (primary). A second independent channel (web page with passkey or an n8n form) so one channel's failure cannot lock Harsh out. The terminal script stays as break-glass. |
+| R3 | **No secret is ever typed, pasted, shown or logged.** Client secrets and per-store tokens live only in a vault / secret manager. |
+| R4 | Works for stores **outside our org** (OAuth install flow, offline token per store and app). |
+| R5 | Effect visible on the storefront on the next render; the bot reports the confirmed state read back from Shopify, not just "request sent". |
+| R6 | Every action writes an audit row (RUNBOOK 2.5: what, why, evidence, before, after, approver) and is alertable. |
+| R7 | Safe by design: allow-listed Telegram user ids, two-step confirm for any change, expiry, rate limits, idempotency, dry-run mode, global `AUTOMATION_ENABLED` flag. |
+| R8 | Automatic rules (billing lapse etc.) exist but start in **shadow**; they only become active after Harsh's written durable authorization (decision D1). |
+| R9 | Heartbeat and uptime monitoring; a silent failure raises an alert. |
+| R10 | Defined behaviour when the service is down (the flag already lives in Shopify, so storefronts keep their last state; see D3). |
+| R11 | Everything testable offline with a fake Shopify (the existing `FakeShopify` pattern in `tests/test_licence_tool.py`). |
+| R12 | Secret rotation is a routine, documented procedure that needs no downtime. |
+
+---
+
+### 4. Target architecture
+
+```
+ Harsh (Telegram)                     Billing events (Razorpay/Stripe/invoice tool)  [shadow first]
+        |  webhook (secret-token header)             |  signed webhook
+        v                                            v
+ +--------------------------------  Licence service (small Python service; one container)  ---------------------------+
+ |  auth: allow-listed user ids      policy: Tier 2 confirm / durable-authorization rules / rate limits / dry-run        |
+ |  command router -> action queue -> executor -> read-back verify -> audit log -> Telegram reply + Slack/Telegram alert |
+ +-------------+------------------------------------------+---------------------------+-------------------------------+
+               |                                          |                           |
+      Secret manager (3 client secrets,          Token vault (encrypted DB:      Shopify Admin GraphQL
+      bot token, signing keys)                   store x app -> offline token)   metafieldsSet dtj.licence
+               ^                                          ^                           ^
+               |                                          |                           |
+        rotation runbook                    OAuth callback (install) +        app/uninstalled webhook (HMAC) ->
+                                            token exchange per client store   mark install removed, alert
+```
+
+Components
+1. **Licence service** (Python, matches the repo; reuse `licence.py` logic as a library, do not rewrite it). Hosting candidates: Fly.io, Render or Cloud Run (needs always-on HTTPS for webhooks). Decide in D5.
+2. **App registry** (config, no secrets): the three apps with handle, client id (from each `shopify.app.toml`), secret reference name, API version pin (currently `2026-07` in `licence.py`).
+3. **Token vault**: table `installs(shop, app_key, token_ciphertext, scopes, installed_at, status, last_verified_at)`; encrypt with a key from the secret manager (AES-GCM, key id stored). For own-org test stores the service can mint short-lived tokens with client credentials instead of storing them.
+4. **Policy engine**: pure code, no AI. Decides whether an action runs now, needs a confirm tap, or is refused. Reads `AUTOMATION_ENABLED`, per-store flags, caps (e.g. max N changes per hour), protected stores, allow-list.
+5. **Executor + verifier**: sets the metafield, then reads it back with a second call and compares. Retries on 429/5xx with backoff (max 3), refresh token once on 401, then stop and alert (RUNBOOK 6).
+6. **Audit log**: append-only table (+ daily export to BigQuery/GCS once Phase 0 data layer exists). Every row has `run_id`, actor, store, app, before, after, result, evidence.
+7. **Telegram bot**: webhook mode, validates the `X-Telegram-Bot-Api-Secret-Token` header, replies in plain language. No secret ever appears in a message.
+8. **n8n** (already part of the plan, RUNBOOK 2.1): thin glue only (scheduled heartbeat, billing webhook relay). The kill logic lives in the service, not in n8n workflow JSON.
+
+#### 4.1 Flows
+- **A. Install of a client store** (ONLY valid once decision D9 is made: with the current custom-distribution apps this works for dev stores and one merchant per app, see 1.3b): client opens our custom-distribution link, approves; Shopify redirects to our OAuth callback; service verifies `hmac` and `state`, exchanges the code for an offline token, stores it encrypted, sets `dtj.licence` to the **default for new installs (D4: `inactive` until payment is confirmed)**, alerts Harsh. **[VERIFY]** the exact current install/OAuth endpoints, required scopes (the flag write worked with client credentials and no extra scope; confirm what an authorization-code token needs), whether the dev dashboard's "custom distribution" install link supports a redirect to our backend, and offline vs online token behaviour.
+- **B. Manual hide/show (Tier 2, human approved)**: Harsh sends `/hide storename`; bot lists exactly what will change ("Hide DTJ Blocks, DTJ Sections, DTJ Sections 2 on elevate-with-harsh.myshopify.com") with Confirm / Cancel buttons (60 s expiry, one-time nonce); on Confirm the executor runs, verifies, replies "Done, read back: inactive x3".
+- **C. Automatic rule (billing lapse)**: billing webhook (HMAC-verified, schema-validated, idempotent) says invoice X is N days overdue; policy engine checks the rule set Harsh authorised (D1); in shadow it only messages "I would hide store Y"; in auto mode it acts and notifies. Restoring on payment is the same path in reverse. Hide is client-visible harm if wrong, so auto mode needs a grace period, a reminder ladder and a human veto window.
+- **D. Uninstall webhook**: mark the install `removed`, delete the stored token (cannot be reused anyway), alert. No Shopify call is possible afterwards; this is information only.
+- **E. Fan-out**: one store action becomes up to three per-app calls with per-app results; partial failure is reported per app and retried, never silently ignored.
+- **F. Heartbeat**: the service pings an external uptime monitor every minute and writes a "last_ok" row; a nightly job reads the real flag of every store/app and compares it with the desired state in the database (drift report: someone changed it by hand, or an install is missing).
+- **G. Break-glass**: `tools/dtj-licence` stays working for own-org stores with secrets typed by hand; documented as the fallback if Telegram/the service are down.
+
+#### 4.2 Telegram command set (proposal)
+`/status [store]` (read-only), `/hide <store> [app]`, `/show <store> [app]`, `/hideall <store>`, `/panic` (hide every store, always asks twice), `/pending` (list approvals), `/mute`, `/help`. Only user ids on the allow-list get a reply; everyone else gets silence and an alert. Group chats are rejected. The bot never accepts a secret: if a message looks like a secret (`shpss_`, long hex) it deletes it if it can and tells Harsh to rotate that secret.
+Alternatives weighed: **WhatsApp** (contacts people = Tier 2 template rules, heavier), **Slack** (RUNBOOK's alert channel but not connected here), **web dashboard with passkey** (good second channel), **email magic link** (slow). Recommendation: Telegram + a minimal web page + the CLI break-glass.
+
+---
+
+### 5. Data model (minimum)
+- `apps(app_key, handle, client_id, secret_ref, api_version)`
+- `installs(shop, app_key, token_ciphertext, key_id, scopes, status, installed_at, last_verified_at)`
+- `desired_state(shop, app_key, state, reason, set_by, set_at, expires_at?)`
+- `actions(id, run_id, ts, actor, shop, app_key, action, before, after, result, evidence, approver, error)`
+- `approvals(nonce, action_json, requested_by, expires_at, status)`
+- `authorizations(rule_id, text, signed_by, signed_at, scope, expires_at)`  (D1: the durable permission, so the system can show "why was this allowed")
+Per-client isolation (RUNBOOK 2.4): no query crosses clients; one client's token is never loaded for another's action.
+
+---
+
+### 6. Security design (summary)
+- Secrets: a managed secret store (GCP Secret Manager, Doppler or the host's encrypted secrets). Never in git, `.env` committed files, logs, Telegram, screenshots. A repo secret scanner in CI (gitleaks) blocks pushes that contain `shpss_`, `shpat_`, bot tokens.
+- Least privilege: the app's own scopes only; no delete scopes; the executor can call **only** `currentAppInstallation` reads and `metafieldsSet` on key `dtj.licence` (allowlist enforced in code, as `licence.py` already does).
+- Telegram: webhook secret token, user-id allow-list, confirm buttons with nonce and expiry, per-user rate limit, message size limit, no logging of message bodies beyond the command.
+- Shopify webhooks: verify HMAC and timestamp, validate JSON against `schemas/`, idempotency key, dead-letter queue for anything malformed (RUNBOOK 7).
+- Rotation: documented procedure per secret (rotate in Dev Dashboard, update secret store, restart, run `/status` all). The leaked DTJ Sections secret is the first rehearsal.
+- Fail direction: licence absent or unreadable = block hidden (already so in Liquid). The service being down never changes storefronts by itself.
+- Unattended AI: none in the kill path. The switch is deterministic code. AI (Claude API with a key) only assists around it (summaries, anomaly notes) with spend caps.
+- Compliance: the service stores store domains and tokens, not shopper data. **[VERIFY]** whether Shopify's mandatory privacy webhooks apply to our distribution type and implement if so.
+
+---
+
+### 7. Phased plan with exit criteria (propose; Harsh approves each phase)
+
+| Phase | Deliverable | Exit criteria |
+|---|---|---|
+| **P0 Prerequisites (Harsh + Account B)** | Rotate the exposed secret; create `main` and branch protection on GitHub; push the feature branch and open the PR (Harsh approves the exact commands); pick hosting, secret store, billing source (D5-D7); create the Telegram bot via BotFather (token goes to the secret store only). | PR merged or consciously deferred; secrets in the store; decisions D1-D8 answered in writing. |
+| **P1 Service skeleton, dry-run only** | Repo `services/licence-service/` (FastAPI or similar), app registry, config, audit table, `AUTOMATION_ENABLED`, health endpoint, uptime heartbeat, **dry-run mode on every action**, fake-Shopify tests, CI that runs all four test suites + secret scan. | A dummy action runs end to end in dev, writes an audit row, is stopped by the kill flag, and a malformed payload lands in the dead-letter queue (RUNBOOK Phase 0 "done when"). |
+| **P2 Own-org stores, parity with the CLI** | Library extracted from `licence.py` (read status, set status, verify), client-credentials token minting with secrets from the secret store, `status`/`set` for all three apps incl. fan-out and read-back verify, drift report. | On `elevate-with-harsh`: service hides/shows all three apps and the storefront page source loses/regains `class="dtj-b` (this also closes the open "flag off" check). |
+| **P3 Telegram, approve mode** | Bot webhook, allow-list, `/status`, `/hide`, `/show`, `/hideall`, confirm buttons, audit + alerts, break-glass doc. | Harsh flips the test store from his phone with no terminal; unauthorised user gets no reply and triggers an alert; replay of an old confirm button fails. |
+| **P4 Client install flow (OAuth)** (needs D9 first; with today's custom apps only dev stores and one merchant per app qualify) | OAuth callback, token vault, default state on install, uninstall webhook, per-client config, onboarding checklist item "kill switch connected and verified". | A second store (a dev store in our org first, then a consenting client) installs via link, receives a token, can be hidden/shown from Telegram; uninstall is detected. **[VERIFY items from 4.1 resolved in writing.]** |
+| **P5 Billing rules in shadow** | Billing webhook relay, rule engine with grace + reminder ladder, shadow messages only. | Two weeks of shadow output reviewed by Harsh with zero wrong "would hide" cases (RUNBOOK 1.2/12 exit criteria). |
+| **P6 Observability and runbook** | Dashboards (actions by tier, drift, approvals pending), alert routes, on-call runbook, rotation drill, restore-from-backup drill. | Monthly drill passes; a killed service raises an alert within 2 minutes. |
+| **P7 Release automation** | CI/CD for the apps: PR runs tests, rules, Theme Check; a Telegram "release?" button runs `shopify app deploy` with a non-interactive CLI token and then verifies the active version (Tier 2: each release is one approval). **[VERIFY]** the supported non-interactive auth for CLI 4.8.x (`SHOPIFY_CLI_PARTNERS_TOKEN`) and Dev Dashboard apps. | A release is one tap, with the version-list verification posted back. |
+| **P8 (optional, later) Auto mode** | Turn the billing rule on for real, only for stores where Harsh signed the authorization (D1). | Needs explicit written approval and the section 12 criteria of the RUNBOOK. |
+
+Order matters: P1 to P3 give Harsh the Telegram kill switch for his own store quickly; P4 is what makes it real for clients; P5 and P8 are policy-heavy and come last.
+
+---
+
+### 8. The wider "full AI automation" plan Account B should analyse and extend
+Account B's second deliverable is to read the whole repo against `RUNBOOK.md` phases and say what to automate next and in what order. Starting hypotheses from the block-library work:
+1. **Screenshot-to-block pipeline** (Claude API with an API key, vision): input an image, output manifest + liquid + css + tests; the existing builder, rule checker (20 rules learned from real Shopify refusals), unit tests and render-vs-image comparison are the guardrails; a human reviews the visual diff before any deploy. Tier 0/1 until the deploy step (Tier 2).
+2. **Page assembly**: product sheet + brand config -> Horizon template JSON from block references (`gen_toilova_page.py` pattern), validated by the schema-checker, pushed to an unpublished theme only after approval. Ties into RUNBOOK Phase 4 (store build pipeline) and `docs/shopify-provisioning.md`.
+3. **QA automation**: headless-browser screenshots at 1280/390/320, overflow stress (9 layouts), Theme Check, storefront-with-flag-off check, speed (indicative only from this PC), report with numbers and their source.
+4. **Release automation** (P7 above) and **audit-to-pitch** (RUNBOOK Phase 3) reuse the same approval bot.
+5. **Data layer, ad guard, reporting** (RUNBOOK Phases 0, 2, 5): independent of the block library; the Telegram approval bot built here is the shared "approve" surface for them.
+Rules for all of it: shadow first, numbers from code, schema-validated AI output, versioned prompts with an eval set, spend caps, "needs human" instead of guessing (RUNBOOK 8).
+
+---
+
+### 9. Decisions Harsh must make (Account B must ask, not assume)
+- **D1 Automatic hiding.** RUNBOOK says Tier 2 never becomes automatic. Hiding a paying client's sections is client-visible. Does Harsh give **durable written authorization** for deterministic rules (e.g. invoice N days overdue after M reminders), per client, with a veto window? If no: the Telegram button is the only trigger (still no terminal, still "no secrets typed"). If yes: RUNBOOK 1.1 must be amended and the authorization stored in `authorizations`.
+- **D2 Who may press the button.** Only Harsh, or named staff? Two-person rule for `/panic` and `/hideall`?
+- **D3 Service-down behaviour.** The flag lives in Shopify so storefronts keep their last state. Is that acceptable? (Alternative: a signed expiry on the flag so a store hides itself if never renewed; costs complexity.)
+- **D4 Default for a new install.** `inactive` until payment confirmed (safest for IP) or `active` for a trial period?
+- **D5 Hosting and cost** (Fly/Render/Cloud Run), region, who pays, backups.
+- **D6 Billing source** (Razorpay, Stripe, invoicing tool, manual) and webhook availability.
+- **D7 Secret store** (GCP Secret Manager, Doppler, host secrets) and who can read it.
+- **D9 Distribution model (blocks everything for client stores, see 1.3b):** public limited-visibility apps with App Store review, per-client custom apps, theme-code delivery without an app, or Plus-organization clients only? Also who owns the Partner organization and the App Store listing, and how long a review delay is acceptable.
+- **D8 Client contracts and wording**: the licence/kill-switch terms the client agrees to; data retention for install records. (Confirm with a qualified professional, RUNBOOK 11.)
+
+---
+
+### 10. Testing strategy
+- Unit: policy engine, Telegram parsing/confirm/expiry, HMAC verification, allowlist, idempotency, token encryption round trip, executor with `FakeShopify` (token errors, 429, userErrors, drift).
+- Contract: replay recorded Shopify responses; a nightly job calls the real read-only `currentAppInstallation` query on the test store.
+- Integration (staging): one dev store per app combination; run the full A-G flows; storefront check that page source contains no `class="dtj-b` when hidden and contains it when shown.
+- Failure drills: service down, Telegram down, wrong secret (HTTP 400), revoked token, partial fan-out, duplicate webhook, malformed webhook, rotated secret.
+- Security: secret scan in CI, dependency audit, a test proving no log line or reply contains a token.
+
+### 11. Risks
+| Risk | Mitigation |
+|---|---|
+| Wrongly hiding a paying client | confirm taps, grace + reminder ladder, veto window, shadow first, per-client protected flag, read-back verify, instant `/show` |
+| Token vault leak | encryption with a separate key, minimal scopes, per-store tokens, rotation drill, alert on unusual reads |
+| Telegram account takeover | user-id allow-list, 2FA on Telegram, confirm nonce, `/panic` limited, second channel, audit alerts |
+| Service outage | flags live in Shopify, break-glass CLI, heartbeat alert, documented restore |
+| Shopify API or install-flow changes | pinned API version, nightly read-only contract test, [VERIFY] list kept current |
+| Secrets pasted into chats again | bot refuses and warns; CI secret scan; masked prompts (`-MaskInput`) in the CLI |
+| Scope creep into AI-in-the-loop for the switch | the kill path stays deterministic code; AI only advises |
+
+### 12. First-day checklist for Account B
+1. Read this file, `CLAUDE.md`, `RUNBOOK.md` (sections 1, 3, 6, 7, 8, 12, 14), this file (section A and the top 6 UPDATES), `docs/block-library-design.md` (licence part).
+2. List which MCP servers and tools are actually connected (do not guess). Note Slack and Telegram are NOT connected; the Shopify MCP points at a real third-party store: do not write.
+3. Run the three test suites and the library check to confirm a green baseline (commands in 1.1). Do not deploy.
+4. Write the plan document (phases, hosting options, cost estimate, decisions D1-D8, [VERIFY] list with sources) and send it to Harsh. Wait for approval before any build.
+5. Ask Harsh about the Royal Dosa project (A.13) and record the answer.
+6. Update this file and open a PR from a feature branch.
+
+### 13. Royal Dosa (a SEPARATE client project, not part of the block library): what the record says and what is missing
+Account A (this session) did NOT work on it; it is recorded here so Account B does not miss it. Source: UPDATE 11 further down (6 Oct 2026, desktop-app session).
+- **Client store:** `the-royal-dosa-paper-2.myshopify.com` (original domain `je6wgn-bh.myshopify.com`, theroyaldosapaper.com). **Target theme:** `188754165987` "The Royal Dosa Paper - Dev Test", role unpublished. **The LIVE theme is "GoKwik Preview 2026-08-14 09:20" `159832768739`: never touch it.** A pasted Codex prompt once named theme `188753346787`, which is NOT in the theme list: ignore it. Old dev theme `160436486371` is not in the 6 Oct list either.
+- **Rule for any push there:** `--theme 188754165987 --only "<approved files>" --nodelete`, Tier 2, Harsh approves the exact command. Harsh decided the Royal Dosa work stays in the desktop-app session.
+- **Older context:** `D:\CODE CONTAINERR\WEB DEV\Daddu\CLAUDE.md` (older Royal Dosa PDP project, no login info) and `D:\CODE CONTAINERR\WEB DEV\GOMINT\royal-dosa-dev-test` (3 Oct copy, NOT verified to match the theme).
+- **Local folders in this repo's `.work/` (git-ignored):** `.work/royal-dosa-dev-test` (a pull of the dev theme, 6 Oct, 348 files) and **`.work/royal-dosa-live-push`**, whose files changed on **8 Oct 2026 between 11:46 and 15:09** (not by Account A's session, which never touched it): `assets/collection-packs-ab.css|js`, `sections/ab-try-all-flavours.liquid`, `sections/collection-packs-ab.liquid`, `sections/collection-template-ab.liquid`, `snippets/ab-addall.liquid`, `ab-floating-cart.liquid`, `ab-hide-banner.liquid`, `ab-tryall.liquid`, `templates/collection.ab_filter_rewards.json`. This looks like an A/B collection page with flavour packs, try-all and a floating cart. **Nothing in this HANDOFF records what it is for, who made it, or whether anything was pushed.** The folder name says "live-push": treat that as a red flag, push NOTHING from it, and ask Harsh first.
+- **Conflict to be aware of:** section 2 says "work ONLY in `elevate-with-harsh`". That rule covers the block-library work. Royal Dosa is a real client store: every change there is Tier 2 (client-visible), never the live theme, and Harsh's written go-ahead for the exact command is required each time. The Shopify and Meta MCP connections must not be used for it unless Harsh says so.
+- **Unknown (ask Harsh in the first session):** the goal of the A/B work, its status, which Claude/Codex session made the files, whether the dev theme was pushed, and whether any of it should be productised (for example as DTJ blocks or part of the page-assembly automation).
+
+---
 
 ## 0. Read this first (60 seconds)
 
-### 0.1 The plan Harsh set on 6 Oct 2026 (end of the desktop-app session)
+### 0.1 The plan Harsh set on 6 Oct 2026 (end of the desktop-app session). SUPERSEDED on 8 Oct 2026: Harsh is moving to a second Claude account (Account B) to plan the full automation and the automated kill switch; see section A above.
 1. **NOW: block development and theme customization** continue in a Claude Code session **started from Harsh's own terminal** in this folder (`claude-a` or `claude-b`, then `cd "D:\CODE CONTAINERR\WEB DEV\dtj-agency-automation"`). Reason: only there do shell commands use Harsh's working Shopify login (app deploys, theme pull/push). In the desktop-app (Code tab) session the shell could not: theme commands said "no access", `shopify app deploy` got **403 "not a member of the requested organization"**, and `shopify auth login` cannot run non-interactively there (details: section 17).
 2. **LATER: the automation work (RUNBOOK phases 0-8)** comes back to the desktop-app session once the theme customization is done.
 
@@ -21,6 +291,7 @@ Update this file at the end of every working session (Harsh's rule).
 Harsh's feedback on `dtj-blocks-18`: the tick showed but looked "weird, not professional or premium". Preview findings: flat grey wash on selected cards, heavy black border, uneven padding (an empty second grid row was reserved on cards without swap buttons), BEST tag colliding with the neighbouring card, plain tick. Redesign in `src/addons.css`: one explicit grid row, 14px between cards, 12px radius, selected = 2px accent edge (border + 1px ring, no layout shift) + soft shadow, no tint; 24px round control, 14px tick that draws itself in (`pathLength=1` + `stroke-dashoffset`), pill with tick + "Added" when button text is set; BEST tag is a pill with clear space. Re-checked in the preview: three ticked/unticked cards, pill labels, swap buttons, Testimonials card (initial visible, full-width text) and Option Picker (current ring, sold-out line). Released **`dtj-blocks-19`** (Harsh approved; dashboard `https://dev.shopify.com/dashboard/141167028/apps/431619997697/versions/1156342513665`). Tests 121 OK, rules ok (72.5 KB), Theme Check 3 advisory. NOT verified: how it looks inside the real Horizon theme (Harsh's screenshot), the cart test, Buy now. Uncommitted on `feature/reels-sound-button` (includes the two preview tools).
 **UPDATE 7 (6 Oct 2026): tick was 3px left of the circle's centre in Harsh's real-theme screenshot.** Measured in headless Edge (new dev tool `tools/preview_measure.py`: prints the offset between the circle centre and the tick centre per card): x = -3px (half of the 6px flex `gap`, because the EMPTY label `<span data-cta-label>` still occupies a flex slot) and y = +0.29px (I had nudged the tick points to 6.5/9.5; reverted to `2 6 5 9 10 3`). Fix: `.dtj-addons__cta [data-cta-label]:empty { display: none }`. After the fix the measurement is x=0, y=0 on all cards; the labelled pill ("ADD"/"ADDED" + tick) was re-rendered and looks right. Lesson: for alignment complaints MEASURE in the browser, do not eyeball. Released **`dtj-blocks-20`** (Harsh approved; dashboard `https://dev.shopify.com/dashboard/141167028/apps/431619997697/versions/1156352507905`). Tests 121 OK, rules ok, Theme Check 3 advisory. NOT verified in the real theme yet (Harsh's next screenshot); cart test still to do. Uncommitted on `feature/reels-sound-button` (incl. `tools/preview_addons.py`, `preview_block.py`, `preview_measure.py`).
 **UPDATE 8 (6 Oct 2026): Hero Points now has a column option (Harsh's request).** New settings in `manifests/hero-points.json`: `columns` (select 1 / 2, default 1, so existing blocks do not change), `stack_mobile` ("Use 1 column on phones", default off = 2 columns stay on phones), `column_gap` (8-48px, default 20). The list is now a CSS grid (`repeat(var(--hp-cols), minmax(0,1fr))`, row gap = "Space between benefits"); 2 columns read left to right then down (1 2 / 3 4); the phone stack rule uses `!important` because `--hp-cols` is set inline; invalid column values fall back to 1; a wrapped benefit keeps its tick level with the first line (`--hp-fs` drives both the text size and the icon offset). Verified in headless Edge (`tools/preview_block.py hero-points OUT.png columns=2 [stack_mobile=True]`; that tool now renders any block from its test sample): 1 column unchanged, 2 columns with a wrapped item, phone stacking works. 3 new tests (124 block-library tests OK), library rules ok (73.3 KB of 100), Theme Check 3 advisory. Released **`dtj-blocks-21`** (Harsh approved; dashboard `https://dev.shopify.com/dashboard/141167028/apps/431619997697/versions/1156384980993`). NOT verified in the real Horizon theme (Harsh to choose Columns = 2 and screenshot). Also in this session: Add-ons tick centring is `dtj-blocks-20` (UPDATE 7). Uncommitted on `feature/reels-sound-button`.
+**UPDATE 28 (8 Oct 2026): HANDOFF TO ACCOUNT B. Section A at the top of this file now holds the complete mission brief for the second Claude account: state of the three apps, how the licence kill switch works today, why it is not enough for client stores, requirements R1-R12, target architecture (hosted licence service + token vault + Telegram bot), data model, security, phased plan P0-P8 with exit criteria, the wider AI-automation plan, decisions D1-D8 Harsh must make, risks and a first-day checklist. Also done on 8 Oct: `licence.py --app all` with a hidden-prompt fallback, and `tools/dtj-licence.cmd|.ps1` (hide/show/status, -App, -DryRun; fixed a bug where a one-item argument array lost the action word); Harsh confirmed the script works. The DTJ Sections client secret was exposed in a screenshot on 8 Oct 2026 and must be rotated. Commits 8b51775 and 09ee1c6 hold the script; this HANDOFF edit is not committed.**
 **UPDATE 27 (8 Oct 2026): THREE NEW THINGS + PAGE DESIGN PASS. (1) NEW BLOCK `DTJ Price` (DTJ Blocks, `dtj-blocks-26`): real variant price, compare-at price struck through, discount badge worked out from the two (percent or amount, never below -1 %, nothing when there is no discount), from Harsh's ROSEE price screenshot; replaces the theme price line on the Toilova page. Tests can now give a block its own sample product (`test.product` in the manifest; generic tests pass `product={}` for 'no data'). Variant switching on a multi-variant product NOT verified (test product has one variant). (2) NEW SECTION `DTJ Measured Results` (DTJ Sections 2, from the 'Measured, not promised' screenshot): dark rounded panel, picture card with two-tone heading + line + big figure, right side heading with accent word, subheading, up to 5 rows (figure/title/text) and a dashed footnote box; the picture sits BELOW the card text by default (opt-in 'text over the picture' for pictures with empty space at the top); released `dtj-sections-2-5` and `-6`. The screenshot's figures (48h, 5 sec, consumer panel) are another brand's claims and exist only in preview renders. (3) NEW STANDARD CONTROL `side_padding` ('Side space', default 16 px) in the builder (`gutter` group, same variables as `spacing`), added to 9 full-width sections (stat-cards, split-story, feature-showcase, measured-results, comparison-table, faq, stories, whats-inside, whats-not-inside) so nothing touches the phone screen edge (Harsh's complaint with a Stat Cards screenshot); released `dtj-sections-10` (DTJ Sections) and `dtj-sections-2-5`. `dtj-sections-11`: Not Inside text now follows the block text colour (Horizon colours h2 itself, so white text on a dark band was dark blue). Marquee, Science Stats and Testimonials Slider have their own spacing and got no gutter. DTJ Sections is at 95.8 KB of 100 KB. PAGE: every section wrapper is now full-width (bands reach both screen edges), content kept off the edges by the side space; rhythm 28-36 px top/bottom; bands alternate white / pale blue, one dark navy band ('Not inside' with white text and green highlight) and the dark Measured panel; demo reviews under the buy buttons, in the slider and in Stories are labelled 'Demo' (dev store only, remove before any real store); sample photos everywhere. Checks: Blocks 142 tests, Sections 77, Sections 2 50, all OK. Verified in headless Edge on the real preview (desktop 1280, phone 390); NOT seen in Harsh's real editor. Not committed (many files).**
 **UPDATE 26 (8 Oct 2026): SOCIAL PROOF LINE (DTJ Blocks) REWORKED to Harsh's reference screenshot (Rupa Divine Crystal store, not findable online or locally, so built from the image): new pill BADGE with a shield (text, shield on/off, bg/text/shield colours), compact RATING STYLE (one star + number), up to 5 overlapping round CUSTOMER PHOTOS (size 24-48; only real customers' photos), and the row stays on ONE LINE when a badge or photos are set and there are no extra text lines (the badge text shortens with an ellipsis first). Header/paragraph budget kept at 5 (the note paragraph moved into the rating field's info). Library rules ok (74.2 KB of 100 KB), 134 tests OK (4 new), Theme Check only the known warnings. Released `dtj-blocks-24` then `dtj-blocks-25` (both approved, active confirmed with the version list). Toilova test page: badge 'Foam powder', pale-blue background, navy text, green shield, gold star, SAMPLE rating 4.8 and SAMPLE photos (product pictures, Harsh said any image is fine on the dev store), also sample images in Not Inside and the comparison 'other' column. Verified at 390, 360 and 320 px: one line. Rule trip fixed: a literal '<img' inside a Liquid condition fooled the image-size rule, use a class word instead. Note: `shopify theme push` once hung in a background run and never landed; stop it and rerun in the foreground (it printed success on the retry). Not committed.**
 **UPDATE 25 (8 Oct 2026): TOILOVA PAGE NOW USES ALL 18 BLOCKS. DTJ Sections 2 released as `dtj-sections-2-4` (Stat Cards; approved deploy, confirmed active with the version list). Template `product.claude-test.json` pushed 3 more times (each approved, single file, unpublished theme 188893495469): buy box order = Social Proof stars (above title) > title+price > Hero Points bullets > Option Picker > variant picker > buy buttons > DTJ Testimonials (reviews directly under the buy buttons, Harsh's rule) > Add-ons; page body = Marquee, Rotating Text, Feature Showcase, Science Stats (blue band, navy cards), 2 Split Story cards, Stat Cards, What's Inside (2 items), Not Inside, Comparison Table, Shoppable Reels (product photos), Testimonials Slider, Stories, FAQ. Testimonials, Testimonials Slider and Stories are deliberately EMPTY (no real customer content exists; editor shows a dashed placeholder, shoppers see nothing); Social Proof stars show only when the product has a real rating (reviews app metafield or a rating typed in the block), none typed. Product pickers (Add-ons, Option Picker, Reels) DO hydrate on the storefront (2 add-on cards, 2 pills, 3 reels) although the editor once showed them empty. The copies TOILOVA (Copy) are test products, replace picks with real ones. Verified on the real preview URL in headless Edge (desktop slices); phone view of the new sections not re-checked. Not committed.**
