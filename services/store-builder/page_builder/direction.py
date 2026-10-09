@@ -35,6 +35,7 @@ SHAPE = {  # one radius family per page
 ACCENT_BY_VOICE = {"luxe": "serif", "warm": "serif", "clinical": "bold", "playful": "bold", "plain": "plain"}
 DENSITY = {"value": {"section": 28, "band": 32}, "mid": {"section": 32, "band": 36}, "premium": {"section": 36, "band": 40}}  # neighbours add up to at most 76 px (rule L03)
 WHITE, BLACK = "#FFFFFF", "#000000"
+RATING_GOLD = "#E0A100"  # the one colour that is not the brand's: rating stars must read as stars
 
 
 def _toward(color: str, bg: str, ratio: float, target: str) -> str:
@@ -111,6 +112,12 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     r["button_bg"] = r["accent"]
     r["button_text"] = _best_text_on(r["button_bg"])
     r["star"] = r["accent"]
+    # rating stars stay gold (stars must read as stars) but, as icons, need 3:1 on the page (WCAG 1.4.11); on a light page the gold is
+    # darkened just enough (the review loop measured plain #E0A100 at 2.2:1 on white, 9 Oct 2026)
+    r["rating_star"] = _toward(RATING_GOLD, bg, AA_LARGE, WHITE if d.dark_mode else BLACK)
+    # star TILES (a square with a white star inside): the white star needs 3:1 on the tile. Only dark brands need it set: by default the
+    # tile takes the text colour, which on a dark brand is light, so the white star disappeared (seen in the review screenshot, 9 Oct 2026)
+    r["rating_tile"] = _toward(RATING_GOLD, WHITE, AA_LARGE, BLACK)
     r["border"] = style.mix(text, bg, 0.85)
     r["tint_card"] = WHITE if not d.dark_mode else style.mix(bg, WHITE, 0.12)
     r["on_card"] = text if not d.dark_mode else text
@@ -119,12 +126,14 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     pairs = [("text on page", "text", "bg", AA_TEXT), ("text on band", "text", "band", AA_TEXT), ("muted text on page", "muted", "bg", AA_TEXT),
              ("accent on page", "accent", "bg", AA_TEXT), ("accent on band", "accent", "band", AA_TEXT), ("text on dark band", "on_dark", "dark", AA_TEXT),
              ("accent on dark band", "accent_on_dark", "dark", AA_TEXT), ("button text", "button_text", "button_bg", AA_TEXT),
-             ("text on white cards", "text", "tint_card", AA_TEXT)]
+             ("text on white cards", "text", "tint_card", AA_TEXT), ("rating stars on page", "rating_star", "bg", AA_LARGE)]
     if d.dark_mode:
         pairs = [p for p in pairs if p[0] not in ("accent on page",)] + [("accent on page", "accent", "band", AA_TEXT)]
     for name, fg, back, need in pairs:
         ratio = round(style.contrast(r[fg], r[back]), 2)
         d.checks.append({"pair": name, "fg": r[fg], "bg": r[back], "ratio": ratio, "needs": need, "ok": ratio >= need})
+    ratio = round(style.contrast(WHITE, r["rating_tile"]), 2)
+    d.checks.append({"pair": "white star on rating tile", "fg": WHITE, "bg": r["rating_tile"], "ratio": ratio, "needs": AA_LARGE, "ok": ratio >= AA_LARGE})
     d.why["colors"] = ("Page = the brand's background and text; band = a very light tint of the brand colour for alternating sections; dark band = the brand "
                        "colour darkened, used once for emphasis; accent colours were pushed toward black/white until they pass 4.5:1 on what they sit on.")
 
