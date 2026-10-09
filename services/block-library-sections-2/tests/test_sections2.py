@@ -263,3 +263,117 @@ class SideSpaceTests(unittest.TestCase):
             self.assertIn("--dtj-pad-left: 16px; --dtj-pad-right: 16px;", html, block)
             self.assertIn("--dtj-pad-left: 4px; --dtj-pad-right: 4px;", render(m, {**m["test"]["sample"], "side_padding": 4}), block)
             self.assertIn("--dtj-pad-left: 0px; --dtj-pad-right: 0px;", render(m, {**m["test"]["sample"], "side_padding": 0}), block)
+
+
+@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
+class SlideshowProTests(unittest.TestCase):
+    m = manifest("slideshow-pro")
+
+    def two(self, **extra):
+        return {"heading_1": "One", "heading_2": "Two", **extra}
+
+    def test_nothing_renders_empty_and_no_copy_is_shipped_by_default(self):
+        self.assertEqual(render(self.m, {}), "")
+        html = render(self.m, {"heading_1": "H"})
+        for part in ("dtj-sl__rating", "dtj-sl__chips", "dtj-sl__btn", "dtj-sl__note", "dtj-sl__eyebrow", "dtj-sl__desc"):
+            self.assertNotIn(part, html)
+
+    def test_a_slide_shows_when_it_has_anything_and_there_are_at_most_three(self):
+        self.assertEqual(render(self.m, {"heading_1": "A", "chips_2": "x", "image_3": "pic", "heading_4": "ignored"}).count('class="dtj-sl__slide'), 3)
+        self.assertEqual(render(self.m, {"heading_2": "only the second"}).count('class="dtj-sl__slide'), 1)
+
+    def test_only_the_first_slide_is_active_and_the_others_are_hidden_from_everyone(self):
+        html = render(self.m, self.two())
+        self.assertEqual(html.count("is-active"), 1)
+        self.assertEqual(html.count("inert"), 1)
+        self.assertIn('aria-label="1 / 2"', html)
+
+    def test_arrows_only_with_two_or_more_slides_and_never_when_hidden(self):
+        self.assertEqual(render(self.m, self.two()).count("dtj-sl__arrow "), 2)
+        self.assertNotIn("dtj-sl__arrow", render(self.m, {"heading_1": "Solo"}))
+        self.assertNotIn("dtj-sl__arrow", render(self.m, self.two(arrows_position="none")))
+        single = render(self.m, {"heading_1": "Solo"})
+        self.assertIn("dtj-sl--single", single)
+        self.assertIn('data-auto="false"', single)
+
+    def test_autoplay_needs_two_slides_and_can_be_switched_off(self):
+        self.assertIn("dtj-sl--auto", render(self.m, self.two()))
+        self.assertIn('data-auto="true"', render(self.m, self.two()))
+        self.assertNotIn("dtj-sl--auto", render(self.m, self.two(autoplay=False)))
+        self.assertIn("--sl-dur: 9s", render(self.m, self.two(autoplay_seconds=9)))
+
+    def test_heading_accent_words_sit_between_asterisks_and_are_escaped(self):
+        html = render(self.m, {"heading_1": "A calming *botanical* reset"})
+        self.assertRegex(html, r'<span>A calming </span><em class="dtj-sl__accent">botanical</em><span> reset</span>')
+        self.assertIn("&lt;b&gt;", render(self.m, {"heading_1": "x *<b>*"}))
+        self.assertNotIn("dtj-sl__accent", render(self.m, {"heading_1": "No accent here"}))
+
+    def test_chips_one_per_line_up_to_four_with_an_optional_known_icon(self):
+        html = render(self.m, {"heading_1": "H", "chips_1": "leaf: One\nTwo\n\nunknown: Three\nFour\nFive"})
+        self.assertEqual(html.count('dtj-sl__chip"'), 4)
+        self.assertEqual(html.count("dtj-sl__icon"), 1)  # only the known icon is drawn
+        self.assertIn("<span>One</span>", html)
+        self.assertIn("<span>unknown: Three</span>", html)  # an unknown key is just text
+        self.assertNotIn("Five", html)
+
+    def test_note_takes_an_optional_icon_and_a_colon_in_the_text_survives(self):
+        html = render(self.m, {"heading_1": "H", "note_1": "shield: Open 9:00 daily"})
+        self.assertIn("dtj-sl__icon", html)
+        self.assertIn("<span>Open 9:00 daily</span>", html)
+        self.assertNotIn("dtj-sl__icon", render(self.m, {"heading_1": "H", "note_1": "Plain note"}))
+
+    def test_button_is_a_link_only_with_a_url_and_the_arrow_is_optional(self):
+        self.assertIn('<a class="dtj-sl__btn" href="/shop">', render(self.m, {"heading_1": "H", "button_label_1": "Go", "button_url_1": "/shop"}))
+        self.assertIn('<span class="dtj-sl__btn">', render(self.m, {"heading_1": "H", "button_label_1": "Go"}))
+        self.assertNotIn("dtj-sl__btn", render(self.m, {"heading_1": "H", "button_url_1": "/shop"}))
+        self.assertNotIn("dtj-sl__btn-arrow", render(self.m, {"heading_1": "H", "button_label_1": "Go"}))
+        self.assertIn("dtj-sl__btn-arrow", render(self.m, {"heading_1": "H", "button_label_1": "Go", "button_arrow": True}))
+
+    def test_rating_shows_five_stars_with_its_text_only_when_typed(self):
+        html = render(self.m, {"heading_1": "H", "rating_1": "Rated by us"})
+        self.assertEqual(html.count('<svg viewBox="0 0 24 24" focusable="false">'), 5)
+        self.assertIn("Rated by us", html)
+        self.assertIn("dtj-sl--rating-plain", html)
+        self.assertIn("dtj-sl--rating-chip", render(self.m, {"heading_1": "H", "rating_style": "chip"}))
+
+    def test_aspect_ratio_fixed_or_adapting_to_the_first_picture(self):
+        self.assertIn("--sl-rd: 3 / 2;", render(self.m, {"heading_1": "H"}))
+        self.assertIn("--sl-rd: 16 / 9;", render(self.m, {"heading_1": "H", "ratio_desktop": "16 / 9"}))
+        pic = {"aspect_ratio": 1.25, "width": 1000, "height": 800, "alt": ""}
+        adapt = render(self.m, {"image_1": pic, "ratio_desktop": "adapt", "ratio_mobile": "adapt"})
+        self.assertIn("--sl-rd: 1.25;", adapt)
+        self.assertIn("--sl-rm: 1.25;", adapt)
+        self.assertIn("--sl-rd: 3 / 2;", render(self.m, {"heading_1": "H", "ratio_desktop": "adapt"}))  # nothing to adapt to: the default shape
+
+    def test_pictures_are_responsive_first_is_eager_and_alt_comes_from_the_picture(self):
+        pic = {"aspect_ratio": 1.0, "width": 1000, "height": 1000, "alt": 'A "quoted" alt'}
+        html = render(self.m, {"image_1": pic, "image_2": pic})
+        self.assertEqual(html.count("srcset="), 2)
+        self.assertEqual(html.count('loading="eager"'), 1)
+        self.assertEqual(html.count('loading="lazy"'), 1)
+        self.assertIn("&quot;quoted&quot;", html)
+        self.assertIn('width="1000" height="1000"', html)
+
+    def test_look_choices_become_classes_and_unknown_content_position_falls_back(self):
+        html = render(self.m, self.two(content_position="right", overlay_style="solid", transition="fade", arrows_position="edges",
+                                       chip_style="glass", button_style="square", accent_font="bold", heading_font="serif", eyebrow_style="mono"))
+        for cls in ("pos-right", "ov-solid", "tr-fade", "arrows-edges", "chips-glass", "btn-square", "accent-bold", "hf-serif", "eyebrow-mono"):
+            self.assertIn(f"dtj-sl--{cls}", html)
+        self.assertIn("dtj-sl--pos-left", render(self.m, {"heading_1": "H", "content_position": "evil"}))
+
+    def test_colours_are_set_only_when_chosen(self):
+        plain = render(self.m, {"heading_1": "H"})
+        for var in ("--sl-ov-c", "--sl-accent", "--sl-star", "--sl-btn-bg", "--sl-btn-c", "--sl-ab", "--sl-ac", "--sl-pc"):
+            self.assertNotIn(var, plain)
+        html = render(self.m, {"heading_1": "H", "overlay_color": "rgb(1, 2, 3)", "accent_color": "rgb(4, 5, 6)", "button_bg": "rgb(7, 8, 9)"})
+        for var, val in (("--sl-ov-c", "rgb(1, 2, 3)"), ("--sl-accent", "rgb(4, 5, 6)"), ("--sl-btn-bg", "rgb(7, 8, 9)")):
+            self.assertIn(f"{var}: {val}", html)
+
+    def test_overlay_numbers_reach_the_css(self):
+        html = render(self.m, {"heading_1": "H", "overlay_opacity": 40, "overlay_size": 55, "overlay_blur": 12, "content_width": 500})
+        for part in ("--sl-ov-pct: 40%", "--sl-ov-size: 55%", "--sl-blur: 12px", "--sl-cw: 500px"):
+            self.assertIn(part, html)
+
+    def test_the_slider_stays_within_75_settings(self):
+        settings = tg.cl.extract_schema(tg.block_text(self.m))["settings"]
+        self.assertLessEqual(len([s for s in settings if s.get("type") not in ("header", "paragraph")]), 75)

@@ -1,0 +1,521 @@
+/* Slideshow Pro: a hero slider. Desktop: the picture fills the slide, the text sits on it (left, right or centre) over a fade; phones: the text
+   sits above the picture. A timer line under the text fills while a slide is shown, then the next slide comes in. */
+.dtj-sl {
+  display: block;
+  background: transparent;
+}
+
+.dtj-sl__viewport {
+  position: relative;
+  max-width: var(--sl-w, 1340px);
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--sl-r, 12px);
+  background: var(--dtj-background, CanvasText);
+  color: var(--dtj-text-color, Canvas);
+}
+
+.dtj-sl__track {
+  display: grid;
+  grid-auto-columns: 100%;
+  grid-auto-flow: column;
+  transform: translateX(calc(var(--sl-i, 0) * -100%));
+  transition: transform 0.65s cubic-bezier(0.65, 0, 0.35, 1);
+  touch-action: pan-y;
+}
+
+/* fade: every slide sits in the same cell and only the active one shows */
+.dtj-sl--tr-fade .dtj-sl__track {
+  grid-auto-columns: auto;
+  grid-auto-flow: row;
+  transform: none;
+  transition: none;
+}
+
+.dtj-sl--tr-fade .dtj-sl__slide {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease, visibility 0s linear 0.6s;
+}
+
+.dtj-sl--tr-fade .dtj-sl__slide.is-active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.6s ease;
+}
+
+/* a slide: phones first = text, then the picture */
+.dtj-sl__slide {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.dtj-sl__media {
+  position: relative;
+  order: 2;
+  overflow: hidden;
+  aspect-ratio: var(--sl-rm, 4 / 5);
+}
+
+.dtj-sl__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--sl-focus, center);
+}
+
+.dtj-sl__fade { display: none; }
+
+.dtj-sl__content {
+  order: 1;
+  padding: 28px 20px 22px;
+  text-align: center;
+}
+
+.dtj-sl__inner {
+  display: flex;
+  max-width: var(--sl-cw, 620px);
+  margin-inline: auto;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* small label */
+.dtj-sl__eyebrow {
+  margin: 0 0 14px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, currentcolor 28%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, currentcolor 9%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.dtj-sl--eyebrow-mono .dtj-sl__eyebrow { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+
+.dtj-sl--eyebrow-plain .dtj-sl__eyebrow {
+  padding: 0;
+  border: 0;
+  background: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dtj-sl--chips-soft .dtj-sl__eyebrow { border-radius: 999px; }
+
+/* heading */
+.dtj-sl__heading {
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: var(--sl-h-m, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.dtj-sl--hf-sans .dtj-sl__heading { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+.dtj-sl--hf-serif .dtj-sl__heading { font-family: Georgia, "Times New Roman", serif; }
+
+.dtj-sl__accent {
+  color: var(--sl-accent, color-mix(in srgb, currentcolor 78%, transparent));
+  font-style: normal;
+}
+
+.dtj-sl--accent-serif .dtj-sl__accent {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dtj-sl--accent-italic .dtj-sl__accent { font-style: italic; }
+
+.dtj-sl--accent-bold .dtj-sl__accent { font-weight: 800; }
+
+/* rating */
+.dtj-sl__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.dtj-sl__stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.dtj-sl__stars svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  fill: var(--sl-star, currentcolor);
+}
+
+.dtj-sl--rating-chip .dtj-sl__rating {
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, currentcolor 24%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, currentcolor 8%, transparent);
+}
+
+.dtj-sl--rating-boxed .dtj-sl__stars svg,
+.dtj-sl--rating-chip .dtj-sl__stars svg {
+  width: 15px;
+  height: 15px;
+  padding: 2px;
+  border-radius: 2px;
+  background: var(--sl-star, currentcolor);
+  fill: white;
+}
+
+.dtj-sl__desc {
+  max-width: 56ch;
+  margin: 14px 0 0;
+  font-size: var(--sl-desc, 17px);
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+/* chips */
+.dtj-sl__chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dtj-sl__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, currentcolor 28%, transparent);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.dtj-sl--chips-soft .dtj-sl__chip {
+  border-color: transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentcolor 12%, transparent);
+}
+
+.dtj-sl--chips-glass .dtj-sl__chip {
+  border-radius: 10px;
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.dtj-sl__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.dtj-sl__icon svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+
+/* button */
+.dtj-sl__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 15px 32px;
+  border-radius: 999px;
+  background: var(--sl-btn-bg, Canvas);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  color: var(--sl-btn-c, CanvasText);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dtj-sl--btn-rounded .dtj-sl__btn { border-radius: 10px; }
+
+.dtj-sl--btn-square .dtj-sl__btn { border-radius: 4px; }
+
+a.dtj-sl__btn:hover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  transform: translateY(-1px);
+}
+
+.dtj-sl__btn-arrow {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.dtj-sl__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* timer line: fills while the slide is shown */
+.dtj-sl__progress {
+  display: none;
+  width: min(var(--sl-pw, 275px), 100%);
+  height: 2px;
+  margin-top: 28px;
+  overflow: hidden;
+  background: color-mix(in srgb, currentcolor 24%, transparent);
+}
+
+.dtj-sl--auto.dtj-sl--progress .dtj-sl__progress { display: block; }
+
+/* the timer still runs (it paces the slides) when the line itself is hidden */
+.dtj-sl--auto:not(.dtj-sl--progress) .dtj-sl__progress {
+  position: absolute;
+  display: block;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  clip-path: inset(50%);
+}
+
+.dtj-sl__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--sl-pc, currentcolor);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.dtj-sl--auto .dtj-sl__slide.is-active .dtj-sl__fill {
+  animation: dtj-sl-fill var(--sl-dur, 6s) linear forwards;
+  animation-play-state: var(--sl-play, running);
+}
+
+/* hovering with a mouse or focus inside pauses the timer (set through a variable so the animation shorthand cannot undo it) */
+.dtj-sl.is-paused { --sl-play: paused; }
+
+@keyframes dtj-sl-fill {
+  to { transform: scaleX(1); }
+}
+
+/* arrows */
+.dtj-sl__nav {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  gap: 10px;
+}
+
+.dtj-sl__arrow {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sl-ab, Canvas);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  color: var(--sl-ac, CanvasText);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.dtj-sl__arrow:hover { transform: scale(1.06); }
+
+.dtj-sl__arrow svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.dtj-sl__arrow:focus-visible,
+.dtj-sl__btn:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-sl__track,
+  .dtj-sl__slide,
+  .dtj-sl__btn,
+  .dtj-sl__arrow { transition: none; }
+}
+
+/* desktop: the picture fills the slide and the text sits on it */
+@media screen and (min-width: 750px) {
+  .dtj-sl__slide {
+    position: relative;
+    flex-direction: row;
+    align-items: var(--sl-ai, center);
+    aspect-ratio: var(--sl-rd, 3 / 2);
+  }
+
+  .dtj-sl--v-top { --sl-ai: flex-start; }
+
+  .dtj-sl--v-bottom { --sl-ai: flex-end; }
+
+  .dtj-sl__media {
+    position: absolute;
+    inset: 0;
+    order: 0;
+    aspect-ratio: auto;
+  }
+
+  .dtj-sl__fade {
+    position: absolute;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+  }
+
+  /* overlays: colour at the chosen strength, fading out across the chosen share of the slide */
+  .dtj-sl--ov-none .dtj-sl__fade { display: none; }
+
+  .dtj-sl--ov-solid .dtj-sl__fade { background: color-mix(in srgb, var(--sl-ov-c, CanvasText) var(--sl-ov-pct, 60%), transparent); }
+
+  .dtj-sl--ov-side .dtj-sl__fade {
+    background: linear-gradient(to right, color-mix(in srgb, var(--sl-ov-c, CanvasText) var(--sl-ov-pct, 60%), transparent) 0%, transparent var(--sl-ov-size, 70%));
+    -webkit-mask-image: linear-gradient(to right, black 0%, transparent var(--sl-ov-size, 70%));
+    mask-image: linear-gradient(to right, black 0%, transparent var(--sl-ov-size, 70%));
+    -webkit-backdrop-filter: blur(var(--sl-blur, 0px));
+    backdrop-filter: blur(var(--sl-blur, 0px));
+  }
+
+  .dtj-sl--ov-side.dtj-sl--pos-right .dtj-sl__fade {
+    background: linear-gradient(to left, color-mix(in srgb, var(--sl-ov-c, CanvasText) var(--sl-ov-pct, 60%), transparent) 0%, transparent var(--sl-ov-size, 70%));
+    -webkit-mask-image: linear-gradient(to left, black 0%, transparent var(--sl-ov-size, 70%));
+    mask-image: linear-gradient(to left, black 0%, transparent var(--sl-ov-size, 70%));
+  }
+
+  .dtj-sl--ov-side.dtj-sl--pos-center .dtj-sl__fade {
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sl-ov-c, CanvasText) var(--sl-ov-pct, 60%), transparent) 0%, transparent var(--sl-ov-size, 70%));
+    -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent var(--sl-ov-size, 70%));
+    mask-image: radial-gradient(ellipse at center, black 0%, transparent var(--sl-ov-size, 70%));
+  }
+
+  .dtj-sl--ov-bottom .dtj-sl__fade {
+    background: linear-gradient(to top, color-mix(in srgb, var(--sl-ov-c, CanvasText) var(--sl-ov-pct, 60%), transparent) 0%, transparent var(--sl-ov-size, 70%));
+    -webkit-mask-image: linear-gradient(to top, black 0%, transparent var(--sl-ov-size, 70%));
+    mask-image: linear-gradient(to top, black 0%, transparent var(--sl-ov-size, 70%));
+    -webkit-backdrop-filter: blur(var(--sl-blur, 0px));
+    backdrop-filter: blur(var(--sl-blur, 0px));
+  }
+
+  .dtj-sl__content {
+    position: relative;
+    display: flex;
+    width: 100%;
+    align-self: stretch;
+    align-items: var(--sl-ai, center);
+    padding: var(--sl-pad, 40px);
+    text-align: start;
+  }
+
+  .dtj-sl__inner {
+    width: 100%;
+    margin-inline: 0;
+    align-items: flex-start;
+  }
+
+  .dtj-sl--pos-right .dtj-sl__content { justify-content: flex-end; }
+
+  .dtj-sl--pos-center .dtj-sl__content { justify-content: center; text-align: center; }
+
+  .dtj-sl--pos-center .dtj-sl__inner { align-items: center; margin-inline: auto; }
+
+  .dtj-sl__heading { font-size: var(--sl-h-d, 52px); }
+
+  .dtj-sl__chips { justify-content: flex-start; }
+
+  .dtj-sl--pos-center .dtj-sl__chips { justify-content: center; }
+
+  .dtj-sl__eyebrow { margin-bottom: 16px; }
+
+  .dtj-sl__rating { margin-top: 16px; }
+
+  .dtj-sl__desc { margin-top: 16px; }
+
+  .dtj-sl__chips { margin-top: 18px; }
+
+  .dtj-sl__btn { margin-top: 24px; }
+
+  .dtj-sl__note { margin-top: 16px; }
+
+  .dtj-sl__progress { margin-top: 36px; }
+
+  /* arrows on the picture */
+  .dtj-sl__nav {
+    right: var(--sl-pad, 40px);
+    bottom: var(--sl-pad, 40px);
+  }
+
+  .dtj-sl--arrows-left-bottom .dtj-sl__nav {
+    right: auto;
+    left: var(--sl-pad, 40px);
+  }
+
+  .dtj-sl--arrows-right-center .dtj-sl__nav {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+
+  .dtj-sl--arrows-edges .dtj-sl__nav {
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .dtj-sl--arrows-edges .dtj-sl__arrow {
+    position: absolute;
+    top: 50%;
+    width: 40px;
+    height: 44px;
+    margin-top: -22px;
+    pointer-events: auto;
+  }
+
+  .dtj-sl--arrows-edges .dtj-sl__arrow--prev {
+    left: 0;
+    border-radius: 0 999px 999px 0;
+  }
+
+  .dtj-sl--arrows-edges .dtj-sl__arrow--next {
+    right: 0;
+    border-radius: 999px 0 0 999px;
+  }
+}

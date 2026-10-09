@@ -1,0 +1,857 @@
+{
+  "id": "slideshow-pro",
+  "title": "DTJ Slideshow Pro",
+  "block_file": "extensions/dtj-sections-2/blocks/dtj-slideshow-pro.liquid",
+  "placements": [
+    "home",
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "eyebrow_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "rating_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "description_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "chips_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "button_label_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "note_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "eyebrow_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "rating_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "description_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "chips_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "button_label_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "note_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "eyebrow_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "rating_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "description_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "chips_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "button_label_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "note_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    }
+  ],
+  "script": true,
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 0,
+    "padding_bottom": 0,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout and picture overlay"
+    },
+    {
+      "type": "select",
+      "id": "ratio_desktop",
+      "label": "Shape on desktop",
+      "default": "3 / 2",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to the first picture"
+        },
+        {
+          "value": "21 / 9",
+          "label": "Ultra wide 21:9"
+        },
+        {
+          "value": "16 / 9",
+          "label": "Wide 16:9"
+        },
+        {
+          "value": "3 / 2",
+          "label": "Landscape 3:2"
+        },
+        {
+          "value": "4 / 3",
+          "label": "Classic 4:3"
+        },
+        {
+          "value": "1 / 1",
+          "label": "Square 1:1"
+        }
+      ],
+      "info": "Adapt = the slider takes the shape of the first slide's picture. A tall text block never gets cut: the slide grows instead."
+    },
+    {
+      "type": "select",
+      "id": "ratio_mobile",
+      "label": "Picture shape on phones",
+      "default": "4 / 5",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to the first picture"
+        },
+        {
+          "value": "1 / 1",
+          "label": "Square 1:1"
+        },
+        {
+          "value": "4 / 5",
+          "label": "Portrait 4:5"
+        },
+        {
+          "value": "3 / 4",
+          "label": "Tall 3:4"
+        },
+        {
+          "value": "4 / 3",
+          "label": "Landscape 4:3"
+        },
+        {
+          "value": "16 / 9",
+          "label": "Wide 16:9"
+        }
+      ],
+      "info": "On phones the text sits above the picture."
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Slider width (largest)",
+      "min": 800,
+      "max": 1920,
+      "step": 20,
+      "unit": "px",
+      "default": 1340
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "label": "Corner radius",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "select",
+      "id": "content_position",
+      "label": "Text side (desktop)",
+      "default": "left",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "content_align",
+      "label": "Text height (desktop)",
+      "default": "center",
+      "options": [
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "center",
+          "label": "Middle"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Text column width",
+      "min": 300,
+      "max": 800,
+      "step": 10,
+      "unit": "px",
+      "default": 680
+    },
+    {
+      "type": "range",
+      "id": "content_padding",
+      "label": "Space around the text",
+      "min": 16,
+      "max": 100,
+      "step": 2,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "select",
+      "id": "image_focus",
+      "label": "Picture focus",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "overlay_style",
+      "label": "Overlay",
+      "default": "side",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "side",
+          "label": "Fade from the text side"
+        },
+        {
+          "value": "solid",
+          "label": "Even tint over the whole picture"
+        },
+        {
+          "value": "bottom",
+          "label": "Fade from the bottom"
+        }
+      ],
+      "info": "Keeps the text readable. A light color with some blur gives the frosted look."
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Overlay color",
+      "info": "Empty = dark."
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "Overlay strength",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "overlay_size",
+      "label": "How far the fade reaches",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 70,
+      "info": "Share of the slide the fade covers."
+    },
+    {
+      "type": "range",
+      "id": "overlay_blur",
+      "label": "Frosted blur behind the text side",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "Type and colors"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "The *accent* words in the heading. Empty = a softer shade of the text."
+    },
+    {
+      "type": "select",
+      "id": "accent_font",
+      "label": "Accent words style",
+      "default": "serif",
+      "options": [
+        {
+          "value": "serif",
+          "label": "Serif italic"
+        },
+        {
+          "value": "italic",
+          "label": "Theme font italic"
+        },
+        {
+          "value": "bold",
+          "label": "Theme font bold"
+        },
+        {
+          "value": "plain",
+          "label": "Theme font plain"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "heading_font",
+      "label": "Heading font",
+      "default": "theme",
+      "options": [
+        {
+          "value": "theme",
+          "label": "Theme heading font"
+        },
+        {
+          "value": "sans",
+          "label": "Clean sans"
+        },
+        {
+          "value": "serif",
+          "label": "Serif"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 28,
+      "max": 96,
+      "step": 1,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phone",
+      "min": 24,
+      "max": 56,
+      "step": 1,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "description_size",
+      "label": "Paragraph size",
+      "min": 13,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "default": 15
+    },
+    {
+      "type": "select",
+      "id": "eyebrow_style",
+      "label": "Small label style",
+      "default": "sans",
+      "options": [
+        {
+          "value": "sans",
+          "label": "Pill, clean font"
+        },
+        {
+          "value": "mono",
+          "label": "Pill, mono font"
+        },
+        {
+          "value": "plain",
+          "label": "Plain text"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Chips, rating and button"
+    },
+    {
+      "type": "select",
+      "id": "chip_style",
+      "label": "Feature chips",
+      "default": "outline",
+      "options": [
+        {
+          "value": "outline",
+          "label": "Outlined"
+        },
+        {
+          "value": "soft",
+          "label": "Soft filled"
+        },
+        {
+          "value": "glass",
+          "label": "Frosted glass"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "rating_style",
+      "label": "Rating",
+      "default": "plain",
+      "options": [
+        {
+          "value": "plain",
+          "label": "Plain stars"
+        },
+        {
+          "value": "boxed",
+          "label": "Boxed stars"
+        },
+        {
+          "value": "chip",
+          "label": "Boxed stars in a chip"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "info": "Boxed styles: the box color. Empty = same as the text."
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button shape",
+      "default": "pill",
+      "options": [
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "rounded",
+          "label": "Rounded"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "button_bg",
+      "label": "Button color",
+      "info": "Empty = light."
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button text color",
+      "info": "Empty = dark."
+    },
+    {
+      "type": "checkbox",
+      "id": "button_arrow",
+      "label": "Arrow in the button",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Arrows, progress and motion"
+    },
+    {
+      "type": "select",
+      "id": "arrows_position",
+      "label": "Arrows",
+      "default": "right-bottom",
+      "options": [
+        {
+          "value": "right-center",
+          "label": "Right, middle"
+        },
+        {
+          "value": "right-bottom",
+          "label": "Right, bottom"
+        },
+        {
+          "value": "left-bottom",
+          "label": "Left, bottom"
+        },
+        {
+          "value": "edges",
+          "label": "On both edges"
+        },
+        {
+          "value": "none",
+          "label": "Hidden"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "arrow_bg",
+      "label": "Arrow color",
+      "info": "Empty = light."
+    },
+    {
+      "type": "color",
+      "id": "arrow_color",
+      "label": "Arrow icon color",
+      "info": "Empty = dark."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress",
+      "label": "Timer line under the text",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "progress_color",
+      "label": "Timer line color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "range",
+      "id": "progress_width",
+      "label": "Timer line width",
+      "min": 120,
+      "max": 480,
+      "step": 5,
+      "unit": "px",
+      "default": 275
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Change slides by itself",
+      "default": true,
+      "info": "Switched off for visitors who ask their device for less motion."
+    },
+    {
+      "type": "range",
+      "id": "autoplay_seconds",
+      "label": "Seconds per slide",
+      "min": 3,
+      "max": 15,
+      "step": 1,
+      "unit": "s",
+      "default": 6
+    },
+    {
+      "type": "select",
+      "id": "transition",
+      "label": "Change style",
+      "default": "slide",
+      "options": [
+        {
+          "value": "slide",
+          "label": "Slide"
+        },
+        {
+          "value": "fade",
+          "label": "Fade"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Slides (up to 3)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Slide 1: picture"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow_1",
+      "label": "Slide 1: small label"
+    },
+    {
+      "type": "text",
+      "id": "heading_1",
+      "label": "Slide 1: heading",
+      "info": "Put the accent words between asterisks, for example: A calming *botanical* reset."
+    },
+    {
+      "type": "text",
+      "id": "rating_1",
+      "label": "Slide 1: rating text",
+      "info": "Shows five stars and this text. Only a rating you can prove."
+    },
+    {
+      "type": "textarea",
+      "id": "description_1",
+      "label": "Slide 1: paragraph"
+    },
+    {
+      "type": "textarea",
+      "id": "chips_1",
+      "label": "Slide 1: feature chips",
+      "info": "One per line, up to 4. Optional icon first, for example: leaf: 100% Organic. Icons: leaf, shield, check, globe, heart, bolt, snowflake, bulb, brain, drop, sparkle, star, truck, clock, award, atom."
+    },
+    {
+      "type": "text",
+      "id": "button_label_1",
+      "label": "Slide 1: button text"
+    },
+    {
+      "type": "url",
+      "id": "button_url_1",
+      "label": "Slide 1: button link"
+    },
+    {
+      "type": "text",
+      "id": "note_1",
+      "label": "Slide 1: line under the button",
+      "info": "Optional icon first, for example: shield: 30-night guarantee. Only a promise you keep."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Slide 2: picture"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow_2",
+      "label": "Slide 2: small label"
+    },
+    {
+      "type": "text",
+      "id": "heading_2",
+      "label": "Slide 2: heading"
+    },
+    {
+      "type": "text",
+      "id": "rating_2",
+      "label": "Slide 2: rating text"
+    },
+    {
+      "type": "textarea",
+      "id": "description_2",
+      "label": "Slide 2: paragraph"
+    },
+    {
+      "type": "textarea",
+      "id": "chips_2",
+      "label": "Slide 2: feature chips"
+    },
+    {
+      "type": "text",
+      "id": "button_label_2",
+      "label": "Slide 2: button text"
+    },
+    {
+      "type": "url",
+      "id": "button_url_2",
+      "label": "Slide 2: button link"
+    },
+    {
+      "type": "text",
+      "id": "note_2",
+      "label": "Slide 2: line under the button"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Slide 3: picture"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow_3",
+      "label": "Slide 3: small label"
+    },
+    {
+      "type": "text",
+      "id": "heading_3",
+      "label": "Slide 3: heading"
+    },
+    {
+      "type": "text",
+      "id": "rating_3",
+      "label": "Slide 3: rating text"
+    },
+    {
+      "type": "textarea",
+      "id": "description_3",
+      "label": "Slide 3: paragraph"
+    },
+    {
+      "type": "textarea",
+      "id": "chips_3",
+      "label": "Slide 3: feature chips"
+    },
+    {
+      "type": "text",
+      "id": "button_label_3",
+      "label": "Slide 3: button text"
+    },
+    {
+      "type": "url",
+      "id": "button_url_3",
+      "label": "Slide 3: button link"
+    },
+    {
+      "type": "text",
+      "id": "note_3",
+      "label": "Slide 3: line under the button"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "eyebrow_1": "Label one",
+      "heading_1": "Head *accent* tail",
+      "rating_1": "Rating one",
+      "description_1": "Paragraph one",
+      "chips_1": "leaf: Chip A\nChip B",
+      "button_label_1": "Button one",
+      "button_url_1": "/a",
+      "note_1": "shield: Note one",
+      "heading_2": "Second slide"
+    },
+    "expect": [
+      "Label one",
+      "Head",
+      "accent",
+      "tail",
+      "Rating one",
+      "Paragraph one",
+      "Chip A",
+      "Chip B",
+      "Button one",
+      "Note one",
+      "Second slide",
+      "dtj-sl__slide",
+      "dtj-sl__btn"
+    ]
+  }
+}

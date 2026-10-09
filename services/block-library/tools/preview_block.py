@@ -56,6 +56,9 @@ def picture(n, ratio):
 def resolve(key, value):
     if value == "SWATCH":
         return swatch(1)
+    if isinstance(value, str) and value.startswith("FILE:"):  # "FILE:D:/pics/a.webp:1.5" = a real local picture with its width / height ratio
+        path, ratio = value[5:].rsplit(":", 1)
+        return {"src": Path(path).as_uri(), "aspect_ratio": float(ratio), "alt": "", "width": 1000, "height": round(1000 / float(ratio))}
     if isinstance(value, str) and value.startswith("SWATCH:"):  # "SWATCH:0.6" = a tall picture, "SWATCH:1.8" = a wide one
         return picture(int(key.rsplit("_", 1)[-1]) if key.rsplit("_", 1)[-1].isdigit() else 1, float(value.split(":")[1]))
     return value
