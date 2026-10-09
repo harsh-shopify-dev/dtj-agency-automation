@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://page-builder/product-facts.schema.json",
+  "title": "Product facts for the page builder",
+  "description": "Everything the page may say. Every text-bearing fact names its SOURCE (product description, pack, client brief, ...). A section whose facts are missing is omitted: nothing is invented. 'demo': true allows clearly labelled placeholders on a dev store only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["product"],
+  "$defs": {
+    "source": {"type": "string", "minLength": 2, "maxLength": 120},
+    "role": {"type": "string", "pattern": "^[a-z0-9_]{2,30}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 400}
+  },
+  "properties": {
+    "demo": {"type": "boolean"},
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {"title": {"type": "string", "minLength": 1, "maxLength": 80}, "handle": {"type": "string"}}
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["role", "file"],
+        "properties": {"role": {"$ref": "#/$defs/role"}, "file": {"type": "string", "pattern": "^[^/\\\\]+\\.(png|jpg|jpeg|webp)$"}, "alt": {"type": "string"}}
+      }
+    },
+    "trust_points": {"type": "array", "maxItems": 6, "items": {"type": "object", "additionalProperties": false, "required": ["text", "source"], "properties": {"text": {"$ref": "#/$defs/text"}, "source": {"$ref": "#/$defs/source"}}}},
+    "benefits": {"type": "array", "maxItems": 6, "items": {"type": "object", "additionalProperties": false, "required": ["title", "source"], "properties": {"title": {"$ref": "#/$defs/text"}, "text": {"type": "string", "maxLength": 400}, "icon": {"type": "string"}, "source": {"$ref": "#/$defs/source"}}}},
+    "story": {"type": "object", "additionalProperties": false, "required": ["heading", "source"], "properties": {"heading": {"$ref": "#/$defs/text"}, "accent": {"type": "string"}, "body": {"type": "string", "maxLength": 400}, "bullets": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/text"}}, "image_role": {"$ref": "#/$defs/role"}, "source": {"$ref": "#/$defs/source"}}},
+    "steps": {"type": "object", "additionalProperties": false, "required": ["items", "source"], "properties": {"intro": {"type": "string", "maxLength": 400}, "items": {"type": "array", "minItems": 2, "maxItems": 5, "items": {"$ref": "#/$defs/text"}}, "image_role": {"$ref": "#/$defs/role"}, "source": {"$ref": "#/$defs/source"}}},
+    "key_facts": {"type": "array", "maxItems": 6, "items": {"type": "object", "additionalProperties": false, "required": ["value", "label", "source"], "properties": {"value": {"type": "string", "maxLength": 40}, "label": {"$ref": "#/$defs/text"}, "note": {"type": "string", "maxLength": 200}, "image_role": {"$ref": "#/$defs/role"}, "source": {"$ref": "#/$defs/source"}}}},
+    "pack_contents": {"type": "array", "maxItems": 6, "items": {"type": "object", "additionalProperties": false, "required": ["name", "source"], "properties": {"name": {"$ref": "#/$defs/text"}, "detail": {"type": "string"}, "dose": {"type": "string"}, "benefits": {"type": "array", "items": {"type": "string"}}, "image_role": {"$ref": "#/$defs/role"}, "source": {"$ref": "#/$defs/source"}}}},
+    "free_from": {"type": "array", "maxItems": 12, "items": {"type": "object", "additionalProperties": false, "required": ["name", "source"], "properties": {"name": {"$ref": "#/$defs/text"}, "image_role": {"$ref": "#/$defs/role"}, "source": {"$ref": "#/$defs/source"}}}},
+    "comparison": {"type": "object", "additionalProperties": false, "required": ["rows", "source"], "properties": {"ours_label": {"type": "string"}, "other_label": {"type": "string"}, "rows": {"type": "array", "minItems": 3, "maxItems": 10, "items": {"type": "object", "additionalProperties": false, "required": ["ours", "other"], "properties": {"ours": {"$ref": "#/$defs/text"}, "other": {"$ref": "#/$defs/text"}}}}, "image_role": {"$ref": "#/$defs/role"}, "claims_approved": {"type": "boolean"}, "source": {"$ref": "#/$defs/source"}}},
+    "faqs": {"type": "array", "maxItems": 12, "items": {"type": "object", "additionalProperties": false, "required": ["q", "a", "source"], "properties": {"q": {"$ref": "#/$defs/text"}, "a": {"$ref": "#/$defs/text"}, "source": {"$ref": "#/$defs/source"}}}},
+    "reviews": {"type": "array", "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["quote", "name", "source"], "properties": {"quote": {"$ref": "#/$defs/text"}, "name": {"type": "string"}, "location": {"type": "string"}, "rating": {"type": "integer", "minimum": 1, "maximum": 5}, "image_role": {"$ref": "#/$defs/role"}, "source": {"$ref": "#/$defs/source"}}}},
+    "rating": {"type": "object", "additionalProperties": false, "required": ["value", "source"], "properties": {"value": {"type": "string", "pattern": "^[0-5](\\.[0-9])?$"}, "source": {"$ref": "#/$defs/source"}}},
+    "guarantees": {"type": "array", "maxItems": 4, "items": {"type": "object", "additionalProperties": false, "required": ["text", "source"], "properties": {"text": {"$ref": "#/$defs/text"}, "icon": {"type": "string"}, "source": {"$ref": "#/$defs/source"}}}},
+    "buybox": {"type": "object", "additionalProperties": false, "properties": {"tagline": {"type": "string", "maxLength": 40}, "intro": {"type": "string", "maxLength": 200}, "bullets": {"type": "array", "maxItems": 4, "items": {"$ref": "#/$defs/text"}}, "source": {"$ref": "#/$defs/source"}}},
+    "bundles": {"type": "object", "additionalProperties": false, "properties": {"addon_handles": {"type": "array", "maxItems": 4, "items": {"type": "string"}}, "variant_handles": {"type": "array", "maxItems": 8, "items": {"type": "string"}}}}
+  }
+}

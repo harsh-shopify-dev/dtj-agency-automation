@@ -1,0 +1,78 @@
+{
+  "_comment": "Real facts from the TOILOVA product page and pack on the dev store elevate-with-harsh (the store owner's own text). No review, rating or figure was added. Pictures are existing store files.",
+  "brand": {
+    "brand_name": "TOILOVA",
+    "category": "home-care",
+    "price_tier": "value",
+    "voice": "plain",
+    "colors": {"primary": "#0B4A6F", "accent": "#12803B", "background": "#FFFFFF", "text": "#0F2A3A"}
+  },
+  "facts": {
+    "product": {"title": "TOILOVA", "handle": "toilova-1"},
+    "media": [
+      {"role": "pack", "file": "toiletcleaningfoampowder-toilova_1.webp"},
+      {"role": "shelf", "file": "toiletcleaningfoampowder-toilova_2.webp"},
+      {"role": "hand", "file": "toiletcleaningfoampowder-toilova_3.webp"},
+      {"role": "steps", "file": "toiletcleaningfoampowder-toilova_5.webp"},
+      {"role": "acid", "file": "toiletcleaningfoampowder-toilova_8.webp"},
+      {"role": "fumes", "file": "toiletcleaningfoampowder-toilova_6.webp"}
+    ],
+    "trust_points": [
+      {"text": "No scrubbing needed", "source": "product description"},
+      {"text": "Full-bowl foam coverage", "source": "product description"},
+      {"text": "Zero touch cleaning", "source": "pack artwork"},
+      {"text": "Safe for septic tanks", "source": "pack artwork"},
+      {"text": "Proudly made in India", "source": "product description"}
+    ],
+    "benefits": [
+      {"title": "No scrubbing needed", "text": "Sprinkle the sachet, wait, and flush. No brush.", "icon": "sparkles", "source": "product description"},
+      {"title": "Full-bowl foam coverage", "text": "Foam that reaches every corner.", "icon": "check", "source": "product description"},
+      {"title": "Zero touch cleaning", "text": "No touching the mess.", "icon": "shield_plus", "source": "product description"},
+      {"title": "Fast and effortless", "text": "Takes just seconds, but feels like a deep clean.", "icon": "wind_calm", "source": "product description"},
+      {"title": "Acid-free and safe", "text": "No toxic fumes.", "icon": "leaf", "source": "product description"},
+      {"title": "Safe for septic tanks", "text": "Clean without the disgust.", "icon": "flask", "source": "pack artwork"}
+    ],
+    "story": {
+      "heading": "Foam that", "accent": "actually works.",
+      "body": "TOILOVA's smart foam expands to reach deep stains and hidden corners, giving you a powerful clean with zero effort.",
+      "bullets": ["Full-foam coverage that reaches every corner", "Acid-free and safe, no toxic fumes", "Takes just seconds", "Proudly made in India"],
+      "image_role": "hand", "source": "product artwork text"
+    },
+    "steps": {
+      "intro": "Sprinkle the sachet, wait, and flush. No brush. No scrubbing. No touching the mess.",
+      "items": ["Drop the sachet into the toilet", "Blue foam rises and covers the bowl", "Flush, and the bowl is left clean"],
+      "image_role": "steps", "source": "how-it-works artwork"
+    },
+    "key_facts": [
+      {"value": "400 g", "label": "Net weight", "note": "Printed on the pack: 100 g x 4 bags", "image_role": "pack", "source": "pack"},
+      {"value": "4 bags", "label": "100 g each, in every box", "note": "Printed on the pack", "image_role": "shelf", "source": "pack"},
+      {"value": "Lemon Fresh", "label": "Fragrance", "note": "Printed on the pack", "image_role": "hand", "source": "pack"}
+    ],
+    "pack_contents": [
+      {"name": "Foam powder sachets", "detail": "Lemon Fresh", "dose": "4 bags x 100 g", "benefits": ["No scrubbing needed", "Full-bowl foam coverage", "Acid-free and safe"], "image_role": "pack", "source": "pack"},
+      {"name": "Lemon Fresh fragrance", "detail": "As printed on the pack", "benefits": ["Sparkling freshness"], "image_role": "shelf", "source": "pack"}
+    ],
+    "free_from": [
+      {"name": "Acid", "image_role": "acid", "source": "product description"},
+      {"name": "Toxic fumes", "image_role": "fumes", "source": "product description"}
+    ],
+    "comparison": {
+      "ours_label": "TOILOVA", "other_label": "Regular cleaners", "image_role": "pack", "claims_approved": false, "source": "store's own comparison artwork",
+      "rows": [
+        {"ours": "Full coverage", "other": "Misses spots"},
+        {"ours": "No scrubbing required", "other": "Scrubbing required"},
+        {"ours": "Touch-free cleaning", "other": "Requires brushes and contact"},
+        {"ours": "Safe for septic tanks", "other": "Harsh chemicals can damage septic balance"}
+      ]
+    },
+    "faqs": [
+      {"q": "How do I use TOILOVA?", "a": "Sprinkle the sachet into the toilet, wait, and flush. No brush, no scrubbing, no touching the mess.", "source": "product description"},
+      {"q": "Do I need a brush?", "a": "No. TOILOVA is brush-free. The foam does the work.", "source": "product description"},
+      {"q": "Is it acid-free?", "a": "Yes. TOILOVA is acid-free and safe, with no toxic fumes.", "source": "product description"},
+      {"q": "Is it safe for septic tanks?", "a": "Yes. TOILOVA is safe for septic tanks.", "source": "pack artwork"},
+      {"q": "What is in the pack?", "a": "One box of 400 g, made up of 4 bags of 100 g each. Fragrance: Lemon Fresh.", "source": "pack"},
+      {"q": "Where is it made?", "a": "TOILOVA is proudly made in India.", "source": "product description"}
+    ],
+    "buybox": {"tagline": "Brush-free. No touch.", "intro": "Sprinkle the sachet, wait, and flush.", "source": "product description"}
+  }
+}
