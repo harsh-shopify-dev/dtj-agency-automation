@@ -397,6 +397,12 @@
     },
     {
       "type": "color",
+      "id": "tick_color",
+      "label": "Check mark color",
+      "info": "The check inside the round point markers. Empty = the page background. Set it when the markers are a light color."
+    },
+    {
+      "type": "color",
       "id": "body_color",
       "label": "Paragraph color",
       "info": "Empty = a softer shade of the text."

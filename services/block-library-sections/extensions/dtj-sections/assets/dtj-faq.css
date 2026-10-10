@@ -157,8 +157,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--fq-accent, currentColor) 10%, transparent);
-  color: var(--fq-accent, currentColor);
+  background: color-mix(in srgb, var(--fq-tg, var(--fq-accent, currentColor)) 10%, transparent);
+  color: var(--fq-tg, var(--fq-accent, currentColor));
   transition: transform 0.25s, background 0.2s;
 }
 
@@ -170,10 +170,11 @@
 /* open: the plus turns 45 degrees into an x on a filled accent circle (the fill is the accent colour itself, so the x takes the page colour) */
 .dtj-faq__item[open] .dtj-faq__toggle {
   transform: rotate(45deg);
-  background: var(--fq-accent, currentColor);
+  background: var(--fq-tg, var(--fq-accent, currentColor));
 }
 
-.dtj-faq__item[open] .dtj-faq__toggle svg { color: Canvas; }
+/* the x takes the question box's own colour when the button has its own colour (white on a yellow button vanished, 10 Oct 2026) */
+.dtj-faq__item[open] .dtj-faq__toggle svg { color: var(--fq-tg-x, Canvas); }
 
 .dtj-faq__a {
   padding: 0 20px 18px;

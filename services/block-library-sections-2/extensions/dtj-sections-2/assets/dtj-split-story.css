@@ -126,7 +126,7 @@
   display: block;
   width: 10px;
   height: 10px;
-  color: Canvas;
+  color: var(--ss-tick-c, Canvas); /* "Check mark color": a white check vanished on a yellow marker (Go Mints v3, 10 Oct 2026) */
 }
 
 /* review card */

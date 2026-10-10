@@ -87,6 +87,15 @@ class NotInsideTests(unittest.TestCase):
 class FaqTests(unittest.TestCase):
     m = manifest("faq")
 
+    def test_the_open_close_button_can_have_its_own_colour_and_the_x_takes_the_box_colour(self):
+        qa = {"question_1": "Q", "answer_1": "<p>A</p>"}
+        html = render(self.m, {**qa, "toggle_color": "#E9EF12", "item_bg": "#082A45"})
+        self.assertIn("--fq-tg: #E9EF12", html)
+        self.assertIn("--fq-tg-x: #082A45", html)
+        self.assertNotIn("--fq-tg", render(self.m, {**qa, "item_bg": "#082A45"}))  # without it nothing changes
+        css = (HERE / "extensions/dtj-sections/assets/dtj-faq.css").read_text(encoding="utf-8")
+        self.assertIn("color: var(--fq-tg-x, Canvas)", css)
+
     def test_a_question_only_shows_when_it_has_text(self):
         html = render(self.m, {"question_1": "Q one?", "answer_2": "orphan answer"})
         self.assertEqual(html.count("<details"), 1)
@@ -279,6 +288,19 @@ class TestimonialsSliderTests(unittest.TestCase):
         self.assertNotIn("--ts-tile-star", render(self.m, {"text_1": "A", "stars_1": "3"}))
         css = (HERE / "extensions/dtj-sections/assets/dtj-testimonials-slider.css").read_text(encoding="utf-8")
         self.assertIn("fill: var(--ts-tile-star, Canvas)", css)
+
+    def test_cards_can_have_their_own_text_colour_for_light_cards_on_a_dark_band(self):
+        # white cards on a navy band need dark words while the heading above them stays white (Harsh, 10 Oct 2026)
+        html = render(self.m, {"text_1": "A", "card_bg": "#FFFFFF", "card_text_color": "#082A45"})
+        self.assertIn("--ts-card-c: #082A45", html)
+        self.assertNotIn("--ts-card-c", render(self.m, {"text_1": "A"}))
+        css = (HERE / "extensions/dtj-sections/assets/dtj-testimonials-slider.css").read_text(encoding="utf-8")
+        self.assertIn("color: var(--ts-card-c, inherit)", css)
+
+    def test_the_heading_keeps_the_cards_side_space_on_phones(self):
+        css = (HERE / "extensions/dtj-sections/assets/dtj-testimonials-slider.css").read_text(encoding="utf-8")
+        phone = css.split("@media screen and (max-width: 749px)")[1].split("@media")[0]
+        self.assertIn("padding-inline: 20px", phone.split(".dtj-ts__intro")[1].split("}")[0])
 
     def test_the_rating_line_shows_only_what_the_merchant_typed(self):
         self.assertNotIn("dtj-ts__rating", render(self.m, {"text_1": "A"}))  # no invented score, no stars, no review count

@@ -90,6 +90,7 @@
   padding: 32px 40px;
   border-radius: var(--dtj-radius, 16px);
   background: var(--ts-card, Canvas);
+  color: var(--ts-card-c, inherit); /* "Card text color": dark words on light cards over a dark band (Harsh, 10 Oct 2026) */
   box-shadow: 0 4px 18px 0 color-mix(in srgb, var(--ts-glow, currentColor) 30%, transparent);
   scroll-snap-align: start;
   text-align: center;
@@ -229,7 +230,7 @@
 .dtj-ts__cta span { color: Canvas; }
 
 @media screen and (max-width: 749px) {
-  .dtj-ts__intro { margin-bottom: 24px; }
+  .dtj-ts__intro { margin-bottom: 24px; padding-inline: 20px; } /* the same side space as the cards: the heading ran to 1.6 px from a 375 px screen edge (Go Mints v3, 10 Oct 2026) */
   .dtj-ts__track { --ts-n: var(--ts-per-m, 1.2); padding-inline: 20px; scroll-padding-inline: 20px; }
   .dtj-ts__card { padding: 24px; }
   .dtj-ts__tile { width: 24px; height: 24px; }

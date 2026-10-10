@@ -379,6 +379,12 @@
       "info": "Empty = same as the title."
     },
     {
+      "type": "color",
+      "id": "icon_bg",
+      "label": "Icon circle color",
+      "info": "Puts each icon in a round badge of this color, so the icons stand apart from the text. Empty = no badge."
+    },
+    {
       "type": "range",
       "id": "feature_width",
       "label": "Feature text width",

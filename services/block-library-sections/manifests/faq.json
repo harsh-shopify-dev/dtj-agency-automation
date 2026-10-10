@@ -439,6 +439,12 @@
       "info": "Empty = a softer shade of the text."
     },
     {
+      "type": "color",
+      "id": "toggle_color",
+      "label": "Open / close button color",
+      "info": "The round + / x button. Empty = the accent color. Use it when the questions sit in dark boxes."
+    },
+    {
       "type": "header",
       "content": "Questions"
     },

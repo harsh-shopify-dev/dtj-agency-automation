@@ -61,6 +61,18 @@ class FeatureShowcaseTests(unittest.TestCase):
         self.assertIn("dtj-fs__icon-img", own)
         self.assertNotIn("<svg", own)
 
+    def test_an_icon_circle_colour_puts_every_icon_in_a_round_badge(self):
+        # icons in the same colour as the text blended in on a brand-colour band (Harsh, 10 Oct 2026)
+        html = render(self.m, {"f1_title": "A", "f1_icon": "leaf", "icon_bg": "#FFFFFF"})
+        self.assertIn("dtj-fs--chip", html)
+        self.assertIn("--fs-ib: #FFFFFF", html)
+        plain = render(self.m, {"f1_title": "A", "f1_icon": "leaf"})
+        self.assertNotIn("dtj-fs--chip", plain)
+        self.assertNotIn("--fs-ib", plain)
+        css = (HERE / "extensions/dtj-sections-2/assets/dtj-feature-showcase.css").read_text(encoding="utf-8")
+        self.assertIn(".dtj-fs--chip .dtj-fs__icon", css)
+        self.assertIn("border-radius: 50%", css)
+
     def test_nothing_is_claimed_by_default(self):
         html = render(self.m, {"f1_title": "A"})
         self.assertNotIn("dtj-fs__heading", html)
@@ -90,6 +102,14 @@ class FeatureShowcaseTests(unittest.TestCase):
 @unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
 class SplitStoryTests(unittest.TestCase):
     m = manifest("split-story")
+
+    def test_the_check_mark_can_take_its_own_colour_for_light_markers(self):
+        # a white check vanished on a yellow marker inside a navy card (Go Mints v3, 10 Oct 2026)
+        html = render(self.m, {"heading": "A", "bullet_1": "x", "tick_color": "#082A45"})
+        self.assertIn("--ss-tick-c: #082A45", html)
+        self.assertNotIn("--ss-tick-c", render(self.m, {"heading": "A", "bullet_1": "x"}))
+        css = (HERE / "extensions/dtj-sections-2/assets/dtj-split-story.css").read_text(encoding="utf-8")
+        self.assertIn("color: var(--ss-tick-c, Canvas)", css)
 
     def test_nothing_renders_empty_and_nothing_is_claimed_by_default(self):
         self.assertEqual(render(self.m, {}), "")

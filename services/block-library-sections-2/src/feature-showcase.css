@@ -106,6 +106,16 @@
   object-fit: contain;
 }
 
+/* "Icon circle color": each icon sits in a round badge, so it stands apart from the title and text (Harsh, 10 Oct 2026) */
+.dtj-fs--chip .dtj-fs__icon {
+  box-sizing: border-box;
+  width: calc(var(--fs-is, 36px) * 1.8);
+  height: calc(var(--fs-is, 36px) * 1.8);
+  padding: calc(var(--fs-is, 36px) * 0.4);
+  border-radius: 50%;
+  background: var(--fs-ib);
+}
+
 .dtj-fs__title {
   margin: 0;
   color: var(--fs-tc, inherit);

@@ -447,6 +447,12 @@
     },
     {
       "type": "color",
+      "id": "card_text_color",
+      "label": "Card text color",
+      "info": "Text and star tiles inside the cards. Empty = the block's text color. Set it when the cards are light on a dark background."
+    },
+    {
+      "type": "color",
       "id": "card_glow",
       "label": "Glow around the cards",
       "info": "Soft colored shadow. Empty = a neutral shadow."
