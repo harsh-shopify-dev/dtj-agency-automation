@@ -581,6 +581,12 @@
       "info": "Empty = same as the text."
     },
     {
+      "type": "color",
+      "id": "avatar_text_color",
+      "label": "Avatar letter color",
+      "info": "The first letter on the circle when a review has no avatar picture. Pick black or white, whichever reads on the accent color. Empty = the page background color."
+    },
+    {
       "type": "range",
       "id": "quote_size",
       "label": "Review text size",

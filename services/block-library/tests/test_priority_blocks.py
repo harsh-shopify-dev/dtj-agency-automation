@@ -232,6 +232,13 @@ class TestimonialsTests(unittest.TestCase):
         html = render(self.m, {f"quote_{i}": f"Review {i}" for i in range(1, 6)})
         self.assertEqual(html.count("data-slide"), 5)
 
+    def test_avatar_letter_colour_is_passed_only_when_chosen_and_falls_back_to_canvas(self):
+        # Canvas alone gave a white initial on a gold accent (2.4:1, page-builder review loop, 9 Oct 2026)
+        self.assertIn("--tt-on-accent: #000000", render(self.m, {"quote_1": "A", "name_1": "Asha", "avatar_text_color": "#000000"}))
+        self.assertNotIn("--tt-on-accent", render(self.m, {"quote_1": "A", "name_1": "Asha"}))
+        css = (ROOT / "extensions/dtj-blocks/assets/dtj-testimonials.css").read_text(encoding="utf-8")
+        self.assertIn("color: var(--tt-on-accent, Canvas)", css)
+
     def test_a_single_review_has_no_next_button_or_progress_bar(self):
         html = render(self.m, {"quote_1": "Only one"})
         self.assertIn("Only one", html)

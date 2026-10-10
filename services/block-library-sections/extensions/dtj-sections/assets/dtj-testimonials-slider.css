@@ -86,7 +86,7 @@
 }
 
 .dtj-ts__tile rect { fill: var(--ts-tile, currentColor); }
-.dtj-ts__tile path { fill: Canvas; }
+.dtj-ts__tile path { fill: var(--ts-tile-star, Canvas); } /* "Star color on the tiles", else the page background (Canvas) */
 
 .dtj-ts__stage { position: relative; }
 

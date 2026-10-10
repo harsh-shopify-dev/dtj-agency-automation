@@ -435,6 +435,12 @@
     },
     {
       "type": "color",
+      "id": "tile_star_color",
+      "label": "Star color on the tiles",
+      "info": "The star drawn on each tile. Pick black or white, whichever reads on the tile color. Empty = the page background color."
+    },
+    {
+      "type": "color",
       "id": "card_bg",
       "label": "Card color",
       "info": "Empty = the block background, or white."

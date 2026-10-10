@@ -273,6 +273,13 @@ class TestimonialsSliderTests(unittest.TestCase):
         self.assertNotIn("dtj-ts__tile", render(self.m, {"text_1": "A"}))
         self.assertEqual(render(self.m, {"text_1": "A", "stars_1": "3"}).count('<svg class="dtj-ts__tile"'), 3)
 
+    def test_the_star_on_the_tiles_has_its_own_colour_with_canvas_as_the_fallback(self):
+        # a white (Canvas) star vanished on light tiles of a dark brand (page-builder review loop, 9 Oct 2026)
+        self.assertIn("--ts-tile-star: #000000", render(self.m, {"text_1": "A", "stars_1": "3", "tile_star_color": "#000000"}))
+        self.assertNotIn("--ts-tile-star", render(self.m, {"text_1": "A", "stars_1": "3"}))
+        css = (HERE / "extensions/dtj-sections/assets/dtj-testimonials-slider.css").read_text(encoding="utf-8")
+        self.assertIn("fill: var(--ts-tile-star, Canvas)", css)
+
     def test_the_rating_line_shows_only_what_the_merchant_typed(self):
         self.assertNotIn("dtj-ts__rating", render(self.m, {"text_1": "A"}))  # no invented score, no stars, no review count
         html = render(self.m, {"text_1": "A", "rating_label": "Typed word", "rating_value": "9.9", "rating_note": "typed note"})

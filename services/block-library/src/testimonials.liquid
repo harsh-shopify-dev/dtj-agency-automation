@@ -10,7 +10,7 @@
   assign star_path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
 -%}
 {%- if tt_count > 0 -%}
-  <dtj-testimonials class="dtj-b dtj-testimonials" data-interval="{{ bs.interval }}" style="{{ dtj_std_style | strip_newlines }} --tt-pad: {{ bs.card_padding }}px; --tt-border-width: {{ bs.border_width }}px; --tt-quote-size: {{ bs.quote_size }}px; --tt-name-size: {{ bs.name_size }}px; --tt-interval: {{ bs.interval }}s;{% if bs.border_color != blank %} --tt-border-color: {{ bs.border_color }};{% endif %}{% if bs.accent_color != blank %} --tt-accent: {{ bs.accent_color }};{% endif %}{% if bs.star_color != blank %} --tt-star: {{ bs.star_color }};{% endif %}" {{ block.shopify_attributes }}>
+  <dtj-testimonials class="dtj-b dtj-testimonials" data-interval="{{ bs.interval }}" style="{{ dtj_std_style | strip_newlines }} --tt-pad: {{ bs.card_padding }}px; --tt-border-width: {{ bs.border_width }}px; --tt-quote-size: {{ bs.quote_size }}px; --tt-name-size: {{ bs.name_size }}px; --tt-interval: {{ bs.interval }}s;{% if bs.border_color != blank %} --tt-border-color: {{ bs.border_color }};{% endif %}{% if bs.accent_color != blank %} --tt-accent: {{ bs.accent_color }};{% endif %}{% if bs.star_color != blank %} --tt-star: {{ bs.star_color }};{% endif %}{% if bs.avatar_text_color != blank %} --tt-on-accent: {{ bs.avatar_text_color }};{% endif %}" {{ block.shopify_attributes }}>
     <div class="dtj-testimonials__card" role="region" aria-roledescription="carousel">
       <div class="dtj-testimonials__track" data-track>
         {%- for i in (1..5) -%}

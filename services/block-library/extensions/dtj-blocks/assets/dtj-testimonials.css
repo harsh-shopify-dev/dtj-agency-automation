@@ -77,9 +77,10 @@
   text-transform: uppercase;
 }
 
-/* the initial is white; setting `color` on the avatar itself would turn its currentColor fill white too */
+/* the initial: the "Avatar letter color" setting, else the page background (Canvas). Canvas alone failed on a light accent such as gold
+   (2.4:1, page-builder review loop, 9 Oct 2026). Setting `color` on the avatar itself would turn its currentColor fill too, so it stays on the span. */
 .dtj-testimonials__avatar span {
-  color: Canvas;
+  color: var(--tt-on-accent, Canvas);
 }
 
 .dtj-testimonials__avatar img {
