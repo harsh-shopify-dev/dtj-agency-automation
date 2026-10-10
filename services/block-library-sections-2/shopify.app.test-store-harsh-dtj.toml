@@ -1,0 +1,22 @@
+# Per-client copy of DTJ Sections 2 for Test Store (test-store-harsh-dtj.myshopify.com). Written by services/install-catcher/tools/add_client.py.
+# Linked with: shopify app config link --path services/block-library-sections-2 --client-id c6899cb7fdda3fe43f2e7c3dd55c2012 --file-name shopify.app.test-store-harsh-dtj.toml --force --no-input
+# Released with: shopify app deploy --path services/block-library-sections-2 --config test-store-harsh-dtj --allow-updates
+
+client_id = "c6899cb7fdda3fe43f2e7c3dd55c2012"
+name = "DTJ Sections 2 - Test Store"
+application_url = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/start/test-store-harsh-dtj-sections2"
+embedded = false
+
+[access_scopes]
+# no store data at all: the licence is a metafield on our own app installation
+scopes = ""
+
+[auth]
+redirect_urls = [ "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/callback/test-store-harsh-dtj-sections2" ]
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/webhooks/test-store-harsh-dtj-sections2"

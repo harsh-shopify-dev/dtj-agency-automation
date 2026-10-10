@@ -1,0 +1,9 @@
+{
+  "name": "dtj-install-catcher",
+  "private": true,
+  "type": "module",
+  "description": "Catches a client store's install of our app copies, keeps the store key encrypted and switches the DTJ licence (design: docs/install-catcher-design.md)",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

@@ -1,0 +1,49 @@
+# DTJ install catcher (design: docs/install-catcher-design.md). Deploy with tools/deploy.py, never by hand with secrets on a command line.
+name = "dtj-install-catcher"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+preview_urls = false  # one public address only: no per-version preview links
+# account_id comes from the CLOUDFLARE_ACCOUNT_ID environment variable at deploy time
+
+[[kv_namespaces]]
+binding = "VAULT"
+id = "d8f7f34509604af8b567376806a3b8bd"  # tools/deploy.py creates the namespace and writes its id here
+
+[triggers]
+crons = ["0 3 * * 1"]  # every Monday 03:00 UTC: refresh every store key (a refresh token dies after 90 days unused)
+
+[vars]
+# one entry per app copy, written by tools/add_client.py (client ids and store addresses are not secret)
+APPS = '''{
+ "rupa-divine-crystals-blocks": {
+  "client_id": "df417f1a617ef40a6da895e54dc5cc8a",
+  "label": "DTJ Blocks - Rupa Divine",
+  "shop": "rupa-divine-crystals.myshopify.com"
+ },
+ "rupa-divine-crystals-sections": {
+  "client_id": "42a9bb7fc532b10ea04ca161d76f874a",
+  "label": "DTJ Sections - Rupa Divine",
+  "shop": "rupa-divine-crystals.myshopify.com"
+ },
+ "rupa-divine-crystals-sections2": {
+  "client_id": "342f999435c9cf07263261a0378fc4f8",
+  "label": "DTJ Sections 2 - Rupa Divine",
+  "shop": "rupa-divine-crystals.myshopify.com"
+ },
+ "test-store-harsh-dtj-blocks": {
+  "client_id": "998ece797bc9c58d2a42ab1bf1ef0766",
+  "label": "DTJ Blocks - Test Store",
+  "shop": "qaxv3r-8g.myshopify.com"
+ },
+ "test-store-harsh-dtj-sections": {
+  "client_id": "8183e67c0562ba516f0bc62df112aca9",
+  "label": "DTJ Sections - Test Store",
+  "shop": "qaxv3r-8g.myshopify.com"
+ },
+ "test-store-harsh-dtj-sections2": {
+  "client_id": "c6899cb7fdda3fe43f2e7c3dd55c2012",
+  "label": "DTJ Sections 2 - Test Store",
+  "shop": "qaxv3r-8g.myshopify.com"
+ }
+}'''
