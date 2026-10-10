@@ -13,6 +13,8 @@ HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "tools"))
 import add_client  # noqa: E402
 import deploy  # noqa: E402
+import client_registry  # noqa: E402
+import licence_call  # noqa: E402
 
 IDS = {"blocks": "a" * 32, "sections": "b" * 32, "sections2": "c" * 32}
 
@@ -175,6 +177,85 @@ class Deployment(unittest.TestCase):
         self.assertEqual(fake.calls, [])
         self.assertTrue(any("deploy" in line for line in d.log))
         self.assertFalse(any("shpss_" in line or "cf-token" in line for line in d.log))
+
+
+class FakeResponse:
+    def __init__(self, status, body):
+        self.status, self._body = status, json.dumps(body).encode()
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+class LicenceCall(unittest.TestCase):
+    def test_the_request_is_signed_with_the_control_key_and_never_carries_it(self):
+        seen = []
+
+        def opener(req, timeout):
+            seen.append(req)
+            return FakeResponse(200, {"licence": "active"})
+        code, data = licence_call.call("royal-dosa-blocks", "status", key="k" * 64, opener=opener)
+        self.assertEqual((code, data), (200, {"licence": "active"}))
+        req = seen[0]
+        expected = __import__("hmac").new(b"k" * 64, req.data, "sha256").hexdigest()
+        self.assertEqual(req.get_header("X-dtj-signature"), expected)
+        self.assertNotIn("k" * 64, req.data.decode())
+        self.assertNotIn("Python-urllib", req.get_header("User-agent"))
+
+    def test_a_change_needs_a_named_approver(self):
+        with self.assertRaises(SystemExit):
+            licence_call.call("royal-dosa-blocks", "inactive", key="k", opener=lambda *a, **k: None)
+
+    def test_server_errors_are_retried_at_most_three_times(self):
+        import urllib.error
+        calls = []
+
+        def opener(req, timeout):
+            calls.append(1)
+            raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, __import__("io").BytesIO(b"busy"))
+        code, _ = licence_call.call("royal-dosa-blocks", "status", key="k", opener=opener, sleep=lambda s: None)
+        self.assertEqual((code, len(calls)), (503, 4))
+
+
+class ClientRegistry(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp)
+        self.wrangler = self.tmp / "wrangler.toml"
+        apps = {f"royal-dosa-{p}": {"client_id": IDS[p], "shop": "qaxv3r-8g.myshopify.com", "label": f"{add_client.APPS[p][1]} - Royal Dosa"}
+                for p in IDS}
+        self.wrangler.write_text(add_client.set_apps(blank_wrangler(), apps), encoding="utf-8")
+        for i, (part, (folder, display)) in enumerate(add_client.APPS.items()):
+            d = self.tmp / folder / ".shopify" / "deploy-bundle"
+            d.mkdir(parents=True)
+            (d / "manifest.json").write_text(json.dumps({"name": f"{display} - Royal Dosa", "modules": [
+                {"type": "app_access", "uuid": "x"}, {"type": "theme_app_extension", "handle": "dtj", "uuid": f"01a120c{i}-0000-7000-8000-000000000000"}]}))
+
+    def build(self, status):
+        return client_registry.build("royal-dosa", status, services=self.tmp, wrangler=self.wrangler, clients_dir=self.tmp / "clients")
+
+    def test_uuids_come_from_the_release_record_and_handles_from_the_store(self):
+        data = self.build(lambda key: {"app_handle": key.replace("royal-dosa-", "dtj-") + "-royal-dosa"})
+        self.assertEqual(data["store"], "qaxv3r-8g.myshopify.com")
+        self.assertEqual(data["apps"]["dtj-blocks"], {"handle": "dtj-blocks-royal-dosa", "uuid": "01a120c0-0000-7000-8000-000000000000"})
+        self.assertEqual(data["apps"]["dtj-sections-2"]["uuid"], "01a120c2-0000-7000-8000-000000000000")
+        self.assertTrue((self.tmp / "clients" / "royal-dosa.json").is_file())
+
+    def test_before_the_install_the_handle_is_pending(self):
+        data = self.build(lambda key: {})
+        self.assertEqual({e["handle"] for e in data["apps"].values()}, {"pending"})
+
+    def test_another_clients_release_record_is_refused(self):
+        m = self.tmp / "block-library" / ".shopify" / "deploy-bundle" / "manifest.json"
+        m.write_text(json.dumps({"name": "DTJ Blocks - Rupa Divine", "modules": []}))
+        with self.assertRaises(SystemExit):
+            self.build(lambda key: {})
 
 
 if __name__ == "__main__":
