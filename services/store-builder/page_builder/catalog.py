@@ -11,6 +11,7 @@ HERE = Path(__file__).resolve().parent
 SERVICES = HERE.parents[1]  # .../services
 _SCHEMA = re.compile(r"\{%-?\s*schema\s*-?%\}(.*?)\{%-?\s*endschema\s*-?%\}", re.S)
 IMAGE_PREFIX = "shopify://shop_images/"
+VIDEO_PREFIX = "shopify://files/videos/"  # a video in the store's Files (Content > Files)
 
 
 @lru_cache(maxsize=1)
@@ -68,6 +69,8 @@ class Catalog:
                 problems.append(f"{app}/{block}: {key} must be true or false")
             elif kind == "image_picker" and not str(value).startswith(IMAGE_PREFIX):
                 problems.append(f"{app}/{block}: {key} must be {IMAGE_PREFIX}<file>, got {value!r}")
+            elif kind == "video" and not str(value).startswith(VIDEO_PREFIX):
+                problems.append(f"{app}/{block}: {key} must be {VIDEO_PREFIX}<file>, got {value!r}")
             elif kind == "color" and not re.fullmatch(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?", str(value)):
                 problems.append(f"{app}/{block}: {key}={value!r} is not a hex colour")
             elif kind in ("text", "textarea", "inline_richtext", "richtext") and not isinstance(value, str):

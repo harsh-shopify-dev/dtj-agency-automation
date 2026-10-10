@@ -6,7 +6,7 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass, field
 
-from .catalog import IMAGE_PREFIX, Catalog
+from .catalog import IMAGE_PREFIX, VIDEO_PREFIX, Catalog
 
 FEATURE_ICONS = ["sparkles", "check", "shield_plus", "wind_calm", "leaf", "flask", "pill", "microscope", "heart_pulse", "shield_focus", "brain", "eye"]
 SLIDE_ICONS = {"leaf", "shield", "check", "globe", "heart", "bolt", "snowflake", "bulb", "brain", "drop", "sparkle", "star", "truck", "clock", "award", "atom"}
@@ -28,6 +28,18 @@ STRUCTURE = {
     "why_us": "Why {brand}",
     "stories": "In their own words",
     "cta": "Shop now",
+    # one button label per section, named after what that section says (Harsh, 10 Oct 2026: "every CTAs have the same text, they should be
+    # named accordingly with what the section says"). Generic buying actions; the copy step rewrites them in the section's own words.
+    "cta_ugc_strip": "Get yours",
+    "cta_story_split": "Try it yourself",
+    "cta_story_split_2": "Make it yours",
+    "cta_reviews_slider": "Join them",
+    "cta_why_us": "Make the switch",
+    "cta_why_features": "Get started",
+    "cta_guarantee": "Order with confidence",
+    "cta_facts_glance": "Choose yours",
+    "cta_faq": "Ready? Order now",
+    "cta_stories": "Start your story",
 }
 MAIN = "#MainContent"  # Horizon's main content anchor: the top of the product (buy box) section
 
@@ -84,6 +96,8 @@ class Ctx:
             kind = "demo"
         if kind == "fact" and str(source).upper().startswith("SAMPLE"):
             kind = "sample"  # sample content (Harsh, 10 Oct 2026): listed in the report, draft themes only, replaced before live
+        if kind == "fact" and str(source).upper().startswith("DTJ COPY"):
+            kind = "dtj_copy"  # a line WE wrote on a sourced fact (references/copywriting.md): listed for the client's sign-off, lint L19
         if kind == "structure" and f"{section.id}.{key}" in self.copy:
             value, kind, source = self.copy[f"{section.id}.{key}"], "copy", "claude copy step (validated)"
         section.settings[key] = value
@@ -172,6 +186,8 @@ def facts_glance(ctx: Ctx):
         return s
     s = Section("dtj_numbers", "dtj-sections-2", "stat-cards", role="band", kind="facts_glance")
     ctx.put(s, "heading", ctx.structure("numbers"))
+    if len(kf) == 4 and max(len(f["value"]) for f in kf) >= 7:
+        s.settings["columns"] = "2"  # a long figure ("2,00,000+") broke across two lines in a row of four (book page, 10 Oct 2026)
     for i, f in _slots(6, kf):
         ctx.put(s, f"number_{i}", f["value"], "fact", f["source"])
         ctx.put(s, f"label_{i}", f["label"], "fact", f["source"])
@@ -328,9 +344,17 @@ def faq(ctx: Ctx):
 
 # ------------------------------------------------------------------------------------------------ DTJ Standard Product Page v1 (10 Oct 2026)
 def cta_label(ctx: Ctx) -> tuple[str, str, str]:
-    """The page's ONE call-to-action label: (label, kind, source)."""
+    """The brand's main call-to-action label (the page's last button): (label, kind, source)."""
     c = ctx.facts.get("cta")
     return (c["label"], "fact", c["source"]) if c else (ctx.structure("cta"), "structure", "page structure")
+
+
+def section_cta_label(ctx: Ctx, kind: str) -> tuple[str, str, str]:
+    """The label of the button after a section: a buying action in that section's words. Every button does the same thing (the page's
+    one action), but each is named after its section (Harsh, 10 Oct 2026). A structural default the copy step may rewrite; a section
+    without one gets the main label."""
+    key = f"cta_{kind}"
+    return (ctx.structure(key), "structure", "page structure") if key in STRUCTURE else cta_label(ctx)
 
 
 def ugc_strip(ctx: Ctx):
@@ -344,6 +368,9 @@ def ugc_strip(ctx: Ctx):
         s.settings["products"] = [handle] * min(6, len(items))
     for i, it in _slots(6, items):
         s.settings[f"media_type_{i}"] = "image"
+        if it.get("video"):  # a reader's or creator's video (Harsh, 10 Oct 2026: videos for the testimonials); the picture stays as fallback
+            s.settings[f"media_type_{i}"] = "video"
+            s.settings[f"video_{i}"] = f"{VIDEO_PREFIX}{it['video']}"
         image = ctx.media(it["image_role"])
         if image:
             s.settings[f"image_{i}"] = image
@@ -404,7 +431,7 @@ def guarantee(ctx: Ctx):
     ctx.put(s, "heading", g["heading"], "fact", g["source"])
     ctx.put(s, "text", g.get("text"), "fact", g["source"])
     ctx.put(s, "seal_text", g.get("seal"), "fact", g["source"])
-    label, kind, source = cta_label(ctx)
+    label, kind, source = section_cta_label(ctx, "guarantee")
     ctx.put(s, "button_label", label, kind, source)
     s.settings["action"] = (ctx.facts.get("cta") or {}).get("action", "scroll")
     return s
@@ -423,7 +450,7 @@ def stories(ctx: Ctx):
         image = ctx.media(it.get("image_role"))
         if image:
             s.settings[f"photo_{i}"] = image
-    label, kind, source = cta_label(ctx)
+    label, kind, source = section_cta_label(ctx, "stories")
     ctx.put(s, "cta_text", label, kind, source)
     s.settings["cta_link"] = MAIN
     return s
@@ -443,7 +470,10 @@ def final_push(ctx: Ctx):
     if image:
         s.settings["image_1"] = image
     s.settings.update({"autoplay": False, "show_progress": False, "arrows_position": "none", "overlay_style": "solid",
-                       "overlay_opacity": 60, "content_position": "center", "ratio_desktop": "21 / 9", "ratio_mobile": "4 / 5"})
+                       "overlay_opacity": 60, "content_position": "center",
+                       # the slide takes the picture's own shape, so nothing is cut off (Harsh, 10 Oct 2026: "the section should adapt to
+                       # image size"; a 4:5 crop of a square pack shot cut its printed claims at both edges)
+                       "ratio_desktop": "adapt", "ratio_mobile": "adapt"})
     return s
 
 

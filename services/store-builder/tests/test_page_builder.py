@@ -8,6 +8,7 @@ from page_builder import copy_contract, rules, styling
 from page_builder.assemble import InputError, build_pdp
 from page_builder.catalog import Catalog
 from page_builder.direction import derive
+from provision.style import contrast as style_contrast
 from page_builder.examples import fixtures
 
 
@@ -631,20 +632,218 @@ class StandardPageTests(unittest.TestCase):
         self.assertEqual(len(sec["block_order"]), 2)
         cta = sec["blocks"][sec["block_order"][1]]
         self.assertIn("/blocks/dtj-cta/", cta["type"])
-        self.assertEqual(cta["settings"]["button_label"], "Get my bottle")
+        self.assertEqual(cta["settings"]["button_label"], "Join them")  # named after its section (Harsh, 10 Oct 2026)
         self.assertEqual(cta["settings"].get("background"), r.model.sections[STANDARD_ORDER.index("reviews_slider")].settings.get("background"))
-        labels = {r.model.extras[k].settings["button_label"] for k in r.model.extras}
-        self.assertEqual(labels, {"Get my bottle"})  # ONE label for the whole page
+
+    def test_every_button_has_its_own_label_and_the_last_one_keeps_the_brands_main_label(self):
+        r = self.build()
+        labels = [x.settings["button_label"] for x in r.model.extras.values()]
+        labels += [r.template["sections"][sid]["blocks"][k]["settings"][key] for sid, key in
+                   (("dtj_guarantee", "button_label"), ("dtj_stories", "cta_text"), ("dtj_final", "button_label_1"))
+                   for k in r.template["sections"][sid]["block_order"][:1]]
+        self.assertEqual(len(labels), len(set(labels)), labels)
+        self.assertEqual(labels[-1], "Get my bottle")
+        self.assertEqual(r.model.prov[("dtj_reviews_cta", "button_label")]["kind"], "structure")  # the copy step may rename it
+
+    def test_the_copy_step_names_a_button_after_its_section_within_the_limits(self):
+        r = self.build()
+        slots = {x["slot"]: x for x in copy_contract.list_slots(r)}
+        self.assertTrue(slots["dtj_reviews_cta.button_label"]["button"])
+        self.assertEqual(slots["dtj_reviews_cta.button_label"]["section_heading"], "What customers say")
+        self.assertEqual(slots["dtj_reviews_cta.button_label"]["max_length"], 24)
+        self.assertNotIn("dtj_final.button_label_1", slots)  # the brand's own main label is a fact
+        accepted, rejected = copy_contract.validate_response(r, {"slots": {
+            "dtj_reviews_cta.button_label": "Join the happy homes",
+            "dtj_faq_cta.button_label": "Learn more about it",
+            "dtj_why_us_cta.button_label": "Get the cleaner that works harder",
+            "dtj_story_cta.button_label": "Go"}})
+        self.assertEqual(set(accepted), {"dtj_reviews_cta.button_label"})
+        self.assertEqual(set(rejected), {"dtj_faq_cta.button_label", "dtj_why_us_cta.button_label", "dtj_story_cta.button_label"})
+        final = build_pdp(*standard_facts(), recipe="dtj-standard-v1", copy_overrides=accepted)
+        self.assertEqual(final.model.extras["dtj_reviews"].settings["button_label"], "Join the happy homes")
+        self.assertEqual(errors(final), [])
+
+    def test_two_buttons_with_the_same_label_fail_the_page(self):
+        r = build_pdp(*standard_facts(), recipe="dtj-standard-v1", copy_overrides={"dtj_faq_cta.button_label": "Join them"})
+        self.assertIn("L16", [f["rule"] for f in errors(r)])
 
     def test_an_electric_brand_gets_bold_bands_and_every_pair_still_passes(self):
         r = self.build(vibe="electric")
         roles = {s.kind: r.model.roles[s.id] for s in r.model.sections}
-        self.assertEqual(roles["ugc_strip"], "dark")
+        # Harsh, 10 Oct 2026: customer photos and numbers on white, reviews dark with white cards
+        self.assertEqual((roles["ugc_strip"], roles["facts_glance"], roles["reviews_slider"]), ("plain", "plain", "dark"))
         self.assertEqual(roles["guarantee"], "accent")
         d = r.model.direction
         self.assertEqual(d.roles["band"], "#0B4A6F")  # the brand colour itself, not a tint
         self.assertEqual(d.failed_checks(), [])
         self.assertEqual(errors(r), [])
+        by_kind = {s.kind: s.settings for s in r.model.sections}
+        reviews = by_kind["reviews_slider"]
+        self.assertEqual((reviews["card_bg"], reviews["card_text_color"]), (d.roles["tint_card"], d.roles["on_card"]))
+        self.assertEqual(reviews["text_color"], d.roles["on_dark"])  # the heading on the dark band stays light
+        numbers = by_kind["facts_glance"]
+        card = numbers.get("card_bg") or numbers.get("card_bg_color")  # stat cards, or science stats when every figure has a picture
+        self.assertEqual((card, numbers["number_color"]), (d.roles["dark"], d.roles["accent_on_dark"]))
+        self.assertNotIn("background", numbers)  # the section itself is white
+        icons = by_kind["why_features"]
+        self.assertEqual((icons["icon_bg"], icons["icon_color"]), (d.roles["tint_card"], d.roles["on_card"]))  # white badges on the band
+
+    def test_white_words_on_an_electric_page_sit_on_ink_never_on_the_brand_colour(self):
+        # Harsh, 10 Oct 2026: white story points, white FAQ answers, white strip ticks; white on the brand cyan was 2.2:1
+        r = self.build(vibe="electric")
+        d = r.model.direction
+        by_kind = {s.kind: s.settings for s in r.model.sections}
+        story = by_kind["story_split"]
+        self.assertEqual((story["panel_bg"], story["body_color"], story["accent_color"]), (d.roles["dark"], d.roles["on_dark"], d.roles["accent_on_dark"]))
+        if style_contrast("#FFFFFF", d.roles["accent_on_dark"]) < 3:
+            self.assertEqual(story["tick_color"], d.roles["dark"])  # a white check would vanish on a light marker
+        faq = by_kind["faq"]
+        self.assertEqual((faq["item_bg"], faq["q_color"], faq["a_color"], faq["toggle_color"]),
+                         (d.roles["dark"], d.roles["on_dark"], d.roles["on_dark"], d.roles["accent_on_dark"]))
+        self.assertEqual(by_kind["trust_marquee"]["accent_color"], d.roles["tint_card"])  # white ticks on the brand band
+        self.assertEqual(by_kind["benefit_strip_2"]["accent_color"], d.roles["on_accent"])  # the accent band keeps its own checked colour
+        calm = {s.kind: s.settings for s in self.build().model.sections}
+        self.assertNotIn("item_bg", calm["faq"])  # calm pages keep their soft look
+        self.assertNotEqual(calm["story_split"]["panel_bg"], r.model.direction.roles["dark"])
+
+    def our_copy(self, intro, category=None):
+        brand, facts = standard_facts()
+        if category:
+            brand["category"] = category
+        facts["buybox"] = {"tagline": "Foam first. Scrub never.", "intro": intro, "source": "DTJ COPY (basis: product description)",
+                           "bullets": ["Zero scrubbing", "No harsh fumes", "Done in one flush", "Hands stay clean"]}
+        return build_pdp(brand, facts, recipe="dtj-standard-v1")
+
+    def test_copy_we_write_is_listed_for_the_clients_sign_off(self):
+        # references/copywriting.md: voice lines stand on facts and are marked DTJ COPY (Harsh, 10 Oct 2026, the MojoVibe standard)
+        r = self.our_copy("Made for the bathroom you dread: foam that does the scrubbing, so all you do is flush.")
+        self.assertIn("dtj_points.subheading", r.report["dtj_copy"])
+        self.assertEqual(r.model.prov[("dtj_points", "subheading")]["kind"], "dtj_copy")
+        self.assertNotIn("dtj_points.subheading", r.report["samples"])
+        self.assertEqual(errors(r), [])
+
+    def test_copy_we_write_adds_no_claim(self):
+        found = lambda r: [f["message"] for f in errors(r) if f["rule"] == "L19"]  # noqa: E731
+        self.assertTrue(found(self.our_copy("The only cleaner you need, clinically tested.")))  # "the only", "clinically"
+        self.assertTrue(found(self.our_copy("Lose weight? No. Lose the scrubbing.")))  # a body word, even as a joke
+        self.assertTrue(found(self.our_copy("100% natural foam.")))  # claim words the brand's own facts do not use
+        self.assertEqual(found(self.our_copy("Warning: may cause addiction to a clean bathroom.")), [])  # a joke on home care
+        self.assertTrue(found(self.our_copy("Warning: may cause addiction to a clean bathroom.", category="supplements")))
+
+    def test_number_cards_on_a_white_electric_section_are_ink_with_accent_figures(self):
+        brand, facts = standard_facts()
+        brand["vibe"] = "electric"
+        for f in facts["key_facts"]:
+            f.pop("image_role", None)  # without a picture per figure the numbers use the stat cards
+        r = build_pdp(brand, facts, recipe="dtj-standard-v1")
+        sec = next(s for s in r.model.sections if s.kind == "facts_glance")
+        d = r.model.direction
+        self.assertEqual(sec.block, "stat-cards")
+        self.assertEqual((sec.settings["card_bg"], sec.settings["number_color"], sec.settings["label_color"]),
+                         (d.roles["dark"], d.roles["accent_on_dark"], d.roles["on_dark"]))
+        self.assertEqual(errors(r), [])
+
+    def test_story_cards_on_a_calm_page_stand_apart_from_the_page_and_the_band(self):
+        # design_checks H01 on the first editorial page (a book, 10 Oct 2026): the calm band is ~1.1:1 from white, so a band-coloured
+        # card on white and a white card on the band both melted into their section
+        r = self.build()
+        d = r.model.direction
+        for s in r.model.sections:
+            if s.block == "split-story":
+                behind = s.settings.get("background") or d.roles["bg"]
+                self.assertEqual(s.settings["panel_bg"], d.roles["panel"].upper())
+                self.assertGreaterEqual(style_contrast(s.settings["panel_bg"], behind), 1.5, s.kind)
+                self.assertGreaterEqual(style_contrast(s.settings["body_color"], s.settings["panel_bg"]), 4.5)  # the card's own words
+        self.assertEqual(d.failed_checks(), [])
+
+    def test_four_long_figures_sit_two_by_two_so_none_breaks_across_lines(self):
+        brand, facts = standard_facts()
+        facts["key_facts"] = [{"value": v, "label": "Label", "source": "pack"} for v in ("2,00,000+", "4.9", "2-3", "2")]
+        sec = next(s for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections if s.kind == "facts_glance")
+        self.assertEqual(sec.settings.get("columns"), "2")
+        facts["key_facts"] = [{"value": v, "label": "Label", "source": "pack"} for v in ("4.9", "50 mg", "75 mg", "4 min")]
+        sec = next(s for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections if s.kind == "facts_glance")
+        self.assertNotIn("columns", sec.settings)
+
+    def test_reader_videos_play_in_the_photo_strip_with_the_picture_as_fallback(self):
+        # Harsh, 10 Oct 2026: "I have added videos which you can use in the testimonials"
+        brand, facts = standard_facts()
+        facts["ugc"] = [{"image_role": "hand", "video": f"clip{i}.mp4", "source": "Harsh, 10 Oct 2026"} for i in (1, 2, 3)]
+        r = build_pdp(brand, facts, recipe="dtj-standard-v1")
+        sec = next(s for s in r.model.sections if s.kind == "ugc_strip")
+        self.assertEqual([sec.settings[f"media_type_{i}"] for i in (1, 2, 3)], ["video"] * 3)
+        self.assertEqual(sec.settings["video_2"], "shopify://files/videos/clip2.mp4")
+        self.assertTrue(sec.settings["image_1"].startswith("shopify://shop_images/"))
+        self.assertEqual(r.report["problems"], [])
+        self.assertEqual(errors(r), [])
+        self.assertTrue(Catalog().validate("dtj-blocks", "shoppable-reels", {"video_1": "https://cdn.shopify.com/x.mp4"}))  # not a Files reference
+
+    def test_edits_made_in_the_theme_editor_are_kept_on_every_rebuild(self):
+        from page_builder.run_client import apply_kept_edits
+        t = build_pdp(*standard_facts(), recipe="dtj-standard-v1").template
+        key = next(k for k in t["sections"]["main"]["blocks"]["product-details"]["blocks"] if "dtj_price" in k)
+        done = apply_kept_edits(t, [{"section": "main", "block": key, "setting": "price_size", "value": 22, "why": "Harsh"}])
+        self.assertEqual(t["sections"]["main"]["blocks"]["product-details"]["blocks"][key]["settings"]["price_size"], 22)
+        self.assertEqual(len(done), 1)
+        with self.assertRaises(ValueError):  # a typo never writes silently
+            apply_kept_edits(t, [{"section": "main", "block": key, "setting": "price_sise", "value": 22}])
+        with self.assertRaises(ValueError):
+            apply_kept_edits(t, [{"section": "main", "block": "gone", "setting": "x", "value": 1}])
+
+    def test_a_bright_brand_colour_stays_bright_on_the_buttons_of_a_calm_page(self):
+        # Hope N Skin, 10 Oct 2026: orange #FF8C11 was darkened to brown for white text; near-black text on the real orange reads at 7.5:1
+        d = derive({"brand_name": "Glow", "category": "beauty", "vibe": "fresh",
+                    "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}})
+        self.assertEqual((d.roles["button_bg"], d.roles["button_text"]), ("#FF8C11", "#1A1A1A"))
+        self.assertGreaterEqual(style_contrast(d.roles["button_text"], d.roles["button_bg"]), 4.5)
+        self.assertNotEqual(d.roles["accent"], "#FF8C11")  # accent WORDS on white still use the darkened, readable shade
+        dark_accent = derive({"brand_name": "Book", "category": "other", "vibe": "editorial",
+                              "colors": {"primary": "#BF956C", "accent": "#993916", "background": "#FFFFFF", "text": "#2A1E16"}})
+        self.assertEqual(dark_accent.roles["button_text"], "#FFFFFF")  # a dark accent keeps white text
+
+    def test_calm_story_cards_are_the_brand_colour_with_white_accent_words_and_ticks(self):
+        # Harsh, Hope N Skin, 10 Oct 2026: "make the dark orange white and make the icons white and the mark inside orange"
+        d = derive({"brand_name": "Glow", "category": "beauty", "vibe": "fresh",
+                    "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}})
+        panel = d.roles["panel"]
+        self.assertEqual((d.roles["accent_on_panel"], d.roles["panel_tick"], d.roles["on_panel"]), ("#FFFFFF", panel, "#FFFFFF"))
+        self.assertGreaterEqual(style_contrast("#FFFFFF", panel), 4.5)  # white paragraph and points (Harsh: "keep every text white here")
+        self.assertGreaterEqual(style_contrast(d.roles["panel_head"], panel), 3.0)  # "Brighter skin," stays dark as a large headline
+        self.assertEqual(d.failed_checks(), [])
+
+    def test_a_neutral_card_tone_gives_a_grey_card_with_the_brand_colour_on_the_ticks(self):
+        # Harsh, Hope N Skin, 10 Oct 2026: "how about we use grey color like minimalist instead of that dark brown"
+        d = derive({"brand_name": "Glow", "category": "beauty", "vibe": "fresh", "card_tone": "neutral",
+                    "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}})
+        r = d.roles
+        red, green, blue = (int(r["panel"][i:i + 2], 16) for i in (1, 3, 5))
+        self.assertLessEqual(max(red, green, blue) - min(red, green, blue), 12)  # a true grey, no brand tint
+        self.assertGreaterEqual(style_contrast("#FFFFFF", r["panel"]), 4.5)
+        self.assertGreaterEqual(style_contrast(r["panel_head"], r["panel"]), 3.0)
+        self.assertGreaterEqual(style_contrast(r["panel_tick"], "#FFFFFF"), 3.0)  # the orange check reads on the white tick
+        self.assertNotEqual(r["panel_tick"], r["panel"])
+        self.assertEqual(d.failed_checks(), [])
+        brand, facts = standard_facts()
+        brand.update({"vibe": "fresh", "card_tone": "neutral"})
+        story = next(s for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections if s.kind == "story_split")
+        self.assertNotEqual(story.settings["tick_color"], story.settings["panel_bg"])  # the brand colour survives on the built page
+
+    def test_the_closing_banner_takes_the_pictures_own_shape(self):
+        final = {s.kind: s.settings for s in self.build().model.sections}["final_push"]
+        self.assertEqual((final["ratio_desktop"], final["ratio_mobile"]), ("adapt", "adapt"))
+
+    def test_a_long_story_card_fails_the_page(self):
+        brand, facts = standard_facts()
+        facts["story"]["body"] = " ".join(["word"] * 21)
+        facts["story_2"]["bullets"][0] = "A point that runs on far too long to read"
+        found = [f["message"] for f in errors(build_pdp(brand, facts, recipe="dtj-standard-v1")) if f["rule"] == "L17"]
+        self.assertEqual(len(found), 2, found)
+
+    def test_buy_box_points_with_a_dose_or_measure_fail_the_page(self):
+        brand, facts = standard_facts()
+        facts["buybox"]["bullets"] = ["Natural caffeine 50 mg", "Energy in minutes", "100% vegan", "Easy to carry"]
+        found = [f["message"] for f in errors(build_pdp(brand, facts, recipe="dtj-standard-v1")) if f["rule"] == "L18"]
+        self.assertEqual(len(found), 2, found)
 
     def test_a_calm_brand_keeps_soft_bands_and_one_dark_at_most(self):
         r = self.build()

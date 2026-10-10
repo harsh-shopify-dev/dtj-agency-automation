@@ -19,8 +19,9 @@
   ],
   "roles": {
     "_comment": "Background role per section. bold = electric / playful vibes (the brand colour, the ink and the accent as full bands); calm = every other vibe (white and a soft tint). A role equal to the one above becomes plain (lint L04).",
-    "bold": {"ugc_strip": "dark", "trust_marquee": "band", "story_split": "plain", "story_split_2": "band", "reviews_slider": "dark", "why_us": "plain",
-             "benefit_strip_2": "accent", "why_features": "band", "guarantee": "accent", "facts_glance": "dark", "faq": "plain", "stories": "band", "final_push": "none"},
+    "bold": {"ugc_strip": "plain", "trust_marquee": "band", "story_split": "plain", "story_split_2": "band", "reviews_slider": "dark", "why_us": "plain",
+             "benefit_strip_2": "accent", "why_features": "band", "guarantee": "accent", "facts_glance": "plain", "faq": "band", "stories": "plain", "final_push": "none"},
+    "_bold_why": "Harsh, 10 Oct 2026 (Go Mints v2 review): the customer photos and the numbers sit on white (the numbers keep ink cards), the reviews band stays dark with white cards; FAQ moves to the brand band and the stories to white so no two neighbours match.",
     "calm": {"ugc_strip": "band", "trust_marquee": "none", "story_split": "plain", "story_split_2": "band", "reviews_slider": "plain", "why_us": "band",
              "benefit_strip_2": "none", "why_features": "plain", "guarantee": "band", "facts_glance": "plain", "faq": "band", "stories": "plain", "final_push": "none"}
   },

@@ -13,6 +13,17 @@ MIN_SIDE = 12
 MAX_DARK = 2
 _NUM = re.compile(r"\d+(?:[.,]\d+)?")
 _STEP = re.compile(r"^Step \d+: ")
+STORY_WORDS = 20  # a story card's paragraph
+STORY_POINT = 32  # characters per story point
+BUTTON_KEYS = ("button_label", "button_label_1", "cta_text")
+# a dose or a measure in a buy-box point means it describes the product (a feature), not what the shopper gets (a benefit)
+# DTJ-written copy (L19): never a health or body claim; a claim word only when the brand's OWN facts already use it
+HEALTH_WORDS = ("lose weight", "weight loss", "burn fat", "fat burn", "detox", "cure", "heals", "immunity", "disease", "clinically",
+                "doctor", "dermatologist", "prescription")
+CLAIM_WORDS = ("best", "#1", "number one", "the only", "india's only", "100%", "guarantee", "proven", "award", "certified", "approved",
+               "official", "natural", "no preservative", "preservative-free", "vegan", "sugar-free", "instantly", "miracle", "chef")
+RISKY_JOKES = ("addict", "overdose", "side effect")  # fine on a sauce, a real worry on a supplement or a skincare product
+_SPEC = re.compile(r"\d\s*(mg|mcg|µg|g|kg|ml|l|iu|kcal|cal|%)(?![a-z])", re.I)
 
 
 @dataclass
@@ -27,7 +38,7 @@ RULES = {
     "L02": ("error", "Every full-width section keeps at least 12 px of side space, so nothing touches a phone's screen edge."),
     "L03": ("error", "Section padding stays within 56 px and two neighbours together within 80 px, so there are no big empty holes between sections."),
     "L04": ("error", "Neighbouring sections never share the same background colour: bands alternate so each section reads as its own block."),
-    "L05": ("error", "At most 2 dark bands (4 on electric / playful pages): dark is for emphasis, and emphasis only works when it is rare."),
+    "L05": ("error", "At most 2 dark bands on every page: dark is for emphasis, and emphasis only works when it is rare. Electric / playful pages put the ink colour into cards and boxes instead (Harsh, 10 Oct 2026)."),
     "L06": ("error", "Reviews sit directly under the buy buttons, where the last doubt appears."),
     "L07": ("error", "Every text on the page has a recorded origin (a named fact, a structural template, or a labelled demo). Nothing is invented."),
     "L08": ("error", "Every number in generated or structural text exists in the facts (the price is live from Shopify, not typed)."),
@@ -38,6 +49,10 @@ RULES = {
     "L15": ("error", "A badge is 2 or 3 short words, at most 20 characters (a milestone or a promise at a glance); a longer one gets cut on phones (Harsh, 9 Oct 2026)."),
     "L14": ("error", "The rating line shows exactly 5 round photos or none: a short row looks unfinished (Harsh, 9 Oct 2026)."),
     "L13": ("error", "Every tick-mark list (the buy box points, the story points) has exactly 4 points: fewer looks thin, more is not read (Harsh, 9 Oct 2026)."),
+    "L16": ("error", "Every button on the page has its own label, named after what its section says; twelve identical labels read as one repeated ad (Harsh, 10 Oct 2026)."),
+    "L17": ("error", "A story card is short and to the point: a paragraph of at most 20 words and points of at most 32 characters, or it reads as a wall of text on a phone (Harsh, 10 Oct 2026)."),
+    "L19": ("error", "Copy DTJ writes (source 'DTJ COPY ...') makes the shopper feel the product but adds no claim: no health or body words, no claim word the brand's own facts do not use, no dependency jokes on supplements or skincare (references/copywriting.md; Harsh, 10 Oct 2026)."),
+    "L18": ("error", "The buy box points are benefits (what the shopper gets: energy in minutes, easy to carry), not specs: doses and measures belong in the ingredients and numbers sections (Harsh, 10 Oct 2026)."),
 }
 
 
@@ -59,6 +74,25 @@ def _fact_numbers(facts: dict) -> set[str]:
                 walk(v)
     walk({k: v for k, v in facts.items() if k not in ("media",)})
     return out
+
+
+def _brand_text(facts: dict) -> str:
+    """The brand's own words: every fact except our copy lines and samples (neither may license a claim)."""
+    out: list[str] = []
+
+    def walk(x):
+        if isinstance(x, dict):
+            if str(x.get("source", "")).upper().startswith(("DTJ COPY", "SAMPLE")):
+                return
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        elif isinstance(x, str):
+            out.append(x.lower())
+    walk({k: v for k, v in facts.items() if k not in ("media",)})
+    return " | ".join(out)
 
 
 def lint(model) -> list[Finding]:
@@ -135,6 +169,29 @@ def lint(model) -> list[Finding]:
             continue
         if n and n != 4:
             add("L13", f"{sec.id} shows {n} tick points; it needs exactly 4 (add real points to the facts, never invented ones)")
+    # L16 one label per button, L17 short story cards, L18 benefits in the buy box
+    labels: dict[str, list[str]] = {}
+    for sec in model.sections + list(getattr(model, "extras", {}).values()):
+        for key in BUTTON_KEYS:
+            if sec.settings.get(key):
+                labels.setdefault(str(sec.settings[key]).strip().lower(), []).append(f"{sec.id}.{key}")
+    for label, where in labels.items():
+        if len(where) > 1:
+            add("L16", f"{len(where)} buttons say '{label}' ({', '.join(where)}); name each after its section")
+    for sec in model.sections:
+        if sec.kind not in ("story_split", "story_split_2"):
+            continue
+        words = len(str(sec.settings.get("body") or "").split())
+        if words > STORY_WORDS:
+            add("L17", f"{sec.id} paragraph has {words} words; keep it to {STORY_WORDS} or fewer")
+        for k in sorted(k for k in sec.settings if re.fullmatch(r"bullet_\d+", k)):
+            if len(str(sec.settings[k])) > STORY_POINT:
+                add("L17", f"{sec.id}.{k} '{sec.settings[k]}' is {len(str(sec.settings[k]))} characters; keep points to {STORY_POINT}")
+    for sec in model.buybox_sections:
+        if sec.kind == "hero_points":
+            for line in str(sec.settings.get("benefits") or "").splitlines():
+                if _SPEC.search(line):
+                    add("L18", f"buy box point '{line.strip()}' is a spec (a dose or measure); write what the shopper gets instead")
     for sec in model.buybox_sections:
         if sec.block == "social-proof":
             photos = len([k for k in sec.settings if re.fullmatch(r"avatar_\d+", k) and sec.settings[k]])
@@ -143,6 +200,18 @@ def lint(model) -> list[Finding]:
             badge = str(sec.settings.get("badge_text") or "").split()
             if badge and (not 2 <= len(badge) <= 3 or len(" ".join(badge)) > 20):
                 add("L15", f"{sec.id} badge '{' '.join(badge)}' is {len(badge)} words / {len(' '.join(badge))} characters; use 2-3 words, at most 20")
+
+    # L19 our own copy adds no claim
+    brand_text = _brand_text(facts)
+    for (sid, key), rec in model.prov.items():
+        if rec["kind"] != "dtj_copy":
+            continue
+        low = html.unescape(str(rec["text"])).lower()
+        bad = [w for w in HEALTH_WORDS if w in low] + [w for w in CLAIM_WORDS if w in low and w not in brand_text]
+        if model.brand.get("category") in ("supplements", "beauty"):
+            bad += [w for w in RISKY_JOKES if w in low]
+        if bad:
+            add("L19", f"{sid}.{key} (DTJ copy) uses {sorted(set(bad))}: say it with a sourced fact, or cut it")
 
     # L07 provenance, L08 numbers, L09 demo
     allowed = _fact_numbers(facts)

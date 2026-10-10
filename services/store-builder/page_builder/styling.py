@@ -5,7 +5,7 @@ from __future__ import annotations
 from provision import style
 
 from .catalog import Catalog
-from .direction import Direction
+from .direction import BOLD_VIBES, Direction
 from .direction import _best_text_on as best_text_on
 from .sections import Section
 
@@ -22,6 +22,7 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
             s[key] = value
 
     dark, band, accent_band = role == "dark", role == "band", role == "accent"
+    bold = d.vibe in BOLD_VIBES and not d.dark_mode  # electric / playful: brand-colour bands, ink boxes with white words
     if dark:
         acc, head = r["accent_on_dark"], r["on_dark"]
     elif accent_band:  # a band in the accent colour (electric / playful pages): everything on it is the ink colour
@@ -56,14 +57,22 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
 
     b = sec.block
     if b == "marquee":
-        put("accent_color", acc)
+        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning
+        put("accent_color", r["tint_card"] if band and bold else acc)
         put("text_size", MARQUEE["text"])
         put("icon_size", MARQUEE["icon"])
         put("gap", MARQUEE["gap"])
     elif b == "feature-showcase":
         put("heading_color", head)
         put("title_color", head)
-        put("icon_color", acc)
+        # every icon sits in a round badge so it stands apart from the words: icons in the text colour blended into the brand band
+        # (Harsh, 10 Oct 2026: "white color for the icons to separate them out"). On a band: a white badge; on white: a brand badge.
+        if dark or band or accent_band:
+            put("icon_bg", r["tint_card"])
+            put("icon_color", r["on_card"])
+        else:
+            put("icon_bg", r["band"])
+            put("icon_color", r["accent_on_band"])
         if dark or band or accent_band:  # the block fades secondary text to 72 %: on a strong band that fails 4.5:1 (review loop, 10 Oct 2026)
             put("desc_color", head)
     elif b == "science-stats":
@@ -81,15 +90,25 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         if dark:
             put("panel_bg", style.mix(r["dark"], "#FFFFFF", 0.10).upper())
             panel_head, panel_acc = r["on_dark"], r["accent_on_dark"]
-        elif band or accent_band:
+        elif bold and (band or accent_band):  # a white card on the brand-colour band
             put("panel_bg", r["tint_card"])
             panel_head, panel_acc = r["text"], r["accent"]
-        else:
-            put("panel_bg", r["band"])
-            panel_head, panel_acc = r["on_band"], r["accent_on_band"]
+        elif bold:  # on white: an ink card with white words and accent ticks (Harsh, 10 Oct 2026: white points; white on the
+            # brand cyan was 2.2:1, so the card turns ink instead)
+            put("panel_bg", r["dark"])
+            panel_head, panel_acc = r["on_dark"], r["accent_on_dark"]
+        else:  # calm pages: the brand-colour card with white accent words and white ticks (H01: it stands apart from page and band)
+            put("panel_bg", r["panel"].upper())
+            panel_head, panel_acc = r["panel_head"], r["accent_on_panel"]
+            if r.get("panel_tick"):
+                put("tick_color", r["panel_tick"].upper())  # the check inside the white tick takes the card's colour
         put("heading_color", panel_head)
         put("accent_color", panel_acc)
-        put("body_color", panel_head)
+        put("body_color", r["on_panel"] if not (dark or bold) else panel_head)  # calm cards: white words on the deep brand colour
+        if style.contrast("#FFFFFF", panel_acc) < 3 and "tick_color" not in s:  # a light marker's check: the card's colour, else black/white
+            # (a tick colour chosen above, e.g. the brand colour on a grey card, is kept)
+            panel = s.get("panel_bg") or r["bg"]
+            put("tick_color", panel if style.contrast(panel, panel_acc) >= 3 else best_text_on(panel_acc))
         put("image_fit", "adapt")  # the whole picture at its own shape (it was trimmed on the live book page, 9 Oct 2026)
     elif b == "measured-results":
         put("accent_color", r["accent_on_dark"])
@@ -99,8 +118,10 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
     elif b == "stat-cards":
         put("heading_color", head)
         put("accent_color", acc)
-        if dark:  # dark cards on a dark band, the figures in the accent colour (volt on white was 1.25:1, review loop 10 Oct 2026)
-            put("card_bg", style.mix(r["dark"], "#FFFFFF", 0.10).upper())
+        bold_on_white = role == "plain" and bold
+        if dark or bold_on_white:  # dark cards, the figures in the accent colour (volt on white was 1.25:1, review loop 10 Oct 2026);
+            # on an electric / playful page the section itself is white and the cards are the ink colour (Harsh, 10 Oct 2026)
+            put("card_bg", style.mix(r["dark"], "#FFFFFF", 0.10).upper() if dark else r["dark"])
             put("number_color", r["accent_on_dark"])
             put("label_color", r["on_dark"])
             put("note_color", r["on_dark"])
@@ -119,20 +140,27 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("our_bg_color", r["band"])
     elif b == "testimonials-slider":
         put("button_color", r["button_bg"])
-        if dark:  # one text colour for heading and cards: on a dark band the cards go dark too (white on white cards was 1.0:1)
-            put("card_bg", style.mix(r["dark"], "#FFFFFF", 0.10).upper())
+        # the cards are always the light card colour with their own text colour, so a dark band gets white cards with dark words
+        # while its heading stays light (Harsh, 10 Oct 2026: "use the white for the review cards"). The direction's card colours are
+        # a checked pair for any brand (a dark brand's white cards once carried #F2F2F2 text, 1.12:1, review loop 9 Oct 2026).
+        put("card_bg", r["tint_card"])
+        put("card_text_color", r["on_card"])
         if not dark:
-            # the cards default to white: on a dark brand that put #F2F2F2 text on white (1.12:1, review loop 9 Oct 2026).
-            # The direction's card colours are a checked pair for any brand, light or dark.
-            put("card_bg", r["tint_card"])
             put("text_color", r["on_card"])
-        tile = r["rating_tile"] if d.dark_mode else head  # empty tile colour = the text colour, which is `head` here
-        if d.dark_mode:
-            put("tile_color", tile)  # a light text colour would leave the star nothing to show on (direction.py)
-        put("tile_star_color", best_text_on(tile))  # black or white, whichever reads on the tile (the block's default is Canvas)
+        tile = r["rating_tile"] if d.dark_mode else r["on_card"]  # a light text colour would leave the star nothing to show on
+        put("tile_color", tile)
+        star = r["accent_on_dark"] if style.contrast(r["accent_on_dark"], tile) >= 3 else best_text_on(tile)
+        put("tile_star_color", star)  # the accent star when it reads on the tile, else black or white (the block's default is Canvas)
     elif b == "faq":
         put("heading_color_1", head)
         put("accent_color", acc)
+        if band and bold:  # questions in ink boxes with white words on the brand band (Harsh, 10 Oct 2026: white answers;
+            # white on the brand cyan was 2.2:1); the open / close button in the accent colour, its x in the box colour
+            put("item_bg", r["dark"])
+            put("item_border", r["dark"])
+            put("q_color", r["on_dark"])
+            put("a_color", r["on_dark"])
+            put("toggle_color", r["accent_on_dark"])
     elif b == "price":
         put("text_color", r["text"])
         # the struck-through price: the block's default "softer shade" measured 3.57:1 on white in the review loop (9 Oct 2026), below AA.

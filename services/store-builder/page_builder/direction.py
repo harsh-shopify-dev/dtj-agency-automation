@@ -8,7 +8,7 @@ the same brand always gives the same direction. The judgment follows these princ
   brand's category, price tier and voice, and the single emphasised "signature" section differs per category.
 - Restraint: at most two accent-word headlines and two eyebrow labels per page, one dark emphasis band, one radius family.
 - The vibe (brand.vibe, 10 Oct 2026): "electric" and "playful" brands get BOLD colour: alternate bands in the brand colour itself (not a
-  tint), dark bands in the brand's ink, a button and accent bands in the accent colour, up to 4 dark bands. Every pair is still checked.
+  tint), the brand's ink for at most 2 dark sections and for cards and boxes, a button and accent bands in the accent colour. Every pair is still checked.
 """
 from __future__ import annotations
 
@@ -145,11 +145,17 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     r["accent_on_dark"] = _toward(style.mix((colors.get("accent") or primary).upper(), WHITE, 0.45), r["dark"], AA_TEXT, WHITE)
     r["button_bg"] = r["accent"]
     r["button_text"] = _best_text_on(r["button_bg"])
+    raw_accent = (colors.get("accent") or "").upper()
+    if raw_accent and not d.dark_mode and raw_accent != r["accent"] and style.contrast(text, raw_accent) >= AA_TEXT:
+        # a bright brand colour that was darkened for text use stays bright as a FILL: the button keeps the brand's own colour with the
+        # page's text colour on it (Hope N Skin orange #FF8C11 had turned brown #9B5609 for white text, 10 Oct 2026)
+        r["button_bg"], r["button_text"] = raw_accent, text
     r["on_band"], r["accent_on_band"] = text, r["accent"]
     d.vibe = brand.get("vibe") or ""
     if d.vibe in BOLD_VIBES and not d.dark_mode:
         _bold(r, colors, bg, text, (colors.get("primary") or primary))  # the brand's own colour: the palette darkens it for TEXT use
-        d.max_dark = 4
+        # still at most 2 dark sections: Harsh's review of Go Mints v2 (10 Oct 2026) moved the photos and the numbers off navy; the ink
+        # colour now goes into cards and boxes on light sections (review cards' band excepted), which keeps the energy without the weight
     r["accent_fill"], r["on_accent"] = r["button_bg"], r["button_text"]
     r["star"] = r["accent"]
     # rating stars stay gold (stars must read as stars) but, as icons, need 3:1 on the page (WCAG 1.4.11); on a light page the gold is
@@ -163,6 +169,32 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     r["on_card"] = text if not d.dark_mode else text
     # soft text on cards (footnotes under figures): the block's default grey was 4.21:1 on white (review loop, 9 Oct 2026, a book page)
     r["muted_on_card"] = _toward(style.mix(text, r["tint_card"], 0.30), r["tint_card"], AA_TEXT, text)
+    # a CARD on a calm page (the story cards): first choice, the brand colour itself, deep enough that WHITE words read on it at 4.5:1
+    # (paragraph, points, accent words, tick circles; Harsh, Hope N Skin, 10 Oct 2026: "make the dark orange white, the icons white and
+    # the mark inside orange", then "keep every text white here, just 'Brighter skin' as it is"). The first heading line keeps the
+    # page's text colour while it reads as a large headline (3:1), else it turns white too. Otherwise a tint at least 1.5:1 from the
+    # page and the band (design_checks H01; the calm band is only ~1.1:1 from white), with the brand accent for the words.
+    raw = (colors.get("primary") or primary).upper()
+    neutral = brand.get("card_tone") == "neutral"  # a minimalist grey card; the brand colour stays on the tick marks
+    base_card = style.mix(text, WHITE, 0.62) if neutral else raw
+    deep, k = base_card, 0.0
+    while style.contrast(WHITE, deep) < AA_TEXT and k < 0.7:
+        k += 0.02
+        deep = style.mix(base_card, BLACK, k)  # k = the share of black
+    if not d.dark_mode and style.contrast(WHITE, deep) >= AA_TEXT:
+        tick = _toward((colors.get("accent") or raw).upper(), WHITE, AA_LARGE, BLACK) if neutral else deep
+        r["panel"], r["accent_on_panel"], r["panel_tick"], r["on_panel"] = deep, WHITE, tick, WHITE
+        r["panel_head"] = text if style.contrast(text, deep) >= AA_LARGE else WHITE
+    else:
+        weight, panel = 0.90, r["band"]
+        while weight > 0.30 and (style.contrast(panel, bg) < 1.5 or style.contrast(panel, r["band"]) < 1.5):
+            weight -= 0.02
+            panel = style.mix(raw, bg, weight)
+        if style.contrast(text, panel) < AA_TEXT:  # never trade the words' contrast for the card's
+            panel = r["band"]
+        r["panel"] = panel
+        r["accent_on_panel"] = _toward(r["accent"], panel, AA_TEXT, BLACK if not d.dark_mode else WHITE)
+        r["panel_tick"], r["on_panel"], r["panel_head"] = "", text, text
     for role in list(r):
         r[role] = r[role].upper()
     pairs = [("text on page", "text", "bg", AA_TEXT), ("text on band", "on_band", "band", AA_TEXT), ("muted text on page", "muted", "bg", AA_TEXT),
@@ -170,7 +202,8 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
              ("text on accent band", "on_accent", "accent_fill", AA_TEXT),
              ("accent on dark band", "accent_on_dark", "dark", AA_TEXT), ("button text", "button_text", "button_bg", AA_TEXT),
              ("text on white cards", "text", "tint_card", AA_TEXT), ("soft text on cards", "muted_on_card", "tint_card", AA_TEXT),
-             ("rating stars on page", "rating_star", "bg", AA_LARGE)]
+             ("rating stars on page", "rating_star", "bg", AA_LARGE), ("words on story cards", "on_panel", "panel", AA_TEXT),
+             ("heading on story cards", "panel_head", "panel", AA_LARGE), ("accent on story cards", "accent_on_panel", "panel", AA_LARGE)]
     if d.dark_mode:
         pairs = [p for p in pairs if p[0] not in ("accent on page",)] + [("accent on page", "accent", "band", AA_TEXT)]
     for name, fg, back, need in pairs:
@@ -180,10 +213,10 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     d.checks.append({"pair": "white star on rating tile", "fg": WHITE, "bg": r["rating_tile"], "ratio": ratio, "needs": AA_LARGE, "ok": ratio >= AA_LARGE})
     d.why["colors"] = ("Page = the brand's background and text; band = a very light tint of the brand colour for alternating sections; dark band = the brand "
                        "colour darkened, used once for emphasis; accent colours were pushed toward black/white until they pass 4.5:1 on what they sit on.")
-    if d.max_dark > 2:
-        d.why["colors"] = (f"{d.vibe} vibe: alternating bands in the brand colour itself ({r['band']}) with {r['on_band']} text, dark bands in the brand's ink "
-                           f"({r['dark']}), the button and accent bands in the accent colour ({r['accent_fill']}) with {r['on_accent']} text; accent words on "
-                           f"white use {r['accent']}. Every pair passes 4.5:1. Up to {d.max_dark} dark bands, because energy needs contrast.")
+    if d.vibe in BOLD_VIBES and not d.dark_mode:
+        d.why["colors"] = (f"{d.vibe} vibe: alternating bands in the brand colour itself ({r['band']}) with {r['on_band']} text, the brand's ink ({r['dark']}) "
+                           f"for at most {d.max_dark} dark sections and for cards and boxes with white words, the button and accent bands in the accent colour "
+                           f"({r['accent_fill']}) with {r['on_accent']} text; accent words on white use {r['accent']}. Every pair passes 4.5:1.")
 
     # ---- shape language: one radius family
     shape_name = brand.get("shape_language") or defaults["shape"]

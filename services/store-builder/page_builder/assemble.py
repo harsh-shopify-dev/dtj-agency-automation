@@ -270,13 +270,14 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
             sec.settings["padding_top"] = 10
             built[i - 1].settings["padding_bottom"] = 10
 
-    # ---- the page's ONE call to action after the sections that end with one in the wireframe (dtj-cta, same band as its section)
+    # ---- the page's ONE action after the sections that end with a button in the wireframe (dtj-cta, same band as its section),
+    # each button named after its own section (Harsh, 10 Oct 2026)
     extras = {}
-    label, label_kind, label_source = sections.cta_label(ctx)
     action = (facts.get("cta") or {}).get("action", "scroll")
     for sec in built:
         if not sec.cta:
             continue
+        label, label_kind, label_source = sections.section_cta_label(ctx, sec.kind)
         c = sections.Section(f"{sec.id}_cta", "dtj-sections-2", "cta", kind="cta")
         c.settings.update({"style": "button", "action": action})
         ctx.put(c, "button_label", label, label_kind, label_source)
@@ -330,11 +331,13 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
     findings = rules.lint(model)
     why = (plan or {}).get("why", {})
     samples = sorted(f"{sid}.{key}" for (sid, key), v in ctx.prov.items() if v["kind"] == "sample")
+    dtj_copy = sorted(f"{sid}.{key}" for (sid, key), v in ctx.prov.items() if v["kind"] == "dtj_copy")
     report = {
         "recipe": recipe["id"], "chosen_by": "fixed set" if fixed else ("plan" if plan else "house rules"), "direction": direction.as_report(),
         "sections_built": [{"id": s.id, "block": f"{s.app}/{s.block}", "role": roles[s.id], "kind": s.kind, "cta": s.id in extras,
                             **({"why": why[s.kind]} if s.kind in why else {})} for s in built],
         "samples": samples,
+        "dtj_copy": dtj_copy,  # our copywriting on the brand's facts: the client signs these lines off before live
         "buybox_blocks": [{"id": s.id, "block": f"{s.app}/{s.block}"} for s in flat],
         "sections_omitted": omitted,
         "needs_replacement": samples + model.demo_items + model.demo_pictures,

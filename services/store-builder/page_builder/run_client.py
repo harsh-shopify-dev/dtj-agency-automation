@@ -80,6 +80,33 @@ def _client(mode: str, given):
     return make_client()
 
 
+def _find_block(node: dict, key: str) -> dict | None:
+    for k, b in (node.get("blocks") or {}).items():
+        if k == key:
+            return b
+        found = _find_block(b, key)
+        if found is not None:
+            return found
+    return None
+
+
+def apply_kept_edits(template: dict, edits: list[dict]) -> list[str]:
+    """Edits a person made in the theme editor that every rebuild must keep (Harsh's buy-box tweaks on the book page, 10 Oct 2026):
+    [{"section", "block", "setting", "value", "why"}]. Only a setting the built block already has can be changed, so a typo or a
+    block that no longer exists stops the build instead of being written silently."""
+    applied = []
+    for e in edits:
+        sec = template["sections"].get(e["section"])
+        block = _find_block(sec, e["block"]) if sec else None
+        if block is None:
+            raise ValueError(f"kept edit: block {e['section']}/{e['block']} is not on the page")
+        if e["setting"] not in block.get("settings", {}):
+            raise ValueError(f"kept edit: {e['section']}/{e['block']} has no setting {e['setting']!r}")
+        block["settings"][e["setting"]] = e["value"]
+        applied.append(f"{e['section']}/{e['block']}.{e['setting']} = {e['value']!r} ({e.get('why', 'kept edit')})")
+    return applied
+
+
 def main(argv: list[str] | None = None, *, browser=None, client=None, access=None, get=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--intake", help="a dtj_client_intake row exported as JSON")
@@ -102,6 +129,7 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
     ap.add_argument("--recipe", default="dtj-standard-v1", choices=("dtj-standard-v1", "pdp"),
                     help="dtj-standard-v1 = the fixed sections every product gets (Harsh, 10 Oct 2026); pdp = the older chosen-section recipe")
     ap.add_argument("--client-registry", help="the client's app copies (handle + uuid per app); without it the page uses our own apps")
+    ap.add_argument("--keep-edits", help="JSON list of theme-editor edits every rebuild keeps ({section, block, setting, value, why})")
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--rounds", type=int, default=2)
     args = ap.parse_args(argv)
@@ -211,6 +239,12 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
     except (OSError, ValueError, KeyError) as exc:
         print(f"client registry: {exc}", file=sys.stderr)
         return 1
+    try:
+        kept = apply_kept_edits(page, json.loads(Path(args.keep_edits).read_text(encoding="utf-8"))) if args.keep_edits else []
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"could not keep the editor edits: {exc}", file=sys.stderr)
+        return 1
+    final.report["kept_edits"] = kept
     body = tt.template_bytes(page)
     (out / "template.json").write_bytes(body)
     (out / "build-report.json").write_text(json.dumps(final.report, indent=1, ensure_ascii=False), encoding="utf-8")
@@ -224,7 +258,7 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
         "theme_name": target["theme_name"] if target else None, "file": target["file"] if target else tt.template_file(args.template_suffix),
         "layout": layout["theme"], "template_sha256": digest, "client_registry": args.client_registry,
         "approve_code": digest[:12], "pushable": bool(target), "ready": ready, "demo": bool(facts.get("demo")),
-        "demo_pictures": len(final.report.get("demo_pictures", [])), "samples": len(final.report.get("samples", [])), "recipe": args.recipe,
+        "demo_pictures": len(final.report.get("demo_pictures", [])), "samples": len(final.report.get("samples", [])), "dtj_copy": len(final.report.get("dtj_copy", [])), "kept_edits": kept, "recipe": args.recipe,
         "built_at": datetime.now(timezone.utc).isoformat(),
         "plan": plan_report.get("status"), "decided_by": plan_report.get("decided_by"), "copy": copy_report.get("status"),
         "review": review.get("verdict"), "backup_of_current_page": target["backup"] if target else None,
