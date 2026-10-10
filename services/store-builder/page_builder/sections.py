@@ -103,6 +103,10 @@ class Ctx:
         return False
 
 
+TICKS = 4  # every tick-mark list on a page has exactly this many points (rule L13)
+AVATARS = 5  # the rating line shows exactly this many round photos, or none (rule L14; Harsh, 9 Oct 2026)
+
+
 def _slots(n_max, items):
     return list(enumerate(items[:n_max], 1))
 
@@ -158,7 +162,8 @@ def facts_glance(ctx: Ctx):
     for i, f in _slots(6, kf):
         ctx.put(s, f"number_{i}", f["value"], "fact", f["source"])
         ctx.put(s, f"label_{i}", f["label"], "fact", f["source"])
-        ctx.put(s, f"note_{i}", f.get("note") or f["source"], "fact", f["source"])
+        # only a real note is shown: a source is bookkeeping ("product description ... confirmed by Harsh"), not words for shoppers
+        ctx.put(s, f"note_{i}", f.get("note"), "fact", f["source"])
     return s
 
 
@@ -169,7 +174,7 @@ def story_split(ctx: Ctx):
     s = Section("dtj_story", "dtj-sections-2", "split-story", role="plain", kind="story_split")
     ctx.accent_pair(s, "heading", "heading_accent", st["heading"], st.get("accent"), "fact", st["source"])
     ctx.put(s, "body", st.get("body"), "fact", st["source"])
-    for i, b in _slots(5, st.get("bullets", [])):
+    for i, b in _slots(TICKS, st.get("bullets", [])):
         ctx.put(s, f"bullet_{i}", b, "fact", st["source"])
     image = ctx.media(st.get("image_role"))
     if image:
@@ -226,7 +231,7 @@ def pack_inside(ctx: Ctx):
     ctx.put(s, "heading", ctx.structure("inside"))
     if ctx.take_accent():
         ctx.put(s, "highlight_word", ctx.structure("inside_hl"))
-    s.settings["columns"] = "2" if len(items) == 2 else "3"
+    s.settings["columns"] = {2: "2", 4: "4"}.get(len(items), "3")  # 4 items in 3 columns left one alone on a row (Go Mints, 9 Oct 2026)
     for i, it in _slots(6, items):
         ctx.put(s, f"name_{i}", it["name"], "fact", it["source"])
         ctx.put(s, f"description_{i}", it.get("detail"), "fact", it["source"])
@@ -316,15 +321,33 @@ def buybox_blocks(ctx: Ctx) -> dict:
     """The DTJ blocks of the buy box, keyed by position: before_title, after_title, before_picker, before_buttons, after_buttons."""
     f, out = ctx.facts, {"before_title": [], "after_title": [], "before_picker": [], "before_buttons": [], "after_buttons": []}
     d = ctx.direction
-    if f.get("rating"):
+    sp = f.get("social_proof") or {}
+    if f.get("rating") or sp:
+        # the line above the title: [badge] [stars + number] [real customer photos] [proof lines], every part from a sourced fact
         s = Section("dtj_stars", "dtj-blocks", "social-proof", kind="rating")
-        s.settings.update({"show_stars": True, "show_rating_number": True, "show_stock": False, "rating_style": "single"})
-        ctx.put(s, "rating_value", f["rating"]["value"], "fact", f["rating"]["source"])
+        rich = bool(sp) or ctx.demo  # a full line (badge, photos) gets the five-star style
+        s.settings.update({"show_stars": bool(f.get("rating")), "show_rating_number": True, "show_stock": False,
+                           "rating_style": "five" if rich else "single"})
+        if f.get("rating"):
+            ctx.put(s, "rating_value", f["rating"]["value"], "fact", f["rating"]["source"])
+        if sp.get("badge"):
+            ctx.put(s, "badge_text", sp["badge"]["text"], "fact", sp["badge"]["source"])
+        for i, line in _slots(2, sp.get("lines", [])):
+            ctx.put(s, f"proof_text_{i}", line["text"], "fact", line["source"])
+        n = 0
+        for av in sp.get("avatars", []):  # the schema requires a consent note for every customer photo
+            image = ctx.media(av["role"])
+            if image and n < AVATARS:
+                n += 1
+                s.settings[f"avatar_{n}"] = image
         out["before_title"].append(s)
     price = Section("dtj_price", "dtj-blocks", "price", kind="price")
     out["after_title"].append(price)
     bb = f.get("buybox") or {}
-    bullets = bb.get("bullets") or [b["title"] for b in f.get("benefits", [])[:4]]
+    # always exactly 4 points (Harsh, 9 Oct 2026): the buy box's own, topped up from the benefit titles, never invented (rule L13)
+    bullets = list(bb.get("bullets") or [])
+    bullets += [b["title"] for b in f.get("benefits", []) if b["title"] not in bullets]
+    bullets = bullets[:TICKS]
     if bullets:
         s = Section("dtj_points", "dtj-blocks", "hero-points", kind="hero_points")
         src = bb.get("source") or "product benefits"

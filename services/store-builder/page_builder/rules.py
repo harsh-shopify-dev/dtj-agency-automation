@@ -2,6 +2,7 @@
 Each rule says WHY it exists, because a rule nobody understands gets argued with or deleted."""
 from __future__ import annotations
 
+import html
 import json
 import re
 from dataclasses import dataclass
@@ -34,6 +35,9 @@ RULES = {
     "L10": ("error", "At most the direction's number of accent-word headlines per page: accenting one word in every heading reads as a template."),
     "L11": ("warn", "Three or more neighbouring sections without a band change makes the page read as one long block."),
     "L12": ("error", "The buy box has the live price block, and the theme's own price line is removed so the price is not shown twice."),
+    "L15": ("error", "A badge is 2 or 3 short words, at most 20 characters (a milestone or a promise at a glance); a longer one gets cut on phones (Harsh, 9 Oct 2026)."),
+    "L14": ("error", "The rating line shows exactly 5 round photos or none: a short row looks unfinished (Harsh, 9 Oct 2026)."),
+    "L13": ("error", "Every tick-mark list (the buy box points, the story points) has exactly 4 points: fewer looks thin, more is not read (Harsh, 9 Oct 2026)."),
 }
 
 
@@ -103,19 +107,41 @@ def lint(model) -> list[Finding]:
             break
 
     # L06 / L12 buy box
-    details = model.template["sections"]["main"]["blocks"]["product-details"]
+    from .assemble import BUY_BUTTON_TYPES, product_column  # the buy box's column, whatever the theme (Horizon or Dawn)
+    details = product_column(model.template)
     order = details["block_order"]
-    btn = "buy_buttons_eYQEYi"
+    btn = next((k for k in order if details["blocks"][k]["type"] in BUY_BUTTON_TYPES), None)
     for key in order:
         blk = details["blocks"][key]
         if "/dtj-testimonials/" in blk["type"]:
-            if order.index(key) != order.index(btn) + 1:
+            if btn is None or order.index(key) != order.index(btn) + 1:
                 add("L06", "the DTJ reviews block is not directly under the buy buttons")
     if not any("/dtj-price/" in details["blocks"][k]["type"] for k in order):
         add("L12", "the DTJ price block is missing from the buy box")
-    group = details["blocks"].get("group_icgrde", {})
-    if any(b.get("type") == "price" for b in group.get("blocks", {}).values()):
-        add("L12", "the theme's own price line is still in the title group next to the DTJ price")
+    theme_prices = [k for k in order if details["blocks"][k].get("type") == "price"]
+    for k in order:
+        theme_prices += [s for s, b in (details["blocks"][k].get("blocks") or {}).items() if b.get("type") == "price"]
+    if theme_prices:
+        add("L12", f"the theme's own price line is still in the buy box next to the DTJ price ({', '.join(theme_prices)})")
+
+    # L13 exactly four ticks wherever a tick list is shown
+    for sec in model.sections + model.buybox_sections:
+        if sec.kind == "hero_points" and sec.settings.get("benefits"):
+            n = len([x for x in str(sec.settings["benefits"]).splitlines() if x.strip()])
+        elif sec.kind == "story_split":
+            n = len([k for k in sec.settings if re.fullmatch(r"bullet_\d+", k) and sec.settings[k]])
+        else:
+            continue
+        if n and n != 4:
+            add("L13", f"{sec.id} shows {n} tick points; it needs exactly 4 (add real points to the facts, never invented ones)")
+    for sec in model.buybox_sections:
+        if sec.block == "social-proof":
+            photos = len([k for k in sec.settings if re.fullmatch(r"avatar_\d+", k) and sec.settings[k]])
+            if photos and photos != 5:
+                add("L14", f"{sec.id} shows {photos} round photos; it needs exactly 5 (or none)")
+            badge = str(sec.settings.get("badge_text") or "").split()
+            if badge and (not 2 <= len(badge) <= 3 or len(" ".join(badge)) > 20):
+                add("L15", f"{sec.id} badge '{' '.join(badge)}' is {len(badge)} words / {len(' '.join(badge))} characters; use 2-3 words, at most 20")
 
     # L07 provenance, L08 numbers, L09 demo
     allowed = _fact_numbers(facts)
@@ -134,11 +160,14 @@ def lint(model) -> list[Finding]:
                 if not model.demo:
                     add("L09", f"{sec.id}.{key} is demo content but the facts do not say demo: true")
                 continue
-            text = re.sub(r"<[^>]+>", " ", _STEP.sub("", rec["text"]))
+            # rich text stores characters as entities ("Malar's" -> "Malar&#x27;s"): read the words, not the entity's digits
+            text = html.unescape(re.sub(r"<[^>]+>", " ", _STEP.sub("", rec["text"])))
             extra = _numbers(text) - allowed
             if extra:
                 add("L08", f"{sec.id}.{key} contains {sorted(extra)} which is not in the facts")
     model.demo_items = demo_items
+    if getattr(model, "demo_pictures", None) and not model.demo:
+        add("L09", f"{len(model.demo_pictures)} test pictures on the page but the facts do not say demo: true")
 
     # L10 accents
     accents = 0

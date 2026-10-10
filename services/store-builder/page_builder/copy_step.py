@@ -77,7 +77,7 @@ def request_params(first: Result, *, model: str = MODEL, effort: str = EFFORT, f
 @dataclass
 class CopyOutcome:
     result: Result  # the page to use (with the accepted rewrites, or the template wording)
-    mode: str  # dry-run | live
+    mode: str  # dry-run | live | claude-code (answered by a Claude Code session, same gate)
     status: str  # not-run | no-slots | applied | no-changes | refusal | cut-off | api-error | bad-json | lint-fallback
     accepted: dict = field(default_factory=dict)  # slot -> new text, applied to the page
     rejected: dict = field(default_factory=dict)  # slot -> reason the line was refused (the template wording stays)
@@ -159,10 +159,32 @@ def run_copy_step(brand: dict, facts: dict, *, client=None, model: str = MODEL, 
         data = json.loads(text) if text else None
     except (TypeError, ValueError):
         data = None
+    return _apply(out, data, brand, facts, first, slots, build_kw)
+
+
+def copy_request(first: Result) -> dict:
+    """Everything a Claude Code session needs to answer the copy step itself: the same system prompt, request and answer shape the API gets."""
+    req = copy_contract.build_request(first)
+    req.pop("response_schema", None)
+    return {"system": system_prompt(), "request": req, "answer_schema": response_schema(req["slots"]), "prompt_version": prompt_version(),
+            "how_to_answer": "Write ONE JSON object matching answer_schema (one line per slot) to copy-answer.json."}
+
+
+def apply_copy_answer(brand: dict, facts: dict, data, *, first: Result | None = None, **build_kw) -> CopyOutcome:
+    """The copy step answered by a Claude Code session instead of the API (Harsh's choice, 9 Oct 2026, the same route as the dtj content
+    workflow). The answer goes through exactly the same gate as an API answer."""
+    first = first or build_pdp(brand, facts, **build_kw)
+    slots = copy_contract.list_slots(first)
+    out = CopyOutcome(first, "claude-code", "no-slots" if not slots else "bad-json", params=request_params(first), slots_sent=len(slots))
+    if not slots:
+        return out
+    return _apply(out, data, brand, facts, first, slots, build_kw)
+
+
+def _apply(out: CopyOutcome, data, brand: dict, facts: dict, first: Result, slots: list[dict], build_kw: dict) -> CopyOutcome:
     if not isinstance(data, dict):
         out.status = "bad-json"
         return out
-
     accepted, rejected = copy_contract.validate_response(first, data)
     current = {s["slot"]: s["current"] for s in slots}
     changed = {k: v for k, v in accepted.items() if v != current.get(k)}  # an unchanged line is not a rewrite: keep its true origin

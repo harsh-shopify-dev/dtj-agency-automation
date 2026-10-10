@@ -73,3 +73,40 @@ class Catalog:
 
     def text_settings(self, app: str, block: str) -> set[str]:
         return {k for k, s in self.settings(app, block).items() if s["type"] in ("text", "textarea", "inline_richtext", "richtext")}
+
+
+_TYPE = re.compile(r"^shopify://apps/(?P<handle>[^/]+)/blocks/(?P<block>[^/]+)/(?P<uuid>[^/]+)$")
+
+
+def load_client_registry(path: str | Path) -> dict:
+    """A client's own app copies: {"apps": {"dtj-blocks": {"handle": ..., "uuid": ...}, ...}}, read from blocks placed in that store's theme.
+    A duplicated app has its own handle and extension uuid, so a page built with our addresses would show nothing in the client's store."""
+    apps = json.loads(Path(path).read_text(encoding="utf-8"))["apps"]
+    for app, entry in apps.items():
+        if app not in registry():
+            raise ValueError(f"client registry: unknown app {app!r}")
+        if not (re.fullmatch(r"[a-z0-9][a-z0-9-]*", entry.get("handle", "")) and re.fullmatch(r"[0-9a-f-]{36}", entry.get("uuid", ""))):
+            raise ValueError(f"client registry: {app} needs a handle and a 36-character uuid")
+    return apps
+
+
+def to_client(template: dict, client: dict, reg: dict | None = None) -> dict:
+    """The same page with every DTJ block pointing at the client's copy of its app. Any DTJ block the client registry does not cover stops it."""
+    reg = reg or registry()
+    ours = {(app, entry["uuid"]): app for app, entry in reg.items()}
+
+    def walk(node):
+        if isinstance(node, dict):
+            out = {k: walk(v) for k, v in node.items()}
+            m = _TYPE.match(str(node.get("type", "")))
+            if m and (m["handle"], m["uuid"]) in ours:
+                app = ours[(m["handle"], m["uuid"])]
+                if app not in client:
+                    raise ValueError(f"the client registry has no copy of {app} (block {m['block']})")
+                out["type"] = f"shopify://apps/{client[app]['handle']}/blocks/{m['block']}/{client[app]['uuid']}"
+            return out
+        if isinstance(node, list):
+            return [walk(v) for v in node]
+        return node
+
+    return walk(template)

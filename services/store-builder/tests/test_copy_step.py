@@ -156,6 +156,29 @@ class LiveAnswerTests(unittest.TestCase):
         self.assertEqual(copy_step.run_copy_step(b, f, client=FakeClient(answer(slots, thinking_first=False))).status, "applied")
 
 
+class ClaudeCodeAnswerTests(unittest.TestCase):
+    """The copy written by a Claude Code session instead of the API: same request, same gate."""
+
+    def test_request_file_carries_the_same_prompt_and_slots(self):
+        b, f = toilova()
+        req = copy_step.copy_request(build_pdp(b, f))
+        self.assertEqual(req["system"], copy_step.system_prompt())
+        self.assertEqual(set(req["answer_schema"]["properties"]["slots"]["required"]), set(current_slots(b, f)))
+        self.assertNotIn("response_schema", req["request"])
+
+    def test_answer_goes_through_the_same_gate(self):
+        b, f = toilova()
+        slots = current_slots(b, f)
+        slots["dtj_why.heading"] = "Why people pick TOILOVA"
+        slots["dtj_faq.heading"] = "Best answers, guaranteed"
+        out = copy_step.apply_copy_answer(b, f, {"slots": slots})
+        self.assertEqual((out.mode, out.status), ("claude-code", "applied"))
+        self.assertEqual(out.accepted, {"dtj_why.heading": "Why people pick TOILOVA"})
+        self.assertIn("claim", out.rejected["dtj_faq.heading"])
+        self.assertEqual(copy_step.apply_copy_answer(b, f, None).status, "bad-json")
+        self.assertEqual(copy_step.apply_copy_answer(b, f, "text").result.template, build_pdp(b, f).template)
+
+
 class FailureTests(unittest.TestCase):
     def assert_template_kept(self, out, status):
         b, f = toilova()

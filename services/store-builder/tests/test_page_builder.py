@@ -143,6 +143,240 @@ class AdaptationTests(unittest.TestCase):
         self.assertEqual(d.failed_checks(), [])
 
 
+class FigureCardTests(unittest.TestCase):
+    """Found 9 Oct 2026 on a book page: figure cards without notes printed the internal source as the caption, in a 4.21:1 grey."""
+
+    KF = [{"value": "2,00,000+", "label": "Copies sold", "source": "product description (current figure confirmed by Harsh)"},
+          {"value": "4.9", "label": "Rating", "source": "product description"},
+          {"value": "2–3", "label": "Sittings to finish", "source": "product description", "note": "From the product description"}]
+
+    def cards(self):
+        r = build(key_facts=copy.deepcopy(self.KF))
+        return r, next(s for s in r.model.sections if s.block == "stat-cards")
+
+    def test_a_source_is_never_printed_as_a_caption(self):
+        r, sec = self.cards()
+        self.assertNotIn("note_1", sec.settings)
+        self.assertNotIn("note_2", sec.settings)
+        self.assertEqual(sec.settings["note_3"], "From the product description")
+        page = json.dumps(r.template)
+        self.assertNotIn("confirmed by Harsh", page)
+
+    def test_card_captions_use_a_colour_checked_on_the_card(self):
+        r, sec = self.cards()
+        roles = r.model.direction.roles
+        self.assertEqual(sec.settings["note_color"], roles["muted_on_card"])
+        self.assertEqual(sec.settings["label_color"], roles["on_card"])
+        for name in fixtures.BRANDS:
+            check = next(c for c in derive(fixtures.BRANDS[name][0]).checks if c["pair"] == "soft text on cards")
+            self.assertTrue(check["ok"], (name, check))
+
+
+class SocialProofLineTests(unittest.TestCase):
+    """The line above the title (Harsh, 9 Oct 2026: 'in the rating star add the images and the badges')."""
+
+    SP = {"badge": {"text": "2 Lakh+ Sold", "source": "product description"},
+          "lines": [{"text": "a short proof line", "source": "product description"}],
+          "avatars": [{"role": f"reader_{i}", "consent": "reader agreed on Instagram DM, 9 Oct 2026"} for i in range(1, 6)]}
+
+    def stars(self, result):
+        return next(s for s in result.model.buybox_sections if s.kind == "rating")
+
+    def facts(self):
+        _, f = fixtures.toilova()
+        f["media"] += [{"role": f"reader_{i}", "file": f"reader-{i}.webp"} for i in range(1, 6)]
+        f["rating"] = {"value": "4.9", "source": "product description"}
+        f["social_proof"] = copy.deepcopy(self.SP)
+        return f
+
+    def test_badge_lines_and_consented_photos_come_from_the_facts(self):
+        b, _ = fixtures.toilova()
+        r = build_pdp(b, self.facts())
+        s = self.stars(r)
+        self.assertEqual((s.settings["badge_text"], s.settings["proof_text_1"], s.settings["rating_style"]),
+                         ("2 Lakh+ Sold", "a short proof line", "five"))
+        self.assertTrue(s.settings["avatar_1"].endswith("reader-1.webp"))
+        self.assertTrue(s.settings["avatar_5"].endswith("reader-5.webp"))
+        self.assertEqual(r.model.prov[(s.id, "badge_text")]["kind"], "fact")
+        self.assertEqual(errors(r), [])
+
+    def test_the_rating_line_shows_five_photos_or_none(self):
+        b, _ = fixtures.toilova()
+        f = self.facts()
+        f["social_proof"]["avatars"] = f["social_proof"]["avatars"][:3]
+        self.assertIn("L14", [x["rule"] for x in errors(build_pdp(b, f))])  # three real photos: the page fails, nothing is padded
+        f["social_proof"]["avatars"] = []
+        self.assertNotIn("L14", [x["rule"] for x in errors(build_pdp(b, f))])
+
+    def test_a_badge_is_two_or_three_words(self):
+        b, _ = fixtures.toilova()
+        for text, ok in (("2 Lakh+ Sold", True), ("Made in India", True), ("Bestseller", False), ("National Bestseller", True), ("2,00,000+ copies sold", False),
+                         ("Over 2,00,000 copies sold", False)):
+            f = self.facts()
+            f["social_proof"]["badge"]["text"] = text
+            self.assertEqual("L15" not in [x["rule"] for x in errors(build_pdp(b, f))], ok, text)
+
+    def test_a_customer_photo_needs_a_consent_note(self):
+        b, _ = fixtures.toilova()
+        f = self.facts()
+        del f["social_proof"]["avatars"][0]["consent"]
+        with self.assertRaises(InputError):
+            build_pdp(b, f)
+
+    def test_without_social_proof_the_line_stays_a_compact_rating(self):
+        b, _ = fixtures.toilova()
+        f = self.facts()
+        del f["social_proof"]
+        s = self.stars(build_pdp(b, f))
+        self.assertEqual(s.settings["rating_style"], "single")
+        self.assertNotIn("badge_text", s.settings)
+        f["social_proof"] = {"badge": {"text": "National Bestseller", "source": "product description"}}
+        del f["rating"]
+        s = self.stars(build_pdp(b, f))
+        self.assertFalse(s.settings["show_stars"])  # no rating fact: no stars, only the badge
+        self.assertNotIn("rating_value", s.settings)
+
+
+class HarshFeedbackTests(unittest.TestCase):
+    """Harsh's notes on the live book page, 9 Oct 2026."""
+
+    def test_the_trust_strip_is_big_and_never_touches_the_pictures(self):
+        s = next(x for x in build().model.sections if x.block == "marquee")
+        self.assertEqual((s.settings["padding_top"], s.settings["padding_bottom"]), (styling.MARQUEE["padding"],) * 2)
+        self.assertGreaterEqual(s.settings["padding_top"], 16)
+        self.assertEqual((s.settings["text_size"], s.settings["icon_size"], s.settings["gap"]),
+                         (styling.MARQUEE["text"], styling.MARQUEE["icon"], styling.MARQUEE["gap"]))
+        self.assertGreater(s.settings["text_size"], 14)  # bigger than the block's default
+
+    def test_pictures_keep_their_own_shape(self):
+        r = build()
+        story = next(x for x in r.model.sections if x.block == "split-story")
+        self.assertEqual(story.settings["image_fit"], "adapt")
+        stats = next(x for x in r.model.sections if x.block == "science-stats")  # TOILOVA's figures all have pictures
+        self.assertEqual(stats.settings["card_image_aspect_ratio"], "adapt")
+
+    def test_tick_lists_have_exactly_four_points(self):
+        r = build(buybox__bullets=["One real point", "Two real points"])
+        pts = next(x for x in r.model.buybox_sections if x.kind == "hero_points")
+        lines = pts.settings["benefits"].splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[:2], ["One real point", "Two real points"])  # the buy box's own first, then benefit titles
+        self.assertEqual(lines[2], "No scrubbing needed")
+        self.assertNotIn("L13", [f["rule"] for f in errors(r)])
+        _, f = fixtures.toilova()
+        r = build(story__bullets=f["story"]["bullets"][:3])
+        self.assertIn("L13", [x["rule"] for x in errors(r)])  # three real points: the page fails, nothing is invented
+        r = build(story__bullets=f["story"]["bullets"] + ["Fifth point"])
+        story = next(x for x in r.model.sections if x.block == "split-story")
+        self.assertEqual(sorted(k for k in story.settings if k.startswith("bullet_")), ["bullet_1", "bullet_2", "bullet_3", "bullet_4"])
+
+
+class DemoPictureTests(unittest.TestCase):
+    """A dev-store test: every empty picture slot gets one of the product's own pictures, and each is listed for replacement."""
+
+    def page(self, demo):
+        b, f = fixtures.toilova()
+        f["demo"] = demo
+        f["rating"] = {"value": "4.9", "source": "test"}
+        f["social_proof"] = {"lines": [{"text": "from 2,000+ readers", "source": "test"}]}
+        for item in f["pack_contents"]:
+            item.pop("image_role", None)
+        return build_pdp(b, f)
+
+    def test_empty_pictures_are_filled_and_listed_only_on_a_demo_page(self):
+        r = self.page(True)
+        pics = r.report["demo_pictures"]
+        self.assertIn("dtj_inside.image_1", pics)
+        self.assertIn("dtj_inside.image_2", pics)
+        self.assertNotIn("dtj_inside.image_3", pics)  # TOILOVA's pack has 2 items: no third picture
+        self.assertEqual([p for p in pics if p.startswith("dtj_stars.")], [f"dtj_stars.avatar_{i}" for i in range(1, 6)])
+        self.assertFalse([p for p in pics if "icon" in p or p.startswith(("dtj_marquee.", "dtj_why.f"))])  # icon slots keep icons
+        self.assertEqual(r.report["needs_replacement"][-len(pics):], pics)
+        self.assertEqual(errors(r), [])
+        self.assertEqual(self.page(False).report["demo_pictures"], [])
+
+    def test_test_pictures_without_the_demo_flag_are_an_error(self):
+        r = self.page(True)
+        r.model.demo = False
+        self.assertIn("L09", [f.rule for f in rules.lint(r.model)])
+
+
+DAWN = {  # the shape of Harsh's Dawn 15.4.1 product.json (9 Oct 2026), including a custom block the page must keep
+    "sections": {
+        "main": {"type": "main-product", "settings": {}, "block_order": ["text", "title", "price", "variant_picker", "buy_buttons", "bundle_upsell", "description"],
+                 "blocks": {k: {"type": k, "settings": {}} for k in ("text", "title", "price", "variant_picker", "buy_buttons", "bundle_upsell", "description")}},
+        "related-products": {"type": "related-products", "settings": {}},
+    },
+    "order": ["main", "related-products"],
+}
+
+
+class DawnLayoutTests(unittest.TestCase):
+    """Harsh, 9 Oct 2026: "create the same page ... in this theme" (a Dawn theme)."""
+
+    def page(self):
+        b, f = fixtures.toilova()
+        f["rating"] = {"value": "4.9", "source": "test"}
+        return build_pdp(b, f, theme="dawn", base_template=copy.deepcopy(DAWN))
+
+    def test_the_buy_box_goes_into_dawns_product_section(self):
+        r = self.page()
+        main = r.template["sections"]["main"]
+        order = main["block_order"]
+        kinds = [main["blocks"][k]["type"].split("/blocks/")[-1].split("/")[0] if "/blocks/" in main["blocks"][k]["type"] else main["blocks"][k]["type"] for k in order]
+        self.assertEqual(kinds, ["text", "dtj-social-proof", "title", "dtj-price", "dtj-hero-points", "variant_picker", "buy_buttons", "bundle_upsell", "description"])
+        self.assertNotIn("price", main["blocks"])  # the DTJ price replaces the theme's
+        self.assertEqual(errors(r), [])
+
+    def test_sections_are_dawn_apps_sections_above_the_themes_own(self):
+        r = self.page()
+        t = r.template
+        ours = [s["id"] for s in r.report["sections_built"]]
+        self.assertEqual(t["order"], ["main", *ours, "related-products"])
+        for sid in ours:
+            self.assertEqual((t["sections"][sid]["type"], t["sections"][sid]["settings"]), ("apps", {"include_margins": False}))
+
+    def test_the_preview_renders_a_dawn_page(self):
+        from page_builder import render
+        html, notes = render.page_html(self.page())
+        self.assertIn('data-pb-dtj="dtj-blocks/price"', html)
+        self.assertIn("theme title", notes["stand_ins"])
+
+    def test_dawn_needs_its_own_product_template(self):
+        b, f = fixtures.toilova()
+        with self.assertRaises(InputError):
+            build_pdp(b, f, theme="dawn")
+        with self.assertRaises(InputError):
+            build_pdp(b, f, theme="debut")
+
+
+class ClientRegistryTests(unittest.TestCase):
+    CLIENT = {"dtj-blocks": {"handle": "dtj-blocks-test-store", "uuid": "a" * 8 + "-0000-7000-8000-" + "b" * 12},
+              "dtj-sections": {"handle": "dtj-sections-test-store", "uuid": "c" * 8 + "-0000-7000-8000-" + "d" * 12},
+              "dtj-sections-2": {"handle": "dtj-sections-2-test-store", "uuid": "e" * 8 + "-0000-7000-8000-" + "f" * 12}}
+
+    def test_every_dtj_block_points_at_the_clients_copy_and_nothing_else_changes(self):
+        from page_builder.catalog import registry, to_client
+        r = build()
+        ours = json.dumps(r.template)
+        moved = to_client(r.template, self.CLIENT)
+        text = json.dumps(moved)
+        for app, entry in registry().items():
+            self.assertNotIn(entry["uuid"], text)  # no block left on our own app
+            if entry["uuid"] in ours:
+                self.assertIn(f"shopify://apps/{self.CLIENT[app]['handle']}/blocks/", text)
+        back = text
+        for app, entry in self.CLIENT.items():
+            back = back.replace(f"apps/{entry['handle']}/", f"apps/{app}/").replace(entry["uuid"], registry()[app]["uuid"])
+        self.assertEqual(json.loads(back), r.template)  # only the addresses changed
+
+    def test_a_missing_copy_stops_the_page(self):
+        from page_builder.catalog import to_client
+        partial = {k: v for k, v in self.CLIENT.items() if k != "dtj-sections"}
+        with self.assertRaises(ValueError):
+            to_client(build().template, partial)
+
+
 class OmissionTests(unittest.TestCase):
     def test_too_few_faqs_omit_the_faq(self):
         r = build(faqs=[{"q": "One?", "a": "A.", "source": "product description"}])
@@ -152,6 +386,14 @@ class OmissionTests(unittest.TestCase):
     def test_a_single_pack_item_is_not_shown_alone(self):
         r = build(pack_contents=fixtures.toilova()[1]["pack_contents"][:1])
         self.assertIn("pack_inside", [o["section"] for o in r.report["sections_omitted"]])
+
+    def test_pack_items_fill_whole_rows(self):
+        base = fixtures.toilova()[1]["pack_contents"]
+        items = (base * 4)[:6]
+        for n, columns in ((2, "2"), (3, "3"), (4, "4"), (6, "3")):
+            r = build(pack_contents=items[:n])
+            inside = [s for s in r.model.sections if s.kind == "pack_inside"][0]
+            self.assertEqual(inside.settings["columns"], columns, f"{n} items")
 
     def test_comparison_appears_only_with_the_owners_approval(self):
         brand, facts = fixtures.toilova()
@@ -203,6 +445,15 @@ class LintTests(unittest.TestCase):
             sec = next(s for s in m.sections if s.kind == "why_features")
             m.prov[(sec.id, "heading")]["text"] = "Trusted by 25,000 homes"
         self.assertIn("L08", self.relint(r, mutate))
+
+    def test_an_apostrophe_stored_as_an_entity_is_not_a_number(self):
+        # found 9 Oct 2026 on a real book page: rich text stores "Malar's" as "Malar&#x27;s" and L08 read the entity's 27 as a number
+        r = build()
+        def mutate(m, text):
+            sec = next(s for s in m.sections if s.kind == "faq")
+            m.prov[(sec.id, "answer_1")]["text"] = text
+        self.assertNotIn("L08", self.relint(r, lambda m: mutate(m, "<p>Harsh and Malar&#x27;s love &amp; friends</p>")))
+        self.assertIn("L08", self.relint(build(), lambda m: mutate(m, "<p>Malar&#x27;s 27 friends</p>")))
 
     def test_text_without_a_recorded_origin_is_caught(self):
         r = build()

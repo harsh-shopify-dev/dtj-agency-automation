@@ -21,7 +21,7 @@ def _facts(title: str, with_reviews: bool = True) -> dict:
         "demo": True, "product": {"title": title, "handle": "demo-product"}, "media": media,
         "trust_points": [{"text": t, "source": src} for t in ("First point", "Second point", "Third point", "Fourth point")],
         "benefits": [{"title": f"Benefit {i}", "text": f"Benefit {i} text", "source": src} for i in range(1, 5)],
-        "story": {"heading": "Story heading", "accent": "accent words", "body": "Story body", "bullets": ["Tick one", "Tick two"], "image_role": "hand", "source": src},
+        "story": {"heading": "Story heading", "accent": "accent words", "body": "Story body", "bullets": ["Tick one", "Tick two", "Tick three", "Tick four"], "image_role": "hand", "source": src},
         "steps": {"intro": "Steps intro", "items": ["First step", "Second step", "Third step"], "image_role": "steps", "source": src},
         "key_facts": [{"value": "10 g", "label": "Fact one", "note": "Note one", "image_role": "pack", "source": src},
                       {"value": "2x", "label": "Fact two", "note": "Note two", "image_role": "shelf", "source": src},

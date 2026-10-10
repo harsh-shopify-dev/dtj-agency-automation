@@ -61,8 +61,24 @@ class BrowserError(RuntimeError):
     pass
 
 
+_WORKING: dict[str, Path | None] = {}
+
+
+def _answers(exe: Path) -> bool:
+    """Headless Edge can exit at once with no output on some machines (seen 9 Oct 2026: Edge 154 printed nothing while Chrome worked),
+    so a browser is only used after it has rendered a one-line page."""
+    try:
+        r = subprocess.run([str(exe), "--headless=new", "--disable-gpu", "--dump-dom", "data:text/html,<p>pb-ok</p>"],
+                           capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return "pb-ok" in r.stdout
+
+
 def find_browser() -> Path | None:
-    return next((Path(p) for p in CANDIDATES if Path(p).is_file()), None)
+    if "exe" not in _WORKING:
+        _WORKING["exe"] = next((Path(p) for p in CANDIDATES if Path(p).is_file() and _answers(Path(p))), None)
+    return _WORKING["exe"]
 
 
 class EdgeBrowser:
@@ -71,7 +87,7 @@ class EdgeBrowser:
     def __init__(self, exe: Path | None = None, work: Path | None = None, timeout: int = 120):
         self.exe = exe or find_browser()
         if not self.exe:
-            raise BrowserError("no Edge or Chrome found: install one, or run the page builder with --no-browser")
+            raise BrowserError("no working Edge or Chrome found (none rendered a test page headless): install or repair one, or run with --no-browser")
         self.work = work
         self.timeout = timeout
 

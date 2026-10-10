@@ -162,7 +162,8 @@ def page_html(result, *, media_dir: Path | None = None, width_hint: str = "") ->
         return f'<div class="shopify-block shopify-app-block" data-pb-block="{key}" data-pb-dtj="{app}/{block}">{body}</div>'
 
     # ---- the product section: the theme's own parts are stand-ins, the DTJ buy-box blocks are real
-    details = template["sections"]["main"]["blocks"]["product-details"]
+    from .assemble import product_column
+    details = product_column(template)  # Horizon's product-details or Dawn's main-product
     col = []
     for key in details["block_order"]:
         entry = details["blocks"][key]
@@ -178,9 +179,13 @@ def page_html(result, *, media_dir: Path | None = None, width_hint: str = "") ->
                     notes["stand_ins"].append(f"theme {sub_entry['type']}")
                     col.append(f'<h1 data-pb-theme="title" style="margin:8px 0;font-size:28px;line-height:1.15">{htmllib.escape(product["title"])}</h1>'
                                if sub_entry["type"] == "text" else _stand_in(sub_entry["type"], f"theme: {sub_entry['type']}", 24))
+        elif t == "title":  # Dawn's title block
+            notes["stand_ins"].append("theme title")
+            col.append(f'<h1 data-pb-theme="title" style="margin:8px 0;font-size:28px;line-height:1.15">{htmllib.escape(product["title"])}</h1>')
         else:
             notes["stand_ins"].append(f"theme {t}")
-            height = {"buy-buttons": 96, "variant-picker": 56, "_divider": 2, "text": 60}.get(t, 40)
+            height = {"buy-buttons": 96, "buy_buttons": 96, "variant-picker": 56, "variant_picker": 56, "_divider": 2, "text": 60,
+                      "description": 120}.get(t, 40)
             col.append(_stand_in(t, f"theme: {t}", height))
     notes["stand_ins"].insert(0, "theme product gallery")
     main = (f'<section class="pb-main" data-pb-section="main"><div class="pb-gallery">{_stand_in("gallery", "theme: product gallery", 320)}</div>'
@@ -192,6 +197,10 @@ def page_html(result, *, media_dir: Path | None = None, width_hint: str = "") ->
         if sid == "main":
             continue
         sec = template["sections"][sid]
+        if not sec.get("block_order"):  # one of the theme's own sections (Dawn's related products): a labelled stand-in
+            notes["stand_ins"].append(f"theme {sec.get('type')}")
+            parts.append(f'<section class="pb-section" data-pb-theme="{sec.get("type")}">{_stand_in(sec.get("type", "section"), "theme: " + str(sec.get("type")), 120)}</section>')
+            continue
         inner = "".join(dtj(sec["blocks"][k], k, sid) for k in sec["block_order"])
         role = model.roles.get(sid, "")
         notes["sections"].append({"id": sid, "role": role})

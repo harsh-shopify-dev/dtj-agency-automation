@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from .catalog import Catalog
 from .direction import Direction
+from .direction import _best_text_on as best_text_on
 from .sections import Section
+
+
+# the trust strip under the buy box: big and calm (Harsh, 9 Oct 2026: "more padding, more height, more gigantic")
+MARQUEE = {"padding": 24, "text": 24, "icon": 30, "gap": 72}
 
 
 def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = False) -> None:
@@ -23,9 +28,9 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
     if sec.block != "marquee":
         put("padding_top", pad if not first else max(pad - 8, 16))
         put("padding_bottom", pad)
-    else:
-        put("padding_top", 0)
-        put("padding_bottom", 0)
+    else:  # the strip is a bold band of its own: clear space above and below so it never touches the pictures (Harsh, 9 Oct 2026)
+        put("padding_top", MARQUEE["padding"])
+        put("padding_bottom", MARQUEE["padding"])
     put("side_padding", d.density["side"])
     if dark:
         put("background", r["dark"])
@@ -39,6 +44,9 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
     b = sec.block
     if b == "marquee":
         put("accent_color", acc)
+        put("text_size", MARQUEE["text"])
+        put("icon_size", MARQUEE["icon"])
+        put("gap", MARQUEE["gap"])
     elif b == "feature-showcase":
         put("heading_color", head)
         put("title_color", head)
@@ -51,10 +59,12 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("card_text_color", r["on_dark"])
         put("number_color", r["accent_on_dark"])
         put("card_shadow_enable", True)
+        put("card_image_aspect_ratio", "adapt")  # pictures keep their own shape: never trimmed
     elif b == "split-story":
         put("heading_color", head)
         put("accent_color", acc)
         put("panel_bg", r["band"])
+        put("image_fit", "adapt")  # the whole picture at its own shape (it was trimmed on the live book page, 9 Oct 2026)
     elif b == "measured-results":
         put("accent_color", r["accent_on_dark"])
         put("card_text_color", r["text"])
@@ -64,6 +74,8 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("heading_color", head)
         put("accent_color", acc)
         put("card_bg", r["tint_card"])
+        put("label_color", r["on_card"])
+        put("note_color", r["muted_on_card"])
     elif b == "whats-inside":
         put("accent_color", acc)
         put("highlight_color", acc)
@@ -79,8 +91,10 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
             # The direction's card colours are a checked pair for any brand, light or dark.
             put("card_bg", r["tint_card"])
             put("text_color", r["on_card"])
+        tile = r["rating_tile"] if d.dark_mode else head  # empty tile colour = the text colour, which is `head` here
         if d.dark_mode:
-            put("tile_color", r["rating_tile"])  # the white star needs a tile it shows on (direction.py)
+            put("tile_color", tile)  # a light text colour would leave the star nothing to show on (direction.py)
+        put("tile_star_color", best_text_on(tile))  # black or white, whichever reads on the tile (the block's default is Canvas)
     elif b == "faq":
         put("heading_color_1", head)
         put("accent_color", acc)
@@ -99,12 +113,14 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("badge_icon_color", acc)
         put("text_size", 13)
         put("item_gap", 8)
+        put("avatar_size", 24)  # five photos (rule L14) + badge + stars must fit one phone line without cutting the badge (9 Oct 2026)
     elif b in ("hero-points", "shade-picker", "addons", "testimonials"):
         put("accent_color", acc)
         if b == "hero-points":
             put("eyebrow_color", head)
         if b == "testimonials":
             put("star_color", r["rating_star"])
+            put("avatar_text_color", best_text_on(acc))  # the initial on the accent circle: black or white by contrast, not Canvas
     elif b == "slideshow-pro":
         put("accent_color", r["accent_on_dark"])
         put("overlay_color", r["dark"])

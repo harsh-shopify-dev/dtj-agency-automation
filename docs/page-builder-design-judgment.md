@@ -60,6 +60,31 @@ What the first runs found and fixed (9 Oct 2026), proof that rendering catches w
 browser colour `Canvas` (white in a light theme, dark in a dark one), so on a light accent (Nocturne's gold: 2.4:1) the initial is unreadable and
 the result depends on the theme's colour scheme. Fix: an explicit "avatar text colour" (and "star colour") setting, or pick black/white by contrast.
 
+## The Claude plan step (ai_plan.py) and the client run (run_client.py, push_page.py)
+Built 9 Oct 2026 on Harsh's idea: Claude is the designer that CHOOSES, code is the gate that CHECKS.
+- **What Claude decides (one API call, same conventions as the copy step):** which of the 11 page sections to use, in what order, which to leave
+  out and why, the one emphasised "signature" section, and the brand style choices the client left open (price level, voice, shape, heading
+  class). Input: the brand, the client's sourced facts, the product as the store shows it publicly (when readable), a menu of every section with
+  the app blocks behind it and whether the facts can fill it (worked out by running the real builder), the house order as a baseline, and up to 5
+  screenshots of pages the agency likes (references for rhythm and mood only; prompt says never copy their text, claims or pictures).
+  Prompt: `prompts/plan_system.md`.
+- **What code still decides and enforces:** a section the facts cannot fill is dropped (no invented reviews, no unapproved comparison); proof panel
+  and figures-at-a-glance never both; FAQ last; every section accounted for; the client's own style answers always win over the plan; colours stay
+  the brand's, contrast-checked by `direction.py`; text is still only facts and validated signposts; the buy box is fixed by rules. Every
+  correction is listed in `plan.json`. Refusal, cut-off, API error, bad JSON or an empty plan: the house rules (`recipes/pdp.json`) decide.
+- **The client's draft theme, via Shopify's Theme Access app:** the password is read from the user variable `DTJ_THEME_ACCESS_<STORE HANDLE>`
+  and handed to the Shopify CLI only through `SHOPIFY_CLI_THEME_TOKEN` (never on a command line, in a file or in output; CLI errors are redacted).
+  `run_client` reads only: the theme must exist, NOT be live, be a draft (`unpublished`) and be built on Horizon (from `config/settings_schema.json`
+  theme_info); it backs up the current `templates/product.json`, designs the page and writes `approval.json` with the page's fingerprint.
+  `push_page` writes only with that approval code: it refuses a page changed after approval, re-checks the theme right before writing, takes a
+  fresh backup, pushes ONLY `templates/product.json` (`--only`, `--nodelete`, never `--allow-live`/`--publish`), pulls it back to prove it
+  landed, and logs a Tier 2 row with who approved it. Undo = push the backup the same way.
+- **Pictures are left for later:** `graphics-todo.json` lists the empty picture slots that belong to something on the page.
+- Verified offline (9 Oct 2026): 28 tests with a stand-in Claude and a stand-in Shopify CLI, every safety rule mutation-checked; a plan rendered
+  through the screenshot loop passed on phone and desktop. NOT verified: a live Claude plan, a real Theme Access password, any real store read or
+  write. Headless Edge stopped answering on this PC on 9 Oct (exit 0, no output); `browser.py` now uses the first installed browser that renders a
+  test page (Chrome here).
+
 ## Adapting to the brand (direction.py)
 | Decision | How it adapts | Why |
 |---|---|---|
@@ -91,7 +116,7 @@ replaces the theme's price line. The first run of the tests caught a real mistak
 ## Not built yet
 (Built 9 Oct 2026: the Claude API call `copy_step.py`, the screenshot review loop `review.py`, the end-to-end command `run_page.py`; first LIVE API
 call still waits for Harsh's yes and a key.) Still to do: measuring SVG icon contrast in the review loop, an optional Claude vision critique of the
-screenshots (advisory only),
-the push of the template to an unpublished theme (Tier 2, a person approves), a home-page recipe, a per-client app registry (uuids differ per duplicated app), theme-level
+screenshots (advisory only), builders for the 4 blocks the page cannot use yet (Stories, Slideshow Pro, Rotating Text, Shoppable Reels: they
+need pictures or videos), a screenshot of the REAL draft after the push (password-protected stores block it), a home-page recipe, a per-client app registry (uuids differ per duplicated app), theme-level
 settings (fonts and palette in `config/settings_data.json` already have code in `provision/style.py`), and real client pilots. Fonts: blocks use theme heading font or a generic
 sans/serif; a brand's exact typeface comes through the theme's font setting, not through our blocks.

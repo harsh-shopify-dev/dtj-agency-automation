@@ -121,12 +121,15 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     r["border"] = style.mix(text, bg, 0.85)
     r["tint_card"] = WHITE if not d.dark_mode else style.mix(bg, WHITE, 0.12)
     r["on_card"] = text if not d.dark_mode else text
+    # soft text on cards (footnotes under figures): the block's default grey was 4.21:1 on white (review loop, 9 Oct 2026, a book page)
+    r["muted_on_card"] = _toward(style.mix(text, r["tint_card"], 0.30), r["tint_card"], AA_TEXT, text)
     for role in list(r):
         r[role] = r[role].upper()
     pairs = [("text on page", "text", "bg", AA_TEXT), ("text on band", "text", "band", AA_TEXT), ("muted text on page", "muted", "bg", AA_TEXT),
              ("accent on page", "accent", "bg", AA_TEXT), ("accent on band", "accent", "band", AA_TEXT), ("text on dark band", "on_dark", "dark", AA_TEXT),
              ("accent on dark band", "accent_on_dark", "dark", AA_TEXT), ("button text", "button_text", "button_bg", AA_TEXT),
-             ("text on white cards", "text", "tint_card", AA_TEXT), ("rating stars on page", "rating_star", "bg", AA_LARGE)]
+             ("text on white cards", "text", "tint_card", AA_TEXT), ("soft text on cards", "muted_on_card", "tint_card", AA_TEXT),
+             ("rating stars on page", "rating_star", "bg", AA_LARGE)]
     if d.dark_mode:
         pairs = [p for p in pairs if p[0] not in ("accent on page",)] + [("accent on page", "accent", "band", AA_TEXT)]
     for name, fg, back, need in pairs:
