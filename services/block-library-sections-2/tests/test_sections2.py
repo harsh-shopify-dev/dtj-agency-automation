@@ -391,3 +391,53 @@ class SlideshowProTests(unittest.TestCase):
     def test_the_slider_stays_within_75_settings(self):
         settings = tg.cl.extract_schema(tg.block_text(self.m))["settings"]
         self.assertLessEqual(len([s for s in settings if s.get("type") not in ("header", "paragraph")]), 75)
+
+
+@unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")
+class CtaTests(unittest.TestCase):
+    m = manifest("cta")
+    ON_SALE = {"selected_or_first_available_variant": {"id": 4242, "available": True}}
+    SOLD_OUT = {"selected_or_first_available_variant": {"id": 4242, "available": False}}
+
+    def test_a_button_needs_only_a_label_and_scrolls_to_the_buy_button_by_default(self):
+        html = render(self.m, {"button_label": "Get my pack"}, product={})
+        self.assertIn("data-dtj-cta-scroll", html)
+        self.assertIn("Get my pack", html)
+        self.assertNotIn("dtj-cta__heading", html)
+
+    def test_the_button_style_never_shows_banner_words(self):
+        html = render(self.m, {"button_label": "Go", "heading": "Hidden heading", "text": "Hidden text", "seal_text": "SEAL"}, product={})
+        for word in ("Hidden heading", "Hidden text", "SEAL"):
+            self.assertNotIn(word, html)
+
+    def test_a_banner_shows_seal_heading_and_terms_and_may_have_no_button(self):
+        html = render(self.m, {"style": "banner", "heading": "Love it or your money back", "text": "30 days.\nNo questions.", "seal_text": "30-day promise"}, product={})
+        self.assertIn("dtj-cta--banner", html)
+        self.assertIn("Love it or your money back", html)
+        self.assertIn("30 days.<br", html)
+        self.assertIn("30-day promise", html)
+        self.assertNotIn("dtj-cta__btn", html)
+
+    def test_add_to_cart_posts_the_available_variant_and_a_sold_out_product_falls_back_to_scrolling(self):
+        html = render(self.m, {"button_label": "Add", "action": "cart"}, product=self.ON_SALE)
+        self.assertIn('name="id" value="4242"', html)
+        self.assertNotIn("data-dtj-cta-scroll", html)
+        html = render(self.m, {"button_label": "Add", "action": "cart"}, product=self.SOLD_OUT)
+        self.assertNotIn('name="id"', html)
+        self.assertIn("data-dtj-cta-scroll", html)
+
+    def test_a_link_opens_the_link_and_an_empty_link_falls_back_to_scrolling(self):
+        self.assertIn('href="/pages/guarantee"', render(self.m, {"button_label": "Read", "action": "link", "link": "/pages/guarantee"}, product={}))
+        self.assertIn("data-dtj-cta-scroll", render(self.m, {"button_label": "Read", "action": "link"}, product={}))
+
+    def test_button_shape_and_colours_are_settings_not_hard_coded(self):
+        html = render(self.m, {"button_label": "Go", "button_style": "square", "button_bg": "#E9EF12", "button_color": "#082A45"}, product={})
+        self.assertIn("dtj-cta__btn--square", html)
+        self.assertIn("--cta-bg: #E9EF12;", html)
+        self.assertIn("--cta-fg: #082A45;", html)
+        self.assertIn("dtj-cta__btn--pill", render(self.m, {"button_label": "Go", "button_style": "weird"}, product={}))
+
+    def test_the_script_stays_small_and_respects_reduced_motion(self):
+        js = (HERE / "src" / "cta.js").read_text(encoding="utf-8")
+        self.assertLess(len(js.encode()), 10000)
+        self.assertIn("prefers-reduced-motion", js)

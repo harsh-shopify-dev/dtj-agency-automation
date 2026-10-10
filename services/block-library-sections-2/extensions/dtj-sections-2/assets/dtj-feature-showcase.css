@@ -62,7 +62,8 @@
 .dtj-fs__sub {
   max-width: 640px;
   margin: 12px auto 0;
-  color: color-mix(in srgb, currentColor 72%, transparent);
+  /* the description colour wins when set: the 72 % fade failed 4.5:1 on strong brand bands (page builder review, 10 Oct 2026) */
+  color: var(--fs-xc, color-mix(in srgb, currentColor 72%, transparent));
   font-size: 15px;
   line-height: 1.55;
 }
