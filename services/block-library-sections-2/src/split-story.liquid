@@ -46,9 +46,9 @@
 -%}
 {%- if ss_has_text or ss_has_image -%}
   <div class="dtj-b dtj-ss" style="{{ dtj_std_style | strip_newlines }} --ss-r: {{ bs.corner_radius }}px; --ss-iw: {{ bs.image_width }}%; --ss-minh: {{ bs.image_min_height }}px; --ss-ratio: {{ ss_ratio }}; --ss-focus: {{ ss_focus }}; --ss-h-d: {{ bs.heading_size_desktop }}px; --ss-h-m: {{ bs.heading_size_mobile }}px; --ss-t-d: {{ bs.body_size_desktop }}px; --ss-t-m: {{ bs.body_size_mobile }}px; --ss-pad-d: {{ bs.panel_padding_desktop }}px; --ss-pad-m: {{ bs.panel_padding_mobile }}px;{% if bs.heading_color != blank %} --ss-hc: {{ bs.heading_color }};{% endif %}{% if bs.accent_color != blank %} --ss-accent: {{ bs.accent_color }};{% endif %}{% if bs.body_color != blank %} --ss-bc: {{ bs.body_color }};{% endif %}{% if bs.panel_bg != blank %} --ss-panel: {{ bs.panel_bg }};{% endif %}{% if bs.card_bg != blank %} --ss-card: {{ bs.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
-    <div class="dtj-ss__card{% if bs.image_side == 'end' %} dtj-ss__card--flip{% endif %}{% unless ss_has_image %} dtj-ss__card--noimg{% endunless %}{% unless ss_has_text %} dtj-ss__card--notext{% endunless %}">
+    <div class="dtj-ss__card{% if bs.image_side == 'end' %} dtj-ss__card--flip{% endif %}{% if bs.image_fit == 'adapt' and ss_has_image %} dtj-ss__card--adapt{% endif %}{% unless ss_has_image %} dtj-ss__card--noimg{% endunless %}{% unless ss_has_text %} dtj-ss__card--notext{% endunless %}">
       {%- if ss_has_image -%}
-        <div class="dtj-ss__media"><img class="dtj-ss__img" src="{{ ss_image | image_url: width: 1200 }}" alt="{{ ss_image.alt | default: ss_h1 | escape }}" width="{{ ss_image.width | default: 1200 }}" height="{{ ss_image.height | default: 900 }}" loading="lazy"></div>
+        <div class="dtj-ss__media"{% if bs.image_fit == 'adapt' %} style="--ss-img-ratio: {{ ss_image.width | default: 4 }} / {{ ss_image.height | default: 3 }};"{% endif %}><img class="dtj-ss__img" src="{{ ss_image | image_url: width: 1200 }}" alt="{{ ss_image.alt | default: ss_h1 | escape }}" width="{{ ss_image.width | default: 1200 }}" height="{{ ss_image.height | default: 900 }}" loading="lazy"></div>
       {%- endif -%}
       {%- if ss_has_text -%}
         <div class="dtj-ss__panel">

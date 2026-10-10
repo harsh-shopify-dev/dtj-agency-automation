@@ -221,6 +221,23 @@
       ]
     },
     {
+      "type": "select",
+      "id": "image_fit",
+      "label": "Image shape",
+      "default": "fill",
+      "options": [
+        {
+          "value": "fill",
+          "label": "Fill the side (crops the edges)"
+        },
+        {
+          "value": "adapt",
+          "label": "Adapt to the image (never crops)"
+        }
+      ],
+      "info": "Adapt shows the whole picture at its own shape, on every screen; the card follows the picture. Use it for pictures with text or a product near the edges."
+    },
+    {
       "type": "range",
       "id": "image_width",
       "label": "Image width, desktop",

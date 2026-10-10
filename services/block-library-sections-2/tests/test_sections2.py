@@ -125,6 +125,20 @@ class SplitStoryTests(unittest.TestCase):
         self.assertIn("dtj-ss__card--noimg", render(self.m, {"heading": "H"}))
         self.assertIn("dtj-ss__card--notext", render(self.m, {"image": "pic"}))
 
+    def test_adapt_shows_the_whole_picture_and_fill_stays_the_default(self):
+        # Harsh, 9 Oct 2026, on the live book page: "make it adapt to the image size, the image is getting trimmed"
+        pic = {"width": 1080, "height": 1350, "alt": "cover"}
+        fill = render(self.m, {"heading": "H", "image": pic})
+        self.assertNotIn("dtj-ss__card--adapt", fill)
+        self.assertNotIn("--ss-img-ratio", fill)  # existing pages keep their look
+        adapt = render(self.m, {"heading": "H", "image": pic, "image_fit": "adapt"})
+        self.assertIn("dtj-ss__card--adapt", adapt)
+        self.assertIn("--ss-img-ratio: 1080 / 1350;", adapt)  # the picture's own shape
+        self.assertNotIn("dtj-ss__card--adapt", render(self.m, {"heading": "H", "image_fit": "adapt"}))  # no picture, nothing to adapt
+        css = (HERE / "src" / "split-story.css").read_text(encoding="utf-8")
+        self.assertIn(".dtj-ss__card--adapt .dtj-ss__img { object-fit: contain; }", css)  # never cropped
+        self.assertIn(".dtj-ss__card--adapt .dtj-ss__media { min-height: 0; aspect-ratio: var(--ss-img-ratio, 4 / 3); }", css)
+
     def test_the_image_side_the_focus_and_the_phone_shape_are_safe_choices(self):
         self.assertIn("dtj-ss__card--flip", render(self.m, {"heading": "H", "image_side": "end"}))
         self.assertNotIn("dtj-ss__card--flip", render(self.m, {"heading": "H", "image_side": "start"}))

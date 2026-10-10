@@ -190,6 +190,12 @@
 .dtj-ss__card--noimg .dtj-ss__panel { padding: var(--ss-pad-m, 20px); }
 .dtj-ss__card--notext .dtj-ss__media { aspect-ratio: var(--ss-ratio, 4 / 3); }
 
+/* adapt: the whole picture at its own shape, never cropped. The photo keeps its ratio on every screen; when the text panel is taller
+   than the picture, the picture sits in the middle of its side on the card's own colour instead of being stretched and cut. */
+.dtj-ss__card--adapt .dtj-ss__media,
+.dtj-ss__card--adapt.dtj-ss__card--notext .dtj-ss__media { aspect-ratio: var(--ss-img-ratio, 4 / 3); }
+.dtj-ss__card--adapt .dtj-ss__img { object-fit: contain; }
+
 /* wide screens: photo and panel side by side, the photo as tall as the panel */
 @media screen and (min-width: 750px) {
   .dtj-ss__card { flex-direction: row; }
@@ -205,6 +211,9 @@
   .dtj-ss__panel { padding: var(--ss-pad-d, 32px); }
 
   .dtj-ss__card--notext .dtj-ss__media { flex-basis: 100%; }
+
+  .dtj-ss__card--adapt { align-items: center; }
+  .dtj-ss__card--adapt .dtj-ss__media { min-height: 0; aspect-ratio: var(--ss-img-ratio, 4 / 3); }
 
   .dtj-ss__heading {
     margin-bottom: 14px;
