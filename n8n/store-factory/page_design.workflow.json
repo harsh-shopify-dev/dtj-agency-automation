@@ -1,0 +1,494 @@
+{
+  "id": "n8MzskKamTbVhZ3h",
+  "name": "Store Factory: Page Design",
+  "versionId": "c36140fe-d60b-44ef-93fe-0358508ed93d",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "nodes": [
+    {
+      "id": "134de678-5b4a-4715-8692-c569f182ac0d",
+      "name": "When a Brief Is Ready",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "row_id",
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "66ea569a-ab9b-45bc-9c0b-6e9f61063b61",
+      "name": "Load Brief",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "7FWesTH7eVyLNuOQ",
+          "cachedResultName": "dtj_client_intake"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.row_id }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      }
+    },
+    {
+      "id": "4eb9d4a3-e0ad-49a9-8792-9440451c0f4c",
+      "name": "Request for Claude Code: Page Design",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Claude Code designs this page instead of the Claude API (Harsh's choice, 9 Oct 2026: the same hand-off as the dtj content workflow).\n// Claude Code reads \"request\" from this node's output, runs the page builder on Harsh's PC\n// (services/store-builder: python -m page_builder.run_client --intake <this output as JSON> --plan answer --copy answer ...),\n// shows Harsh the plan and the screenshots, then POSTs to resume_url:\n// {\"page_status\": \"ready for approval\" | \"needs a look\" | \"could not build\", \"approve_code\": \"<12 hex, only when ready>\",\n//  \"summary\": \"<the plan in two or three sentences>\", \"sections\": [\"...\"], \"note\": \"<anything Harsh should know>\"}\nconst row = $input.first().json;\nif (!row || !row.id) throw new Error('No brief with that row id in dtj_client_intake');\nreturn [{ json: {\n  claude_code_stage: 'page_design',\n  resume_url: $execution.resumeUrl,\n  request: {\n    row_id: row.id, brand_name: row.brand_name, store_domain: row.store_domain, theme_id: row.theme_id || '',\n    status: row.status, problems: row.problems || '',\n    brand: JSON.parse(row.brand_json || '{}'), facts: JSON.parse(row.facts_json || '{}'),\n    picture_links: JSON.parse(row.picture_links_json || '[]'), logo_link: row.logo_link || '', notes: row.notes || '',\n  },\n} }];"
+      }
+    },
+    {
+      "id": "1bbff904-923c-46f1-bd7b-e1965c35c571",
+      "name": "Wait for Claude Code: Page Design",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "limitWaitTime": true,
+        "limitType": "afterTimeInterval",
+        "resumeAmount": 3,
+        "resumeUnit": "days",
+        "options": {}
+      },
+      "webhookId": "2b303f14-cacc-411a-8ee4-c24faad08834"
+    },
+    {
+      "id": "9dd0591a-61b8-4b45-8045-68eaf172588d",
+      "name": "Claude Code Reply: Page Design",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['ready for approval', 'needs a look', 'could not build'];\nlet status = allowed.includes(b.page_status) ? b.page_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst code = /^[0-9a-f]{12}$/.test(String(b.approve_code || '')) ? String(b.approve_code) : '';\nif (status === 'ready for approval' && !code) status = 'reply not understood (no approval code)';\nreturn [{ json: {\n  row_id: $('Load Brief').first().json.id,\n  page_status: status,\n  approve_code: status === 'ready for approval' ? code : '',\n  page_summary: String(b.summary || ''),\n  page_sections: Array.isArray(b.sections) ? b.sections.map(String).join(', ') : '',\n  page_note: String(b.note || ''),\n} }];"
+      }
+    },
+    {
+      "id": "bb0c2dcf-6e99-4348-bfae-67abad60d570",
+      "name": "Record Page Design",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "7FWesTH7eVyLNuOQ",
+          "cachedResultName": "dtj_client_intake"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.row_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "page_status": "={{ $json.page_status }}",
+            "approve_code": "={{ $json.approve_code }}",
+            "page_summary": "={{ $json.page_summary }}",
+            "page_sections": "={{ $json.page_sections }}",
+            "page_note": "={{ $json.page_note }}",
+            "page_updated_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "page_status",
+              "displayName": "page_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "approve_code",
+              "displayName": "approve_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_summary",
+              "displayName": "page_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_sections",
+              "displayName": "page_sections",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_note",
+              "displayName": "page_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_updated_at",
+              "displayName": "page_updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "280f26af-0c11-4058-84a6-773e1de00367",
+      "name": "Ready for Approval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Claude Code Reply: Page Design').item.json.page_status }}",
+              "rightValue": "ready for approval",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "b31f7be1-3a6c-4feb-850a-abf22a82ec01",
+      "name": "Request for Claude Code: Write to Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Second hand-off. Claude Code writes the page into the client's DRAFT theme only after Harsh says yes to this exact page\n// (python -m page_builder.push_page --out <run folder> --approve <approve_code> --approved-by <name>; it refuses the live theme),\n// then POSTs to resume_url: {\"result\": \"written to draft\" | \"not written\", \"approved_by\": \"<name>\", \"note\": \"<what happened>\"}\nconst d = $('Claude Code Reply: Page Design').first().json;\nconst brief = $('Load Brief').first().json;\nreturn [{ json: {\n  claude_code_stage: 'write_to_draft',\n  resume_url: $execution.resumeUrl,\n  request: { row_id: d.row_id, approve_code: d.approve_code, store_domain: brief.store_domain, theme_id: brief.theme_id || '' },\n} }];"
+      }
+    },
+    {
+      "id": "9fe9110c-5f2d-4826-8800-b69bd2144f1a",
+      "name": "Wait for Claude Code: Write to Draft",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        240
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "limitWaitTime": true,
+        "limitType": "afterTimeInterval",
+        "resumeAmount": 14,
+        "resumeUnit": "days",
+        "options": {}
+      },
+      "webhookId": "4822813b-7a1a-454d-a219-8006ee37cb59"
+    },
+    {
+      "id": "a94a3d2d-b643-4950-931b-e02f78e298a7",
+      "name": "Claude Code Reply: Write to Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Reads what Claude Code posted after the write (a timeout resumes with no body).\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['written to draft', 'not written'];\nconst result = allowed.includes(b.result) ? b.result : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 14 days)');\nreturn [{ json: {\n  row_id: $('Claude Code Reply: Page Design').first().json.row_id,\n  page_status: result,\n  approved_by: result === 'written to draft' ? String(b.approved_by || '') : '',\n  page_note: String(b.note || ''),\n} }];"
+      }
+    },
+    {
+      "id": "f601a8e3-fba5-4fe4-b0c2-8ec20929879e",
+      "name": "Record Write to Draft",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        240
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "7FWesTH7eVyLNuOQ",
+          "cachedResultName": "dtj_client_intake"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.row_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "page_status": "={{ $json.page_status }}",
+            "approved_by": "={{ $json.approved_by }}",
+            "page_note": "={{ $json.page_note }}",
+            "page_updated_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "page_status",
+              "displayName": "page_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "approved_by",
+              "displayName": "approved_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_note",
+              "displayName": "page_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_updated_at",
+              "displayName": "page_updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "278eeb46-54b0-4287-8b62-bb4ae9434c2b",
+      "name": "Sticky Note a4b3e49a",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -420
+      ],
+      "parameters": {
+        "content": "## Store factory: page design (Claude Code hand-off)\nStarted by \"Shopify Automation\" when a brief is saved with status `new` (or by hand with a `row_id`).\n\n1. **Page Design**: the run pauses. Claude Code (Harsh's desktop session) reads the request, designs the page with the page builder (plan and copy written by Claude Code, checked by code), shows Harsh, and posts the result with an approval code. Nothing touches the store.\n2. **Write to Draft**: the run pauses again. Only after Harsh says yes to that exact page does Claude Code write it into the client's DRAFT theme (never the live theme) and post the result.\n\nEvery step is recorded on the brief's row in **dtj_client_intake** (page_status, approve_code, approved_by). Source in git: `n8n/store-factory/`.",
+        "color": 5,
+        "width": 1300,
+        "height": 300
+      }
+    }
+  ],
+  "connections": {
+    "When a Brief Is Ready": {
+      "main": [
+        [
+          {
+            "node": "Load Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Brief": {
+      "main": [
+        [
+          {
+            "node": "Request for Claude Code: Page Design",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request for Claude Code: Page Design": {
+      "main": [
+        [
+          {
+            "node": "Wait for Claude Code: Page Design",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Claude Code: Page Design": {
+      "main": [
+        [
+          {
+            "node": "Claude Code Reply: Page Design",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Code Reply: Page Design": {
+      "main": [
+        [
+          {
+            "node": "Record Page Design",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ready for Approval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready for Approval?": {
+      "main": [
+        [
+          {
+            "node": "Request for Claude Code: Write to Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request for Claude Code: Write to Draft": {
+      "main": [
+        [
+          {
+            "node": "Wait for Claude Code: Write to Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Claude Code: Write to Draft": {
+      "main": [
+        [
+          {
+            "node": "Claude Code Reply: Write to Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Code Reply: Write to Draft": {
+      "main": [
+        [
+          {
+            "node": "Record Write to Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
