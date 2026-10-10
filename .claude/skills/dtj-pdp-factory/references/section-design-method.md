@@ -33,7 +33,8 @@ a fact you do not have, make it a marked sample. Never fill a section by repeati
    the catalog). Know the item limits, select values and ranges. Never plan a setting the block does not have.
 4. **Write the words:**
    - Headline: a benefit, at most 8 words, sentence case, the brand's voice; not a bare feature or label.
-   - Body: at most 2 lines on a 390 px phone (about 90 characters per line), one idea.
+   - Body: at most 2 lines on a 390 px phone (about 90 characters per line), one idea. Story cards (W05, W06): at most 20
+     words and 4 points of at most 32 characters (lint L17).
    - Items: the same grammatical shape for every item; icon labels 2-5 words.
    - Samples: believable and modest (a new D2C brand has hundreds or a few thousand customers, a 4.5-4.8 rating, reviews that
      mention one concrete moment). Never the forbidden kinds (medical claims, "clinically proven", competitor names, licences,
@@ -44,11 +45,16 @@ a fact you do not have, make it a marked sample. Never fill a section by repeati
    `motion-by-category.md` allows.
 6. **Check the phone form:** picture first, short text, sideways lists show part of the next card, tap targets 44 px, nothing
    wider than the screen.
-7. **CTA:** the page's single label; scroll to the buy box (several variants or bundles) or add to cart (one variant).
+7. **CTA:** the page's one action (scroll to the buy box with several variants or bundles, add to cart with one variant), with a
+   label named after THIS section: a buying action, 2-5 words, at most 24 characters, verb first, never "Learn more"; different
+   from every other button (lint L16). Write it in the section notes; it goes into `copy-answer.json` as
+   `<section id>_cta.button_label` (W11 `dtj_guarantee.button_label`, W14 `dtj_stories.cta_text`). W15 keeps the main label.
 8. **Self-check** (write "ok" or the fix): answers its one question in 3 seconds? anything said elsewhere? every number has a
    source or SAMPLE mark? contrast passes? understandable on a phone without the desktop picture?
 
 ## Copy rules that keep pages from sounding generated
+The full method is `copywriting.md` (enemy, sensory paradox, payoff; the voice dial by vibe; truth rules). The rules below are
+the minimum for every line.
 - No superlatives without proof ("best", "No. 1"), no exclamation marks, no ALL CAPS sentences (a short uppercase eyebrow or
   marquee is fine), no emoji in headings. Indian rules: ASCI on claims; FSSAI licence number on food and nutraceutical pages when
   the brand gives it.
@@ -61,7 +67,7 @@ a fact you do not have, make it a marked sample. Never fill a section by repeati
 ```markdown
 # Page plan: <brand> <product> (<date>), DTJ Standard Product Page v1
 Vibe: <electric | fresh | calm | premium | playful | editorial | appetite | natural> (why, one line)
-CTA label: "<label>"  Action: scroll-to-buy-box | add-to-cart
+Main CTA label (W15): "<label>"  Action: scroll-to-buy-box | add-to-cart  (section labels: in each section's notes)
 Signature section(s): <W..>
 Store checks: title <ok | propose ...>, stock <ok | SOLD OUT>, pictures <n, which>, policies <found | missing>
 

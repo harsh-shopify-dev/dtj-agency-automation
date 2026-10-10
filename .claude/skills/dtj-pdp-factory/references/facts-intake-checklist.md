@@ -37,6 +37,20 @@ Every fact goes into `facts.json` with a `source` (at most about 60 characters: 
 ## Brand
 - Logo, pack colours (hex if they have them), fonts, tone of voice examples, sites or pages they love or hate.
 
+## Voice (for the copy: `copywriting.md`)
+- The sensation, in customers' own words: what it tastes, feels, smells, sounds or looks like (read 20 reviews; copy the
+  adjectives and verbs they use, with the review as source).
+- The two qualities that make it different and seem to fight (sweet and hot, energy and calm, gentle and strong).
+- The everyday situation the shopper hates that this ends (the enemy), and the moment of the payoff.
+- Real use scenes, local and concrete (Maggi, momos, the Pune-Mumbai drive, exam week).
+- Words the brand never uses, and jokes that are off limits for the category.
+- Badge check: every "natural / no preservatives / vegan / sugar-free" claim checked against the ingredient list and label
+  (MojoVibe's page says "No Preservatives" while listing Sodium Benzoate, INS 211).
+- Picture check: read every picture's printed text against the ingredient list too. A picture whose printed claim is false or
+  unverified stays OUT of `facts.media` entirely, because the builder fills empty picture slots with the media pictures (Hope N Skin,
+  10 Oct 2026: the ingredients picture printed Alpha Arbutin, which is not in the formula; another printed an unproven 'Balanced pH';
+  before/after photos with no proof they are real customers are never used as results).
+
 ## Sample content while designing (Harsh's decision, 10 Oct 2026)
 Every section of the fixed set is filled during design. What the client has not sent yet becomes a marked SAMPLE (source starting
 with `SAMPLE`), listed in the build report and in `content-needed.md`, and replaced or signed off by Harsh before the page goes

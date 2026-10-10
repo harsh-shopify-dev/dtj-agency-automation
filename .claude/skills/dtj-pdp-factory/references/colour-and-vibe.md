@@ -46,8 +46,17 @@ Contrast is never traded for vibe: body text 4.5:1, large text and icons 3:1. Me
 ## Step 4: pace the colour down the page
 
 Walk the wireframe slots and give each a role so the page has rhythm (lint L04: neighbours never share a background):
-- electric example: W02 white, W03 ink, W04 brand, W05 white, W06 brand, W07 ink, W08 white, W10 brand, W11 accent band,
-  W13 white, W14 ink, W15 photo + ink overlay. Three to five strong bands; never two strong bands touching.
+- electric / playful (the builder's `recipes/dtj-standard-v1.json` "bold" roles, Harsh's review of Go Mints v2, 10 Oct 2026):
+  W02 white, W03 white (customer photos carry the colour), W04 brand with WHITE ticks, W05 white with an INK story card (white
+  words, accent ticks with ink checks), W06 brand, W07 ink with WHITE review cards (dark words, ink star tiles with accent stars),
+  W08 white, W09 accent, W10 brand with white icon badges, W11 accent, W12 white with ink number cards and accent figures, W13
+  brand with INK question boxes (white questions and answers, accent open / close button), W14 white, W15 photo + ink overlay.
+  Never two strong bands touching.
+- Calm pages: story cards are the brand colour deepened until white words read (default), or with `brand.card_tone: "neutral"` a
+  minimalist grey with the brand colour only on the tick checks (Harsh's choice for Hope N Skin, 10 Oct 2026, when the orange card
+  felt brown and heavy). Offer the grey when the brand colour turns muddy once deepened (orange, yellow, kraft).
+- White words never sit on the brand colour itself when it is bright: white on Go Mints cyan #12BEE9 is 2.2:1. When Harsh asks
+  for white text there, the words go into an ink box instead (his choice, 10 Oct 2026: "navy boxes, white text").
 - calm and premium: white and one soft surface alternating, ONE emphasis band at the signature slot.
 
 ## Step 5: check it like a designer before the code does
@@ -61,9 +70,10 @@ Walk the wireframe slots and give each a role so the page has rhythm (lint L04: 
 
 ## What the builder does today (10 Oct 2026) and the change it needs
 
-`direction.py` implements the fresh/calm column for every brand: alternate band = a very light tint of the brand colour, one dark
-band, accent pushed to 4.5:1. That is why every brand looks calm. **Gap V1** (build next, with tests): a `vibe` field in the brand
-profile that `direction.derive()` reads:
+Status: V1 is BUILT (10 Oct 2026): `brand.vibe` electric / playful gives the bold roles above; every other vibe keeps the calm
+column. The original gap description, kept for reference: `direction.py` implemented the fresh/calm column for every brand
+(alternate band = a very light tint of the brand colour, one dark band, accent pushed to 4.5:1), so every brand looked calm.
+The change, as built: a `vibe` field in the brand profile that `direction.derive()` reads:
 - electric: band = the brand colour itself (text = ink or white, whichever passes 4.5:1; if neither passes, darken the band until one
   does), up to 3 emphasis bands (lint L05 limit raised for electric only), CTA = accent fill with ink text, heading weight 800+.
 - playful: second brand colour for bands, 2 emphasis bands.

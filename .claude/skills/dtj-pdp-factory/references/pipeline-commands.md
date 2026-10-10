@@ -40,6 +40,9 @@ python -m page_builder.run_client --brand <C>/brand.json --facts <C>/facts.json 
   --client-registry page_builder/clients/<name>.json --template-suffix dtj-<product>
 ```
 - `<C>` = `../../.work/clients/<client>-<product>` (git-ignored).
+- Editor edits to keep: `--keep-edits <C>/kept-edits.json` (a list of {section, block, setting, value, why}; the build stops if a
+  block or setting no longer exists). Reader videos: in `facts.ugc[]` add `"video": "<name in Content > Files>"` (the picture
+  stays as fallback).
 - First run with `--plan dry --copy dry` (or `off`): it writes `plan-request.json` / `copy-request.json`; answer them (you are the AI
   step while Harsh is in the loop; unattended runs use the API key: `--plan live --copy live`), then run with `answer`.
 - `--no-theme-check` designs without reading the store (nothing can be pushed from it). The theme check refuses a LIVE theme by design.

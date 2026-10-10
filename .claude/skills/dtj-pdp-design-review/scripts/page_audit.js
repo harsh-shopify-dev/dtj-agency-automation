@@ -13,7 +13,9 @@
   const all = [...document.querySelectorAll('body *')];
   const buttons = [...document.querySelectorAll('button, a, input[type=submit]')].filter(visible);
   const buyRe = /(add to cart|buy now|buy it now|sold out|get (my|your)|shop now|order now)/i;
-  const buy = buttons.filter((b) => buyRe.test(text(b) || b.value || ''));
+  // every button of a DTJ call-to-action block counts too: since 10 Oct 2026 each one is named after its section ("Make the switch")
+  const ctaBlock = (b) => !!b.closest('.dtj-cta, .dtj-sl__btn, .dtj-st__cta, .dtj-ts__cta') || /(^|\s)(dtj-[a-z]+__btn|dtj-[a-z]+__cta)(\s|$)/.test(b.className || '');
+  const buy = buttons.filter((b) => !b.closest('[aria-hidden="true"]') && (buyRe.test(text(b) || b.value || '') || ctaBlock(b)));
   const priceEls = all.filter((e) => e.children.length === 0 && /(₹|rs\.?|inr)\s?\d/i.test(text(e)));
   const h1 = [...document.querySelectorAll('h1')].filter(visible).map(text);
   const mainBuy = buy.find((b) => /(add to cart|buy|sold out)/i.test(text(b) || b.value || ''));
@@ -48,6 +50,18 @@
   const smallTargets = buttons.filter((b) => { const r = b.getBoundingClientRect(); return (r.width < 40 || r.height < 40) && !b.closest('p, li'); })
     .slice(0, 30).map((b) => (text(b) || b.getAttribute('aria-label') || b.tagName).slice(0, 40));
   const noAlt = [...document.querySelectorAll('img')].filter((i) => visible(i) && !i.hasAttribute('alt')).length;
+  // words closer than 12 px to the screen edge (the review heading sat 1.6 px from a 375 px edge on Go Mints v3, 10 Oct 2026);
+  // sideways carousels and off-screen menus are skipped: their edges move
+  const scrollsSideways = (e) => { for (let a = e.parentElement; a; a = a.parentElement) { const ox = getComputedStyle(a).overflowX;
+    if ((ox === 'auto' || ox === 'scroll' || ox === 'hidden') && a.scrollWidth > a.clientWidth + 2) return true; } return false; };
+  const nearEdge = [];
+  for (const e of blocks) {
+    const rg = document.createRange(); rg.selectNodeContents(e);
+    const rs = [...rg.getClientRects()].filter((r) => r.width > 2 && r.height > 2 && r.right > 0 && r.left < vw);
+    if (!rs.length || scrollsSideways(e)) continue;
+    const gap = Math.min(...rs.map((r) => Math.min(r.left, vw - r.right)));
+    if (gap < 12) nearEdge.push({ text: text(e).slice(0, 50), gap_px: Math.round(gap * 10) / 10 });
+  }
 
   // 5. layout
   const overflowing = document.documentElement.scrollWidth > vw + 1;
@@ -67,7 +81,7 @@
     first_screen: firstScreen,
     ctas: { count: ctas.length, labels: [...new Set(ctas.map((c) => c.label.toLowerCase()))], longest_gap_px: Math.round(maxGap), list: ctas.slice(0, 30) },
     repetition: { sentences: repeatedText, images_used_3plus: repeatedImages },
-    legibility: { text_under_12px: tinyText, small_tap_targets: smallTargets, images_without_alt: noAlt },
+    legibility: { text_under_12px: tinyText, small_tap_targets: smallTargets, images_without_alt: noAlt, text_near_edge: nearEdge.slice(0, 20) },
     structure: { sections, headings, animations_running_in_first_screen: moving },
   };
 })()
