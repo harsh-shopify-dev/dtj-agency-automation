@@ -24,7 +24,12 @@ STRUCTURE = {
     "numbers": "{brand} in numbers",
     "glance": "{brand} at a glance",
     "footnote": "From {sources}.",
+    "ugc": "{brand} in real life",
+    "why_us": "Why {brand}",
+    "stories": "In their own words",
+    "cta": "Shop now",
 }
+MAIN = "#MainContent"  # Horizon's main content anchor: the top of the product (buy box) section
 
 
 @dataclass
@@ -33,8 +38,9 @@ class Section:
     app: str
     block: str
     settings: dict = field(default_factory=dict)
-    role: str = "auto"  # auto | plain | band | dark | none (none = no band, no alternation)
+    role: str = "auto"  # auto | plain | band | dark | accent | none (none = no band, no alternation)
     kind: str = ""
+    cta: bool = False  # a DTJ CTA button follows this section (DTJ Standard Product Page v1)
 
 
 @dataclass
@@ -76,6 +82,8 @@ class Ctx:
             raise ValueError(f"{section.id}.{key}: {len(value)} characters is too long for a text setting")
         if kind == "fact" and str(source).lower().startswith("demo"):
             kind = "demo"
+        if kind == "fact" and str(source).upper().startswith("SAMPLE"):
+            kind = "sample"  # sample content (Harsh, 10 Oct 2026): listed in the report, draft themes only, replaced before live
         if kind == "structure" and f"{section.id}.{key}" in self.copy:
             value, kind, source = self.copy[f"{section.id}.{key}"], "copy", "claude copy step (validated)"
         section.settings[key] = value
@@ -130,7 +138,12 @@ def why_features(ctx: Ctx):
     if n == 0:
         return Omit("why_features", "needs 4 or 6 benefits so both sides of the layout are filled")
     s = Section("dtj_why", "dtj-sections-2", "feature-showcase", role="plain", kind="why_features")
-    ctx.put(s, "heading", ctx.structure("why"))
+    intro = ctx.facts.get("feature_intro")
+    if intro:  # W10 of the standard page: a benefit headline and two sentences above the four benefits
+        ctx.put(s, "heading", intro["heading"], "fact", intro["source"])
+        ctx.put(s, "subheading", intro.get("text"), "fact", intro["source"])
+    else:
+        ctx.put(s, "heading", ctx.structure("why"))
     image = ctx.media("pack")
     if image:
         s.settings["image"] = image
@@ -313,7 +326,129 @@ def faq(ctx: Ctx):
     return s
 
 
-BUILDERS = {f.__name__: f for f in (trust_marquee, why_features, facts_glance, story_split, how_split, proof_panel, pack_inside, free_from, comparison, reviews_slider, faq)}
+# ------------------------------------------------------------------------------------------------ DTJ Standard Product Page v1 (10 Oct 2026)
+def cta_label(ctx: Ctx) -> tuple[str, str, str]:
+    """The page's ONE call-to-action label: (label, kind, source)."""
+    c = ctx.facts.get("cta")
+    return (c["label"], "fact", c["source"]) if c else (ctx.structure("cta"), "structure", "page structure")
+
+
+def ugc_strip(ctx: Ctx):
+    items = ctx.facts.get("ugc", [])
+    if len(items) < 3:
+        return Omit("ugc_strip", "needs 3-6 customer photos or videos (with permission), or SAMPLE pictures on our own store")
+    s = Section("dtj_ugc", "dtj-blocks", "shoppable-reels", role="dark", kind="ugc_strip")
+    ctx.put(s, "heading", ctx.structure("ugc"))
+    handle = ctx.facts.get("product", {}).get("handle")
+    if handle:
+        s.settings["products"] = [handle] * min(6, len(items))
+    for i, it in _slots(6, items):
+        s.settings[f"media_type_{i}"] = "image"
+        image = ctx.media(it["image_role"])
+        if image:
+            s.settings[f"image_{i}"] = image
+    return s
+
+
+def story_split_2(ctx: Ctx):
+    st = ctx.facts.get("story_2")
+    if not st:
+        return Omit("story_split_2", "needs the second big benefit (a heading, a short paragraph, 4 points and their source)")
+    s = Section("dtj_story_2", "dtj-sections-2", "split-story", role="band", kind="story_split_2")
+    ctx.accent_pair(s, "heading", "heading_accent", st["heading"], st.get("accent"), "fact", st["source"])
+    ctx.put(s, "body", st.get("body"), "fact", st["source"])
+    for i, b in _slots(TICKS, st.get("bullets", [])):
+        ctx.put(s, f"bullet_{i}", b, "fact", st["source"])
+    image = ctx.media(st.get("image_role"))
+    if image:
+        s.settings["image"] = image
+    s.settings["image_side"] = "end"
+    return s
+
+
+def why_us(ctx: Ctx):
+    d = ctx.facts.get("differentiators")
+    if not d or len(d.get("items", [])) < 4:
+        return Omit("why_us", "needs 4 or 6 differentiators (title + one line each) and their source")
+    items = d["items"][:6] if len(d["items"]) >= 6 else d["items"][:4]
+    s = Section("dtj_why_us", "dtj-sections", "whats-inside", role="plain", kind="why_us")
+    ctx.put(s, "heading", d["heading"], "fact", d["source"])
+    if d.get("highlight") and d["highlight"] in d["heading"] and ctx.take_accent():
+        ctx.put(s, "highlight_word", d["highlight"], "fact", d["source"])
+    s.settings["columns"] = "3" if len(items) == 6 else "2"
+    for i, it in _slots(6, items):
+        ctx.put(s, f"name_{i}", it["title"], "fact", it["source"])
+        ctx.put(s, f"description_{i}", it.get("text"), "fact", it["source"])
+        image = ctx.media(it.get("image_role"))
+        if image:
+            s.settings[f"image_{i}"] = image
+    return s
+
+
+def benefit_strip_2(ctx: Ctx):
+    pts = ctx.facts.get("strip_2", [])
+    if len(pts) < 3:
+        return Omit("benefit_strip_2", "needs at least 3 points that are not in the first strip")
+    s = Section("dtj_marquee_2", "dtj-sections", "marquee", role="none", kind="benefit_strip_2")
+    for i, p in _slots(10, pts):
+        ctx.put(s, f"text_{i}", p["text"], "fact", p["source"])
+    return s
+
+
+def guarantee(ctx: Ctx):
+    g = ctx.facts.get("guarantee")
+    if not g:
+        return Omit("guarantee", "needs the brand's guarantee or return promise with its terms (or SAMPLE terms)")
+    s = Section("dtj_guarantee", "dtj-sections-2", "cta", role="accent", kind="guarantee")
+    s.settings["style"] = "banner"
+    ctx.put(s, "heading", g["heading"], "fact", g["source"])
+    ctx.put(s, "text", g.get("text"), "fact", g["source"])
+    ctx.put(s, "seal_text", g.get("seal"), "fact", g["source"])
+    label, kind, source = cta_label(ctx)
+    ctx.put(s, "button_label", label, kind, source)
+    s.settings["action"] = (ctx.facts.get("cta") or {}).get("action", "scroll")
+    return s
+
+
+def stories(ctx: Ctx):
+    items = ctx.facts.get("stories", [])
+    if len(items) < 3:
+        return Omit("stories", "needs 3-6 customer stories (photo, name, quote) or SAMPLE ones")
+    s = Section("dtj_stories", "dtj-sections", "stories", role="band", kind="stories")
+    ctx.put(s, "heading", ctx.structure("stories"))
+    for i, it in _slots(6, items):
+        ctx.put(s, f"name_{i}", it["name"], "fact", it["source"])
+        ctx.put(s, f"quote_{i}", it["quote"], "fact", it["source"])
+        ctx.put(s, f"tags_{i}", it.get("tags"), "fact", it["source"])
+        image = ctx.media(it.get("image_role"))
+        if image:
+            s.settings[f"photo_{i}"] = image
+    label, kind, source = cta_label(ctx)
+    ctx.put(s, "cta_text", label, kind, source)
+    s.settings["cta_link"] = MAIN
+    return s
+
+
+def final_push(ctx: Ctx):
+    f = ctx.facts.get("final_push")
+    if not f:
+        return Omit("final_push", "needs the final value proposition (a heading, one sentence, a picture)")
+    s = Section("dtj_final", "dtj-sections-2", "slideshow-pro", role="none", kind="final_push")
+    ctx.put(s, "heading_1", f["heading"], "fact", f["source"])
+    ctx.put(s, "description_1", f.get("text"), "fact", f["source"])
+    label, kind, source = cta_label(ctx)
+    ctx.put(s, "button_label_1", label, kind, source)
+    s.settings["button_url_1"] = MAIN
+    image = ctx.media(f.get("image_role")) or ctx.media("pack")
+    if image:
+        s.settings["image_1"] = image
+    s.settings.update({"autoplay": False, "show_progress": False, "arrows_position": "none", "overlay_style": "solid",
+                       "overlay_opacity": 60, "content_position": "center", "ratio_desktop": "21 / 9", "ratio_mobile": "4 / 5"})
+    return s
+
+
+BUILDERS = {f.__name__: f for f in (trust_marquee, why_features, facts_glance, story_split, how_split, proof_panel, pack_inside, free_from, comparison, reviews_slider, faq,
+                                    ugc_strip, story_split_2, why_us, benefit_strip_2, guarantee, stories, final_push)}
 
 
 # ------------------------------------------------------------------------------------------------ buy box blocks

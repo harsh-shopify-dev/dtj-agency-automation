@@ -11,6 +11,7 @@
     "category": {"enum": ["beauty", "supplements", "home-care", "food", "apparel", "other"]},
     "price_tier": {"enum": ["value", "mid", "premium"]},
     "voice": {"enum": ["plain", "warm", "clinical", "playful", "luxe"]},
+    "vibe": {"enum": ["electric", "fresh", "calm", "premium", "playful", "editorial", "appetite", "natural"], "description": "the feeling the page must give (.claude/skills/dtj-pdp-factory/references/colour-and-vibe.md); direction.py does not use it yet (gap V1)"},
     "shape_language": {"enum": ["sharp", "soft", "round"]},
     "colors": {
       "type": "object",

@@ -95,7 +95,7 @@ def menu(brand: dict, facts: dict, catalog: Catalog | None = None) -> list[dict]
     d = direction_mod.derive(brand)
     purpose = {e["builder"]: e["why"] for e in _recipe()["sections"]}
     items = []
-    for name, build in sections.BUILDERS.items():
+    for name, build in ((n, b) for n, b in sections.BUILDERS.items() if n in BLOCKS):  # the plan step's menu: the pdp recipe's sections
         res = build(sections.Ctx(brand, facts, d, cat))
         item = {"section": name, "what_it_is_for": purpose.get(name, ""), "blocks": BLOCKS[name], "available": not isinstance(res, sections.Omit)}
         if isinstance(res, sections.Omit):
@@ -122,7 +122,7 @@ def load_references(paths) -> list[dict]:
 
 
 def response_schema() -> dict:
-    names = list(sections.BUILDERS)
+    names = [n for n in sections.BUILDERS if n in BLOCKS]
     pick = {"type": "object", "additionalProperties": False, "required": ["section", "why"],
             "properties": {"section": {"type": "string", "enum": names}, "why": {"type": "string"}}}
     return {

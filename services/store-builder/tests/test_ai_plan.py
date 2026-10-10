@@ -30,7 +30,7 @@ def answer(order, left=(), signature="free_from_band", **choices) -> dict:
     }
 
 
-ALL = list(sections.BUILDERS)
+ALL = [n for n in sections.BUILDERS if n in ai_plan.BLOCKS]  # the plan step chooses among the pdp recipe's sections only
 
 
 class MenuAndRequest(unittest.TestCase):

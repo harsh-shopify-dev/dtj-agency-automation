@@ -61,6 +61,7 @@ class PageModel:
     demo: bool = False
     demo_items: list = field(default_factory=list)
     demo_pictures: list = field(default_factory=list)
+    extras: dict = field(default_factory=dict)  # section id -> the CTA button block that follows it inside the same section
 
 
 @dataclass
@@ -104,7 +105,16 @@ def _insert(order_list: list, keys: list, before: str | None = None, after: str 
         order_list.insert(idx + n, k)
 
 
-def _horizon_template(built, flat, bb, cat) -> dict:
+def _blocks_of(sec, cat, extras) -> tuple[dict, list]:
+    keys = [_key(sec)]
+    blocks = {keys[0]: _block_entry(sec, cat)}
+    if sec.id in extras:
+        keys.append(_key(extras[sec.id]))
+        blocks[keys[1]] = _block_entry(extras[sec.id], cat)
+    return blocks, keys
+
+
+def _horizon_template(built, flat, bb, cat, extras=None) -> dict:
     template = copy.deepcopy(json.loads((HERE / "base" / "product-base.json").read_text(encoding="utf-8")))
     details = template["sections"]["main"]["blocks"]["product-details"]
     details["settings"]["gap"] = 10
@@ -121,13 +131,13 @@ def _horizon_template(built, flat, bb, cat) -> dict:
     _insert(order_list, [_key(s) for s in bb["before_buttons"]], before=BUY_BUTTONS)
     _insert(order_list, [_key(s) for s in bb["after_buttons"]], after=BUY_BUTTONS)
     for sec in built:
-        key = _key(sec)
-        template["sections"][sec.id] = {"type": "_blocks", "blocks": {key: _block_entry(sec, cat)}, "block_order": [key], "settings": dict(WRAP)}
+        blocks, keys = _blocks_of(sec, cat, extras or {})
+        template["sections"][sec.id] = {"type": "_blocks", "blocks": blocks, "block_order": keys, "settings": dict(WRAP)}
         template["order"].append(sec.id)
     return template
 
 
-def _dawn_template(base: dict, built, flat, bb, cat) -> dict:
+def _dawn_template(base: dict, built, flat, bb, cat, extras=None) -> dict:
     """Dawn (built 9 Oct 2026 for Harsh's Dawn 15.4.1 theme): keep the theme's own product template (its product section, custom blocks,
     related products), put the DTJ buy-box blocks into main-product (it accepts app blocks) in place of the theme's price block, and add
     each DTJ section as one of Dawn's own 'Apps' sections (no page margins: our blocks bring their own side space)."""
@@ -157,9 +167,8 @@ def _dawn_template(base: dict, built, flat, bb, cat) -> dict:
     rest = [sid for sid in template["order"] if sid != "main"]
     template["order"] = ["main"]
     for sec in built:
-        key = _key(sec)
-        template["sections"][sec.id] = {"type": "apps", "blocks": {key: _block_entry(sec, cat)}, "block_order": [key],
-                                        "settings": {"include_margins": False}}
+        blocks, keys = _blocks_of(sec, cat, extras or {})
+        template["sections"][sec.id] = {"type": "apps", "blocks": blocks, "block_order": keys, "settings": {"include_margins": False}}
         template["order"].append(sec.id)
     template["order"] += rest  # the theme's own sections below the product (related products) stay last
     return template
@@ -178,7 +187,7 @@ def _load_recipe(name: str = "pdp") -> dict:
 
 
 def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalog: Catalog | None = None, copy_overrides: dict | None = None,
-              plan: dict | None = None, theme: str = "horizon", base_template: dict | None = None) -> Result:
+              plan: dict | None = None, theme: str = "horizon", base_template: dict | None = None, recipe: str = "pdp") -> Result:
     """`plan` (from ai_plan.check_plan) replaces the recipe's section choice and order and may set the signature; without it the
     house rules in recipes/pdp.json decide. Either way every section is still built (or refused) by the same builders.
     `theme`: "horizon" (our base template) or "dawn" (then `base_template` is the Dawn theme's own templates/product.json, so its
@@ -192,14 +201,17 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
     cat = catalog or Catalog()
     direction = direction_mod.derive(brand, logo_path)
     ctx = sections.Ctx(brand, facts, direction, cat, copy_overrides)
-    recipe = _load_recipe()
+    recipe_name = recipe
+    recipe = _load_recipe(recipe_name)
+    fixed = bool(recipe.get("fixed"))  # DTJ Standard Product Page v1: same sections, same order, every product (Harsh, 10 Oct 2026)
     entries = {e["builder"]: e for e in recipe["sections"]}
-    order = recipe.get("overrides", {}).get(brand["category"], {}).get("order") or [e["builder"] for e in recipe["sections"]]
+    order = (None if fixed else recipe.get("overrides", {}).get(brand["category"], {}).get("order")) or [e["builder"] for e in recipe["sections"]]
     omitted = []
     if plan:
         if plan.get("signature"):
             direction.signature = plan["signature"]
             direction.why["signature"] = f"Chosen by the plan: {plan['signature']}."
+    if plan and not fixed:
         unknown = [n for n in plan["order"] if n not in sections.BUILDERS]
         if unknown:
             raise InputError(f"plan names unknown sections: {unknown}")
@@ -218,13 +230,25 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
             continue
         res = sections.BUILDERS[name](ctx)
         if isinstance(res, sections.Omit):
-            omitted.append({"section": name, "reason": res.reason})
+            omitted.append({"section": name, "reason": res.reason, **({"slot": entry["slot"]} if entry.get("slot") else {})})
         else:
+            res.cta = bool(entry.get("cta"))
             built.append(res)
 
     # ---- bands: alternate plain / band, a dark band only for the brand's signature section, story + how share one band
     roles, prev, prev_kind = {}, "band", ""
+    role_map = None
+    if fixed:
+        role_map = recipe["roles"]["bold" if direction.vibe in direction_mod.BOLD_VIBES and not direction.dark_mode else "calm"]
     for sec in built:
+        if role_map is not None:
+            role = role_map.get(sec.kind, "plain")
+            if role != "none" and role != "plain" and role == prev:
+                role = "plain"  # two neighbours never share a colour (lint L04): a missing section must not glue two bands together
+            roles[sec.id] = role
+            if role != "none":
+                prev = role
+            continue
         if sec.role == "none":
             roles[sec.id] = "none"
             continue
@@ -246,8 +270,28 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
             sec.settings["padding_top"] = 10
             built[i - 1].settings["padding_bottom"] = 10
 
+    # ---- the page's ONE call to action after the sections that end with one in the wireframe (dtj-cta, same band as its section)
+    extras = {}
+    label, label_kind, label_source = sections.cta_label(ctx)
+    action = (facts.get("cta") or {}).get("action", "scroll")
+    for sec in built:
+        if not sec.cta:
+            continue
+        c = sections.Section(f"{sec.id}_cta", "dtj-sections-2", "cta", kind="cta")
+        c.settings.update({"style": "button", "action": action})
+        ctx.put(c, "button_label", label, label_kind, label_source)
+        styling.apply(c, roles[sec.id], direction, cat)
+        gap = sec.settings.get("padding_bottom")
+        c.settings["padding_top"] = 0
+        if gap is not None and cat.has(sec.app, sec.block, "padding_bottom"):
+            c.settings["padding_bottom"] = gap
+            sec.settings["padding_bottom"] = min(gap, 16)  # the button sits right under its section, on the same band
+        extras[sec.id] = c
+
     # ---- buy box blocks
     bb = sections.buybox_blocks(ctx)
+    if fixed:  # the wireframe's buy box has no reviews box: the reviews have their own section (W07), never shown twice
+        bb["after_buttons"] = [x for x in bb["after_buttons"] if x.kind != "reviews_buybox"]
     flat = [s for group in bb.values() for s in group]
     for sec in flat:
         styling.apply(sec, "plain", direction, cat)
@@ -275,23 +319,25 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
 
     # ---- the template, in the theme's own layout
     if theme == "dawn":
-        template = _dawn_template(base_template, built, flat, bb, cat)
+        template = _dawn_template(base_template, built, flat, bb, cat, extras)
     else:
-        template = _horizon_template(built, flat, bb, cat)
+        template = _horizon_template(built, flat, bb, cat, extras)
 
-    model = PageModel(brand, facts, direction, cat, built, flat, roles, ctx.prov, template, ctx.demo, demo_pictures=demo_pictures)
+    model = PageModel(brand, facts, direction, cat, built, flat, roles, ctx.prov, template, ctx.demo, demo_pictures=demo_pictures, extras=extras)
     problems = []
-    for sec in built + flat:
+    for sec in built + flat + list(extras.values()):
         problems += cat.validate(sec.app, sec.block, sec.settings)
     findings = rules.lint(model)
     why = (plan or {}).get("why", {})
+    samples = sorted(f"{sid}.{key}" for (sid, key), v in ctx.prov.items() if v["kind"] == "sample")
     report = {
-        "recipe": recipe["id"], "chosen_by": "plan" if plan else "house rules", "direction": direction.as_report(),
-        "sections_built": [{"id": s.id, "block": f"{s.app}/{s.block}", "role": roles[s.id], "kind": s.kind,
+        "recipe": recipe["id"], "chosen_by": "fixed set" if fixed else ("plan" if plan else "house rules"), "direction": direction.as_report(),
+        "sections_built": [{"id": s.id, "block": f"{s.app}/{s.block}", "role": roles[s.id], "kind": s.kind, "cta": s.id in extras,
                             **({"why": why[s.kind]} if s.kind in why else {})} for s in built],
+        "samples": samples,
         "buybox_blocks": [{"id": s.id, "block": f"{s.app}/{s.block}"} for s in flat],
         "sections_omitted": omitted,
-        "needs_replacement": model.demo_items + model.demo_pictures,
+        "needs_replacement": samples + model.demo_items + model.demo_pictures,
         "demo_pictures": model.demo_pictures,
         "provenance": {f"{sid}.{key}": {"kind": v["kind"], "source": v["source"]} for (sid, key), v in ctx.prov.items()},
         "problems": problems,

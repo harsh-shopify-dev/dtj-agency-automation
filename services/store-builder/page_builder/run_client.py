@@ -99,6 +99,8 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
     ap.add_argument("--no-theme-check", action="store_true")
     ap.add_argument("--template-suffix", help="write a NEW product template templates/product.<suffix>.json (chosen per product) instead "
                                                "of the theme's product.json")
+    ap.add_argument("--recipe", default="dtj-standard-v1", choices=("dtj-standard-v1", "pdp"),
+                    help="dtj-standard-v1 = the fixed sections every product gets (Harsh, 10 Oct 2026); pdp = the older chosen-section recipe")
     ap.add_argument("--client-registry", help="the client's app copies (handle + uuid per app); without it the page uses our own apps")
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--rounds", type=int, default=2)
@@ -137,10 +139,11 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
             return 1
 
     # the page is built in the theme's own layout: Horizon (our base) or Dawn (on the theme's own product.json)
-    layout = {"theme": "horizon"}
+    layout = {"theme": "horizon", "recipe": args.recipe}
     if target and target["base_theme"] == "Dawn":
         from provision import templates as theme_templates
-        layout = {"theme": "dawn", "base_template": theme_templates.load(Path(target["theme_product_template"]).read_text(encoding="utf-8"))[1]}
+        layout = {"theme": "dawn", "recipe": args.recipe,
+                  "base_template": theme_templates.load(Path(target["theme_product_template"]).read_text(encoding="utf-8"))[1]}
 
     # ---- 2. the product as the store shows it (context for the plan only)
     handle = facts.get("product", {}).get("handle")
@@ -164,7 +167,9 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
     except ReferenceImageError as exc:
         print(f"reference image refused: {exc}", file=sys.stderr)
         return 1
-    plan_report = plan_out.as_report() if args.plan != "off" else {"status": "off", "decided_by": "house rules (recipes/pdp.json)"}
+    plan_report = plan_out.as_report() if args.plan != "off" else {"status": "off", "decided_by": f"house rules (recipes/{args.recipe}.json)"}
+    if args.recipe == "dtj-standard-v1":
+        plan_report["decided_by"] = "the fixed DTJ Standard Product Page v1 sections (recipes/dtj-standard-v1.json)"
     plan_report["store_product"] = store_product
     (out / "plan.json").write_text(json.dumps(plan_report, indent=1, ensure_ascii=False), encoding="utf-8")
     brand2, plan = plan_out.brand, plan_out.plan
@@ -219,7 +224,8 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
         "theme_name": target["theme_name"] if target else None, "file": target["file"] if target else tt.template_file(args.template_suffix),
         "layout": layout["theme"], "template_sha256": digest, "client_registry": args.client_registry,
         "approve_code": digest[:12], "pushable": bool(target), "ready": ready, "demo": bool(facts.get("demo")),
-        "demo_pictures": len(final.report.get("demo_pictures", [])), "built_at": datetime.now(timezone.utc).isoformat(),
+        "demo_pictures": len(final.report.get("demo_pictures", [])), "samples": len(final.report.get("samples", [])), "recipe": args.recipe,
+        "built_at": datetime.now(timezone.utc).isoformat(),
         "plan": plan_report.get("status"), "decided_by": plan_report.get("decided_by"), "copy": copy_report.get("status"),
         "review": review.get("verdict"), "backup_of_current_page": target["backup"] if target else None,
     }

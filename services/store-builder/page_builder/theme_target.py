@@ -90,6 +90,9 @@ class ThemeAccess:
         out = _ANSI.sub("", (done.stdout or "") + "\n" + (done.stderr or "")).replace(self._token, "[redacted]")
         if done.returncode != 0:
             raise ThemeError(f"shopify {' '.join(cmd[1:3])} failed ({done.returncode}): {out.strip()[:600]}")
+        if "pushed with errors" in out:  # the CLI exits 0 when Shopify refuses a file (10 Oct 2026: a range value off its step)
+            words = " ".join(x for x in (ln.strip(" │╭╮╰╯─") for ln in out.splitlines()) if x)  # drop the CLI's box drawing
+            raise ThemeError(f"Shopify refused part of the push: {words[:600]}")
         return _ANSI.sub("", done.stdout or "").replace(self._token, "[redacted]")
 
     def themes(self, theme_id: str) -> list[dict]:

@@ -1,0 +1,31 @@
+{
+  "id": "dtj-standard-v1",
+  "purpose": "DTJ Standard Product Page v1 (Harsh, 10 Oct 2026): the SAME sections in the SAME order with the SAME blocks for every product, from the ThrillX 'Ecom Product Based Landing Page' wireframe (Figma 2460-4368 / 2460-5367). Only content and colours change per brand. Spec: .claude/skills/dtj-pdp-factory/references/wireframe-ecom-product.md. A section without content is left out of the page until its content (real or SAMPLE) exists; it is never reordered or replaced.",
+  "fixed": true,
+  "sections": [
+    {"builder": "ugc_strip", "slot": "W03", "cta": true},
+    {"builder": "trust_marquee", "slot": "W04"},
+    {"builder": "story_split", "slot": "W05", "cta": true},
+    {"builder": "story_split_2", "slot": "W06", "cta": true},
+    {"builder": "reviews_slider", "slot": "W07", "cta": true},
+    {"builder": "why_us", "slot": "W08", "cta": true},
+    {"builder": "benefit_strip_2", "slot": "W09"},
+    {"builder": "why_features", "slot": "W10", "cta": true},
+    {"builder": "guarantee", "slot": "W11"},
+    {"builder": "facts_glance", "slot": "W12", "cta": true},
+    {"builder": "faq", "slot": "W13", "cta": true},
+    {"builder": "stories", "slot": "W14"},
+    {"builder": "final_push", "slot": "W15"}
+  ],
+  "roles": {
+    "_comment": "Background role per section. bold = electric / playful vibes (the brand colour, the ink and the accent as full bands); calm = every other vibe (white and a soft tint). A role equal to the one above becomes plain (lint L04).",
+    "bold": {"ugc_strip": "dark", "trust_marquee": "band", "story_split": "plain", "story_split_2": "band", "reviews_slider": "dark", "why_us": "plain",
+             "benefit_strip_2": "accent", "why_features": "band", "guarantee": "accent", "facts_glance": "dark", "faq": "plain", "stories": "band", "final_push": "none"},
+    "calm": {"ugc_strip": "band", "trust_marquee": "none", "story_split": "plain", "story_split_2": "band", "reviews_slider": "plain", "why_us": "band",
+             "benefit_strip_2": "none", "why_features": "plain", "guarantee": "band", "facts_glance": "plain", "faq": "band", "stories": "plain", "final_push": "none"}
+  },
+  "buybox": {
+    "order": ["rating line above the title", "title", "price with the real compare-at and the saving", "one-line benefit + exactly 4 points", "option picker (2+ variant products)", "bundles (real ones only)", "buy buttons", "reviews directly under the buttons"],
+    "why": "The wireframe's buy box (W02): everything that answers 'what is it, what does it cost, why believe it' within one thumb of Add to cart."
+  }
+}

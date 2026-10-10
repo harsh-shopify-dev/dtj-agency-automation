@@ -29,6 +29,8 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
     ap.add_argument("--out", required=True, help="the run_client output folder")
     ap.add_argument("--approve", required=True, help="the approval code printed by run_client")
     ap.add_argument("--approved-by", required=True, help="who looked at the page and said yes")
+    ap.add_argument("--allow-samples", action="store_true",
+                    help="write a page that still holds SAMPLE values (a draft preview for Harsh); never for a page going live")
     ap.add_argument("--allow-demo", action="store_true",
                     help="write a page that uses TEST pictures (facts say demo: true): only for a development store, never a client")
     ap.add_argument("--accept-review-findings", action="store_true",
@@ -58,6 +60,9 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
         return refuse("template.json changed after the approval file was written; run run_client again")
     if args.approve.strip().lower() != digest[:12]:
         return refuse("the approval code does not match this page (it was approved for a different version)")
+    if approval.get("samples") and not args.allow_samples:
+        return refuse(f"this page still holds {approval['samples']} SAMPLE values (build-report.json 'samples'): replace them with real "
+                      "content and rebuild, or add --allow-samples for a draft preview")
     if approval.get("demo") and not args.allow_demo:
         return refuse("this page uses TEST pictures (demo: true); they may only go to a development store: add --allow-demo if this is one")
     if not approval.get("ready") and not args.accept_review_findings:

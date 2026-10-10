@@ -370,6 +370,18 @@ class ClientRegistryTests(unittest.TestCase):
             back = back.replace(f"apps/{entry['handle']}/", f"apps/{app}/").replace(entry["uuid"], registry()[app]["uuid"])
         self.assertEqual(json.loads(back), r.template)  # only the addresses changed
 
+    def test_a_registry_written_before_the_install_is_refused(self):
+        import tempfile
+        from pathlib import Path
+        from page_builder.catalog import load_client_registry
+        apps = {k: dict(v) for k, v in self.CLIENT.items()}
+        apps["dtj-blocks"]["handle"] = "pending"
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "c.json"
+            f.write_text(json.dumps({"apps": apps}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_client_registry(f)
+
     def test_a_missing_copy_stops_the_page(self):
         from page_builder.catalog import to_client
         partial = {k: v for k, v in self.CLIENT.items() if k != "dtj-sections"}
@@ -386,6 +398,14 @@ class OmissionTests(unittest.TestCase):
     def test_a_single_pack_item_is_not_shown_alone(self):
         r = build(pack_contents=fixtures.toilova()[1]["pack_contents"][:1])
         self.assertIn("pack_inside", [o["section"] for o in r.report["sections_omitted"]])
+
+    def test_a_brand_may_name_its_vibe(self):
+        brand, facts = fixtures.toilova()
+        brand["vibe"] = "electric"
+        self.assertEqual(errors(build_pdp(brand, facts)), [])
+        brand["vibe"] = "loud"
+        with self.assertRaises((InputError, ValueError)):
+            build_pdp(brand, facts)
 
     def test_pack_items_fill_whole_rows(self):
         base = fixtures.toilova()[1]["pack_contents"]
@@ -543,3 +563,110 @@ class CopyContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def standard_facts():
+    """The TOILOVA fixture filled out for every section of DTJ Standard Product Page v1, with marked samples where a client
+    would not have sent content yet."""
+    brand, facts = fixtures.toilova()
+    S = "SAMPLE: replace before live"
+    facts["ugc"] = [{"image_role": r, "source": S} for r in ("hand", "shelf", "steps")]
+    facts["story_2"] = {"heading": "Clean without the fumes", "body": "A thick gel that clings to the bowl.",
+                        "bullets": ["Clings under the rim", "No harsh smell", "Septic-safe", "Rinses in one flush"], "image_role": "fumes",
+                        "source": "product description"}
+    facts["differentiators"] = {"heading": "Why TOILOVA works harder", "items": [{"title": f"Point {i}", "text": f"Line {i}.", "source": "product description"} for i in range(1, 7)],
+                                "source": "product description"}
+    facts["strip_2"] = [{"text": t, "source": "pack print"} for t in ("Made in India", "Septic safe", "No harsh smell", "Cash on delivery")]
+    facts["feature_intro"] = {"heading": "What you will notice", "text": "Every flush, cleaner.", "source": "product description"}
+    facts["guarantee"] = {"heading": "Love it or your money back", "text": "Use it for 30 days.", "seal": "30-day promise", "source": S}
+    facts["reviews"] = [{"quote": f"Review words {i}.", "name": n, "location": "Pune", "rating": 5, "source": S} for i, n in enumerate(("Asha", "Ravi", "Meera"), 1)]
+    facts["stories"] = [{"name": n, "quote": f"Story words {i}.", "tags": "Daily use", "image_role": "hand", "source": S} for i, n in enumerate(("Kiran", "Neha", "Arjun"), 1)]
+    facts["final_push"] = {"heading": "A cleaner bathroom, every day", "text": "Order today.", "image_role": "shelf", "source": "product description"}
+    facts["cta"] = {"label": "Get my bottle", "source": "brand voice"}
+    return brand, facts
+
+
+STANDARD_ORDER = ["ugc_strip", "trust_marquee", "story_split", "story_split_2", "reviews_slider", "why_us", "benefit_strip_2", "why_features",
+                  "guarantee", "facts_glance", "faq", "stories", "final_push"]
+
+
+class RangeStepTests(unittest.TestCase):
+    def test_a_range_value_between_steps_is_a_problem_before_shopify_refuses_the_file(self):
+        cat = Catalog()
+        self.assertTrue(any("step" in p for p in cat.validate("dtj-sections-2", "slideshow-pro", {"overlay_opacity": 62})))
+        self.assertEqual(cat.validate("dtj-sections-2", "slideshow-pro", {"overlay_opacity": 60}), [])
+
+
+class StandardPageTests(unittest.TestCase):
+    def build(self, vibe=None, **mods):
+        brand, facts = standard_facts()
+        if vibe:
+            brand["vibe"] = vibe
+        for k, v in mods.items():
+            if v is None:
+                facts.pop(k, None)  # the client has not sent this section's content
+            else:
+                facts[k] = v
+        return build_pdp(brand, facts, recipe="dtj-standard-v1")
+
+    def test_every_section_in_the_fixed_order_whatever_the_category(self):
+        r = self.build()
+        self.assertEqual([s.kind for s in r.model.sections], STANDARD_ORDER)
+        self.assertEqual(r.report["chosen_by"], "fixed set")
+        self.assertEqual(errors(r), [])
+        brand, facts = standard_facts()
+        brand["category"] = "beauty"  # categories reorder the old recipe, never the fixed set
+        self.assertEqual([s.kind for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections], STANDARD_ORDER)
+
+    def test_a_plan_cannot_reorder_or_drop_sections_of_the_fixed_set(self):
+        brand, facts = standard_facts()
+        r = build_pdp(brand, facts, recipe="dtj-standard-v1", plan={"order": ["faq"], "left_out": {}, "signature": ""})
+        self.assertEqual([s.kind for s in r.model.sections], STANDARD_ORDER)
+
+    def test_the_cta_button_follows_the_wireframe_sections_inside_the_same_band(self):
+        r = self.build()
+        with_cta = [s["kind"] for s in r.report["sections_built"] if s["cta"]]
+        self.assertEqual(with_cta, ["ugc_strip", "story_split", "story_split_2", "reviews_slider", "why_us", "why_features", "facts_glance", "faq"])
+        sec = r.template["sections"]["dtj_reviews"]
+        self.assertEqual(len(sec["block_order"]), 2)
+        cta = sec["blocks"][sec["block_order"][1]]
+        self.assertIn("/blocks/dtj-cta/", cta["type"])
+        self.assertEqual(cta["settings"]["button_label"], "Get my bottle")
+        self.assertEqual(cta["settings"].get("background"), r.model.sections[STANDARD_ORDER.index("reviews_slider")].settings.get("background"))
+        labels = {r.model.extras[k].settings["button_label"] for k in r.model.extras}
+        self.assertEqual(labels, {"Get my bottle"})  # ONE label for the whole page
+
+    def test_an_electric_brand_gets_bold_bands_and_every_pair_still_passes(self):
+        r = self.build(vibe="electric")
+        roles = {s.kind: r.model.roles[s.id] for s in r.model.sections}
+        self.assertEqual(roles["ugc_strip"], "dark")
+        self.assertEqual(roles["guarantee"], "accent")
+        d = r.model.direction
+        self.assertEqual(d.roles["band"], "#0B4A6F")  # the brand colour itself, not a tint
+        self.assertEqual(d.failed_checks(), [])
+        self.assertEqual(errors(r), [])
+
+    def test_a_calm_brand_keeps_soft_bands_and_one_dark_at_most(self):
+        r = self.build()
+        self.assertNotIn("accent", set(r.model.roles.values()))
+        self.assertNotIn("dark", set(r.model.roles.values()))
+        self.assertNotEqual(r.model.direction.roles["band"], "#0B4A6F")
+
+    def test_reviews_show_once_in_the_fixed_set_never_also_in_the_buy_box(self):
+        r = self.build()
+        self.assertNotIn("reviews_buybox", [s.kind for s in r.model.buybox_sections])
+        self.assertIn("reviews_slider", [s.kind for s in r.model.sections])
+
+    def test_samples_are_tracked_and_listed_for_replacement(self):
+        r = self.build()
+        self.assertIn("dtj_guarantee.heading", r.report["samples"])
+        self.assertIn("dtj_reviews.text_1", r.report["samples"])
+        self.assertTrue(set(r.report["samples"]) <= set(r.report["needs_replacement"]))
+        self.assertNotIn("dtj_story.heading", r.report["samples"])  # a real fact is not a sample
+
+    def test_a_section_without_content_is_left_out_and_never_glues_two_bands_together(self):
+        r = self.build(vibe="electric", story=None)
+        kinds = [s.kind for s in r.model.sections]
+        self.assertNotIn("story_split", kinds)
+        bgs = [s.settings.get("background") for s in r.model.sections if r.model.roles[s.id] != "none"]
+        self.assertFalse(any(a and a == b for a, b in zip(bgs, bgs[1:])))

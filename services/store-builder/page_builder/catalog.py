@@ -61,6 +61,9 @@ class Catalog:
                 problems.append(f"{app}/{block}: {key}={value!r} is not one of {[o['value'] for o in s['options']]}")
             elif kind == "range" and not (isinstance(value, (int, float)) and s["min"] <= value <= s["max"]):
                 problems.append(f"{app}/{block}: {key}={value!r} is outside {s['min']}..{s['max']}")
+            elif kind == "range" and abs(((value - s["min"]) / s.get("step", 1)) - round((value - s["min"]) / s.get("step", 1))) > 1e-6:
+                # Shopify refuses the whole file for a value between steps ("must be a step in the range", 10 Oct 2026)
+                problems.append(f"{app}/{block}: {key}={value!r} is not on the {s.get('step', 1)} step from {s['min']}")
             elif kind == "checkbox" and not isinstance(value, bool):
                 problems.append(f"{app}/{block}: {key} must be true or false")
             elif kind == "image_picker" and not str(value).startswith(IMAGE_PREFIX):
@@ -83,6 +86,8 @@ def load_client_registry(path: str | Path) -> dict:
     A duplicated app has its own handle and extension uuid, so a page built with our addresses would show nothing in the client's store."""
     apps = json.loads(Path(path).read_text(encoding="utf-8"))["apps"]
     for app, entry in apps.items():
+        if entry.get("handle") == "pending":
+            raise ValueError(f"client registry: {app} is not installed yet (handle pending): run client_registry.py again after the install")
         if app not in registry():
             raise ValueError(f"client registry: unknown app {app!r}")
         if not (re.fullmatch(r"[a-z0-9][a-z0-9-]*", entry.get("handle", "")) and re.fullmatch(r"[0-9a-f-]{36}", entry.get("uuid", ""))):

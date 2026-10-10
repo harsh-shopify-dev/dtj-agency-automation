@@ -1,5 +1,5 @@
 {
- "_comment": "Test Store (qaxv3r-8g.myshopify.com, shown as test-store-harsh-dtj). handle = the app's handle as the store reports it (catcher /licence status, 10 Oct 2026); uuid = the theme extension's id in the CLI's release record (.shopify/deploy-bundle/manifest.json, modules[type=theme_app_extension].uuid, after `shopify app deploy --config test-store-harsh-dtj`).",
+ "_comment": "Written by services/install-catcher/tools/client_registry.py. handle: the store's own name for the installed app (catcher status); uuid: the theme extension id from the CLI release record.",
  "store": "qaxv3r-8g.myshopify.com",
  "apps": {
   "dtj-blocks": {

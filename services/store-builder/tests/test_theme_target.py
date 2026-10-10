@@ -204,6 +204,19 @@ class ClientRunAndPush(unittest.TestCase):
         self.assertEqual(backups[0].read_text(encoding="utf-8"), self.original)
         self.assertIn("written and verified", printed)
 
+    def test_a_page_with_samples_needs_an_explicit_yes_for_a_draft_preview(self):
+        self.design()
+        approval_path = self.out / "approval.json"
+        approval = json.loads(approval_path.read_text(encoding="utf-8"))
+        approval["samples"] = 3  # as run_client records when facts carry SAMPLE sources
+        approval_path.write_text(json.dumps(approval), encoding="utf-8")
+        rc, printed = self.push(approval["approve_code"], "--accept-review-findings")
+        self.assertEqual(rc, 1)
+        self.assertIn("SAMPLE", printed)
+        self.assertEqual(self.fake.pushed, [])
+        rc, printed = self.push(approval["approve_code"], "--accept-review-findings", "--allow-samples")
+        self.assertEqual(rc, 0, printed)
+
     def test_push_refusals_write_nothing(self):
         self.design()
         approval = json.loads((self.out / "approval.json").read_text(encoding="utf-8"))
@@ -263,7 +276,7 @@ class ClientRunAndPush(unittest.TestCase):
         from tests.test_ai_plan import answer as plan_answer
 
         (self.tmp / "plan-answer.json").write_text(json.dumps(plan_answer(["trust_marquee", "free_from", "faq"])), encoding="utf-8")
-        code, printed = self.design("--plan", "answer", "--plan-answer", str(self.tmp / "plan-answer.json"))
+        code, printed = self.design("--plan", "answer", "--plan-answer", str(self.tmp / "plan-answer.json"), "--recipe", "pdp")
         self.assertEqual(code, 2)
         plan = json.loads((self.out / "plan.json").read_text(encoding="utf-8"))
         self.assertEqual(plan["decided_by"], "claude code session plan (checked by code)")
@@ -274,6 +287,16 @@ class ClientRunAndPush(unittest.TestCase):
         self.assertEqual(self.fake.pushed, [])
         code, _ = self.design("--plan", "answer")  # no answer file: refuse, do not fall back silently
         self.assertEqual(code, 1)
+
+    def test_the_fixed_standard_set_ignores_a_plans_section_choice(self):
+        from tests.test_ai_plan import answer as plan_answer
+
+        (self.tmp / "plan-answer.json").write_text(json.dumps(plan_answer(["trust_marquee", "free_from", "faq"])), encoding="utf-8")
+        self.design("--plan", "answer", "--plan-answer", str(self.tmp / "plan-answer.json"))  # default recipe: dtj-standard-v1
+        report = json.loads((self.out / "build-report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["recipe"], "dtj-standard-v1")
+        self.assertEqual(report["chosen_by"], "fixed set")
+        self.assertNotIn("free_from", [s["kind"] for s in report["sections_built"]])  # not part of the fixed set, whatever a plan says
 
     def test_the_n8n_request_drives_a_run(self):
         b, f = fixtures.toilova()
@@ -313,3 +336,14 @@ class ClientRunAndPush(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PushRefusalTests(unittest.TestCase):
+    def test_a_push_shopify_partly_refuses_is_an_error_even_when_the_cli_exits_0(self):
+        import subprocess
+        out = ("Theme upload complete ...\n╭─ error ─╮\n│ templates/product.x.json │\n"
+               "│ Setting 'overlay_opacity' must be a step in the range │\nThe theme 'Copy' (#1) was pushed with errors")
+        access = tt.ThemeAccess("x.myshopify.com", "shptka_test", runner=lambda cmd, env: subprocess.CompletedProcess(cmd, 0, out, ""))
+        with self.assertRaises(tt.ThemeError) as caught:
+            access.push_product_template("1", tt.Path("."), "templates/product.x.json")
+        self.assertIn("overlay_opacity", str(caught.exception))

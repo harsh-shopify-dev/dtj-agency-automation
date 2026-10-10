@@ -27,7 +27,7 @@ RULES = {
     "L02": ("error", "Every full-width section keeps at least 12 px of side space, so nothing touches a phone's screen edge."),
     "L03": ("error", "Section padding stays within 56 px and two neighbours together within 80 px, so there are no big empty holes between sections."),
     "L04": ("error", "Neighbouring sections never share the same background colour: bands alternate so each section reads as its own block."),
-    "L05": ("error", "At most 2 dark bands: dark is for emphasis, and emphasis only works when it is rare."),
+    "L05": ("error", "At most 2 dark bands (4 on electric / playful pages): dark is for emphasis, and emphasis only works when it is rare."),
     "L06": ("error", "Reviews sit directly under the buy buttons, where the last doubt appears."),
     "L07": ("error", "Every text on the page has a recorded origin (a named fact, a structural template, or a labelled demo). Nothing is invented."),
     "L08": ("error", "Every number in generated or structural text exists in the facts (the price is live from Shopify, not typed)."),
@@ -97,8 +97,9 @@ def lint(model) -> list[Finding]:
     for a, b in zip(bgs, bgs[1:]):
         if a and a == b:
             add("L04", f"two neighbouring sections share the background {a}")
-    if sum(1 for sec in model.sections if model.roles.get(sec.id) == "dark") > MAX_DARK:
-        add("L05", f"more than {MAX_DARK} dark bands")
+    max_dark = getattr(d, "max_dark", MAX_DARK)
+    if sum(1 for sec in model.sections if model.roles.get(sec.id) == "dark") > max_dark:
+        add("L05", f"more than {max_dark} dark bands")
     run = 0
     for bg in bgs:
         run = run + 1 if not bg else 0
@@ -128,7 +129,7 @@ def lint(model) -> list[Finding]:
     for sec in model.sections + model.buybox_sections:
         if sec.kind == "hero_points" and sec.settings.get("benefits"):
             n = len([x for x in str(sec.settings["benefits"]).splitlines() if x.strip()])
-        elif sec.kind == "story_split":
+        elif sec.kind in ("story_split", "story_split_2"):
             n = len([k for k in sec.settings if re.fullmatch(r"bullet_\d+", k) and sec.settings[k]])
         else:
             continue
@@ -147,7 +148,7 @@ def lint(model) -> list[Finding]:
     allowed = _fact_numbers(facts)
     allowed |= _numbers(model.brand.get("brand_name", ""))
     demo_items = []
-    for sec in model.sections + model.buybox_sections:
+    for sec in model.sections + model.buybox_sections + list(getattr(model, "extras", {}).values()):
         for key in cat.text_settings(sec.app, sec.block):
             if key not in sec.settings:
                 continue
