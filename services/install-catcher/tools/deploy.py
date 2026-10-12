@@ -6,6 +6,8 @@
 Reads (Windows user variables or this shell's environment; never printed, never on a command line):
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID       the Cloudflare login for wrangler
   DTJ_SECRET_<CLIENT>_BLOCKS / _SECTIONS / _SECTIONS2   each client app copy's client secret (see add_client.py)
+  DTJ_BLOCKS_CLIENT_SECRET / DTJ_SECTIONS_CLIENT_SECRET / DTJ_SECTIONS2_CLIENT_SECRET   DTJ's original apps' client secrets, only
+      when APPS has a store in DTJ's own organization ("grant": "org", add_client.py --org); each is put once as ORG_SECRET_<APP>
 Creates once and keeps a local backup as Windows user variables (Cloudflare never shows a secret again; losing VAULT_KEY would
 mean every client reinstalling): DTJ_CATCHER_VAULT_KEY, DTJ_CATCHER_CONTROL_KEY (signs licence_call.py requests) and
 DTJ_CATCHER_BOT_KEY (the Telegram bot's key: Harsh copies it into n8n's credential "DTJ Catcher Bot Key", never into chat).
@@ -28,7 +30,7 @@ from typing import Callable, Mapping, Sequence
 
 HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from add_client import APPS as PARTS, current_apps, secret_env  # noqa: E402
+from add_client import APPS as PARTS, ORG_APPS, current_apps, org_secret_name, secret_env  # noqa: E402
 
 Runner = Callable[[Sequence[str], Mapping[str, str], str | None], "subprocess.CompletedProcess[str]"]
 
@@ -131,10 +133,22 @@ class Deploy:
     def run(self) -> str | None:
         apps = current_apps(self.toml.read_text(encoding="utf-8"))
         wanted = []
+        org_vars = {org_app: var for org_app, var in ORG_APPS.values()}
         for app, cfg in apps.items():
             part = app.rsplit("-", 1)[1]
             if part not in PARTS:
                 raise SystemExit(f"unknown app part in {app}")
+            if cfg.get("grant") == "org":  # DTJ's original app on a store in DTJ's organization: one shared secret per app
+                var = org_vars.get(cfg.get("org_app", ""))
+                if not var:
+                    raise SystemExit(f"{app}: unknown org_app {cfg.get('org_app')!r}")
+                value = read_var(var, self.environ)
+                if not value:
+                    raise SystemExit(f"missing Windows variable {var} (the client secret of DTJ's original app, needed for {cfg['label']}); "
+                                     "nothing was deployed")
+                if all(name != org_secret_name(cfg["org_app"]) for name, _v, _w in wanted):
+                    wanted.append((org_secret_name(cfg["org_app"]), value, var))
+                continue
             var = secret_env(app.rsplit("-", 1)[0], part)  # named after the client, not the store address
             value = read_var(var, self.environ)
             if not value:

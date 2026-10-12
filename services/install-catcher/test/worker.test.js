@@ -3,7 +3,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import worker, { appKeyEnv, refreshAll, sameText, seal, open, call } from "../src/worker.js";
+import worker, { appKeyEnv, orgSecretEnv, refreshAll, sameText, seal, open, call } from "../src/worker.js";
 
 const SHOP = "client-store.myshopify.com";
 const APP = "client-store-blocks";
@@ -232,4 +232,90 @@ test("errors never echo a secret, and unknown routes are 404", async () => {
   assert.ok(!text.includes(SECRET) && !text.includes(env.VAULT_KEY));
   assert.equal((await get(env, "/anything")).status, 404);
   assert.deepEqual(await (await get(env, "/health")).json(), { ok: true, apps: 1 });
+});
+
+// DTJ's original app on a store in DTJ's own Shopify organization (elevate-with-harsh): the client credentials grant, nothing stored
+const ORG_SHOP = "dtj-own-store.myshopify.com";
+const ORG_APP = "dtj-own-store-blocks";
+const ORG_SECRET = "shpss_original_dtj_blocks_secret";
+const orgEnv = (extra = {}) => makeEnv({
+  APPS: JSON.stringify({
+    [APP]: { client_id: "client-id-blocks", shop: SHOP, label: "DTJ Blocks - Client" },
+    [ORG_APP]: { client_id: "original-blocks-id", shop: ORG_SHOP, label: "DTJ Blocks - Own Store", grant: "org", org_app: "dtj-blocks" },
+  }),
+  [orgSecretEnv("dtj-blocks")]: ORG_SECRET,
+  ...extra,
+});
+function orgShopify({ refuse = null } = {}) {  // the organization store answers the client credentials grant only
+  const base = shopify.fetch;
+  const s = { tokens: 0, tokenBodies: [] };
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(url);
+    if (u.host !== ORG_SHOP) return base(url, init);
+    shopify.calls.push({ url: u.toString(), body: init.body });
+    if (u.pathname === "/admin/oauth/access_token") {
+      const b = JSON.parse(init.body);
+      s.tokenBodies.push(b);
+      if (refuse) return Response.json({ error: refuse }, { status: 400 });
+      if (b.grant_type !== "client_credentials" || b.client_secret !== ORG_SECRET || b.client_id !== "original-blocks-id") return Response.json({ error: "invalid_client" }, { status: 401 });
+      s.tokens += 1;
+      shopify.access = `shpat_org_${s.tokens}`;
+      return Response.json({ access_token: shopify.access, scope: "", expires_in: 86399 });
+    }
+    return base(`https://${SHOP}${u.pathname}`, init);  // the same stand-in GraphQL (licence read and write)
+  };
+  return s;
+}
+
+test("DTJ's own apps on an organization store: a fresh client-credentials token per call, nothing stored, never installable", async () => {
+  const BOT = "k".repeat(64);
+  const env = orgEnv({ BOT_KEY: BOT });
+  const org = orgShopify();
+  const fresh = () => Math.floor(Date.now() / 1000);
+  const st = await worker.fetch(signed({ app: ORG_APP, state: "status", ts: fresh() }), env);
+  assert.equal(st.status, 200);
+  assert.equal((await st.json()).licence, null);  // never set yet: the blocks stay hidden (fail closed)
+  const asBot = (b) => new Request(`${ORIGIN}/licence`, { method: "POST", body: JSON.stringify(b), headers: { "X-DTJ-Bot-Key": BOT } });
+  const on = await worker.fetch(asBot({ app: ORG_APP, state: "active", approved_by: "Harsh via Telegram", ts: fresh() }), env);
+  assert.deepEqual(await on.json(), { app: ORG_APP, shop: ORG_SHOP, before: null, after: "active", verified: true });
+  assert.equal(org.tokens, 2);  // one token per call
+  assert.ok(org.tokenBodies.every((b) => b.grant_type === "client_credentials" && b.client_secret === ORG_SECRET));
+  assert.equal(await env.VAULT.get(`token:${ORG_APP}`), null);  // nothing kept
+  const rows = env.VAULT.keys("audit:").map((k) => env.VAULT.data.get(k));
+  assert.ok(rows.some((r) => r.includes("licence active")) && rows.every((r) => !r.includes(ORG_SECRET) && !r.includes("shpat_")));
+  // the install routes never accept DTJ's original apps, even with a valid hmac
+  assert.equal((await get(env, `/start/${ORG_APP}?${signQuery({ shop: ORG_SHOP, timestamp: ts() }, ORG_SECRET)}`)).status, 404);
+  assert.deepEqual((await refreshAll(env)).find((r) => r.app === ORG_APP), { app: ORG_APP, result: "DTJ app: nothing stored" });
+});
+
+test("an organization store Shopify refuses (outside DTJ's organization, or app not installed) is reported, not hidden", async () => {
+  const env = orgEnv();
+  orgShopify({ refuse: "shop_not_permitted" });
+  const res = await worker.fetch(signed({ app: ORG_APP, state: "status", ts: Math.floor(Date.now() / 1000) }), env);
+  assert.equal(res.status, 404);
+  const text = await res.text();
+  assert.match(text, /not in DTJ's Shopify organization \(shop_not_permitted\)/);
+  assert.ok(!text.includes(ORG_SECRET));
+  const broken = orgEnv({ APPS: JSON.stringify({ [ORG_APP]: { client_id: "x", shop: ORG_SHOP, grant: "org" } }) });  // no org_app
+  assert.equal((await worker.fetch(signed({ app: ORG_APP, state: "status", ts: Math.floor(Date.now() / 1000) }), broken)).status, 500);
+  const noSecret = orgEnv({ [orgSecretEnv("dtj-blocks")]: undefined });
+  assert.equal((await worker.fetch(signed({ app: ORG_APP, state: "status", ts: Math.floor(Date.now() / 1000) }), noSecret)).status, 500);
+});
+
+test("the list names every shop the switch can reach, grouped, with no secret and no Shopify call; it needs a caller's key", async () => {
+  const BOT = "z".repeat(64);
+  const env = orgEnv({ BOT_KEY: BOT });
+  const res = await worker.fetch(signed({ state: "list", ts: Math.floor(Date.now() / 1000) }), env);
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  assert.deepEqual(JSON.parse(text), { shops: [
+    { client: "client-store", shop: SHOP, name: "Client", kind: "client copies", apps: [{ app: APP, part: "blocks", label: "DTJ Blocks - Client" }] },
+    { client: "dtj-own-store", shop: ORG_SHOP, name: "Own Store", kind: "dtj apps", apps: [{ app: ORG_APP, part: "blocks", label: "DTJ Blocks - Own Store" }] },
+  ] });
+  assert.ok(![SECRET, ORG_SECRET, BOT, "client-id-blocks", "original-blocks-id"].some((s) => text.includes(s)));
+  assert.equal(shopify.calls.length, 0);
+  const asBot = (b, key = BOT) => new Request(`${ORIGIN}/licence`, { method: "POST", body: JSON.stringify(b), headers: { "X-DTJ-Bot-Key": key } });
+  assert.equal((await worker.fetch(asBot({ state: "list", ts: Math.floor(Date.now() / 1000) }), env)).status, 200);
+  assert.equal((await worker.fetch(asBot({ state: "list", ts: Math.floor(Date.now() / 1000) }, "y".repeat(64)), env)).status, 401);
+  assert.equal((await worker.fetch(asBot({ state: "list", ts: 1000 }), env)).status, 400);  // an old request is refused too
 });

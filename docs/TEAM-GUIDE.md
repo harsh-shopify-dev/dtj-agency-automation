@@ -186,12 +186,13 @@ git pull
 | **Telegram Message** | Receives every message sent to the bot. |
 | **Read the Message** | Ignores group chats. Refuses anything that looks like a password (asks you to delete it). Finds the first link; the rest of the message is your note. |
 | **Load Bot Users** / **Load Shops** / **Who Is It** | Checks you are in dtj_bot_users. If not, it replies with your number to send to Harsh. Then decides what you asked for: a page, an admin command (Part E, "Switch a shop's apps"), or just an answer. |
-| **What to Do** | Sends the request down the right path: a page, a switch, the confirm buttons, or a plain answer. |
+| **What to Do** | Sends the request down the right path: a page, an admin's switch command, or a plain answer. |
+| **Ask for the Shop List** / **Pick the Shop** / **What Next** | For a switch command: asks the install service which shops it can reach, finds the one you named (by name, `.myshopify.com` address or website), then asks the service about it, shows the confirm buttons, or explains what is wrong. |
 | **Ask New Page** | Gives the link and your note to automation 1 and waits for its answer (about a second). |
 | **Write the Answers** / **Send** | Tells you "Got it ..." and tells every designer "New page waiting ... type: handle the Claude Code trigger in n8n". |
 | **Ask to Confirm** | For /off and /on: sends "Switch OFF ...?" with a **Yes** and a **Cancel** button. Nothing is switched yet. |
 | **Is It a Button?** / **Answer the Button** | When an admin taps a button, tells Telegram the tap arrived (so the button stops spinning). |
-| **Licence Calls** / **Ask the Switch** | Asks the install service about the shop's 3 DTJ apps (or switches them), with the bot's own key (the n8n credential **DTJ Catcher Bot Key**). |
+| **Licence Calls** / **Ask the Switch** | Asks the install service about each DTJ app of the shop (or of every shop, for /shops), or switches them, with the bot's own key (the n8n credential **DTJ Catcher Bot Key**). |
 | **Licence Report** | Turns the 3 answers into one message: each app ON or OFF, and "(checked)" when the service confirmed the change. Other admins are told too. |
 
 ### Automation 1: "Store Factory: New Page" (the front door, about 1 second)
@@ -302,8 +303,12 @@ Designers get a Telegram message "New page waiting ..." whenever someone sends a
 ## Part E. Add a new shop (Harsh)
 
 A shop can get pages only after these steps, done once:
-1. **Our apps:** the client's copies of DTJ Blocks, DTJ Sections and DTJ Sections 2 are installed and switched on (the install
-   catcher). Their addresses file exists: `services/store-builder/page_builder/clients/<shop>.json`.
+1. **Our apps, on the switch:** either the client's own copies of DTJ Blocks, DTJ Sections and DTJ Sections 2 are installed
+   through the install service (`services/install-catcher/tools/add_client.py`), or, for a shop inside DTJ's own Shopify
+   organization that runs DTJ's original apps, it is added with `add_client.py --org --shop <shop>.myshopify.com --label "<Name>"`
+   (needs DTJ's original app secrets once: `tools\team-setup\save-dtj-app-secrets.ps1`). Then the install service is deployed
+   (`services/install-catcher/tools/deploy.py`) and `/shops` in the bot shows the shop. Its addresses file exists:
+   `services/store-builder/page_builder/clients/<shop>.json`.
 2. **A draft theme:** in the shop's admin, **Online Store > Themes**, on the live theme click **...** > **Duplicate**. Note the
    new theme's number (in its "Customize" link). If a draft is ever published, make a new duplicate: the tools refuse to
    write to a live theme.
@@ -327,7 +332,7 @@ that shop at once. Only people with the role `admin` can use it; everyone else g
 
 | Send the bot | What happens |
 |---|---|
-| `/shops` | The list of shops and their addresses. |
+| `/shops` | Every shop the switch reaches, with each DTJ app ON or OFF. Changes nothing. |
 | `/status test store` | Each of the shop's 3 apps: ON or OFF. Changes nothing. |
 | `/off test store` | The bot asks "Switch OFF all DTJ apps on DTJ Test Store?" with two buttons. Tap **Yes, switch OFF** within 2 minutes, or **Cancel**. |
 | `/on test store` | The same, to switch them back on. |
@@ -339,7 +344,12 @@ that shop at once. Only people with the role `admin` can use it; everyone else g
 - After a switch the bot answers each app `ON -> OFF (checked)`. "(checked)" means the service read the switch back and it
   really changed. If a line says "NOT confirmed" or "failed", send `/status` again and tell Harsh.
 - Every switch is saved in the install service's log with your name ("via Telegram") and every other admin gets a message.
-- Shops that use DTJ's own apps (not client copies, for example Elevate with Harsh) cannot be switched here: the bot says so.
+- **Which shops:** every shop the install service knows, whether or not it gets pages: client shops with their own copies of
+  our apps (for example Rupa Divine), and shops inside DTJ's own Shopify organization that run DTJ's original apps (for example
+  Elevate with Harsh, once Harsh has added it, Part E). A shop set up for pages but not on the switch yet is named at the end
+  of `/shops`.
+- What the lines mean: **ON** / **OFF**; **not set (blocks hidden)** = the switch was never set on that shop, so DTJ blocks
+  stay hidden until someone sends `/on`; **not installed on the shop** = the shop has not installed that app (or removed it).
 
 ---
 
@@ -365,7 +375,9 @@ that shop at once. Only people with the role `admin` can use it; everyone else g
 | You sent a link but no preview link came back | Nobody has run Claude Code yet, or the page could not be finished | Ask a designer; the bot tells you if the page was not finished, and why |
 | The bot says "That button has expired" | More than 2 minutes passed before you tapped | Send the /off or /on command again |
 | The bot says "the bot's key was refused" | The n8n credential **DTJ Catcher Bot Key** does not match the install service | Harsh: open the credential, check Name is `X-DTJ-Bot-Key`, paste the key again (see HANDOFF, 12 Oct) |
-| The bot says a shop "uses DTJ's own apps" | That shop has DTJ's original apps, not client copies | Nothing to do: the switch is only for client copies |
+| The bot says a shop "is set up for pages, but its DTJ apps are not on the switch yet" | The shop is in dtj_stores but not in the install service | Harsh adds it (Part E step 1) |
+| A line says "not installed on the shop" | The shop never installed that app copy, or removed it | The shop owner installs it from the link Harsh sends |
+| A line says "outside DTJ's Shopify organization" | DTJ's original app is not installed there, or the shop is not in DTJ's organization | Ask Harsh |
 
 ---
 

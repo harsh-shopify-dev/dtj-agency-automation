@@ -57,6 +57,22 @@ class AddClient(unittest.TestCase):
         self.assertEqual(sorted(apps), ["royal-dosa-blocks", "royal-dosa-sections", "royal-dosa-sections2"])
         self.assertEqual(apps["royal-dosa-sections"], {"client_id": "b" * 32, "shop": SHOP, "label": "DTJ Sections - Royal Dosa"})
 
+    def test_an_organization_store_uses_dtjs_original_apps_and_writes_no_app_files(self):
+        originals = {"blocks": "1" * 32, "sections": "2" * 32, "sections2": "3" * 32}
+        for part, (folder, _) in add_client.APPS.items():
+            (self.tmp / folder / "shopify.app.toml").write_text(f'client_id = "{originals[part]}"\nname = "x"\n', encoding="utf-8")
+        add_client.main(["--org", "--shop", "elevate-with-harsh.myshopify.com", "--label", "Elevate with Harsh"],
+                        services=self.tmp, wrangler=self.wrangler)
+        apps = add_client.current_apps(self.wrangler.read_text(encoding="utf-8"))
+        self.assertEqual(apps["elevate-with-harsh-sections2"], {"client_id": "3" * 32, "shop": "elevate-with-harsh.myshopify.com",
+                                                                "label": "DTJ Sections 2 - Elevate with Harsh", "grant": "org",
+                                                                "org_app": "dtj-sections2"})
+        self.assertEqual(sorted(a["org_app"] for a in apps.values()), ["dtj-blocks", "dtj-sections", "dtj-sections2"])
+        for folder, _ in add_client.APPS.values():  # no per-client app file: nothing is installed through the catcher
+            self.assertEqual([f.name for f in (self.tmp / folder).iterdir()], ["shopify.app.toml"])
+        with self.assertRaises(SystemExit):  # app copies still need their address and client ids
+            add_client.main(["--shop", SHOP, "--label", "Royal Dosa"], services=self.tmp, wrangler=self.wrangler)
+
     def test_bad_inputs_are_refused(self):
         with self.assertRaises(SystemExit):
             self.add(**{"--blocks-id": "not-a-client-id"})
@@ -180,6 +196,39 @@ class Deployment(unittest.TestCase):
         fake = FakeWrangler()
         with self.assertRaises(SystemExit):
             self.deployer(fake, env).run()
+        self.assertEqual(fake.calls, [])
+
+    def org_toml(self):
+        text = self.toml.read_text(encoding="utf-8")
+        apps = add_client.current_apps(text)
+        for store in ("elevate-with-harsh", "another-dtj-store"):  # two stores in DTJ's organization share the original apps
+            for part, (org_app, _var) in add_client.ORG_APPS.items():
+                apps[f"{store}-{part}"] = {"client_id": "9" * 32, "shop": f"{store}.myshopify.com", "label": part, "grant": "org", "org_app": org_app}
+        self.toml.write_text(add_client.set_apps(text, apps), encoding="utf-8")
+        return {**self.env, **{var: f"shpss_original_{org_app}" for org_app, var in add_client.ORG_APPS.values()}}
+
+    def test_dtjs_original_app_secrets_are_put_once_each_and_only_through_stdin(self):
+        env = self.org_toml()
+        fake = FakeWrangler()
+        self.deployer(fake, env).run()
+        puts = {}
+        for cmd, stdin, _ in fake.calls:
+            if cmd[3:5] == ["secret", "put"]:
+                self.assertNotIn(cmd[5], puts)  # each secret once, even with two organization stores
+                puts[cmd[5]] = stdin
+            self.assertFalse(any("shpss_original" in part for part in cmd))
+        self.assertEqual(puts["ORG_SECRET_DTJ_BLOCKS"], "shpss_original_dtj-blocks")
+        self.assertEqual(puts["ORG_SECRET_DTJ_SECTIONS2"], "shpss_original_dtj-sections2")
+        self.assertIn("SECRET_ROYAL_DOSA_BLOCKS", puts)  # the client copies keep their own secrets
+        self.assertFalse([n for n in puts if n.startswith("SECRET_ELEVATE")])
+
+    def test_a_missing_original_app_secret_stops_before_anything_runs(self):
+        env = self.org_toml()
+        del env["DTJ_SECTIONS_CLIENT_SECRET"]
+        fake = FakeWrangler()
+        with self.assertRaises(SystemExit) as stop:
+            self.deployer(fake, env).run()
+        self.assertIn("DTJ_SECTIONS_CLIENT_SECRET", str(stop.exception))
         self.assertEqual(fake.calls, [])
 
     def test_dry_run_runs_nothing(self):

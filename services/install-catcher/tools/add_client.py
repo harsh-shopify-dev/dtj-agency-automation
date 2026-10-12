@@ -16,6 +16,14 @@ Writes (our current apps and their shopify.app.toml files are never touched):
 and adds the three copies to APPS in services/install-catcher/wrangler.toml.
 Each copy: not embedded, no scopes, opens the catcher on install, sends app/uninstalled to the catcher.
 Prints the Windows variables tools/deploy.py reads the three client secrets from (the secrets themselves never pass through here).
+
+A store INSIDE DTJ's own Shopify organization (a dev store, for example elevate-with-harsh) runs DTJ's original apps, not copies:
+
+    python services/install-catcher/tools/add_client.py --org --shop elevate-with-harsh.myshopify.com --label "Elevate with Harsh"
+
+adds its three entries to APPS ("grant": "org": the catcher gets a fresh token from the original app's client credentials grant on
+every call, nothing is installed or stored) and writes no app files. tools/deploy.py then needs the original apps' client secrets
+in DTJ_BLOCKS_CLIENT_SECRET, DTJ_SECTIONS_CLIENT_SECRET and DTJ_SECTIONS2_CLIENT_SECRET (the names tools/licence.py uses).
 """
 from __future__ import annotations
 
@@ -35,6 +43,25 @@ APPS = {  # app part -> (code folder, display name)
 SHOP_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\.myshopify\.com$")
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 API_VERSION = "2026-10"  # the stable version Shopify gives a new app (seen on the Rupa Divine copies, 9 Oct 2026)
+# DTJ's original apps (for stores in DTJ's organization): app part -> (name in APPS "org_app", Windows variable with its client secret)
+ORG_APPS = {
+    "blocks": ("dtj-blocks", "DTJ_BLOCKS_CLIENT_SECRET"),
+    "sections": ("dtj-sections", "DTJ_SECTIONS_CLIENT_SECRET"),
+    "sections2": ("dtj-sections2", "DTJ_SECTIONS2_CLIENT_SECRET"),
+}
+
+
+def org_secret_name(org_app: str) -> str:
+    """The catcher's secret holding an original app's client secret (worker.js orgSecretEnv)."""
+    return "ORG_SECRET_" + re.sub(r"[^A-Z0-9]", "_", org_app.upper())
+
+
+def original_client_id(services: Path, part: str) -> str:
+    text = (services / APPS[part][0] / "shopify.app.toml").read_text(encoding="utf-8")
+    m = re.search(r'^client_id\s*=\s*"([0-9a-f]{32})"', text, re.M)
+    if not m:
+        raise SystemExit(f"no client id in services/{APPS[part][0]}/shopify.app.toml")
+    return m.group(1)
 
 
 def client_key(shop: str) -> str:
@@ -93,19 +120,33 @@ def main(argv=None, services: Path = SERVICES, wrangler: Path = HERE / "wrangler
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--shop", required=True)
     ap.add_argument("--label", required=True, help="the client's name as it should appear in the app names")
-    ap.add_argument("--worker", required=True, help="the catcher's https address")
+    ap.add_argument("--org", action="store_true", help="a store in DTJ's own Shopify organization: DTJ's original apps, no copies")
+    ap.add_argument("--worker", help="the catcher's https address (app copies only)")
     ap.add_argument("--name", help="short name for files, app addresses and secret variables (default: the store's handle)")
     for part in APPS:
-        ap.add_argument(f"--{part}-id", required=True, help=f"client id of the {APPS[part][1]} copy")
+        ap.add_argument(f"--{part}-id", help=f"client id of the {APPS[part][1]} copy (app copies only)")
     args = ap.parse_args(argv)
-    worker = args.worker.rstrip("/")
-    if not re.fullmatch(r"https://[a-z0-9.-]+", worker):
-        raise SystemExit("--worker must be an https address without a path")
     client = args.name or client_key(args.shop)
     client_key(args.shop)  # the store address is checked even when a name is given
     if not NAME_RE.fullmatch(client):
         raise SystemExit(f"--name {client!r}: use lowercase letters, digits and single dashes")
     apps = current_apps(wrangler.read_text(encoding="utf-8"))
+    if args.org:
+        for part, (org_app, _var) in ORG_APPS.items():
+            apps[f"{client}-{part}"] = {"client_id": original_client_id(services, part), "shop": args.shop,
+                                        "label": f"{APPS[part][1]} - {args.label}", "grant": "org", "org_app": org_app}
+        wrangler.write_text(set_apps(wrangler.read_text(encoding="utf-8"), apps), encoding="utf-8")
+        print(f"registered {client}-blocks, {client}-sections, {client}-sections2 in {wrangler.name} (DTJ's original apps, organization store)")
+        print("the original apps' client secrets are read at deploy time from these Windows variables (never typed here):")
+        for _org_app, var in ORG_APPS.values():
+            print(f"  {var}")
+        return 0
+    missing = [f"--{name}" for name in ("worker", *(f"{part}-id" for part in APPS)) if not getattr(args, name.replace("-", "_"))]
+    if missing:
+        raise SystemExit(f"app copies need {', '.join(missing)} (or --org for a store in DTJ's own organization)")
+    worker = args.worker.rstrip("/")
+    if not re.fullmatch(r"https://[a-z0-9.-]+", worker):
+        raise SystemExit("--worker must be an https address without a path")
     for part, (folder, display) in APPS.items():
         cid = getattr(args, f"{part}_id")
         if not re.fullmatch(r"[0-9a-f]{32}", cid):

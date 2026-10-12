@@ -9,8 +9,10 @@
 
 Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is It -> What to Do
     design  -> Ask New Page (Store Factory: New Page, waits for its answer) -> Write the Answers -> Send
-    licence -> Licence Calls -> Ask the Switch (install catcher /licence, bot key) -> Licence Report -> Send
-    confirm -> Ask to Confirm (the "Yes, switch ..." / "Cancel" buttons)
+    switch  -> Ask for the Shop List (install catcher /licence state "list", bot key) -> Pick the Shop -> What Next
+                   licence -> Licence Calls -> Ask the Switch (install catcher /licence, bot key) -> Licence Report -> Send
+                   confirm -> Ask to Confirm (the "Yes, switch ..." / "Cancel" buttons)
+                   reply   -> Send
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -37,7 +39,8 @@ CREDENTIAL = "DTJ Page Bot"                 # n8n Telegram API credential (the b
 SWITCH_CREDENTIAL = "DTJ Catcher Bot Key"   # n8n Header Auth credential: name X-DTJ-Bot-Key, value = the catcher's BOT_KEY
 CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence"
 CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
-              "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js"}
+              "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js"}
+SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
 DESCRIPTION = "Store factory Telegram bot: a team member sends a product link, the bot starts Store Factory: New Page and replies."
@@ -176,6 +179,53 @@ def switch_ops(live: set[str], telegram_id: str | None) -> list[dict]:
     return ops
 
 
+def _catcher_call(name: str, pos: list[int], body: str) -> dict:
+    return _add(name, "n8n-nodes-base.httpRequest", 4.2, pos, {
+        "method": "POST", "url": CATCHER, "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": True, "headerParameters": {"parameters": [{"name": "User-Agent", "value": "dtj-n8n-bot/1"}]},
+        "sendBody": True, "contentType": "json", "specifyBody": "json", "jsonBody": body,
+        "options": {"response": {"response": {"fullResponse": True, "neverError": True}}, "timeout": 60000}})
+
+
+def directory_ops(switch_key: str | None) -> list[dict]:
+    """The switch's directory (12 Oct 2026, Harsh: "on every store we work on the switch must work"): an admin command first asks
+    the install catcher which shops it reaches, then "Pick the Shop" finds the one named. Client copies, app-only clients and DTJ's
+    own apps on organization stores are all on that list, so dtj_stores no longer limits the switch."""
+    ops: list[dict] = [
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v} for v in ("design", "switch")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 1, "target": "Licence Calls"},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 2, "target": "Ask to Confirm"},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 3, "target": "Send"},
+        _catcher_call("Ask for the Shop List", [1320, 240], "={{ JSON.stringify({ state: 'list', ts: Math.floor(Date.now() / 1000) }) }}"),
+        {"type": "setNodeSettings", "nodeName": "Ask for the Shop List", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 1, "target": "Ask for the Shop List"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 2, "target": "Send"},
+        _add("Pick the Shop", "n8n-nodes-base.code", 2, [1560, 240], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                       "jsCode": code("bot_switch.js")}),
+        {"type": "addConnection", "source": "Ask for the Shop List", "target": "Pick the Shop"},
+        _add("What Next", "n8n-nodes-base.switch", 3.2, [1800, 240], {
+            "rules": {"values": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v} for v in ("licence", "confirm")]},
+            "options": {"fallbackOutput": "extra", "renameFallbackOutput": "reply"}}),
+        {"type": "addConnection", "source": "Pick the Shop", "target": "What Next"},
+        {"type": "addConnection", "source": "What Next", "sourceIndex": 0, "target": "Licence Calls"},
+        {"type": "addConnection", "source": "What Next", "sourceIndex": 1, "target": "Ask to Confirm"},
+        {"type": "addConnection", "source": "What Next", "sourceIndex": 2, "target": "Send"},
+        {"type": "updateNodeParameters", "nodeName": "Licence Calls", "parameters": {"jsCode": code("licence_calls.js")}},
+        {"type": "updateNodeParameters", "nodeName": "Licence Report", "parameters": {"jsCode": code("licence_report.js")}},
+        {"type": "setNodePosition", "nodeName": "Licence Calls", "position": [2040, 240]},
+        {"type": "setNodePosition", "nodeName": "Ask the Switch", "position": [2280, 240]},
+        {"type": "setNodePosition", "nodeName": "Licence Report", "position": [2520, 240]},
+        {"type": "setNodePosition", "nodeName": "Ask to Confirm", "position": [2040, 420]},
+        {"type": "setNodePosition", "nodeName": "Send", "position": [2760, 120]},
+    ]
+    if switch_key:
+        ops.append({"type": "setNodeCredential", "nodeName": "Ask for the Shop List", "credentialKey": "httpHeaderAuth",
+                    "credentialId": switch_key, "credentialName": SWITCH_CREDENTIAL})
+    return ops
+
+
 def page_design_ops(live: dict) -> list[dict]:
     notify = code(NOTIFY_JS)
     if "Tell the Requester" in live:
@@ -212,11 +262,12 @@ def attach_credential() -> int:
                for n in nodes]
         print(wf, call("update_workflow", {"workflowId": wf, "operations": ops}).get("appliedOperations"), "Telegram credential(s) attached")
     key = credential_id(SWITCH_CREDENTIAL, "httpHeaderAuth")
-    if "Ask the Switch" in live and key:
-        op = {"type": "setNodeCredential", "nodeName": "Ask the Switch", "credentialKey": "httpHeaderAuth", "credentialId": key,
-              "credentialName": SWITCH_CREDENTIAL}
-        print(bot, call("update_workflow", {"workflowId": bot, "operations": [op]}).get("appliedOperations"), "switch key attached")
-    elif "Ask the Switch" in live:
+    switch_nodes = [n for n in SWITCH_NODES if n in live]
+    if switch_nodes and key:
+        ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "httpHeaderAuth", "credentialId": key,
+                "credentialName": SWITCH_CREDENTIAL} for n in switch_nodes]
+        print(bot, call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"), "switch key attached")
+    elif switch_nodes:
         print(f"no Header Auth credential named '{SWITCH_CREDENTIAL}' yet: the app switch has no key until Harsh creates it")
     return 0
 
@@ -230,9 +281,10 @@ def main(argv=None) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if args.dry_run:
         print(sdk_code())
-        for op in switch_ops({"Start a Page?"}, "telegram-credential-id"):
-            print(f"switch op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
-                  f"{op.get('source', '')} {op.get('target', '')}".rstrip())
+        for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id"))):
+            for op in ops:
+                print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
+                      f"{op.get('source', '')} {op.get('target', '')}".rstrip())
         return 0
     try:
         if args.attach_credential:
@@ -243,6 +295,11 @@ def main(argv=None) -> int:
             if "Licence Calls" not in live_bot:
                 ops = switch_ops(live_bot, credential_id(CREDENTIAL, "telegramApi"))
                 print("adding the app switch:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"), "operation(s)")
+                live_bot = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
+            if "Pick the Shop" not in live_bot:
+                ops = directory_ops(credential_id(SWITCH_CREDENTIAL, "httpHeaderAuth"))
+                print("adding the switch's shop list:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Switch: every shop the catcher reaches"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))

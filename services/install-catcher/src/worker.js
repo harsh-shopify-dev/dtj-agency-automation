@@ -4,9 +4,16 @@
 // authorization code grant, keep the store key (an expiring offline token pair) encrypted, and switch the licence metafield
 // dtj.licence on. Later Harsh's kill switch (n8n) asks /licence to switch it off or on. A store key never leaves this Worker.
 //
+// A store inside DTJ's own Shopify organization (a dev store such as elevate-with-harsh) runs DTJ's ORIGINAL apps instead: no
+// install to catch, no key to keep. Its APPS entries say "grant": "org", and every call gets a fresh token from the app's client
+// credentials grant (Shopify: this works only when the app and the store belong to the same organization). Harsh, 12 Oct 2026:
+// "on every store we work on the switch must work".
+//
 // Configuration (wrangler.toml / Cloudflare dashboard):
 //   vars.APPS           JSON {"<app key>": {"client_id": "...", "shop": "<store>.myshopify.com", "label": "DTJ Blocks - X"}}   (not secret)
+//                       a DTJ app on an organization store adds "grant": "org", "org_app": "dtj-blocks" (dtj-sections, dtj-sections2)
 //   secret SECRET_<APP KEY IN CAPITALS>   each app copy's client secret (app key: letters, digits, dashes -> underscores)
+//   secret ORG_SECRET_<ORG APP>           the client secret of DTJ's original app (ORG_SECRET_DTJ_BLOCKS ...), shared by its org stores
 //   secret VAULT_KEY    32 random bytes, base64: encrypts the stored tokens (AES-GCM) and signs the OAuth state
 //   secret CONTROL_KEY  shared key that signs /licence requests (HMAC-SHA256, hex): tools/licence_call.py
 //   secret BOT_KEY      optional, 32+ characters: the Telegram bot in n8n sends it as X-DTJ-Bot-Key (see licenceCaller)
@@ -58,18 +65,41 @@ async function hmacB64(secret, bytes) {
 }
 
 export function appKeyEnv(app) { return "SECRET_" + app.toUpperCase().replace(/[^A-Z0-9]/g, "_"); }
+export function orgSecretEnv(orgApp) { return "ORG_SECRET_" + String(orgApp).toUpperCase().replace(/[^A-Z0-9]/g, "_"); }
 
 function apps(env) {
   try { return JSON.parse(env.APPS || "{}"); } catch { throw new Refuse(500, "APPS is not valid JSON"); }
 }
-function appConfig(env, app) {
+// install = a route Shopify opens for an app copy (start, callback, webhooks): DTJ's original apps never come through here
+function appConfig(env, app, { install = false } = {}) {
   if (!APP_RE.test(app || "")) throw new Refuse(404, "unknown app");
   const cfg = apps(env)[app];
   if (!cfg) throw new Refuse(404, "unknown app");
-  if (!SHOP_RE.test(cfg.shop || "") || !cfg.client_id) throw new Refuse(500, `app ${app} is misconfigured`);
-  const secret = env[appKeyEnv(app)];
+  const org = cfg.grant === "org";
+  if (install && org) throw new Refuse(404, "unknown app");
+  if (!SHOP_RE.test(cfg.shop || "") || !cfg.client_id || (cfg.grant && !org) || (org && !APP_RE.test(cfg.org_app || ""))) {
+    throw new Refuse(500, `app ${app} is misconfigured`);
+  }
+  const secret = env[org ? orgSecretEnv(cfg.org_app) : appKeyEnv(app)];
   if (!secret) throw new Refuse(500, `the secret for ${app} is not set`);
   return { ...cfg, app, secret };
+}
+
+// The switch's directory (no secrets, no Shopify calls): every shop the catcher can switch, its apps grouped per shop. The bot uses
+// it for /shops and to find a shop by name; the state of each app is asked separately (one /licence status call per app).
+export function listShops(env) {
+  const shops = new Map();
+  for (const app of Object.keys(apps(env)).sort()) {
+    const cfg = apps(env)[app];
+    const m = app.match(/^(.+)-(blocks|sections|sections2)$/);
+    const client = m ? m[1] : app;
+    if (!shops.has(client)) {
+      const name = String(cfg.label || "").split(" - ").slice(1).join(" - ").trim() || client;
+      shops.set(client, { client, shop: cfg.shop, name, kind: cfg.grant === "org" ? "dtj apps" : "client copies", apps: [] });
+    }
+    shops.get(client).apps.push({ app, part: m ? m[2] : "", label: cfg.label || app });
+  }
+  return [...shops.values()];
 }
 
 // Shopify's query hmac: drop hmac (and the legacy signature), sort the rest by name, join name=value with &, HMAC-SHA256 hex.
@@ -195,8 +225,25 @@ async function saveTokens(env, cfg, tokens) {
   await env.VAULT.put(`token:${cfg.app}`, JSON.stringify(record));
 }
 
+// DTJ's original app on a store in DTJ's organization: the client credentials grant (JSON body, as tools/licence.py sends it; the
+// token lives 24 h and is used once, nothing is stored). A store outside the organization, or without the app, is refused by Shopify.
+async function orgAccess(cfg) {
+  const res = await call(`https://${cfg.shop}/admin/oauth/access_token`, {
+    method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ client_id: cfg.client_id, client_secret: cfg.secret, grant_type: "client_credentials" }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 200 && body.access_token) return body.access_token;
+  const why = String(body.error_description || body.error || `HTTP ${res.status}`).slice(0, 120);
+  if (res.status >= 400 && res.status < 500) {
+    throw new Refuse(404, `DTJ's app is not installed on ${cfg.shop}, or the store is not in DTJ's Shopify organization (${why})`);
+  }
+  throw new Refuse(502, `Shopify refused the token request (${why})`);
+}
+
 // a fresh access token: refresh with the stored refresh token and store the NEW pair before using it (Shopify rotates both)
 export async function freshAccess(env, cfg) {
+  if (cfg.grant === "org") return orgAccess(cfg);
   const raw = await env.VAULT.get(`token:${cfg.app}`);
   if (!raw) throw new Refuse(404, `no store key for ${cfg.app}: the store has not installed it (or uninstalled it)`);
   const record = JSON.parse(raw);
@@ -215,7 +262,7 @@ export async function audit(env, row) {
 
 // ------------------------------------------------------------------------------------------------ routes
 async function start(url, env, app) {
-  const cfg = appConfig(env, app);
+  const cfg = appConfig(env, app, { install: true });
   if (!(await shopifyQueryHmacOk(url.searchParams, cfg.secret))) throw new Refuse(403, "bad hmac");
   const shop = checkShopRequest(url, cfg);
   const auth = new URL(`https://${shop}/admin/oauth/authorize`);
@@ -226,7 +273,7 @@ async function start(url, env, app) {
 }
 
 async function callback(url, env, app) {
-  const cfg = appConfig(env, app);
+  const cfg = appConfig(env, app, { install: true });
   if (!(await shopifyQueryHmacOk(url.searchParams, cfg.secret))) throw new Refuse(403, "bad hmac");
   const shop = checkShopRequest(url, cfg);
   await readState(env, url.searchParams.get("state"), app, shop);
@@ -241,7 +288,7 @@ async function callback(url, env, app) {
 }
 
 async function webhook(request, env, app) {
-  const cfg = appConfig(env, app);
+  const cfg = appConfig(env, app, { install: true });
   const raw = new Uint8Array(await request.arrayBuffer());
   if (!sameText(await hmacB64(cfg.secret, raw), request.headers.get("X-Shopify-Hmac-Sha256"))) throw new Refuse(401, "bad webhook hmac");
   const shop = request.headers.get("X-Shopify-Shop-Domain");
@@ -271,13 +318,14 @@ async function licence(request, env) {
   let body;
   try { body = JSON.parse(raw); } catch { throw new Refuse(400, "body is not JSON"); }
   if (!Number.isFinite(body.ts) || Math.abs(now() - body.ts) > FRESH_SECONDS) throw new Refuse(400, "the request is too old");
+  if (body.state === "list") return json(200, { shops: listShops(env) });  // read only: names and addresses, no Shopify call
   const cfg = appConfig(env, body.app);
   if (body.state === "status") {
     const access = await freshAccess(env, cfg);
     const cur = await readLicence(cfg.shop, access);
     return json(200, { app: cfg.app, shop: cfg.shop, licence: cur.licence, app_handle: cur.app_handle });  // the handle names this copy's blocks in a theme
   }
-  if (!STATES.has(body.state)) throw new Refuse(400, "state must be active, inactive or status");
+  if (!STATES.has(body.state)) throw new Refuse(400, "state must be active, inactive, status or list");
   if (!String(body.approved_by || "").trim()) throw new Refuse(400, "approved_by is required for a licence change");
   try {
     const access = await freshAccess(env, cfg);
@@ -292,7 +340,8 @@ async function licence(request, env) {
 
 export async function refreshAll(env) {
   const out = [];
-  for (const [app] of Object.entries(apps(env))) {
+  for (const [app, raw] of Object.entries(apps(env))) {
+    if (raw.grant === "org") { out.push({ app, result: "DTJ app: nothing stored" }); continue; }  // a fresh token on every call
     try {
       const cfg = appConfig(env, app);
       if (!(await env.VAULT.get(`token:${app}`))) { out.push({ app, result: "no key yet" }); continue; }

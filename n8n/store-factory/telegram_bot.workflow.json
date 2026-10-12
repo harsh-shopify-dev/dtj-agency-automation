@@ -86,7 +86,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Input: the shops (dtj_stores, from \"Load Shops\"). Output: one item with action\n//   design  -> start a page (Store Factory: New Page)\n//   licence -> ask the install catcher (status, or a confirmed switch)\n//   confirm -> send the \"Yes, switch ...\" / \"Cancel\" buttons\n//   reply   -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst shops = $input.all().map((i) => i.json).filter((s) => s && s.myshopify_domain && s.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists the shops, /status shop shows whether its DTJ apps are on, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only)\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const clientOf = (s) => (String(s.client_registry || '').match(/clients\\/([a-z0-9-]+)\\.json$/) || [])[1] || '';\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    const shop = shops.find((s) => clientOf(s) === b[2]);\n    if (!shop) return reply('That shop is not set up any more. Nothing was switched.');\n    return [{ json: { action: 'licence', chat_id: msg.chat_id, state: b[1] === 'on' ? 'active' : 'inactive', client: b[2],\n      shop_name: shop.store_name || shop.myshopify_domain, approved_by: myName + ' via Telegram', reason: 'Telegram /' + b[1],\n      actor: myName, admins: otherAdmins } }];\n  }\n  if (msg.command === 'shops') {\n    if (!shops.length) return reply('No shops are set up yet.');\n    return reply('Shops:\\n' + shops.map((s) => '- ' + esc(s.store_name || s.myshopify_domain) + ' (' + esc(s.myshopify_domain) + ')').join('\\n')\n      + '\\n\\nUse a name with /status, /on or /off, for example: /status ' + esc(shops[0].store_name || shops[0].myshopify_domain));\n  }\n  if (!msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  const q = msg.arg.toLowerCase().replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '').trim();\n  const names = (s) => [s.store_name, s.myshopify_domain, clientOf(s), ...String(s.other_domains || '').split(',')]\n    .map((x) => String(x || '').toLowerCase().trim()).filter(Boolean);\n  let found = shops.filter((s) => names(s).includes(q));\n  if (!found.length) found = shops.filter((s) => names(s).some((n) => n.includes(q)));\n  if (!found.length) return reply('No shop matches \"' + esc(msg.arg) + '\". Send /shops for the list.');\n  if (found.length > 1) return reply('More than one shop matches \"' + esc(msg.arg) + '\": ' + found.map((s) => esc(s.store_name)).join(', ') + '. Please be more specific.');\n  const shop = found[0];\n  const client = clientOf(shop);\n  const shopName = shop.store_name || shop.myshopify_domain;\n  if (!client) return reply(esc(shopName) + ' has no app copies saved, so it cannot be checked or switched here.');\n  if (msg.command === 'status') {\n    return [{ json: { action: 'licence', chat_id: msg.chat_id, state: 'status', client, shop_name: shopName, approved_by: '', reason: '',\n      actor: myName, admins: [] } }];\n  }\n  const off = msg.command === 'off';\n  const word = off ? 'OFF' : 'ON';\n  const stamp = Math.floor(Date.now() / 1000);\n  return [{ json: { action: 'confirm', chat_id: msg.chat_id,\n    text: 'Switch ' + word + ' all DTJ apps on ' + esc(shopName) + '?\\n'\n      + (off ? 'Every DTJ block disappears from that shop for its shoppers at once.' : 'Every DTJ block comes back on that shop at once.')\n      + '\\nTap the button within 2 minutes.',\n    yes_text: 'Yes, switch ' + word, yes_data: 'lic:' + msg.command + ':' + client + ':' + stamp } }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
+    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Output: one item with action\n//   design -> start a page (Store Factory: New Page)\n//   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list (\"Pick the Shop\")\n//   reply  -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only). Which shops exist is the install catcher's to say, so the shop is matched in \"Pick the Shop\".\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  const ask = { action: 'switch', chat_id: msg.chat_id, actor: myName, admins: otherAdmins, command: msg.command, arg: msg.arg || '',\n    state: '', client: '' };\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    return [{ json: { ...ask, command: 'tap', state: b[1] === 'on' ? 'active' : 'inactive', client: b[2] } }];\n  }\n  if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  return [{ json: ask }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
    }
   },
   {
@@ -182,7 +182,7 @@
    "type": "n8n-nodes-base.telegram",
    "typeVersion": 1.2,
    "position": [
-    2040,
+    2760,
     120
    ],
    "parameters": {
@@ -297,7 +297,7 @@
         "conditions": [
          {
           "leftValue": "={{ $json.action }}",
-          "rightValue": "licence",
+          "rightValue": "switch",
           "operator": {
            "type": "string",
            "operation": "equals"
@@ -307,29 +307,7 @@
         "combinator": "and"
        },
        "renameOutput": true,
-       "outputKey": "licence"
-      },
-      {
-       "conditions": {
-        "options": {
-         "caseSensitive": true,
-         "leftValue": "",
-         "typeValidation": "strict"
-        },
-        "conditions": [
-         {
-          "leftValue": "={{ $json.action }}",
-          "rightValue": "confirm",
-          "operator": {
-           "type": "string",
-           "operation": "equals"
-          }
-         }
-        ],
-        "combinator": "and"
-       },
-       "renameOutput": true,
-       "outputKey": "confirm"
+       "outputKey": "switch"
       }
      ]
     },
@@ -345,13 +323,13 @@
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1320,
+    2040,
     240
    ],
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Licence Calls\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// One request per DTJ app of the shop for the install catcher's /licence (the HTTP step \"Ask the Switch\" sends each one with the\n// bot's key from the n8n credential \"DTJ Catcher Bot Key\"). The catcher names a client's apps <client>-blocks / -sections / -sections2.\nconst a = $input.first().json || {};\nconst ts = Math.floor(Date.now() / 1000);\nreturn [['blocks', 'DTJ Blocks'], ['sections', 'DTJ Sections'], ['sections2', 'DTJ Sections 2']].map(([part, label]) => {\n  const app = a.client + '-' + part;\n  const body = a.state === 'status'\n    ? { app, state: 'status', ts }\n    : { app, state: a.state, ts, approved_by: a.approved_by, reason: a.reason || '' };\n  return { json: { app, label, body: JSON.stringify(body) } };\n});\n"
+    "jsCode": "// n8n Code node \"Licence Calls\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// One request per app of every shop \"Pick the Shop\" chose, for the install catcher's /licence (the HTTP step \"Ask the Switch\" sends\n// each one with the bot's key from the n8n credential \"DTJ Catcher Bot Key\"). The apps come from the catcher's own list, so client\n// copies (<client>-blocks / -sections / -sections2) and DTJ's original apps on organization stores are asked the same way.\nconst a = $input.first().json || {};\nconst ts = Math.floor(Date.now() / 1000);\nconst out = [];\nfor (const s of a.shops || []) {\n  for (const p of s.apps || []) {\n    const body = a.state === 'status'\n      ? { app: p.app, state: 'status', ts }\n      : { app: p.app, state: a.state, ts, approved_by: a.approved_by, reason: a.reason || '' };\n    out.push({ json: { app: p.app, label: String(p.label || p.app).split(' - ')[0], client: s.client, body: JSON.stringify(body) } });\n  }\n}\nreturn out;\n"
    }
   },
   {
@@ -360,7 +338,7 @@
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    1560,
+    2280,
     240
    ],
    "parameters": {
@@ -405,13 +383,13 @@
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1800,
+    2520,
     240
    ],
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Licence Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns the catcher's three answers (full responses: statusCode + body) into the message for the admin who asked and, after a switch,\n// a note to every other admin. Every item out is { chat_id, text } for the \"Send\" step.\nconst a = $('Who Is It').first().json;\nconst calls = $('Licence Calls').all().map((i) => i.json);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst word = (v) => (v === 'active' ? 'ON' : v === 'inactive' ? 'OFF' : v ? String(v) : 'not set');\nconst rows = $input.all().map((it, i) => {\n  const r = it.json || {};\n  const code = Number(r.statusCode || (r.error ? 0 : 200));\n  const body = parse(r.body !== undefined ? r.body : r);\n  return { label: (calls[i] || {}).label || 'App ' + (i + 1), code, body };\n});\nconst unknown = rows.every((r) => r.code === 404 && /unknown app/i.test(String(r.body.error || '')));\nif (unknown) {\n  return [{ json: { chat_id: a.chat_id, text: esc(a.shop_name) + ' uses DTJ\\'s own apps, not client copies: the switch only manages client '\n    + 'app copies (installed through the install catcher). Nothing was changed.' } }];\n}\nconst line = (r) => {\n  if (r.code === 200 && a.state === 'status') return r.label + ': ' + word(r.body.licence);\n  if (r.code === 200) return r.label + ': ' + word(r.body.before) + ' -> ' + word(r.body.after) + (r.body.verified ? ' (checked)' : ' (NOT confirmed)');\n  if (r.code === 404) return r.label + ': not connected (' + esc(r.body.error || 'not installed') + ')';\n  if (r.code === 401) return r.label + ': the bot\\'s key was refused (ask Harsh to check the credential \"DTJ Catcher Bot Key\")';\n  return r.label + ': failed (' + esc(r.body.error || ('HTTP ' + r.code)) + ')';\n};\nconst lines = rows.map(line).join('\\n');\nif (a.state === 'status') return [{ json: { chat_id: a.chat_id, text: 'DTJ apps on ' + esc(a.shop_name) + ':\\n' + lines } }];\n\nconst ok = rows.every((r) => r.code === 200 && r.body.verified);\nconst word2 = a.state === 'active' ? 'ON' : 'OFF';\nconst head = (ok ? 'Done: all DTJ apps on ' + esc(a.shop_name) + ' are ' + word2 + '.' : 'Not everything switched on ' + esc(a.shop_name) + '. Check the lines below.');\nconst out = [{ json: { chat_id: a.chat_id, text: head + '\\n' + lines } }];\nfor (const id of a.admins || []) {\n  out.push({ json: { chat_id: id, text: esc(a.actor) + ' switched ' + word2 + ' the DTJ apps on ' + esc(a.shop_name) + ' via Telegram.\\n' + lines } });\n}\nreturn out;\n"
+    "jsCode": "// n8n Code node \"Licence Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns the catcher's answers (full responses: statusCode + body, one per app, in the order of \"Licence Calls\") into the message for\n// the admin who asked, grouped per shop, and, after a switch, a note to every other admin. Every item out is { chat_id, text } for\n// the \"Send\" step.\nconst a = $('Pick the Shop').first().json;\nconst calls = $('Licence Calls').all().map((i) => i.json);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst word = (v) => (v === 'active' ? 'ON' : v === 'inactive' ? 'OFF' : v ? String(v) : 'not set (blocks hidden)');\nconst rows = $input.all().map((it, i) => {\n  const r = it.json || {};\n  const code = Number(r.statusCode || (r.error ? 0 : 200));\n  const body = parse(r.body !== undefined ? r.body : r);\n  const call = calls[i] || {};\n  return { label: call.label || 'App ' + (i + 1), client: call.client || '', code, body, error: String(body.error || '') };\n});\nconst line = (r) => {\n  if (r.code === 200 && a.state === 'status') return r.label + ': ' + word(r.body.licence);\n  if (r.code === 200) return r.label + ': ' + word(r.body.before) + ' -> ' + word(r.body.after) + (r.body.verified ? ' (checked)' : ' (NOT confirmed)');\n  if (r.code === 404 && /no store key|has not installed/i.test(r.error)) return r.label + ': not installed on the shop';\n  if (r.code === 404 && /organization/i.test(r.error)) return r.label + ': DTJ\\'s app is not installed there, or the shop is outside DTJ\\'s Shopify organization';\n  if (r.code === 404) return r.label + ': not connected (' + esc(r.error || 'not installed') + ')';\n  if (r.code === 401) return r.label + ': the bot\\'s key was refused (ask Harsh to check the credential \"DTJ Catcher Bot Key\")';\n  return r.label + ': failed (' + esc(r.error || ('HTTP ' + r.code)) + ')';\n};\nconst block = (s) => rows.filter((r) => r.client === s.client).map(line).join('\\n');\nconst head = (s) => esc(s.name) + ' (' + esc(s.shop) + (s.kind === 'dtj apps' ? ', DTJ\\'s own apps' : '') + ')';\nconst fit = (text) => (text.length > 4000 ? text.slice(0, 3990) + '\\n...' : text);  // Telegram's limit is 4096 characters\n\nif (a.listing) {\n  const parts = (a.shops || []).map((s) => head(s) + '\\n' + block(s));\n  const rest = (a.missing || []).length ? '\\n\\nSet up for pages, but not on the switch yet: ' + a.missing.map(esc).join(', ') + ' (ask Harsh).' : '';\n  const example = (a.shops || [])[0] ? '\\n\\nUse a name with /status, /on or /off, for example: /status ' + esc(a.shops[0].name) : '';\n  return [{ json: { chat_id: a.chat_id, text: fit('Shops on the switch:\\n\\n' + parts.join('\\n\\n') + rest + example) } }];\n}\nconst shop = (a.shops || [])[0] || { name: '?', shop: '?', client: '' };\nif (a.state === 'status') return [{ json: { chat_id: a.chat_id, text: fit('DTJ apps on ' + head(shop) + ':\\n' + block(shop)) } }];\n\nconst ok = rows.length > 0 && rows.every((r) => r.code === 200 && r.body.verified);\nconst word2 = a.state === 'active' ? 'ON' : 'OFF';\nconst lines = block(shop);\nconst top = ok ? 'Done: all DTJ apps on ' + esc(shop.name) + ' are ' + word2 + '.' : 'Not everything switched on ' + esc(shop.name) + '. Check the lines below.';\nconst out = [{ json: { chat_id: a.chat_id, text: fit(top + '\\n' + lines) } }];\nfor (const id of a.admins || []) {\n  out.push({ json: { chat_id: id, text: fit(esc(a.actor) + ' switched ' + word2 + ' the DTJ apps on ' + esc(shop.name) + ' via Telegram.\\n' + lines) } });\n}\nreturn out;\n"
    }
   },
   {
@@ -420,8 +398,8 @@
    "type": "n8n-nodes-base.telegram",
    "typeVersion": 1.2,
    "position": [
-    1320,
-    400
+    2040,
+    420
    ],
    "parameters": {
     "resource": "message",
@@ -517,6 +495,130 @@
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
      "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "329c28b2-1254-4328-867a-5583c81f15cc",
+   "name": "Ask for the Shop List",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1320,
+    240
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "User-Agent",
+       "value": "dtj-n8n-bot/1"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "json",
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ state: 'list', ts: Math.floor(Date.now() / 1000) }) }}",
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     },
+     "timeout": 60000
+    }
+   },
+   "onError": "continueRegularOutput",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "I32lgulR9ZPulvwb",
+     "name": "DTJ Catcher Bot Key"
+    }
+   }
+  },
+  {
+   "id": "bd412698-42ae-4397-86e3-57f6fc5426a6",
+   "name": "Pick the Shop",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1560,
+    240
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Pick the Shop\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Input: the install catcher's list of every shop the switch reaches (\"Ask for the Shop List\": full response, statusCode + body):\n// client app copies AND stores in DTJ's own organization running DTJ's original apps (Harsh, 12 Oct 2026: \"on every store we work\n// on the switch must work\"). Finds the shop the admin named and decides the next step. Output: one item with action\n//   licence -> ask the catcher about (or switch) every app of `shops`: status for /shops and /status, active|inactive after a tap\n//   confirm -> send the \"Yes, switch ...\" / \"Cancel\" buttons\n//   reply   -> just answer\n// dtj_stores (\"Load Shops\") only adds friendlier names and the shop's other addresses, and shows shops set up for pages whose apps\n// are not on the switch yet.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: ask.chat_id, text } }];\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst code = Number(res.statusCode || (res.error ? 0 : 200));\nconst body = parse(res.body !== undefined ? res.body : res);\nif (code === 401) {\n  return reply('The install service refused the bot\\'s key (ask Harsh to check the n8n credential \"DTJ Catcher Bot Key\"). Nothing was changed.');\n}\nif (code !== 200 || !Array.isArray(body.shops)) {\n  const why = body.error || (typeof res.error === 'string' ? res.error : (res.error && res.error.message)) || ('HTTP ' + code);\n  return reply('I could not reach the install service (' + esc(why) + '). Nothing was changed. Please try again in a minute.');\n}\n\nconst low = (x) => String(x == null ? '' : x).toLowerCase().trim();\nconst rows = $('Load Shops').all().map((i) => i.json).filter((r) => r && r.myshopify_domain && r.active !== false);\nconst stem = (r) => (String(r.client_registry || '').match(/clients\\/([a-z0-9-]+)\\.json$/) || [])[1] || '';\nconst shops = body.shops.map((s) => {\n  const row = rows.find((r) => low(r.myshopify_domain) === low(s.shop) || stem(r) === s.client);\n  const name = (row && row.store_name) || s.name || s.client;\n  const names = [name, s.name, s.client, s.shop, ...(row ? [row.myshopify_domain, ...String(row.other_domains || '').split(',')] : [])]\n    .map(low).filter(Boolean);\n  return { client: s.client, shop: s.shop, name, kind: s.kind, apps: (s.apps || []).map((a) => ({ app: a.app, label: a.label })), names };\n});\nconst missing = rows.filter((r) => !shops.some((s) => low(s.shop) === low(r.myshopify_domain) || s.client === stem(r)))\n  .map((r) => ({ name: r.store_name || r.myshopify_domain, names: [r.store_name, r.myshopify_domain, stem(r), ...String(r.other_domains || '').split(',')].map(low).filter(Boolean) }));\nconst plain = (s) => ({ client: s.client, shop: s.shop, name: s.name, kind: s.kind, apps: s.apps });\nconst licence = (state, list, extra) => [{ json: { action: 'licence', chat_id: ask.chat_id, state, shops: list.map(plain), listing: false,\n  missing: [], approved_by: '', reason: '', actor: ask.actor, admins: [], ...extra } }];\n\nif (ask.command === 'tap') {\n  const shop = shops.find((s) => s.client === ask.client);\n  if (!shop) return reply('That shop is not on the switch any more. Nothing was switched.');\n  const word = ask.state === 'active' ? 'on' : 'off';\n  return licence(ask.state, [shop], { approved_by: ask.actor + ' via Telegram', reason: 'Telegram /' + word, admins: ask.admins || [] });\n}\nif (ask.command === 'shops') {\n  if (!shops.length) {\n    return reply('No shop is on the switch yet.' + (missing.length ? ' Set up for pages only: ' + missing.map((m) => esc(m.name)).join(', ') + '.' : ''));\n  }\n  return licence('status', shops, { listing: true, missing: missing.map((m) => m.name) });\n}\n\nconst q = low(ask.arg).replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '');\nlet found = shops.filter((s) => s.names.includes(q));\nif (!found.length) found = shops.filter((s) => s.names.some((n) => n.includes(q)));\nif (!found.length) {\n  const pagesOnly = missing.find((m) => m.names.includes(q) || m.names.some((n) => n.includes(q)));\n  if (pagesOnly) return reply(esc(pagesOnly.name) + ' is set up for pages, but its DTJ apps are not on the switch yet. Ask Harsh to add it.');\n  return reply('No shop matches \"' + esc(ask.arg) + '\". Send /shops for the list.');\n}\nif (found.length > 1) {\n  return reply('More than one shop matches \"' + esc(ask.arg) + '\": ' + found.map((s) => esc(s.name)).join(', ') + '. Please be more specific.');\n}\nconst shop = found[0];\nif (ask.command === 'status') return licence('status', [shop], {});\nconst off = ask.command === 'off';\nconst word = off ? 'OFF' : 'ON';\nconst yes = 'lic:' + ask.command + ':' + shop.client + ':' + Math.floor(Date.now() / 1000);\nif (yes.length > 64) return reply('That shop\\'s name is too long for a Telegram button. Ask Harsh to switch it with licence_call.py.');\nreturn [{ json: { action: 'confirm', chat_id: ask.chat_id,\n  text: 'Switch ' + word + ' all DTJ apps on ' + esc(shop.name) + ' (' + esc(shop.shop) + ')?\\n'\n    + (off ? 'Every DTJ block disappears from that shop for its shoppers at once.' : 'Every DTJ block comes back on that shop at once.')\n    + '\\nTap the button within 2 minutes.',\n  yes_text: 'Yes, switch ' + word, yes_data: yes } }];\n"
+   }
+  },
+  {
+   "id": "baf073d5-57be-4d18-a685-d031fba59cc7",
+   "name": "What Next",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1800,
+    240
+   ],
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "licence",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "licence"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "confirm",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "confirm"
+      }
+     ]
+    },
+    "options": {
+     "fallbackOutput": "extra",
+     "renameFallbackOutput": "reply"
     }
    }
   }
@@ -615,14 +717,7 @@
     ],
     [
      {
-      "node": "Licence Calls",
-      "type": "main",
-      "index": 0
-     }
-    ],
-    [
-     {
-      "node": "Ask to Confirm",
+      "node": "Ask for the Shop List",
       "type": "main",
       "index": 0
      }
@@ -633,7 +728,8 @@
       "type": "main",
       "index": 0
      }
-    ]
+    ],
+    []
    ]
   },
   "Licence Calls": {
@@ -674,6 +770,53 @@
     [
      {
       "node": "Answer the Button",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Ask for the Shop List": {
+   "main": [
+    [
+     {
+      "node": "Pick the Shop",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pick the Shop": {
+   "main": [
+    [
+     {
+      "node": "What Next",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "What Next": {
+   "main": [
+    [
+     {
+      "node": "Licence Calls",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Ask to Confirm",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send",
       "type": "main",
       "index": 0
      }

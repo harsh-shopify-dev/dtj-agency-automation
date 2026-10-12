@@ -6,10 +6,11 @@ Design and the facts behind it: [docs/install-catcher-design.md](../../docs/inst
 
 ```
 src/worker.js        the Worker (routes /start, /callback, /webhooks, /licence, /health and a weekly key refresh)
-test/worker.test.js  node --test test/*.test.js      (a stand-in Shopify; 11 tests)
-tools/add_client.py  writes a client's 3 app-copy files (shopify.app.<client>.toml) and registers them in wrangler.toml
+test/worker.test.js  node --test test/*.test.js      (a stand-in Shopify; 15 tests)
+tools/add_client.py  writes a client's 3 app-copy files (shopify.app.<client>.toml) and registers them in wrangler.toml;
+                     --org registers a store in DTJ's own organization (DTJ's original apps, no files)
 tools/deploy.py      creates the storage once, sets the secrets from Windows variables (stdin only), deploys, checks /health
-test/test_tools.py   python -m unittest discover -s services/install-catcher/test -p "test_*.py"   (a stand-in wrangler; 8 tests)
+test/test_tools.py   python -m unittest discover -s services/install-catcher/test -p "test_*.py"   (a stand-in wrangler; 21 tests)
 ```
 
 ## One-time setup (Harsh)
@@ -29,6 +30,19 @@ test/test_tools.py   python -m unittest discover -s services/install-catcher/tes
 5. Harsh: each new app > Distribution > **Custom distribution** > the client's .myshopify.com > open the install link logged in to
    that store > Install. The catcher shows "DTJ is connected" and the licence is on.
 6. Check: `POST /licence {"app": "<client>-blocks", "state": "status", "ts": <now>}` signed with `DTJ_CATCHER_CONTROL_KEY` answers `active`.
+
+## A store in DTJ's own Shopify organization (DTJ's original apps)
+A dev store in our organization (for example elevate-with-harsh) runs DTJ Blocks / Sections / Sections 2 themselves, not copies.
+The catcher reaches it with the original app's client credentials grant (a fresh 24-hour token per call, nothing stored; Shopify
+allows this only for stores in the app's own organization).
+1. Once, Harsh: `powershell -ExecutionPolicy Bypass -File tools\team-setup\save-dtj-app-secrets.ps1` (saves
+   `DTJ_BLOCKS_CLIENT_SECRET`, `DTJ_SECTIONS_CLIENT_SECRET`, `DTJ_SECTIONS2_CLIENT_SECRET`, never shown).
+2. `python services/install-catcher/tools/add_client.py --org --shop <store>.myshopify.com --label "<Name>"`
+3. `python services/install-catcher/tools/deploy.py` (puts each original secret once as `ORG_SECRET_DTJ_...`), then `/status <name>` in the bot.
+
+## The switch's directory
+`POST /licence {"state": "list", "ts": <now>}` (signed, or the bot's key) answers every shop the catcher reaches with its apps
+(no secrets, no Shopify call). The Telegram bot's `/shops`, `/status`, `/on` and `/off` find shops in this list.
 
 ## Rules
 - A store key is never printed, logged, returned or sent to n8n. Client secrets and the vault key are Worker secrets.

@@ -130,58 +130,117 @@ class AppSwitch(unittest.TestCase):
             self.assertIn("Only an admin", out[0]["text"])
         self.assertIn("Only an admin", self.route(self.read(button("lic:off:test-store-harsh-dtj:%d" % __import__("time").time(), user=111)))[0]["text"])
 
-    def test_status_asks_the_catcher_and_off_asks_for_a_confirmation_first(self):
-        st = self.cmd("/status Test Store")[0]
-        self.assertEqual((st["action"], st["state"], st["client"], st["shop_name"]), ("licence", "status", "test-store-harsh-dtj", "DTJ Test Store"))
-        off = self.cmd("/off test-store-harsh-dtj.myshopify.com")[0]
-        self.assertEqual(off["action"], "confirm")  # nothing switches before the tap
-        self.assertEqual(off["yes_text"], "Yes, switch OFF")
-        self.assertRegex(off["yes_data"], r"^lic:off:test-store-harsh-dtj:\d{10}$")
-        self.assertLessEqual(len(off["yes_data"]), 64)  # Telegram's limit for button data
-        self.assertIn("disappears", off["text"])
-
-    def test_a_fresh_tap_switches_an_old_or_cancelled_one_does_not(self):
+    def test_admin_commands_and_fresh_taps_go_to_the_switch_path(self):
         import time
         now = int(time.time())
+        st = self.cmd("/status Test Store")[0]
+        self.assertEqual((st["action"], st["command"], st["arg"]), ("switch", "status", "Test Store"))
+        self.assertEqual(self.cmd("/shops")[0]["command"], "shops")
         go = self.route(self.read(button(f"lic:off:test-store-harsh-dtj:{now}")))[0]
-        self.assertEqual((go["action"], go["state"], go["client"], go["approved_by"], go["admins"]),
-                         ("licence", "inactive", "test-store-harsh-dtj", "Harsh via Telegram", []))
+        self.assertEqual((go["action"], go["command"], go["state"], go["client"], go["actor"], go["admins"]),
+                         ("switch", "tap", "inactive", "test-store-harsh-dtj", "Harsh", []))
         self.assertIn("expired", self.route(self.read(button(f"lic:off:test-store-harsh-dtj:{now - 121}")))[0]["text"])
         self.assertIn("Cancelled", self.route(self.read(button("lic:cancel")))[0]["text"])
         self.assertIn("not valid", self.route(self.read(button("lic:off:../../x:1")))[0]["text"])
-        self.assertIn("not set up", self.route(self.read(button(f"lic:on:gone-shop:{now}")))[0]["text"])
+        self.assertIn("Which shop", self.cmd("/status")[0]["text"])
         two = self.route(self.read(button(f"lic:on:test-store-harsh-dtj:{now}")), users=(HARSH, {**DEV, "role": "admin"}))[0]
         self.assertEqual((two["state"], two["admins"]), ("active", ["222"]))  # the other admin is told afterwards
 
-    def test_unclear_shop_names_are_asked_again(self):
-        self.assertIn("Which shop", self.cmd("/status")[0]["text"])
-        self.assertIn("No shop matches", self.cmd("/status rupa")[0]["text"])
-        self.assertIn("More than one shop", self.cmd("/status harsh")[0]["text"])  # both names contain "harsh"
-        self.assertIn("DTJ Test Store", self.cmd("/shops")[0]["text"])
 
-    def test_the_three_calls_and_the_reports(self):
-        calls = [i["json"] for i in run_node("licence_calls.js", {"client": "test-store-harsh-dtj", "state": "inactive",
-                                                                     "approved_by": "Harsh via Telegram", "reason": "Telegram /off"})["out"]]
+# the install catcher's list (worker.js listShops): client copies, DTJ's original apps on an organization store, an app-only client
+def apps(client, label, parts=("blocks", "sections", "sections2")):
+    names = {"blocks": "DTJ Blocks", "sections": "DTJ Sections", "sections2": "DTJ Sections 2"}
+    return [{"app": f"{client}-{p}", "part": p, "label": f"{names[p]} - {label}"} for p in parts]
+
+
+CATCHER_LIST = {"statusCode": 200, "body": {"shops": [
+    {"client": "elevate-with-harsh", "shop": "elevate-with-harsh.myshopify.com", "name": "Elevate with Harsh", "kind": "dtj apps",
+     "apps": apps("elevate-with-harsh", "Elevate with Harsh")},
+    {"client": "rupa-divine-crystals", "shop": "rupa-divine-crystals.myshopify.com", "name": "Rupa Divine", "kind": "client copies",
+     "apps": apps("rupa-divine-crystals", "Rupa Divine")},
+    {"client": "test-store-harsh-dtj", "shop": "qaxv3r-8g.myshopify.com", "name": "Test Store", "kind": "client copies",
+     "apps": apps("test-store-harsh-dtj", "Test Store")}]}}
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class PickTheShop(unittest.TestCase):
+    def pick(self, command, arg="", listing=CATCHER_LIST, shops=SHOPS, **ask):
+        who = {"action": "switch", "chat_id": "333", "actor": "Harsh", "admins": ["222"], "command": command, "arg": arg,
+               "state": "", "client": "", **ask}
+        res = run_node("bot_switch.js", listing, {"Who Is It": who, "Load Shops": list(shops) or [{}]})
+        self.assertTrue(res["ok"], res)
+        return [i["json"] for i in res["out"]]
+
+    def test_shops_lists_every_shop_the_catcher_knows_and_the_page_only_ones(self):
+        out = self.pick("shops", shops=SHOPS + [{"store_name": "Hope N Skin", "myshopify_domain": "hopenskin.myshopify.com",
+                                                 "client_registry": "", "active": True}])[0]
+        self.assertEqual((out["action"], out["state"], out["listing"]), ("licence", "status", True))
+        self.assertEqual([s["client"] for s in out["shops"]], ["elevate-with-harsh", "rupa-divine-crystals", "test-store-harsh-dtj"])
+        self.assertEqual(out["shops"][2]["name"], "DTJ Test Store")  # the friendlier name from dtj_stores
+        self.assertEqual(out["shops"][1]["name"], "Rupa Divine")  # an app-only client: not in dtj_stores, still on the switch
+        self.assertEqual(out["missing"], ["Hope N Skin"])
+        self.assertNotIn("names", out["shops"][0])
+
+    def test_a_shop_is_found_by_any_of_its_names_and_off_asks_for_a_tap_first(self):
+        for arg in ("rupa", "Rupa Divine", "rupa-divine-crystals.myshopify.com", "https://rupa-divine-crystals.myshopify.com/admin"):
+            st = self.pick("status", arg)[0]
+            self.assertEqual((st["action"], [s["client"] for s in st["shops"]]), ("licence", ["rupa-divine-crystals"]), arg)
+        self.assertEqual(self.pick("status", "test-store-harsh-dtj.myshopify.com")[0]["shops"][0]["client"], "test-store-harsh-dtj")
+        off = self.pick("off", "elevate")[0]
+        self.assertEqual((off["action"], off["yes_text"]), ("confirm", "Yes, switch OFF"))  # nothing switches before the tap
+        self.assertRegex(off["yes_data"], r"^lic:off:elevate-with-harsh:\d{10}$")
+        self.assertIn("elevate-with-harsh.myshopify.com", off["text"])
+        self.assertIn("More than one shop", self.pick("status", "harsh")[0]["text"])
+        self.assertIn("No shop matches", self.pick("status", "royal dosa")[0]["text"])
+
+    def test_a_tap_switches_only_a_shop_still_on_the_list(self):
+        go = self.pick("tap", state="inactive", client="elevate-with-harsh")[0]
+        self.assertEqual((go["action"], go["state"], go["approved_by"], go["reason"], go["admins"]),
+                         ("licence", "inactive", "Harsh via Telegram", "Telegram /off", ["222"]))
+        self.assertEqual([a["app"] for a in go["shops"][0]["apps"]],
+                         ["elevate-with-harsh-blocks", "elevate-with-harsh-sections", "elevate-with-harsh-sections2"])
+        self.assertIn("not on the switch any more", self.pick("tap", state="active", client="gone-shop")[0]["text"])
+
+    def test_a_page_shop_without_the_switch_and_a_broken_list_are_explained(self):
+        only_test = {"statusCode": 200, "body": {"shops": CATCHER_LIST["body"]["shops"][2:]}}
+        self.assertIn("not on the switch yet", self.pick("status", "elevate", listing=only_test)[0]["text"])
+        self.assertIn("refused the bot's key", self.pick("shops", listing={"statusCode": 401, "body": {"error": "bad signature"}})[0]["text"])
+        self.assertIn("could not reach", self.pick("shops", listing={"error": {"message": "timeout"}})[0]["text"])
+
+    def test_the_calls_and_the_reports(self):
+        import json
+        pick = self.pick("tap", state="inactive", client="test-store-harsh-dtj")[0]
+        calls = [i["json"] for i in run_node("licence_calls.js", pick)["out"]]
         self.assertEqual([c["app"] for c in calls], ["test-store-harsh-dtj-blocks", "test-store-harsh-dtj-sections", "test-store-harsh-dtj-sections2"])
-        body = __import__("json").loads(calls[0]["body"])
+        self.assertEqual([c["label"] for c in calls], ["DTJ Blocks", "DTJ Sections", "DTJ Sections 2"])
+        body = json.loads(calls[0]["body"])
         self.assertEqual((body["state"], body["approved_by"]), ("inactive", "Harsh via Telegram"))
-        self.assertNotIn("approved_by", __import__("json").loads(run_node("licence_calls.js", {"client": "c", "state": "status"})["out"][0]["json"]["body"]))
-        ask = {"chat_id": "333", "state": "inactive", "shop_name": "DTJ Test Store", "actor": "Harsh", "admins": ["222"]}
         answers = [{"statusCode": 200, "body": {"before": "active", "after": "inactive", "verified": True}}] * 3
-        out = [i["json"] for i in run_node("licence_report.js", answers, {"Who Is It": ask, "Licence Calls": calls})["out"]]
+        out = [i["json"] for i in run_node("licence_report.js", answers, {"Pick the Shop": pick, "Licence Calls": calls})["out"]]
         self.assertEqual([o["chat_id"] for o in out], ["333", "222"])
         self.assertIn("Done: all DTJ apps on DTJ Test Store are OFF.", out[0]["text"])
         self.assertIn("DTJ Sections 2: ON -> OFF (checked)", out[0]["text"])
         self.assertIn("Harsh switched OFF", out[1]["text"])
         mixed = answers[:2] + [{"statusCode": 401, "body": {"error": "bad signature"}}]
-        self.assertIn("Not everything switched", run_node("licence_report.js", mixed, {"Who Is It": ask, "Licence Calls": calls})["out"][0]["json"]["text"])
-        status = [{"statusCode": 200, "body": {"licence": "active"}}, {"statusCode": 200, "body": {"licence": "inactive"}},
-                  {"statusCode": 404, "body": {"error": "no store key for x"}}]
-        txt = run_node("licence_report.js", status, {"Who Is It": {**ask, "state": "status"}, "Licence Calls": calls})["out"][0]["json"]["text"]
-        self.assertIn("DTJ Blocks: ON\nDTJ Sections: OFF\nDTJ Sections 2: not connected", txt)
-        own = [{"statusCode": 404, "body": {"error": "unknown app"}}] * 3
-        self.assertIn("uses DTJ's own apps", run_node("licence_report.js", own, {"Who Is It": {**ask, "shop_name": "Elevate"}, "Licence Calls": calls})["out"][0]["json"]["text"])
+        self.assertIn("Not everything switched", run_node("licence_report.js", mixed, {"Pick the Shop": pick, "Licence Calls": calls})["out"][0]["json"]["text"])
 
+        listing = self.pick("shops")[0]
+        calls = [i["json"] for i in run_node("licence_calls.js", listing)["out"]]
+        self.assertEqual(len(calls), 9)
+        self.assertNotIn("approved_by", json.loads(calls[0]["body"]))  # a status call changes nothing
+        state = {"elevate-with-harsh": {"statusCode": 200, "body": {"licence": None}},
+                 "rupa-divine-crystals": {"statusCode": 404, "body": {"error": "no store key for x: the store has not installed it (or uninstalled it)"}},
+                 "test-store-harsh-dtj": {"statusCode": 200, "body": {"licence": "active"}}}
+        txt = run_node("licence_report.js", [state[c["client"]] for c in calls], {"Pick the Shop": listing, "Licence Calls": calls})["out"][0]["json"]["text"]
+        self.assertIn("Elevate with Harsh (elevate-with-harsh.myshopify.com, DTJ's own apps)\nDTJ Blocks: not set (blocks hidden)", txt)
+        self.assertIn("Rupa Divine (rupa-divine-crystals.myshopify.com)\nDTJ Blocks: not installed on the shop", txt)
+        self.assertIn("DTJ Test Store (qaxv3r-8g.myshopify.com)\nDTJ Blocks: ON\nDTJ Sections: ON\nDTJ Sections 2: ON", txt)
+        self.assertIn("for example: /status Elevate with Harsh", txt)
+        org = [{"statusCode": 404, "body": {"error": "DTJ's app is not installed on x, or the store is not in DTJ's Shopify organization (shop_not_permitted)"}}] * 3
+        one = self.pick("status", "elevate")[0]
+        calls = [i["json"] for i in run_node("licence_calls.js", one)["out"]]
+        txt = run_node("licence_report.js", org, {"Pick the Shop": one, "Licence Calls": calls})["out"][0]["json"]["text"]
+        self.assertIn("outside DTJ's Shopify organization", txt)
 
 if __name__ == "__main__":
     unittest.main()
