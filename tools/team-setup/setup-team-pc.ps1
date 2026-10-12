@@ -87,7 +87,20 @@ function Save-Secret([string]$Name) {
   Write-Host "Saved $Name ($($plain.Length) characters)."
   $plain = $null
 }
-# the n8n token first: the list of shops comes from n8n
+# the company vault first (Bitwarden): one sign-in copies every shared key this person may see (docs/ACCESS-AND-KEYS.md)
+Write-Host ''
+$useVault = Read-Host 'Has Harsh given you access to DTJ''s Bitwarden vault? Type Y to sign in and copy your keys from it (Enter = skip)'
+if ($useVault -match '^[Yy]$') {
+  if (-not (Has 'bw')) { npm install -g '@bitwarden/cli'; Refresh-Path }
+  $bwState = ''
+  try { $bwState = (bw status | ConvertFrom-Json).status } catch { $bwState = '' }
+  if ($bwState -eq 'unauthenticated') {
+    Write-Host 'Sign in to Bitwarden: your email, then your master password (hidden), then the code if it asks for one.'
+    $env:BW_SESSION = (bw login --raw)  # only the session key comes back; it stays in this window and is never shown
+  }
+  python tools\team-setup\vault.py pull @(if ($Replace) { '--replace' })
+}
+# the n8n token is personal (never in the vault): the list of shops comes from n8n
 if ($Replace -or -not [Environment]::GetEnvironmentVariable('N8N_MCP_TOKEN', 'User')) { Save-Secret 'N8N_MCP_TOKEN' }
 if ($Replace) {
   $shops = @(python tools\team-setup\check_setup.py --secret-names) | Where-Object { $_ -and $_ -ne 'N8N_MCP_TOKEN' }

@@ -29,7 +29,12 @@
       "Bash(*--allow-live*)",
       "Read(./.env)",
       "Read(./.env.*)",
-      "Read(./secrets/**)"
+      "Read(./secrets/**)",
+      "Bash(bw get:*)",
+      "Bash(bw list:*)",
+      "Bash(bw export:*)",
+      "Bash(bw unlock:*)",
+      "Bash(bw login:*)"
     ]
   }
 }

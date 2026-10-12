@@ -86,6 +86,13 @@ Harsh (or the shop owner) does this in Shopify: **Apps > Theme Access > Create p
 email from Shopify with a link: open it and copy the password. The link works **once**, so keep the page open until A7 is done.
 If the link has expired, ask for a new password.
 
+### A6b. DTJ's key vault (Bitwarden), if Harsh gave you access
+DTJ keeps the shared passwords in a company Bitwarden vault (docs/ACCESS-AND-KEYS.md). If you have an invitation:
+1. Accept it from your email and set up your Bitwarden account (choose a strong master password and remember it; nobody can
+   recover it for you).
+2. In the next step the setup script asks "Has Harsh given you access to DTJ's Bitwarden vault?". Type **Y**, sign in, and it
+   copies your shop passwords for you, so you skip A6.
+
 ### A7. Run the setup script
 In PowerShell (still in the `dtj-agency-automation` folder, see A4), paste:
 ```

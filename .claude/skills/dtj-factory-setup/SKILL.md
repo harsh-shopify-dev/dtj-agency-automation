@@ -39,6 +39,11 @@ a designer's laptop, Harsh's laptop, or a new n8n server.
   asks for each secret in a hidden prompt:
   `powershell -ExecutionPolicy Bypass -File tools\team-setup\setup-team-pc.ps1`
   Then they close and reopen Claude, so it sees the new settings, and you run the check again.
+- Keys come from DTJ's Bitwarden vault when the person has access: the setup script asks, or they run
+  `python tools/team-setup/vault.py pull` in their own PowerShell. Claude never runs `bw` itself: reading the vault is blocked
+  in `.claude/settings.json`, and only the person can type their master password.
+- `vault.py status` (run by the person) warns if `DTJ_CATCHER_VAULT_KEY` exists only on one laptop: point them to
+  docs/ACCESS-AND-KEYS.md, "The company vault".
 - "draft theme ... is live": the shop's draft was published. Harsh duplicates the live theme and puts the new number in dtj_stores
   (TEAM-GUIDE Part E step 2).
 

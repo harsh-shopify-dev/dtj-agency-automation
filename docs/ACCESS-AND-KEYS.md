@@ -67,11 +67,42 @@ by Harsh.
    re-encryption step, which is not built yet. This is the reason it must live in the company vault and nowhere else.
 5. Update this page.
 
-## The plan (each step needs Harsh's decision)
-1. **A company password vault** (for example Bitwarden or 1Password), owned by DTJ, with Harsh as admin.
-   - It holds: the three catcher keys, the Cloudflare token, the Shopify app secrets, the Telegram bot token, and one shared
-     item per shop for Theme Access.
-   - Never in git, never in chat.
-2. **The setup script reads from the vault**, so a new person signs in to the vault once instead of pasting every password.
-3. **Accounts moved to the company:** GitHub organization, Cloudflare owner, Shopify organization owners, the n8n and Hostinger
-   owner, the Telegram bot.
+## The company vault: Bitwarden (Harsh's choice, 12 Oct 2026)
+**Set it up once (Harsh; creating the account is a person's job):**
+1. Create a Bitwarden **organization** for DTJ. Make it owned by the company: Tushar (or a DTJ admin email) as Owner, Harsh as
+   Admin, so it never depends on one person. Check Bitwarden's current plans for a team of your size.
+2. In the organization, **Collections > New**, make two:
+   - `DTJ Store Factory - Designers`: the shops' Theme Access passwords;
+   - `DTJ Store Factory - Developers`: the install service's keys, Cloudflare, the Shopify app secrets.
+   Designers get the first, developers both.
+3. On Harsh's laptop, in PowerShell, in the project folder:
+   1. `npm install -g @bitwarden/cli`
+   2. `bw login`. If the organization is on Bitwarden's EU server, run `bw config server https://vault.bitwarden.eu` before
+      logging in.
+   3. `python tools\team-setup\vault.py push --all`. This backs up every store-factory key on this laptop, the irreplaceable
+      `DTJ_CATCHER_VAULT_KEY` included. Values travel through a pipe straight to Bitwarden and are never shown.
+   4. `python tools\team-setup\vault.py status`. Every key should say "in the vault".
+4. Add the keys that live only in n8n or in people's heads by hand, in the Bitwarden app:
+   - the Telegram bot token (item "Telegram bot token - DtjPageDesignerBot");
+   - the n8n owner login;
+   - the Hostinger login;
+   - the Cloudflare login.
+5. Invite each person to the organization and give them the right collection.
+
+**A new person's laptop:**
+- They run the normal setup script (`tools\team-setup\setup-team-pc.ps1`) and answer **Y** to "access to DTJ's Bitwarden vault".
+- They sign in once, and every key they may see is copied into their Windows settings. Nothing to paste.
+- Only their own n8n token is still asked for, because it is personal.
+
+**When a key changes** (for example a new Theme Access password): put the new one on the laptop, then
+`python tools\team-setup\vault.py push <NAME>`. Others get it with `vault.py pull --replace`.
+
+**Claude never reads the vault:** `.claude/settings.json` blocks `bw get`, `bw list`, `bw export`, `bw login` and `bw unlock`
+for Claude. `vault.py` is run by people in their own PowerShell, because only they can type the master password.
+
+## Still to do (Harsh)
+1. Create the organization and the two collections (above). Then run `vault.py push --all` on your laptop: this is the most
+   urgent step, because of `DTJ_CATCHER_VAULT_KEY`.
+2. Move the accounts to the company: a GitHub organization, a Cloudflare owner, the Shopify organization owners, the n8n and
+   Hostinger owner, the Telegram bot.
+3. Fill in the **[unknown]** owners in the tables above.
