@@ -3,19 +3,28 @@
 This guide is for anyone in the team, technical or not. Follow it top to bottom and you will be able to make a full product page
 for any shop that has our apps, without Harsh and without Harsh's computer.
 
-- **Part A** sets up your laptop. You do it **once** (about 45 minutes).
+There are two kinds of team members:
+
+| You are a... | You do | You need |
+|---|---|---|
+| **Requester** | Send a product link to the Telegram bot and get the preview link back | **Only Telegram.** Skip Part A completely: read "Get access to the bot" below, then Part C |
+| **Designer** | Also run Claude Code on your laptop when a page is waiting | Telegram **and** the laptop setup in Part A (once) |
+
+**Get access to the bot (everyone):** in Telegram, search **@DtjPageDesignerBot**, open it, press **Start** (or send "hi").
+It replies with your number. Send that number to Harsh and say whether you are a requester or a designer. Once he adds you,
+the bot works for you.
+
+- **Part A** sets up a designer's laptop. You do it **once** (about 45 minutes).
 - **Part B** explains how everything works. Read it once; it makes the rest easy.
-- **Part C** is what you do **every time** you make a page (about 2 minutes of your time, then about 15 to 20 minutes of waiting).
+- **Part C** is what you do **every time** you make a page (one message, then about 15 to 20 minutes of waiting).
 - **Part D** is what to do with the finished page.
 - **Part E** is for Harsh: adding a new shop.
 - **Part F** lists problems and their fixes. **Part G** explains the words.
 
-> Coming soon: a Telegram bot. You will send the product link to the bot instead of opening n8n. Part C will then get shorter.
-> Everything else in this guide stays the same.
 
 ---
 
-## Part A. Set up your laptop (once)
+## Part A. Set up a designer's laptop (once; requesters skip this)
 
 ### What you need before you start
 
@@ -126,13 +135,16 @@ git pull
 ### The picture
 
 ```
- YOU                       n8n (the conveyor belt)                          CLAUDE CODE (the designer, on your laptop)
- ───                       ───────────────────────                          ──────────────────────────────────────────
- product link  ─────►  1. Store Factory: New Page
+ YOU (Telegram)            n8n (the conveyor belt)                          CLAUDE CODE (the designer, on a laptop)
+ ──────────────            ───────────────────────                          ───────────────────────────────────────
+ product link  ─────►  0. Store Factory: Telegram Bot ("Who is this? Allowed?")
+ (to the bot)                    │
+                                 ▼
+                       1. Store Factory: New Page
                           "Which shop is this?"  (looks in dtj_stores)
                           saves a work order     (dtj_client_intake)
-                          replies "Got it"
-                                 │
+                          replies "Got it" (the bot tells you, and tells the designers
+                                 │        "a page is waiting")
                                  ▼
                        2. Store Factory: Page Design
                           writes the task list
@@ -150,6 +162,7 @@ git pull
                           records the result:
                           status, preview link,
                           checks, samples
+ preview link  ◄────────  and sends it to you on Telegram
 ```
 
 ### The pieces
@@ -160,8 +173,21 @@ git pull
 | **n8n** | https://n8n.srv2048145.hstgr.cloud | The conveyor belt. It holds the work orders and passes them from one step to the next. |
 | **dtj_stores** (a table in n8n) | One row per shop | The shop's addresses, its draft theme, its app copies, its brand website. Set up once by Harsh. |
 | **dtj_client_intake** (a table in n8n) | One row per page request | The work order: which product, who asked, and later the result and the preview link. |
+| **dtj_bot_users** (a table in n8n) | One row per person allowed to use the bot | Their Telegram number, name and role (requester, designer, admin). |
+| **@DtjPageDesignerBot** | The Telegram bot | The easiest front door: send it a product link, it sends you back the preview link. |
 | **Claude Code** | Claude's **Code** tab, opened in the project folder | The designer. It follows the project's rules and the task list. |
 | **The project folder** | `dtj-agency-automation` on your laptop | The rules, the design knowledge and the tools Claude uses. |
+
+### Automation 0: "Store Factory: Telegram Bot" (the messenger)
+
+| Box in n8n | What it does |
+|---|---|
+| **Telegram Message** | Receives every message sent to the bot. |
+| **Read the Message** | Ignores group chats. Refuses anything that looks like a password (asks you to delete it). Finds the first link; the rest of the message is your note. |
+| **Load Bot Users** / **Who Is It** | Checks you are in dtj_bot_users. If not, it replies with your number to send to Harsh. |
+| **Start a Page?** | A link: go on. "hi", /help or no link: just answer. |
+| **Ask New Page** | Gives the link and your note to automation 1 and waits for its answer (about a second). |
+| **Write the Answers** / **Send** | Tells you "Got it ..." and tells every designer "New page waiting ... type: handle the Claude Code trigger in n8n". |
 
 ### Automation 1: "Store Factory: New Page" (the front door, about 1 second)
 
@@ -187,6 +213,7 @@ git pull
 | **Wait for Claude Code: Page Design** | Pauses. It waits up to 3 days for you to run Claude Code. |
 | **Claude Code Reply: Page Design** | Checks Claude's answer (a page marked "written" must come with a real preview link). |
 | **Record Page Design** | Writes the result on the work order: status, preview link, checks passed, number of samples. |
+| **Tell the Requester** / **Send Result** | If the request came from Telegram: sends the person the preview link and the number of samples (or why it was not finished). |
 
 ### What Claude does when you say "handle the Claude Code trigger in n8n"
 1. Finds the waiting work order in n8n and reads its task list.
@@ -217,7 +244,18 @@ git pull
 2. Copy the address from the top of the browser. It contains `/products/`, for example
    `https://test-store-harsh-dtj.myshopify.com/products/pore-clarifying-serum-2-salicylic-acid-30ml`
 
-### Step 2. Give it to n8n
+### Step 2. Send it to the bot (the easy way)
+1. In Telegram, open **@DtjPageDesignerBot**.
+2. Paste the link. If you want, add a note after it in the same message, in plain words. For example:
+   `https://hopenskin.com/products/vitamin-c-serum lead with the glow, real rating 4.6 on Judge.me`
+3. The bot answers in a few seconds:
+   - "Got it: designing ..." means the work order is saved. Designers get a message too.
+   - Anything else explains, in one sentence, what to fix (usually the link). Fix it and send again.
+4. If you are a **requester**, you are done: the bot sends you the preview link when the page is ready (Part D).
+   If you are a **designer**, go to Step 3.
+
+### Step 2 (other way). Give it to n8n by hand
+Use this only if Telegram is not available.
 1. Open https://n8n.srv2048145.hstgr.cloud and open the workflow **Store Factory: New Page**.
 2. Double-click the box **What to Design (edit me)**.
 3. Find the line that starts with `const product_link =`. It ends with two small slanted marks `` ` ` `` and a `;`.
@@ -231,20 +269,23 @@ git pull
    - **Started**: read the message. It says "Got it: designing ...". Go to Step 3.
    - **Not Started**: read the message, fix what it says (usually the link), and try again.
 
-### Step 3. Let Claude design it
+### Step 3. Let Claude design it (designers)
+Designers get a Telegram message "New page waiting ..." whenever someone sends a link.
 1. Open Claude, the **Code** tab, in the folder `dtj-agency-automation`.
 2. Type exactly:
    ```
    handle the Claude Code trigger in n8n
    ```
 3. Wait about 15 to 20 minutes. Claude works on its own. If it asks to allow a normal page step, choose **Allow**.
-4. At the end Claude gives you the **preview link** and the **list of samples**.
+4. At the end Claude gives you the **preview link** and the **list of samples**. The bot also sends the preview link to the
+   person who asked.
 
 ---
 
 ## Part D. After the page is made
 
-1. Open the **preview link** on your phone and on a computer. This is the draft: shoppers cannot see it.
+1. Open the **preview link** (from the bot, or from Claude) on your phone and on a computer. This is the draft: shoppers
+   cannot see it.
 2. Read the **samples list**. These are placeholder words or pictures (for example made-up reviews) that must be replaced with
    real ones, or approved by Harsh, before the page goes live.
 3. Send Harsh the preview link and the samples list. He decides what goes live and when.
@@ -266,7 +307,13 @@ A shop can get pages only after these steps, done once:
    `.myshopify.com` address), other_domains (every other address of the shop, separated by commas, for example
    `hopenskin.com, www.hopenskin.com`), draft_theme_id, client_registry (`page_builder/clients/<shop>.json`), brand_name,
    brand_website, reference_brands (optional), store_notes (optional), active = true.
-5. Each team member runs the setup script again (Part A7): it asks only for the new shop's password. Then the check (A8).
+5. Each designer runs the setup script again (Part A7): it asks only for the new shop's password. Then the check (A8).
+
+### Add a person to the bot (Harsh)
+1. The person messages **@DtjPageDesignerBot** and sends you the number it replies with.
+2. In n8n: **Data tables > dtj_bot_users > add a row**: telegram_user_id (that number), name, role (`requester`, `designer`
+   or `admin`), active = true.
+3. To remove someone, set active = false. Designers and admins get the "New page waiting" messages.
 
 ---
 
@@ -286,6 +333,10 @@ A shop can get pages only after these steps, done once:
 | Claude asks to allow something unusual | A step outside the normal page steps | If unsure, choose **No** and ask Harsh |
 | Nothing happens after "handle the Claude Code trigger in n8n" | No work order is waiting | Do Part C Step 2 first; check the box at the end says **Started** |
 | PowerShell: "running scripts is disabled" | Windows blocks scripts by default | Use the exact command in A7 (it starts with `powershell -ExecutionPolicy Bypass`) |
+| The bot says "This bot is only for the DTJ team ... send Harsh this number" | You are not on the list yet | Send Harsh the number |
+| The bot says "That looks like a password or a key" | Your message looked like a secret | Delete your message (press and hold it, then Delete). Never send passwords to any chat |
+| The bot does not answer at all | n8n is down, or you wrote in a group | Write to the bot directly (not in a group). Still nothing after a minute: tell Harsh |
+| You sent a link but no preview link came back | Nobody has run Claude Code yet, or the page could not be finished | Ask a designer; the bot tells you if the page was not finished, and why |
 
 ---
 
@@ -302,4 +353,5 @@ A shop can get pages only after these steps, done once:
 | **Work order / brief** | One row in dtj_client_intake: one page request. |
 | **Theme Access password** | A password from Shopify that lets the tools write to a shop's draft theme. One per shop, per person. |
 | **n8n token** | Your personal key that lets Claude talk to n8n. |
+| **Requester / designer** | A requester sends links to the bot. A designer also runs Claude Code on a set-up laptop. |
 | **Preview link** | The address where you can see the draft page. |
