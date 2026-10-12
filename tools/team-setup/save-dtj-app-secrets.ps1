@@ -10,6 +10,7 @@ cannot read one, you can paste it into a hidden prompt instead (from the app's p
 Saved as DTJ_BLOCKS_CLIENT_SECRET, DTJ_SECTIONS_CLIENT_SECRET and DTJ_SECTIONS2_CLIENT_SECRET (the names services/install-catcher/
 tools/deploy.py and services/block-library/tools/licence.py read). Never paste them into a chat, an email or a file.
 #>
+param([switch]$Paste)  # -Paste: skip the Shopify CLI and ask for each secret straight away
 $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $Repo
@@ -23,7 +24,7 @@ foreach ($a in $apps) {
   Write-Host ''
   Write-Host "$($a.Label) -> $($a.Var)" -ForegroundColor Cyan
   $plain = $null
-  try {
+  if (-not $Paste) { try {
     # the CLI prints SHOPIFY_API_SECRET=...; it is captured here and never written to the screen. It runs as a background job with
     # a 90-second limit, so a login question it cannot ask (no screen) never leaves this window waiting.
     $job = Start-Job -ScriptBlock { param($p) & shopify app env show --path $p --config shopify.app.toml 2>&1 | Out-String } -ArgumentList (Join-Path $Repo $a.Path)
@@ -32,14 +33,18 @@ foreach ($a in $apps) {
     $m = [regex]::Match($out, 'SHOPIFY_API_SECRET\s*=\s*([^\s\x1b]+)')
     if ($m.Success) { $plain = $m.Groups[1].Value.Trim() }
     $out = $null
-  } catch { $plain = $null }
-  if (-not $plain) {
-    Write-Host 'The Shopify CLI could not read it (not signed in with the account that owns the app?).'
-    $secure = Read-Host 'Paste the client secret here instead and press Enter (nothing shows; leave empty to skip)' -AsSecureString
+  } catch { $plain = $null } }
+  # a Shopify client secret is shpss_ + 32 hex characters (the Client ID is 32 hex characters with no prefix: a common mix-up)
+  for ($try = 1; $try -le 3 -and -not ($plain -and $plain.Trim() -match '^shpss_[0-9a-f]{32}$'); $try++) {
+    if ($plain) { Write-Host 'That is not a client secret (it must start with shpss_ and be 38 characters; the Client ID is not it). Try again.' -ForegroundColor Red }
+    elseif (-not $Paste) { Write-Host 'The Shopify CLI could not read it (not signed in with the account that owns the app?).' }
+    Write-Host "In the Dev Dashboard open $($a.Label) (the original app), Settings > Client credentials, copy the Secret."
+    $secure = Read-Host 'Paste the client secret here and press Enter (nothing shows; leave empty to skip)' -AsSecureString
     $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    if ([string]::IsNullOrWhiteSpace($plain)) { break }
   }
-  if ([string]::IsNullOrWhiteSpace($plain)) { Write-Host "Skipped $($a.Var)."; continue }
+  if ([string]::IsNullOrWhiteSpace($plain) -or $plain.Trim() -notmatch '^shpss_[0-9a-f]{32}$') { Write-Host "Skipped $($a.Var) (nothing saved)."; continue }
   $plain = $plain.Trim()
   [Environment]::SetEnvironmentVariable($a.Var, $plain, 'User')
   Write-Host "Saved $($a.Var) ($($plain.Length) characters)."

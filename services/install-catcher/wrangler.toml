@@ -16,6 +16,27 @@ crons = ["0 3 * * 1"]  # every Monday 03:00 UTC: refresh every store key (a refr
 [vars]
 # one entry per app copy, written by tools/add_client.py (client ids and store addresses are not secret)
 APPS = '''{
+ "elevate-with-harsh-blocks": {
+  "client_id": "5952b6121d9bc666225ea06143fb523d",
+  "grant": "org",
+  "label": "DTJ Blocks - Elevate with Harsh",
+  "org_app": "dtj-blocks",
+  "shop": "elevate-with-harsh.myshopify.com"
+ },
+ "elevate-with-harsh-sections": {
+  "client_id": "c10a9d9037a01cb9eacef391eab5d714",
+  "grant": "org",
+  "label": "DTJ Sections - Elevate with Harsh",
+  "org_app": "dtj-sections",
+  "shop": "elevate-with-harsh.myshopify.com"
+ },
+ "elevate-with-harsh-sections2": {
+  "client_id": "a257890dc9312b8ee1288f9bdb8a7c08",
+  "grant": "org",
+  "label": "DTJ Sections 2 - Elevate with Harsh",
+  "org_app": "dtj-sections2",
+  "shop": "elevate-with-harsh.myshopify.com"
+ },
  "rupa-divine-crystals-blocks": {
   "client_id": "df417f1a617ef40a6da895e54dc5cc8a",
   "label": "DTJ Blocks - Rupa Divine",
