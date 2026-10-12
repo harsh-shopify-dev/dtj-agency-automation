@@ -331,7 +331,10 @@ Instead of starting each page yourself, you can let Claude wait for them while y
 
 ---
 
-## Part E. Add a new shop (Harsh)
+## Part E. Add a new shop (Harsh, or any teammate)
+
+Fastest way: in Claude (Code tab, this folder) type `add a new shop`. The skill `dtj-add-shop` does every scripted step and
+tells you the few clicks only a person can do in Shopify. The steps below are what it covers.
 
 A shop can get pages only after these steps, done once:
 1. **Our apps, on the switch:** either the client's own copies of DTJ Blocks, DTJ Sections and DTJ Sections 2 are installed

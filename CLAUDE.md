@@ -15,6 +15,10 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
      (unpublished) theme without asking, through `page_builder.ship_draft` / `push_page` only (they refuse a live theme). This holds
      for every session and team member. A live theme, publishing a theme, app releases and creating stores or products still need
      Harsh's yes every time.
+     **Who may say yes (Harsh, 12 Oct 2026: "any of the teammate"):** Harsh; or, when Harsh is not reachable, any DTJ teammate
+     (an active person in n8n's `dtj_bot_users`). The rule stays the same: one yes covers one action, given in this session by
+     the person, with their name. Record it as approved_by "<name> (Harsh not reachable)". Everywhere this repo says "Harsh's yes"
+     or "ask Harsh", it means this. Tier 3 stays never, whoever asks.
    - Tier 3 destructive (delete, truncate, drop, force-push, remove access): never.
 3. **Shadow first.** New automations only recommend until Harsh moves them up.
 4. **Numbers come from code.** Never invent or estimate a metric. Every figure must come from a stored query or file and name its source. If you do not have it, say "not available".
@@ -58,6 +62,8 @@ A new page is started in n8n with **Store Factory: New Page** (just a product li
 with `python tools/team-setup/check_setup.py`.
 **Setting everything up** (laptop, n8n, the app switch) and **"listen for the telegram call"** (wait for bot requests and design
 each one while a person is at the laptop): the skill `dtj-factory-setup`.
+**A new shop** (a client's store or one in DTJ's own Shopify organization): the skill `dtj-add-shop`. The page to share with a
+new teammate: `docs/START-HERE.md`.
 
 ## `/start-dtj-engine`
 When Harsh types this: confirm you have read `CLAUDE.md` and `RUNBOOK.md`; list which MCP servers and tools are actually connected (do not guess); state the current mode of each automation (shadow, approve or auto) from the config; then wait for the first instruction. If something needed is not connected, tell Harsh what and why, and do not proceed with it.

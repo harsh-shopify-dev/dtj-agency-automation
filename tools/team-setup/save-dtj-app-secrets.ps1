@@ -9,8 +9,12 @@ Each secret is read straight from Shopify's CLI (`shopify app env show`) and sav
 cannot read one, you can paste it into a hidden prompt instead (from the app's page in the Shopify Dev Dashboard, Client credentials).
 Saved as DTJ_BLOCKS_CLIENT_SECRET, DTJ_SECTIONS_CLIENT_SECRET and DTJ_SECTIONS2_CLIENT_SECRET (the names services/install-catcher/
 tools/deploy.py and services/block-library/tools/licence.py read). Never paste them into a chat, an email or a file.
+
+A NEW CLIENT's own app copies (skill dtj-add-shop): their three secrets, asked one by one, checked the same way:
+      powershell -ExecutionPolicy Bypass -File tools\team-setup\save-dtj-app-secrets.ps1 -Client royal-dosa
+saves DTJ_SECRET_ROYAL_DOSA_BLOCKS / _SECTIONS / _SECTIONS2 (the names services/install-catcher/tools/deploy.py reads).
 #>
-param([switch]$Paste)  # -Paste: skip the Shopify CLI and ask for each secret straight away
+param([switch]$Paste, [string]$Client = '')  # -Paste: skip the Shopify CLI; -Client <short name>: a client's app copies
 $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $Repo
@@ -20,6 +24,18 @@ $apps = @(
   @{ Var = 'DTJ_SECTIONS_CLIENT_SECRET';  Path = 'services\block-library-sections';   Label = 'DTJ Sections' },
   @{ Var = 'DTJ_SECTIONS2_CLIENT_SECRET'; Path = 'services\block-library-sections-2'; Label = 'DTJ Sections 2' }
 )
+$which = 'the original app'
+if ($Client) {
+  if ($Client -notmatch '^[a-z0-9]+(-[a-z0-9]+)*$') { throw "-Client must be the client's short name: lowercase letters, digits and single dashes" }
+  $up = ($Client.ToUpper() -replace '[^A-Z0-9]', '_')
+  $apps = @(
+    @{ Var = "DTJ_SECRET_${up}_BLOCKS";    Label = "DTJ Blocks - (this client)" },
+    @{ Var = "DTJ_SECRET_${up}_SECTIONS";  Label = "DTJ Sections - (this client)" },
+    @{ Var = "DTJ_SECRET_${up}_SECTIONS2"; Label = "DTJ Sections 2 - (this client)" }
+  )
+  $which = "the client's copy you created"
+  $Paste = $true  # a new copy has no linked config here yet: ask straight away
+}
 foreach ($a in $apps) {
   Write-Host ''
   Write-Host "$($a.Label) -> $($a.Var)" -ForegroundColor Cyan
@@ -38,7 +54,7 @@ foreach ($a in $apps) {
   for ($try = 1; $try -le 3 -and -not ($plain -and $plain.Trim() -match '^shpss_[0-9a-f]{32}$'); $try++) {
     if ($plain) { Write-Host 'That is not a client secret (it must start with shpss_ and be 38 characters; the Client ID is not it). Try again.' -ForegroundColor Red }
     elseif (-not $Paste) { Write-Host 'The Shopify CLI could not read it (not signed in with the account that owns the app?).' }
-    Write-Host "In the Dev Dashboard open $($a.Label) (the original app), Settings > Client credentials, copy the Secret."
+    Write-Host "In the Dev Dashboard open $($a.Label) ($which), Settings > Client credentials, copy the Secret."
     $secure = Read-Host 'Paste the client secret here and press Enter (nothing shows; leave empty to skip)' -AsSecureString
     $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }

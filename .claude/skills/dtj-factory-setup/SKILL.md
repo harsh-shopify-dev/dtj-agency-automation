@@ -20,7 +20,8 @@ app releases, adding a client's app copies, changes to the install service or th
   runs in their own terminal; the tools read them from the Windows user settings and send them only where they belong. Never ask
   for a secret in chat, and never put one in a file, a command line or a log. `.claude/settings.json` blocks Claude from `bw get`,
   `bw list`, `bw export`, `bw login` and `bw unlock`.
-- **Read-only checks and building missing pieces need no permission.** The following need Harsh's yes for that action, every time:
+- **Read-only checks and building missing pieces need no permission.** The following need a yes for that action, every time,
+  from Harsh or, when he isn't reachable, any teammate by name (CLAUDE.md rule 2):
   publishing an n8n workflow, deploying the install service, adding an admin to the bot, switching a shop's apps. `--apply` never
   deletes and never publishes.
 - **Pages only ever go to a DRAFT theme** (`page_builder.ship_draft` / `push_page`).
