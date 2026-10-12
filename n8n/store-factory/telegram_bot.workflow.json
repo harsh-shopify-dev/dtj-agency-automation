@@ -1,0 +1,332 @@
+{
+ "id": "y7xTaf7JG8pIjFgQ",
+ "name": "Store Factory: Telegram Bot",
+ "description": "Store factory Telegram bot: a team member sends a product link, the bot starts Store Factory: New Page and replies.",
+ "nodes": [
+  {
+   "id": "6afe2067-57c9-498a-9239-72f010ba2544",
+   "name": "Telegram Message",
+   "type": "n8n-nodes-base.telegramTrigger",
+   "typeVersion": 1.5,
+   "position": [
+    0,
+    120
+   ],
+   "parameters": {
+    "updates": [
+     "message"
+    ],
+    "additionalFields": {}
+   },
+   "webhookId": "94179fbb-0513-47f6-99cc-c55dcf365237"
+  },
+  {
+   "id": "f26ea1de-c250-4e3b-9039-f830619322be",
+   "name": "Read the Message",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Read the Message\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns one Telegram update into: who wrote, in which chat, and what they want (help, a page from a product link, or nothing).\nconst update = $input.first().json || {};\nconst msg = update.message || update;\nconst chat = msg.chat || {};\nconst from = msg.from || {};\nconst text = String(msg.text || '').trim();\nconst name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\nconst base = { chat_id: String(chat.id || ''), chat_type: String(chat.type || ''), user_id: String(from.id || ''), name, text };\n\n// group chats, channels, other bots and empty updates are ignored: the bot only talks one to one\nif (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n\n// a message that looks like a password, token or key is never used (the person is asked to delete it)\nconst secret = /\\bshp(at|ca|ss|tka)_[0-9a-z]{8,}/i.test(text) || /\\b[0-9]{8,10}:[A-Za-z0-9_-]{30,}\\b/.test(text)\n  || /\\b[0-9a-f]{32,}\\b/i.test(text) || /\\beyJ[A-Za-z0-9_-]{20,}\\./.test(text) || /\\bsk-ant-[A-Za-z0-9_-]{10,}/.test(text);\nif (secret) return [{ json: { ...base, kind: 'secret' } }];\n\nif (/^\\/(start|help)\\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];\n\n// the first link in the message; everything else is the note for the designer\nconst m = text.match(/https?:\\/\\/[^\\s<>\"]+/i) || text.match(/\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/[^\\s<>\"]*/i);\nif (!m) return [{ json: { ...base, kind: 'nolink' } }];\nconst product_link = m[0].replace(/[).,;!?]+$/, '');\nconst note = (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length)).replace(/\\s+/g, ' ').trim().slice(0, 1500);\nreturn [{ json: { ...base, kind: 'link', product_link, note } }];\n"
+   }
+  },
+  {
+   "id": "58be6924-4738-4ecc-b040-be84db78bd54",
+   "name": "Load Bot Users",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "xJ9O19tBBmCJc1Hc",
+     "cachedResultName": "dtj_bot_users"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "telegram_user_id",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "e2ee1b6f-7b92-4472-a5d3-d1c33308e115",
+   "name": "Who Is It",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both). Output: action \"design\" (start a page) or \"reply\" (just answer).\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $input.all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(me.name || msg.name) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.');\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\nconst designers = users.filter((u) => ['designer', 'admin'].includes(String(u.role || '').toLowerCase().trim()))\n  .map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: (me.name || msg.name) + ' (Telegram)', requester_name: me.name || msg.name, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
+   }
+  },
+  {
+   "id": "f2d7161c-daee-47eb-8d1b-5534c0bcf1a1",
+   "name": "Start a Page?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    960,
+    120
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.action }}",
+       "rightValue": "design",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "6336ada2-f931-4e54-93d4-fc52209c15b1",
+   "name": "Ask New Page",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "Z3s9hqny1d2shvXT",
+     "cachedResultName": "Store Factory: New Page"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "product_link": "={{ $json.product_link }}",
+      "note": "={{ $json.note }}",
+      "requested_by": "={{ $json.requested_by }}",
+      "chat_id": "={{ $json.chat_id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "product_link",
+       "displayName": "product_link",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "note",
+       "displayName": "note",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "mode": "once",
+    "options": {
+     "waitForSubWorkflow": true
+    }
+   }
+  },
+  {
+   "id": "eace2d9c-a71b-4e90-ab84-6ff62878e60a",
+   "name": "Write the Answers",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1440,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Write the Answers\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Store Factory: New Page\" ran: one message for the person who asked and, when a page was started, one for each designer\n// (a designer who asked gets both in one message). Every item is { chat_id, text } for the \"Send\" node (HTML mode, text escaped).\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!res.ok) return [{ json: { chat_id: ask.chat_id, text: esc(res.message || 'That did not work. Please ask Harsh.') } }];\n\nconst what = (res.handle ? res.handle : 'your page') + (res.store_name ? ' on ' + res.store_name : '');\nconst toDesigner = 'New page waiting (brief ' + esc(res.row_id) + ') from ' + esc(ask.requester_name) + ': ' + esc(what) + '.\\n'\n  + 'Open Claude Code in the dtj-agency-automation folder and type:\\nhandle the Claude Code trigger in n8n';\nconst askerIsDesigner = (ask.designers || []).includes(ask.requester_id);\nconst out = [{ json: { chat_id: ask.chat_id, text: 'Got it: designing ' + esc(what) + ' (brief ' + esc(res.row_id) + ').\\n'\n  + (askerIsDesigner ? '\\n' + toDesigner : 'A designer will start it on their laptop; I will send you the preview link here when it is ready.') } }];\nfor (const d of ask.designers || []) {\n  if (d !== ask.requester_id) out.push({ json: { chat_id: d, text: toDesigner } });\n}\nreturn out;\n"
+   }
+  },
+  {
+   "id": "ad064599-3518-4f36-97f6-9633868a07d9",
+   "name": "Send",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1680,
+    120
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "0706eecb-b8f8-44f3-8185-8354cfce045f"
+  },
+  {
+   "id": "55c5c861-e79d-445d-9bd8-9d73a7d70d3b",
+   "name": "Sticky Note c4b26d98",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -300
+   ],
+   "parameters": {
+    "content": "## DTJ page bot (Telegram)\nA team member sends a product link (and a note) to the bot in a private chat. Only people in the data table **dtj_bot_users** (active) may use it; anyone else gets their Telegram number to send to Harsh. Roles: requester, designer (also told when a page waits for Claude Code), admin.\n\nThe link goes to **Store Factory: New Page**; the answer comes back here. When the page is done, **Store Factory: Page Design** sends the preview link to the person who asked.\n\nCredential: Telegram API **DTJ Page Bot** (the token is pasted by Harsh in n8n, never in git or chat). Source in git: `n8n/store-factory/`.",
+    "color": 5,
+    "width": 980,
+    "height": 300
+   }
+  }
+ ],
+ "connections": {
+  "Telegram Message": {
+   "main": [
+    [
+     {
+      "node": "Read the Message",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Read the Message": {
+   "main": [
+    [
+     {
+      "node": "Load Bot Users",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Bot Users": {
+   "main": [
+    [
+     {
+      "node": "Who Is It",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Who Is It": {
+   "main": [
+    [
+     {
+      "node": "Start a Page?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Start a Page?": {
+   "main": [
+    [
+     {
+      "node": "Ask New Page",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Ask New Page": {
+   "main": [
+    [
+     {
+      "node": "Write the Answers",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Write the Answers": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

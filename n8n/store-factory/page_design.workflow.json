@@ -236,6 +236,44 @@
     -48,
     -416
    ]
+  },
+  {
+   "id": "24460223-5b48-4087-b13e-6d037f29c0ff",
+   "name": "Tell the Requester",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1200,
+    240
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Tell the Requester\" in \"Store Factory: Page Design\" (mode: Run Once for All Items).\n// When a page request came from Telegram (the brief has a telegram_chat_id), send its result back to that person.\n// Input: the checked answer from \"Claude Code Reply: Page Design\". Output: [] (nothing to send) or one { chat_id, text }.\nconst brief = $('Load Brief').first().json || {};\nconst chat = String(brief.telegram_chat_id || '').trim();\nif (!chat) return [];\nconst r = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst handle = (String(brief.product_url || '').match(/\\/products\\/([a-z0-9-]+)/i) || [])[1] || 'your product';\nlet text;\nif (r.page_status === 'written to draft') {\n  text = 'Your page for ' + esc(handle) + ' is ready in the draft theme (shoppers cannot see it yet):\\n' + esc(r.preview_url) + '\\n\\n'\n    + 'Design checks passed: ' + esc(r.design_checks || '?') + '. Samples to replace before it goes live: ' + esc(r.samples == null ? '?' : r.samples) + '.\\n'\n    + 'Send the link to Harsh; he decides what goes live and when.';\n} else {\n  text = 'The page for ' + esc(handle) + ' was not finished (' + esc(r.page_status || 'no answer') + ')'\n    + (r.page_note ? ': ' + esc(String(r.page_note).slice(0, 600)) : '.') + '\\nHarsh will take a look.';\n}\nreturn [{ json: { chat_id: chat, text } }];\n"
+   }
+  },
+  {
+   "id": "3d3f77a6-1bcb-4050-9e71-479cb9c30fd1",
+   "name": "Send Result",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1440,
+    240
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "6ac8a46f-45b7-411f-abbe-737ea4be4356"
   }
  ],
  "connections": {
@@ -288,6 +326,22 @@
     [
      {
       "node": "Record Page Design",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Tell the Requester",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tell the Requester": {
+   "main": [
+    [
+     {
+      "node": "Send Result",
       "type": "main",
       "index": 0
      }

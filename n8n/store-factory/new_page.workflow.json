@@ -457,7 +457,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Started\" in \"Store Factory: New Page\" (mode: Run Once for All Items): the answer for the person who asked\n// (shown in n8n, and sent back by the Telegram bot).\nconst match = $('Match the Store').first().json;\nconst saved = $('Save Brief').first().json;\nreturn [{ json: {\n  ok: true,\n  row_id: saved.id,\n  message: 'Got it: designing ' + match.handle + ' on ' + match.store_name + ' (brief ' + saved.id + '). '\n    + 'Next: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n. '\n    + 'The preview link comes back when the page is in the draft theme (about 15 to 20 minutes).',\n} }];\n"
+    "jsCode": "// n8n Code node \"Started\" in \"Store Factory: New Page\" (mode: Run Once for All Items): the answer for the person who asked\n// (shown in n8n, and sent back by the Telegram bot).\nconst match = $('Match the Store').first().json;\nconst saved = $('Save Brief').first().json;\nreturn [{ json: {\n  ok: true,\n  row_id: saved.id,\n  handle: match.handle,\n  store_name: match.store_name,\n  message: 'Got it: designing ' + match.handle + ' on ' + match.store_name + ' (brief ' + saved.id + '). '\n    + 'Next: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n. '\n    + 'The preview link comes back when the page is in the draft theme (about 15 to 20 minutes).',\n} }];\n"
    }
   },
   {
