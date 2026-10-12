@@ -68,10 +68,7 @@ cd $HOME
 git clone https://github.com/harsh-shopify-dev/dtj-agency-automation.git
 cd dtj-agency-automation
 ```
-A GitHub window opens the first time: **sign in with the GitHub account Harsh invited**. Then paste:
-```
-git checkout feature/store-factory-install-catcher
-```
+A GitHub window opens the first time: **sign in with the GitHub account Harsh invited**.
 The project is now in the folder `dtj-agency-automation` inside your user folder (for example `C:\Users\riya\dtj-agency-automation`).
 
 ### A5. Get your n8n token
