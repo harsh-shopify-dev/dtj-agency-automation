@@ -119,6 +119,15 @@ What you will see, step by step:
 2. Choose the folder `dtj-agency-automation` (in your user folder).
 3. If Claude asks whether to use the **n8n** server for this project, choose **Allow**.
 
+### A10. Let Claude check everything (any time)
+In Claude (Code tab, this folder) type:
+```
+set up the store factory
+```
+Claude checks this laptop, n8n (the tables, the three automations and their passwords) and the app switch on every shop. It only
+reads, and it tells you in plain words anything you must do (for example "run the setup script" or "ask Harsh to publish"). It
+never asks you to type a password into the chat. At the end it says **"Ready. Say 'listen for the telegram call'"**.
+
 Your laptop is ready.
 
 ### Keeping the project up to date
@@ -285,6 +294,20 @@ Designers get a Telegram message "New page waiting ..." whenever someone sends a
 3. Wait about 15 to 20 minutes. Claude works on its own. If it asks to allow a normal page step, choose **Allow**.
 4. At the end Claude gives you the **preview link** and the **list of samples**. The bot also sends the preview link to the
    person who asked.
+
+### Step 3 (hands-free). Let Claude listen for the bot
+Instead of starting each page yourself, you can let Claude wait for them while you are at your laptop:
+1. In Claude (Code tab, this folder) type:
+   ```
+   listen for the telegram call
+   ```
+2. Claude says "Listening for page requests until ...". Keep the window open. Every time someone sends a link to the bot, Claude
+   designs that page on its own, sends the preview link back (the bot passes it on), tells you in three lines, and waits for the
+   next one.
+3. To stop, type `stop listening`. It also stops by itself after 8 hours.
+- **Only one laptop listens at a time** (two would design the same page twice). Agree in the team who listens today.
+- **Only while you are at the laptop.** Do not leave it listening overnight or while nobody is around: running Claude unattended
+  needs a different (paid API) setup that Harsh decides on.
 
 ---
 

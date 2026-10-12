@@ -25,7 +25,9 @@ STAGES = {
 }
 
 
-N8N_HOST = "n8n.srv2048145.hstgr.cloud"  # DTJ's n8n since 10 Oct 2026 (moved from n8n.srv1969859.hstgr.cloud)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from n8n_mcp import N8N_HOST  # noqa: E402  (DTJ's n8n: the address in this laptop's .mcp.json)
+
 RESUME = re.compile(r"^https://" + re.escape(N8N_HOST) + r"/webhook-waiting/\d+(/[\w-]+)?(\?signature=[0-9a-f]+)?$")
 PREVIEW = re.compile(r"^https://[a-z0-9-]+\.myshopify\.com/\S*preview_theme_id=\d+")
 

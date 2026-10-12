@@ -56,6 +56,8 @@ If the n8n tools are not loaded, ask Harsh to paste the output of the "Request f
 A new page is started in n8n with **Store Factory: New Page** (just a product link; the shop's details come from the data table
 `dtj_stores`) or, later, from the Telegram bot. A new team laptop is set up with `tools/team-setup/setup-team-pc.ps1` and checked
 with `python tools/team-setup/check_setup.py`.
+**Setting everything up** (laptop, n8n, the app switch) and **"listen for the telegram call"** (wait for bot requests and design
+each one while a person is at the laptop): the skill `dtj-factory-setup`.
 
 ## `/start-dtj-engine`
 When Harsh types this: confirm you have read `CLAUDE.md` and `RUNBOOK.md`; list which MCP servers and tools are actually connected (do not guess); state the current mode of each automation (shadow, approve or auto) from the config; then wait for the first instruction. If something needed is not connected, tell Harsh what and why, and do not proceed with it.

@@ -6,9 +6,25 @@ is still seen) and is never printed or written anywhere.
 from __future__ import annotations
 
 import json
+import re
 import urllib.request
+from pathlib import Path
 
-N8N_HOST = "n8n.srv2048145.hstgr.cloud"
+DEFAULT_HOST = "n8n.srv2048145.hstgr.cloud"  # DTJ's n8n since 10 Oct 2026 (moved from n8n.srv1969859.hstgr.cloud)
+
+
+def n8n_host(mcp_json: Path = Path(__file__).resolve().parents[2] / ".mcp.json") -> str:
+    """The n8n server Claude Code in this folder talks to: the "n8n" address in .mcp.json (so a move to a new server is one
+    edit there), else DTJ's current server."""
+    try:
+        url = json.loads(mcp_json.read_text(encoding="utf-8"))["mcpServers"]["n8n"]["url"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return DEFAULT_HOST
+    m = re.match(r"^https://([a-z0-9.-]+)/", str(url))
+    return m.group(1) if m else DEFAULT_HOST
+
+
+N8N_HOST = n8n_host()
 ENDPOINT = f"https://{N8N_HOST}/mcp-server/http"
 PROJECT = "NuKdhPFWwCCbm1K3"
 INTAKE_TABLE = "7FWesTH7eVyLNuOQ"   # dtj_client_intake
