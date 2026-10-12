@@ -31,6 +31,30 @@ prefix), never by printing it.
 8. Check: `python services/install-catcher/tools/licence_call.py <name>-blocks status` (and -sections, -sections2): `"licence":"active"`.
    Then run step 6 again to fill the handles.
 
+## B0. Build, check and write the draft in ONE command (the standard since 10 Oct 2026)
+
+First, for a product already on the store, read it and its pictures (read-only):
+```
+python -m page_builder.fetch_product --store <ORIGINAL>.myshopify.com --handle <handle> --client <C>
+```
+It writes `<C>/store-product.json` (title, prices in rupees, variants, description as text, every picture's STORE file name) and
+saves the pictures in `<C>/media/` under those names. Use exactly those names in `facts.media[].file` (they become
+`shopify://shop_images/<name>`). Videos are listed only: `facts.ugc[].video` needs the Content > Files name (ask Harsh).
+
+```
+cd services/store-builder
+python -m page_builder.ship_draft --client <C> --store <ORIGINAL>.myshopify.com --theme <draft id>   --template-suffix dtj-<product> --client-registry page_builder/clients/<name>.json      [--design-only]
+```
+- Reads `<C>/brand.json`, `facts.json`, `copy-answer.json` and, when present, `media/` and `kept-edits.json`; the run goes to `<C>/run`.
+- Gates in order, any failure stops BEFORE the store is touched: run_client (fixed sections, `--plan off`; a headless-browser start
+  failure is retried, max 3 runs) -> review pass, lint errors 0, build problems 0 -> `design_checks.py` all pass -> `push_page`
+  with the build's own approve code (draft only, backup, read-back, action-log row; `--allow-samples` / `--allow-demo` added only
+  because it is a draft preview). An approval.json from an earlier run is deleted first, so an old page can never be pushed.
+- Writes `<C>/run/ship-result.json` (page_status, approve_code, preview_url, design_checks, samples, dtj_copy, note) = the body for
+  `python n8n/store-factory/reply.py --resume-url <url> --body <C>/run/ship-result.json` when n8n is waiting for the page.
+- Exit 0 written (or designed with `--design-only`), 2 needs a look (the note says which gate), 1 could not build.
+- Section B below is what it runs; use B directly only to debug one step.
+
 ## B. Design a page (read-only for the store)
 
 ```
@@ -52,7 +76,7 @@ python -m page_builder.run_client --brand <C>/brand.json --facts <C>/facts.json 
 ## C. Review (the `dtj-pdp-design-review` skill)
 Run it on `page-390.png` + `page-1280.png` before asking for approval, and on the real storefront after writing.
 
-## D. Write (Tier 2: Harsh's "yes <approve_code>" for THIS page, every time)
+## D. Write (drafts: Harsh's standing rule, no code needed, normally done by `ship_draft`; live: his yes, every time)
 - Draft theme: `python -m page_builder.push_page --out <C>/run --approve <code> --approved-by Harsh [--allow-samples] [--allow-demo]`
   (`--allow-samples` only for a draft preview that still holds SAMPLE values; Harsh's yes covers it)
   (refuses a live theme, backs up, writes only the named template file, reads it back, logs).

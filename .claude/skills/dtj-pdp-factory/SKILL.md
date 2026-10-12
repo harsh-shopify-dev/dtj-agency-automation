@@ -42,8 +42,10 @@ have a source starting with `SAMPLE`), `SOURCES.md`, `wireframe-plan.md` (sectio
    (Harsh, 10 Oct 2026: "whatever the category, the copy should kill it.")
 10. **Harsh's design principles** (`references/design-principles.md`): dark for figures, light for ground; cards and icons
    stand apart; white words only on dark; short story cards; benefits in the buy box; one label per button; whole pictures;
-   12 px side space; no single colour everywhere (white or contrasting details on every coloured surface). `design_checks.py`
-   must pass all 10 checks before any push, and again on every re-verification.
+   12 px side space; no single colour everywhere (white or contrasting details on every coloured surface); a bright orange or
+   yellow is a fill, never darkened into brown; calm pages get near-white cards; a named reference brand is measured first; a
+   colour change is swept across the whole page. `design_checks.py` must pass all 11 checks before any push, and again on every
+   re-verification.
 
 ## Phases
 
@@ -87,6 +89,9 @@ plan, then run with `answer` and `--client-registry`. Sections the builder canno
 "designed, waiting for the builder" with their full content in the plan, so they can be built the moment the gap closes.
 Never hand-edit `template.json` (the next build undoes it and lint cannot check it).
 **Gate:** exit 0 or 2, lint errors 0, build problems 0.
+**Standard run since 10 Oct 2026:** once facts, brand, copy answer and media are ready, `python -m page_builder.ship_draft` (pipeline
+section B0) does P5, the design-check part of P6 and P8 in one command with every gate in front of the draft write, and writes
+`run/ship-result.json` (the answer for n8n). Use the separate commands only to debug a step.
 
 ### P6. Review (call the `dtj-pdp-design-review` skill)
 Give it the run folder, the vibe and the plan. Fix and rebuild, at most 3 rounds. The local preview has a placeholder price and
@@ -108,6 +113,14 @@ Storefront check (pipeline section E) on the draft preview; run the review skill
 only when Harsh asks. Update `docs/HANDOFF.md`. Give Harsh `content-needed.md`, the samples list and the graphics brief.
 Before any page with samples may go live: every sample replaced (rebuild) or signed off by Harsh one by one.
 
+## Answering an n8n page request (a fresh session can do the whole page)
+"Store Factory: Page Design" (n8n `n8MzskKamTbVhZ3h`) pauses at "Wait for Claude Code: Page Design". Its "Request for Claude Code:
+Page Design" output holds a complete numbered task list (`instructions`): fetch the product (`page_builder.fetch_product`), P2-P4
+here, a `ship_draft --design-only` run for the copy request, the `ship_draft` run that writes the draft, the real-page check, the
+answer with `n8n/store-factory/reply.py`, the handoff entry. Follow it in order; how to find the waiting run is in `CLAUDE.md`
+("n8n hand-offs"). The step code lives in `n8n/store-factory/*.js` (tested by `test_page_design_nodes.py`) and is deployed with
+`n8n/store-factory/deploy_page_design.py`.
+
 ## Talking to Harsh
 Lead with the result in one line, then what he must do (numbered, exact clicks), then detail. No jargon. Never ask him to paste a
 secret in chat. When something failed: what, why, what you tried, the next step.
@@ -126,7 +139,7 @@ are built, plan the full content anyway and say which sections are waiting for w
 | `references/colour-and-vibe.md`, `references/motion-by-category.md` | P2, P4 |
 | `references/facts-intake-checklist.md` | P2 |
 | `references/copywriting.md` (MojoVibe analysis, method, voice dial, category starters, truth rules, Go Mints example) | P2, P3, P4 |
-| `references/design-principles.md` (Harsh's review of Go Mints v2: 9 principles, v2 vs v4 measured) | P4, P6 |
+| `references/design-principles.md` (Harsh's reviews: 14 principles, Go Mints v2 vs v4 and the Hope N Skin colour rounds measured) | P2, P4, P6 |
 | `references/pipeline-commands.md` | P0, P1, P5, P8, P9 |
 | `references/errors-playbook.md` | whenever anything fails |
 | `references/building-a-missing-block.md` | when a gap blocks a section |
