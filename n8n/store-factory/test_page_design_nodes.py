@@ -1,77 +1,22 @@
-"""The code nodes of "Store Factory: Page Design" run in Node exactly as n8n runs them (Run Once for All Items, $input / $ /
-$execution stand-ins). The files here are the source of truth: deploy_page_design.py sends them to n8n byte for byte.
+"""The code nodes of "Store Factory: Page Design" run in Node exactly as n8n runs them (node_harness.py). The .js files are the source
+of truth: deploy_page_design.py sends them to n8n byte for byte.
 
     python -m unittest discover -s n8n/store-factory -t n8n/store-factory
 """
 import json
-import os
-import shutil
-import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+from node_harness import HAS_NODE
+from node_harness import run_node as _run
+
 RESUME = "https://n8n.srv2048145.hstgr.cloud/webhook-waiting/301?signature=ab12"
-HARNESS = r"""
-const fs = require('fs');
-const [file, inputJson, refsJson] = process.argv.slice(-3);
-const code = fs.readFileSync(file, 'utf8');
-const input = JSON.parse(inputJson), refs = JSON.parse(refsJson);
-const $input = { first: () => ({ json: input }), all: () => [{ json: input }] };
-const $ = (name) => ({ first: () => ({ json: refs[name] }) });
-const $execution = { resumeUrl: refs.__resume };
-try {
-  const out = new Function('$input', '$', '$execution', code)($input, $, $execution);
-  process.stdout.write(JSON.stringify({ ok: true, out }));
-} catch (e) {
-  process.stdout.write(JSON.stringify({ ok: false, error: String(e.message) }));
-}
-"""
 
 
-@unittest.skipUnless(shutil.which("node"), "Node.js is needed to run n8n code nodes")
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
 class Nodes(unittest.TestCase):
     def run_node(self, name, given, refs=None):
-        refs = {"__resume": RESUME, **(refs or {})}
-        p = subprocess.run(["node", "-e", HARNESS, str(name if isinstance(name, Path) else HERE / name), json.dumps(given), json.dumps(refs)],
-                           capture_output=True, text=True, encoding="utf-8", timeout=60)
-        self.assertEqual(p.returncode, 0, p.stderr)
-        return json.loads(p.stdout)
-
-    # ---- Page Brief (edit for each run)
-    def brief_with(self, **changes):
-        src = (HERE / "page_brief.js").read_text(encoding="utf-8")
-        for key, value in changes.items():
-            start = src.index(f"  {key}: ")
-            end = src.index(",", start)
-            src = src[:start] + f"  {key}: {json.dumps(value)}" + src[end:]
-        fd, name = tempfile.mkstemp(suffix=".js")
-        os.close(fd)
-        tmp = Path(name)
-        tmp.write_text(src, encoding="utf-8")
-        self.addCleanup(tmp.unlink, missing_ok=True)
-        return self.run_node(tmp, {})
-
-    def test_the_brief_as_shipped_refuses_to_run_until_a_product_is_given(self):
-        res = self.run_node("page_brief.js", {})
-        self.assertFalse(res["ok"])
-        self.assertIn("product_url", res["error"])
-
-    def test_a_filled_brief_becomes_a_new_row(self):
-        res = self.brief_with(product_url="https://test-store-harsh-dtj.myshopify.com/products/Radiance-Serum-30ml",
-                              brand_website="https://hopenskin.com", reference_brands="Minimalist")
-        self.assertTrue(res["ok"], res)
-        row = res["out"][0]["json"]
-        self.assertEqual((row["status"], row["store_domain"], row["theme_id"], row["template_suffix"]),
-                         ("new", "qaxv3r-8g.myshopify.com", "167627423941", "dtj-radiance-serum-30ml"))
-        self.assertEqual(row["reference_brands"], "Minimalist")
-
-    def test_bad_briefs_stop_before_anything_is_saved(self):
-        for changes in ({"store_domain": "test-store-harsh-dtj.com"}, {"theme_id": "live"},
-                        {"brand_website": "http://insecure.example"}, {"client_registry": "../secrets.json"}):
-            res = self.brief_with(product_url="https://x.myshopify.com/products/serum", **changes)
-            self.assertFalse(res["ok"], changes)
+        return _run(name, given, {"__resume": RESUME, **(refs or {})})
 
     # ---- Request for Claude Code: Page Design
     def row(self, **extra):

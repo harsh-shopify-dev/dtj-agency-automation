@@ -1,19 +1,10 @@
 {
  "id": "n8MzskKamTbVhZ3h",
  "name": "Store Factory: Page Design",
- "description": "Store factory: a page brief (by hand or from the client form) goes to Claude Code, which designs the whole product page, checks it and writes it into the client's DRAFT theme. Records the result on the brief row.",
+ "description": "Store factory: a saved page brief goes to Claude Code, which designs the whole product page, checks it and writes it into the client's DRAFT theme. Records the result on the brief row.",
  "nodes": [
   {
-   "id": "134de678-5b4a-4715-8692-c569f182ac0d",
-   "name": "When a Brief Is Ready",
-   "type": "n8n-nodes-base.executeWorkflowTrigger",
-   "typeVersion": 1.2,
-   "position": [
-    0,
-    0
-   ],
    "parameters": {
-    "inputSource": "workflowInputs",
     "workflowInputs": {
      "values": [
       {
@@ -22,19 +13,18 @@
       }
      ]
     }
-   }
+   },
+   "id": "134de678-5b4a-4715-8692-c569f182ac0d",
+   "name": "When a Brief Is Ready",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ]
   },
   {
-   "id": "66ea569a-ab9b-45bc-9c0b-6e9f61063b61",
-   "name": "Load Brief",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    240,
-    0
-   ],
    "parameters": {
-    "resource": "row",
     "operation": "get",
     "dataTableId": {
      "__rl": true,
@@ -46,17 +36,25 @@
     "filters": {
      "conditions": [
       {
-       "keyName": "id",
-       "condition": "eq",
        "keyValue": "={{ $json.row_id }}"
       }
      ]
     },
-    "returnAll": false,
     "limit": 1
-   }
+   },
+   "id": "66ea569a-ab9b-45bc-9c0b-6e9f61063b61",
+   "name": "Load Brief",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    240,
+    0
+   ]
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Request for Claude Code: Page Design\" in \"Store Factory: Page Design\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. A Claude Code session on Harsh's PC (possibly a FRESH one that knows nothing about\n// the project) finds this waiting run, reads `instructions` and does everything in it: research, design, checks, the DRAFT write,\n// the answer to resume_url. Harsh's choice (9 Oct 2026): Claude Code is the AI step while he is in the loop, not the Claude API.\nconst row = $input.first().json;\nif (!row || !row.id) throw new Error('No brief row (dtj_client_intake id) reached this step');\nconst parse = (s, fallback) => { try { return JSON.parse(s || ''); } catch (e) { return fallback; } };\nconst brand = parse(row.brand_json, {});\nconst facts = parse(row.facts_json, {});\nconst urlHandle = (String(row.product_url || '').match(/\\/products\\/([a-z0-9][a-z0-9-]*)/i) || [])[1] || '';\nconst handle = (urlHandle || (facts.product && facts.product.handle) || '').toLowerCase();\nif (!handle) throw new Error('The brief has no product (product_url or facts.product.handle)');\nconst store = String(row.store_domain || '').toLowerCase();\nconst theme = String(row.theme_id || '');\nconst suffix = row.template_suffix || ('dtj-' + handle).slice(0, 48).replace(/-+$/, '');\nconst registry = row.client_registry || '';\nconst folder = ('n8n-' + row.id + '-' + handle).slice(0, 60).replace(/-+$/, '');\nconst C = '../../.work/clients/' + folder;\nconst resumeUrl = $execution.resumeUrl;\nconst regArg = registry ? ' --client-registry ' + registry : ' --client-registry <the file in page_builder/clients/ whose \"store\" is ' + store + '>';\n\nconst lines = [\n  'DTJ STORE FACTORY - design the WHOLE product page for this brief and write it into the DRAFT theme.',\n  'You are the AI step: a Claude Code session on Harsh\\'s PC. Nobody has briefed you; everything you need is below and in the repo.',\n  '',\n  'BRIEF',\n  '- Brief row: id ' + row.id + ' in the n8n data table dtj_client_intake',\n  '- Brand: ' + (row.brand_name || brand.brand_name || '(not given: take it from the product and the brand site)'),\n  '- Store: ' + store + ' (the ORIGINAL .myshopify.com address) | Draft theme: ' + theme,\n  '- Product: ' + (row.product_url || ('https://' + store + '/products/' + handle)) + ' (handle ' + handle + ')',\n  '- Page file: templates/product.' + suffix + '.json (a NEW template for this product; the theme\\'s product.json is never touched)',\n  '- Brand\\'s own site: ' + (row.brand_website || '(not given: search for it; only the brand\\'s own pages count as sources)'),\n  '- Look references: ' + (row.reference_brands || '(none)'),\n  '- App copies on this store: ' + (registry ? 'services/store-builder/' + registry : '(not given: find it in services/store-builder/page_builder/clients/)'),\n  '- Asked by: ' + (row.requested_by || 'Harsh') + ' | Notes: ' + (row.notes || '(none)'),\n  (Object.keys(brand).length || Object.keys(facts).length)\n    ? '- This brief came from the client form: request.brand and request.facts hold the client\\'s answers. Start from them and keep their sources.'\n    : '- This brief was started by hand: there are no client answers; the facts come from the store, the brand\\'s site and the pictures.',\n  '',\n  'DO THIS, IN ORDER',\n  '1. Work in the repo D:\\\\CODE CONTAINERR\\\\WEB DEV\\\\dtj-agency-automation. Read CLAUDE.md. Load the skill dtj-pdp-factory (the runbook, phases P0-P9) and follow it; dtj-pdp-design-review is its review gate. Stay on the current git branch; do not commit or push unless Harsh asks.',\n  '2. Read the product as the store shows it and fetch its pictures (read-only):',\n  '   cd services/store-builder',\n  '   python -m page_builder.fetch_product --store ' + store + ' --handle ' + handle + ' --client ' + C,\n  '   It writes store-product.json and saves every picture in media/ under its STORE file name. Use exactly those names in facts.media[].file.',\n  '3. Facts and brand (P2): from store-product.json, the brand\\'s own site and what the pictures print, write in ' + C + ': brand.json (with a vibe), facts.json (every fact with a source; fill every gap with modest SAMPLE content whose source starts with \"SAMPLE\"; never sample medical claims, \"clinically proven\", competitor names, licences or certifications, prices, discounts or offers), SOURCES.md, content-needed.md. Voice lines per the skill\\'s copywriting.md, each marked \"DTJ COPY (basis: ...)\". If a look reference is named, open its site and measure its colours before choosing yours (design-principles.md 13).',\n  '4. Design-only run (writes run/copy-request.json; touches no store):',\n  '   python -m page_builder.ship_draft --client ' + C + ' --design-only --template-suffix ' + suffix + regArg,\n  '   Then answer run/copy-request.json into ' + C + '/copy-answer.json (its rules are inside the request).',\n  '5. Build, check and write the DRAFT in one command:',\n  '   python -m page_builder.ship_draft --client ' + C + ' --store ' + store + ' --theme ' + theme + ' --template-suffix ' + suffix + regArg,\n  '   Exit 0 = written to the draft. Exit 2 = a gate failed: read \"note\" in run/ship-result.json, fix brand.json / facts.json (never hand-edit template.json) and run again, at most 3 rounds. Exit 1 = could not build: read run/ship-build-*.log.',\n  '6. Check the real page (P9): open preview_url from run/ship-result.json in the browser at 390 px and 1280 px. Every DTJ section shows, pictures load, no sideways scroll. If not, fix and repeat step 5.',\n  '7. Answer this n8n run, also when the page could not be written (the brief row then records why):',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body ' + '.work/clients/' + folder + '/run/ship-result.json',\n  '   (run it from the repo root; if you stopped before step 5, send a small JSON file instead: {\"page_status\": \"could not build\", \"note\": \"<why>\"})',\n  '8. Add a dated entry to docs/HANDOFF.md (what was built, the preview link, the samples to replace, anything open). Tell Harsh in plain words: the preview link, the SAMPLE list, what needs his action.',\n  '',\n  'RULES',\n  '- Draft theme only: never the live theme, never --allow-live, never publish a theme. ship_draft writes the draft under Harsh\\'s standing rule (no approval code for drafts).',\n  '- Never put a password, token or key in a file or in chat; the tools read the Theme Access password from a Windows user variable.',\n  '- Do not invent prices, offers, claims, reviews or policies. Mark unknowns.',\n  '- If something blocks you (no Theme Access password, the theme is live, the product does not exist, the store is password-protected): stop, answer n8n with \"could not build\" and the reason (step 7), and tell Harsh exactly what he must do.',\n];\n\nreturn [{ json: {\n  claude_code_stage: 'page_design',\n  resume_url: resumeUrl,\n  instructions: lines.join('\\n'),\n  request: {\n    row_id: row.id, brand_name: row.brand_name || brand.brand_name || '', store_domain: store, theme_id: theme, handle,\n    product_url: row.product_url || '', template_suffix: suffix, client_registry: registry, client_folder: '.work/clients/' + folder,\n    brand_website: row.brand_website || '', reference_brands: row.reference_brands || '', notes: row.notes || '',\n    status: row.status, problems: row.problems || '', brand, facts,\n    picture_links: parse(row.picture_links_json, []), logo_link: row.logo_link || '',\n  },\n} }];\n"
+   },
    "id": "4eb9d4a3-e0ad-49a9-8792-9440451c0f4c",
    "name": "Request for Claude Code: Page Design",
    "type": "n8n-nodes-base.code",
@@ -64,14 +62,17 @@
    "position": [
     480,
     0
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Request for Claude Code: Page Design\" in \"Store Factory: Page Design\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. A Claude Code session on Harsh's PC (possibly a FRESH one that knows nothing about\n// the project) finds this waiting run, reads `instructions` and does everything in it: research, design, checks, the DRAFT write,\n// the answer to resume_url. Harsh's choice (9 Oct 2026): Claude Code is the AI step while he is in the loop, not the Claude API.\nconst row = $input.first().json;\nif (!row || !row.id) throw new Error('No brief row (dtj_client_intake id) reached this step');\nconst parse = (s, fallback) => { try { return JSON.parse(s || ''); } catch (e) { return fallback; } };\nconst brand = parse(row.brand_json, {});\nconst facts = parse(row.facts_json, {});\nconst urlHandle = (String(row.product_url || '').match(/\\/products\\/([a-z0-9][a-z0-9-]*)/i) || [])[1] || '';\nconst handle = (urlHandle || (facts.product && facts.product.handle) || '').toLowerCase();\nif (!handle) throw new Error('The brief has no product (product_url or facts.product.handle)');\nconst store = String(row.store_domain || '').toLowerCase();\nconst theme = String(row.theme_id || '');\nconst suffix = row.template_suffix || ('dtj-' + handle).slice(0, 48).replace(/-+$/, '');\nconst registry = row.client_registry || '';\nconst folder = ('n8n-' + row.id + '-' + handle).slice(0, 60).replace(/-+$/, '');\nconst C = '../../.work/clients/' + folder;\nconst resumeUrl = $execution.resumeUrl;\nconst regArg = registry ? ' --client-registry ' + registry : ' --client-registry <the file in page_builder/clients/ whose \"store\" is ' + store + '>';\n\nconst lines = [\n  'DTJ STORE FACTORY - design the WHOLE product page for this brief and write it into the DRAFT theme.',\n  'You are the AI step: a Claude Code session on Harsh\\'s PC. Nobody has briefed you; everything you need is below and in the repo.',\n  '',\n  'BRIEF',\n  '- Brief row: id ' + row.id + ' in the n8n data table dtj_client_intake',\n  '- Brand: ' + (row.brand_name || brand.brand_name || '(not given: take it from the product and the brand site)'),\n  '- Store: ' + store + ' (the ORIGINAL .myshopify.com address) | Draft theme: ' + theme,\n  '- Product: ' + (row.product_url || ('https://' + store + '/products/' + handle)) + ' (handle ' + handle + ')',\n  '- Page file: templates/product.' + suffix + '.json (a NEW template for this product; the theme\\'s product.json is never touched)',\n  '- Brand\\'s own site: ' + (row.brand_website || '(not given: search for it; only the brand\\'s own pages count as sources)'),\n  '- Look references: ' + (row.reference_brands || '(none)'),\n  '- App copies on this store: ' + (registry ? 'services/store-builder/' + registry : '(not given: find it in services/store-builder/page_builder/clients/)'),\n  '- Harsh\\'s notes: ' + (row.notes || '(none)'),\n  (Object.keys(brand).length || Object.keys(facts).length)\n    ? '- This brief came from the client form: request.brand and request.facts hold the client\\'s answers. Start from them and keep their sources.'\n    : '- This brief was started by hand: there are no client answers; the facts come from the store, the brand\\'s site and the pictures.',\n  '',\n  'DO THIS, IN ORDER',\n  '1. Work in the repo D:\\\\CODE CONTAINERR\\\\WEB DEV\\\\dtj-agency-automation. Read CLAUDE.md. Load the skill dtj-pdp-factory (the runbook, phases P0-P9) and follow it; dtj-pdp-design-review is its review gate. Stay on the current git branch; do not commit or push unless Harsh asks.',\n  '2. Read the product as the store shows it and fetch its pictures (read-only):',\n  '   cd services/store-builder',\n  '   python -m page_builder.fetch_product --store ' + store + ' --handle ' + handle + ' --client ' + C,\n  '   It writes store-product.json and saves every picture in media/ under its STORE file name. Use exactly those names in facts.media[].file.',\n  '3. Facts and brand (P2): from store-product.json, the brand\\'s own site and what the pictures print, write in ' + C + ': brand.json (with a vibe), facts.json (every fact with a source; fill every gap with modest SAMPLE content whose source starts with \"SAMPLE\"; never sample medical claims, \"clinically proven\", competitor names, licences or certifications, prices, discounts or offers), SOURCES.md, content-needed.md. Voice lines per the skill\\'s copywriting.md, each marked \"DTJ COPY (basis: ...)\". If a look reference is named, open its site and measure its colours before choosing yours (design-principles.md 13).',\n  '4. Design-only run (writes run/copy-request.json; touches no store):',\n  '   python -m page_builder.ship_draft --client ' + C + ' --design-only --template-suffix ' + suffix + regArg,\n  '   Then answer run/copy-request.json into ' + C + '/copy-answer.json (its rules are inside the request).',\n  '5. Build, check and write the DRAFT in one command:',\n  '   python -m page_builder.ship_draft --client ' + C + ' --store ' + store + ' --theme ' + theme + ' --template-suffix ' + suffix + regArg,\n  '   Exit 0 = written to the draft. Exit 2 = a gate failed: read \"note\" in run/ship-result.json, fix brand.json / facts.json (never hand-edit template.json) and run again, at most 3 rounds. Exit 1 = could not build: read run/ship-build-*.log.',\n  '6. Check the real page (P9): open preview_url from run/ship-result.json in the browser at 390 px and 1280 px. Every DTJ section shows, pictures load, no sideways scroll. If not, fix and repeat step 5.',\n  '7. Answer this n8n run, also when the page could not be written (the brief row then records why):',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body ' + '.work/clients/' + folder + '/run/ship-result.json',\n  '   (run it from the repo root; if you stopped before step 5, send a small JSON file instead: {\"page_status\": \"could not build\", \"note\": \"<why>\"})',\n  '8. Add a dated entry to docs/HANDOFF.md (what was built, the preview link, the samples to replace, anything open). Tell Harsh in plain words: the preview link, the SAMPLE list, what needs his action.',\n  '',\n  'RULES',\n  '- Draft theme only: never the live theme, never --allow-live, never publish a theme. ship_draft writes the draft under Harsh\\'s standing rule (no approval code for drafts).',\n  '- Never put a password, token or key in a file or in chat; the tools read the Theme Access password from a Windows user variable.',\n  '- Do not invent prices, offers, claims, reviews or policies. Mark unknowns.',\n  '- If something blocks you (no Theme Access password, the theme is live, the product does not exist, the store is password-protected): stop, answer n8n with \"could not build\" and the reason (step 7), and tell Harsh exactly what he must do.',\n];\n\nreturn [{ json: {\n  claude_code_stage: 'page_design',\n  resume_url: resumeUrl,\n  instructions: lines.join('\\n'),\n  request: {\n    row_id: row.id, brand_name: row.brand_name || brand.brand_name || '', store_domain: store, theme_id: theme, handle,\n    product_url: row.product_url || '', template_suffix: suffix, client_registry: registry, client_folder: '.work/clients/' + folder,\n    brand_website: row.brand_website || '', reference_brands: row.reference_brands || '', notes: row.notes || '',\n    status: row.status, problems: row.problems || '', brand, facts,\n    picture_links: parse(row.picture_links_json, []), logo_link: row.logo_link || '',\n  },\n} }];\n"
-   }
+   ]
   },
   {
+   "parameters": {
+    "resume": "webhook",
+    "httpMethod": "POST",
+    "limitWaitTime": true,
+    "resumeAmount": 3,
+    "resumeUnit": "days",
+    "options": {}
+   },
    "id": "1bbff904-923c-46f1-bd7b-e1965c35c571",
    "name": "Wait for Claude Code: Page Design",
    "type": "n8n-nodes-base.wait",
@@ -80,18 +81,12 @@
     720,
     0
    ],
-   "parameters": {
-    "resume": "webhook",
-    "httpMethod": "POST",
-    "limitWaitTime": true,
-    "limitType": "afterTimeInterval",
-    "resumeAmount": 3,
-    "resumeUnit": "days",
-    "options": {}
-   },
    "webhookId": "2b303f14-cacc-411a-8ee4-c24faad08834"
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Claude Code Reply: Page Design\" in \"Store Factory: Page Design\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same rules as\n// n8n/store-factory/reply.py, which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['written to draft', 'designed (not written)', 'needs a look', 'could not build'];\nlet status = allowed.includes(b.page_status) ? b.page_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst code = /^[0-9a-f]{12}$/.test(String(b.approve_code || '')) ? String(b.approve_code) : '';\nconst previewOk = /^https:[/][/][a-z0-9-]+[.]myshopify[.]com[/][^ ]*preview_theme_id=[0-9]+/.test(String(b.preview_url || ''));\nif (status === 'written to draft' && !(code && previewOk)) status = 'reply not understood (no code or preview link)';\nconst count = (v) => (Number.isInteger(v) && v >= 0 ? v : null);\nreturn [{ json: {\n  row_id: $('Request for Claude Code: Page Design').first().json.request.row_id,\n  page_status: status,\n  approve_code: code,\n  preview_url: status === 'written to draft' ? String(b.preview_url) : '',\n  design_checks: /^[0-9]+[/][0-9]+$/.test(String(b.design_checks || '')) ? String(b.design_checks) : '',\n  samples: count(b.samples),\n  page_summary: String(b.summary || '').slice(0, 500),\n  page_note: String(b.note || '').slice(0, 1000),\n  approved_by: status === 'written to draft' ? 'Harsh (standing: draft pushes without asking)' : '',\n} }];\n"
+   },
    "id": "9dd0591a-61b8-4b45-8045-68eaf172588d",
    "name": "Claude Code Reply: Page Design",
    "type": "n8n-nodes-base.code",
@@ -99,24 +94,10 @@
    "position": [
     960,
     0
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Claude Code Reply: Page Design\" in \"Store Factory: Page Design\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same rules as\n// n8n/store-factory/reply.py, which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['written to draft', 'designed (not written)', 'needs a look', 'could not build'];\nlet status = allowed.includes(b.page_status) ? b.page_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst code = /^[0-9a-f]{12}$/.test(String(b.approve_code || '')) ? String(b.approve_code) : '';\nconst previewOk = /^https:[/][/][a-z0-9-]+[.]myshopify[.]com[/][^ ]*preview_theme_id=[0-9]+/.test(String(b.preview_url || ''));\nif (status === 'written to draft' && !(code && previewOk)) status = 'reply not understood (no code or preview link)';\nconst count = (v) => (Number.isInteger(v) && v >= 0 ? v : null);\nreturn [{ json: {\n  row_id: $('Request for Claude Code: Page Design').first().json.request.row_id,\n  page_status: status,\n  approve_code: code,\n  preview_url: status === 'written to draft' ? String(b.preview_url) : '',\n  design_checks: /^[0-9]+[/][0-9]+$/.test(String(b.design_checks || '')) ? String(b.design_checks) : '',\n  samples: count(b.samples),\n  page_summary: String(b.summary || '').slice(0, 500),\n  page_note: String(b.note || '').slice(0, 1000),\n  approved_by: status === 'written to draft' ? 'Harsh (standing: draft pushes without asking)' : '',\n} }];\n"
-   }
+   ]
   },
   {
-   "id": "bb0c2dcf-6e99-4348-bfae-67abad60d570",
-   "name": "Record Page Design",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    1200,
-    0
-   ],
    "parameters": {
-    "resource": "row",
     "operation": "update",
     "dataTableId": {
      "__rl": true,
@@ -128,8 +109,6 @@
     "filters": {
      "conditions": [
       {
-       "keyName": "id",
-       "condition": "eq",
        "keyValue": "={{ $json.row_id }}"
       }
      ]
@@ -232,273 +211,31 @@
      ]
     },
     "options": {}
-   }
+   },
+   "id": "bb0c2dcf-6e99-4348-bfae-67abad60d570",
+   "name": "Record Page Design",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1200,
+    0
+   ]
   },
   {
+   "parameters": {
+    "content": "## Store factory: page design\nStarted with a brief row id by **Store Factory: New Page** (paste a product link there, or send it to the Telegram bot) or by the client form.\n\nThe run pauses at **Wait for Claude Code: Page Design**. In a Claude Code session opened in the dtj-agency-automation folder, say \"handle the Claude Code trigger in n8n\". The session reads the task list in **Request for Claude Code: Page Design**, researches the product, designs the whole page (DTJ Standard Product Page v1), runs every check and writes it into the DRAFT theme only (Harsh's standing rule; never the live theme), then posts the result here.\n\nThe brief's row in **dtj_client_intake** gets page_status, preview_url, design_checks, samples and approve_code. Source in git: `n8n/store-factory/`.",
+    "height": 380,
+    "width": 1300,
+    "color": 5
+   },
    "id": "278eeb46-54b0-4287-8b62-bb4ae9434c2b",
    "name": "Sticky Note a4b3e49a",
    "type": "n8n-nodes-base.stickyNote",
    "typeVersion": 1,
    "position": [
-    -40,
-    -420
-   ],
-   "parameters": {
-    "content": "## Store factory: page design (v2, 10 Oct 2026)\n**Start by hand:** edit the brief in **Page Brief (edit for each run)** (store, draft theme, product link, brand site, look references, notes), then press Execute workflow. Client briefs from the form start at **When a Brief Is Ready**.\n\nThe run pauses at **Wait for Claude Code: Page Design**. In a Claude Code session opened in the dtj-agency-automation folder, say \"handle the Claude Code trigger in n8n\". The session reads the task list in **Request for Claude Code: Page Design**, researches the product, designs the whole page (DTJ Standard Product Page v1), runs every check and writes it into the DRAFT theme only (Harsh's standing rule; never the live theme), then posts the result here.\n\nThe brief's row in **dtj_client_intake** gets page_status, preview_url, design_checks, samples and approve_code. Source in git: `n8n/store-factory/`.",
-    "color": 5,
-    "width": 1300,
-    "height": 380
-   }
-  },
-  {
-   "id": "33136090-064b-4709-ba5b-b6eaf5491ba2",
-   "name": "Run by Hand",
-   "type": "n8n-nodes-base.manualTrigger",
-   "typeVersion": 1,
-   "position": [
-    -480,
-    320
-   ],
-   "parameters": {}
-  },
-  {
-   "id": "f26aff82-e773-4b7e-8a10-d5684e729b8b",
-   "name": "Page Brief (edit for each run)",
-   "type": "n8n-nodes-base.code",
-   "typeVersion": 2,
-   "position": [
-    -240,
-    320
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Page Brief (edit for each run)\" in \"Store Factory: Page Design\" (mode: Run Once for All Items).\n// Harsh edits ONLY the object below, then presses \"Execute workflow\". No passwords, tokens or keys belong here.\nconst brief = {\n  store_domain: 'qaxv3r-8g.myshopify.com',          // the store's ORIGINAL .myshopify.com address (the Test Store keeps qaxv3r-8g)\n  theme_id: '167627423941',                          // a DRAFT (unpublished) theme's id, never the live theme\n  product_url: 'https://test-store-harsh-dtj.myshopify.com/products/PUT-THE-HANDLE-HERE', // the product, already created on the store\n  brand_name: '',                                    // as the brand writes it\n  brand_website: '',                                 // the brand's own site or product page (facts, voice, pictures)\n  reference_brands: '',                              // brands whose LOOK you like, e.g. 'Minimalist' (their site is measured first)\n  client_registry: 'page_builder/clients/test-store-harsh-dtj.json', // the store's DTJ app copies (one file per store)\n  notes: '',                                         // anything else: what is confirmed, what to avoid, real offers or rating source\n};\n\n// ---- checks (a bad brief stops here, before anything is saved)\nconst problems = [];\nconst store = String(brief.store_domain || '').trim().toLowerCase();\nif (!/^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$/.test(store)) problems.push('store_domain must be the original <name>.myshopify.com address');\nconst theme = String(brief.theme_id || '').trim();\nif (!/^[0-9]{6,20}$/.test(theme)) problems.push('theme_id must be the draft theme number');\nconst m = String(brief.product_url || '').match(/\\/products\\/([a-z0-9][a-z0-9-]*)/i);\nconst handle = m ? m[1].toLowerCase() : '';\nif (!handle || handle === 'put-the-handle-here') problems.push('product_url must be the product link (…/products/<handle>)');\nconst registry = String(brief.client_registry || '').trim();\nif (!/^page_builder\\/clients\\/[a-z0-9-]+\\.json$/.test(registry)) problems.push('client_registry must look like page_builder/clients/<store>.json');\nfor (const key of ['brand_website']) {\n  const v = String(brief[key] || '').trim();\n  if (v && !/^https:\\/\\//.test(v)) problems.push(key + ' must start with https://');\n}\nif (problems.length) throw new Error('Page brief not ready: ' + problems.join('; '));\n\n// one template file per product: templates/product.dtj-<handle>.json (letters, digits and hyphens only)\nconst template_suffix = ('dtj-' + handle).slice(0, 48).replace(/-+$/, '');\nreturn [{ json: {\n  submitted_at: new Date().toISOString(),\n  status: 'new',\n  store_domain: store,\n  theme_id: theme,\n  brand_name: String(brief.brand_name || '').trim(),\n  product_title: '',\n  product_url: String(brief.product_url).trim(),\n  brand_website: String(brief.brand_website || '').trim(),\n  reference_brands: String(brief.reference_brands || '').trim(),\n  client_registry: registry,\n  template_suffix,\n  notes: String(brief.notes || '').trim(),\n  problems: '',\n  problem_count: 0,\n  brand_json: '{}',\n  facts_json: '{}',\n  picture_links_json: '[]',\n  raw_json: JSON.stringify({ source: 'Page Brief (run by hand)', brief }),\n} }];\n"
-   }
-  },
-  {
-   "id": "4f6dede1-4681-43c0-a3e7-c896fd278ea2",
-   "name": "Save Page Brief",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    0,
-    320
-   ],
-   "parameters": {
-    "dataTableId": {
-     "__rl": true,
-     "mode": "list",
-     "value": "7FWesTH7eVyLNuOQ",
-     "cachedResultName": "dtj_client_intake"
-    },
-    "columns": {
-     "mappingMode": "defineBelow",
-     "value": {
-      "submitted_at": "={{ $json.submitted_at }}",
-      "status": "={{ $json.status }}",
-      "store_domain": "={{ $json.store_domain }}",
-      "theme_id": "={{ $json.theme_id }}",
-      "brand_name": "={{ $json.brand_name }}",
-      "product_title": "={{ $json.product_title }}",
-      "product_url": "={{ $json.product_url }}",
-      "brand_website": "={{ $json.brand_website }}",
-      "reference_brands": "={{ $json.reference_brands }}",
-      "client_registry": "={{ $json.client_registry }}",
-      "template_suffix": "={{ $json.template_suffix }}",
-      "notes": "={{ $json.notes }}",
-      "problems": "={{ $json.problems }}",
-      "problem_count": "={{ $json.problem_count }}",
-      "brand_json": "={{ $json.brand_json }}",
-      "facts_json": "={{ $json.facts_json }}",
-      "picture_links_json": "={{ $json.picture_links_json }}",
-      "raw_json": "={{ $json.raw_json }}"
-     },
-     "matchingColumns": [],
-     "schema": [
-      {
-       "id": "submitted_at",
-       "displayName": "submitted_at",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "status",
-       "displayName": "status",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "store_domain",
-       "displayName": "store_domain",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "theme_id",
-       "displayName": "theme_id",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "brand_name",
-       "displayName": "brand_name",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "product_title",
-       "displayName": "product_title",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "product_url",
-       "displayName": "product_url",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "brand_website",
-       "displayName": "brand_website",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "reference_brands",
-       "displayName": "reference_brands",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "client_registry",
-       "displayName": "client_registry",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "template_suffix",
-       "displayName": "template_suffix",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "notes",
-       "displayName": "notes",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "problems",
-       "displayName": "problems",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "problem_count",
-       "displayName": "problem_count",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "number",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "brand_json",
-       "displayName": "brand_json",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "facts_json",
-       "displayName": "facts_json",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "picture_links_json",
-       "displayName": "picture_links_json",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      },
-      {
-       "id": "raw_json",
-       "displayName": "raw_json",
-       "required": false,
-       "defaultMatch": false,
-       "display": true,
-       "type": "string",
-       "readOnly": false,
-       "removed": false
-      }
-     ]
-    }
-   }
+    -48,
+    -416
+   ]
   }
  ],
  "connections": {
@@ -556,43 +293,11 @@
      }
     ]
    ]
-  },
-  "Run by Hand": {
-   "main": [
-    [
-     {
-      "node": "Page Brief (edit for each run)",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Page Brief (edit for each run)": {
-   "main": [
-    [
-     {
-      "node": "Save Page Brief",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Save Page Brief": {
-   "main": [
-    [
-     {
-      "node": "Request for Claude Code: Page Design",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
   }
  },
  "settings": {
   "executionOrder": "v1",
-  "availableInMCP": true
+  "availableInMCP": true,
+  "binaryMode": "separate"
  }
 }

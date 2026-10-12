@@ -11,6 +11,10 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
    - Tier 0 read only: do freely.
    - Tier 1 reversible and low risk (pause an ad set, make a draft): only inside the caps in the runbook, and log it.
    - Tier 2 spends money, changes anything client-visible, or contacts people (publish an ad, change a budget, push or publish a theme, send a message, create a store): **ask Harsh first, every time.** Approval for one action does not cover the next.
+     **Harsh's one standing exception (10 Oct 2026):** a product page that passes every gate may be written to a store's DRAFT
+     (unpublished) theme without asking, through `page_builder.ship_draft` / `push_page` only (they refuse a live theme). This holds
+     for every session and team member. A live theme, publishing a theme, app releases and creating stores or products still need
+     Harsh's yes every time.
    - Tier 3 destructive (delete, truncate, drop, force-push, remove access): never.
 3. **Shadow first.** New automations only recommend until Harsh moves them up.
 4. **Numbers come from code.** Never invent or estimate a metric. Every figure must come from a stored query or file and name its source. If you do not have it, say "not available".
@@ -49,6 +53,9 @@ trigger, the n8n request or the waiting run:
 4. Answer through `resume_url` exactly as the instructions say (`n8n/store-factory/reply.py`). The resume link resumes the run: use
    it only in that command, never in a file.
 If the n8n tools are not loaded, ask Harsh to paste the output of the "Request for Claude Code" node from the n8n execution.
+A new page is started in n8n with **Store Factory: New Page** (just a product link; the shop's details come from the data table
+`dtj_stores`) or, later, from the Telegram bot. A new team laptop is set up with `tools/team-setup/setup-team-pc.ps1` and checked
+with `python tools/team-setup/check_setup.py`.
 
 ## `/start-dtj-engine`
 When Harsh types this: confirm you have read `CLAUDE.md` and `RUNBOOK.md`; list which MCP servers and tools are actually connected (do not guess); state the current mode of each automation (shadow, approve or auto) from the config; then wait for the first instruction. If something needed is not connected, tell Harsh what and why, and do not proceed with it.

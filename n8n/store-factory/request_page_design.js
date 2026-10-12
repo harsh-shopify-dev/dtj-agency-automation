@@ -32,7 +32,7 @@ const lines = [
   '- Brand\'s own site: ' + (row.brand_website || '(not given: search for it; only the brand\'s own pages count as sources)'),
   '- Look references: ' + (row.reference_brands || '(none)'),
   '- App copies on this store: ' + (registry ? 'services/store-builder/' + registry : '(not given: find it in services/store-builder/page_builder/clients/)'),
-  '- Harsh\'s notes: ' + (row.notes || '(none)'),
+  '- Asked by: ' + (row.requested_by || 'Harsh') + ' | Notes: ' + (row.notes || '(none)'),
   (Object.keys(brand).length || Object.keys(facts).length)
     ? '- This brief came from the client form: request.brand and request.facts hold the client\'s answers. Start from them and keep their sources.'
     : '- This brief was started by hand: there are no client answers; the facts come from the store, the brand\'s site and the pictures.',

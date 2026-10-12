@@ -1,5 +1,19 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(cd services/store-builder)",
+      "Bash(python -m page_builder.fetch_product:*)",
+      "Bash(python -m page_builder.ship_draft:*)",
+      "Bash(python n8n/store-factory/reply.py:*)",
+      "Bash(python tools/team-setup/check_setup.py:*)",
+      "Bash(python .claude/skills/dtj-pdp-design-review/scripts/design_checks.py:*)",
+      "Edit(.work/**)",
+      "Edit(docs/HANDOFF.md)",
+      "mcp__n8n__search_workflow_executions",
+      "mcp__n8n__get_workflow_execution",
+      "mcp__n8n__search_workflows",
+      "mcp__n8n__get_data_table_rows"
+    ],
     "deny": [
       "Bash(git push origin main:*)",
       "Bash(git push origin master:*)",

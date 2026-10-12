@@ -114,7 +114,8 @@ only when Harsh asks. Update `docs/HANDOFF.md`. Give Harsh `content-needed.md`, 
 Before any page with samples may go live: every sample replaced (rebuild) or signed off by Harsh one by one.
 
 ## Answering an n8n page request (a fresh session can do the whole page)
-"Store Factory: Page Design" (n8n `n8MzskKamTbVhZ3h`) pauses at "Wait for Claude Code: Page Design". Its "Request for Claude Code:
+"Store Factory: New Page" (n8n `Z3s9hqny1d2shvXT`) turns a product link into a brief (the shop from the data table `dtj_stores`) and
+starts "Store Factory: Page Design" (n8n `n8MzskKamTbVhZ3h`), which pauses at "Wait for Claude Code: Page Design". Its "Request for Claude Code:
 Page Design" output holds a complete numbered task list (`instructions`): fetch the product (`page_builder.fetch_product`), P2-P4
 here, a `ship_draft --design-only` run for the copy request, the `ship_draft` run that writes the draft, the real-page check, the
 answer with `n8n/store-factory/reply.py`, the handoff entry. Follow it in order; how to find the waiting run is in `CLAUDE.md`
