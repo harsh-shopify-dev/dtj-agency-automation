@@ -174,7 +174,8 @@ git pull
 | **dtj_stores** (a table in n8n) | One row per shop | The shop's addresses, its draft theme, its app copies, its brand website. Set up once by Harsh. |
 | **dtj_client_intake** (a table in n8n) | One row per page request | The work order: which product, who asked, and later the result and the preview link. |
 | **dtj_bot_users** (a table in n8n) | One row per person allowed to use the bot | Their Telegram number, name and role (requester, designer, admin). |
-| **@DtjPageDesignerBot** | The Telegram bot | The easiest front door: send it a product link, it sends you back the preview link. |
+| **@DtjPageDesignerBot** | The Telegram bot | The easiest front door: send it a product link, it sends you back the preview link. Admins can also switch a shop's DTJ apps off and on with it. |
+| **The install service** | https://dtj-install-catcher.ultimateecomwithharsh.workers.dev | Keeps the on/off switch of every client's copy of our 3 apps. The bot asks it with its own key. |
 | **Claude Code** | Claude's **Code** tab, opened in the project folder | The designer. It follows the project's rules and the task list. |
 | **The project folder** | `dtj-agency-automation` on your laptop | The rules, the design knowledge and the tools Claude uses. |
 
@@ -184,17 +185,21 @@ git pull
 |---|---|
 | **Telegram Message** | Receives every message sent to the bot. |
 | **Read the Message** | Ignores group chats. Refuses anything that looks like a password (asks you to delete it). Finds the first link; the rest of the message is your note. |
-| **Load Bot Users** / **Who Is It** | Checks you are in dtj_bot_users. If not, it replies with your number to send to Harsh. |
-| **Start a Page?** | A link: go on. "hi", /help or no link: just answer. |
+| **Load Bot Users** / **Load Shops** / **Who Is It** | Checks you are in dtj_bot_users. If not, it replies with your number to send to Harsh. Then decides what you asked for: a page, an admin command (Part E, "Switch a shop's apps"), or just an answer. |
+| **What to Do** | Sends the request down the right path: a page, a switch, the confirm buttons, or a plain answer. |
 | **Ask New Page** | Gives the link and your note to automation 1 and waits for its answer (about a second). |
 | **Write the Answers** / **Send** | Tells you "Got it ..." and tells every designer "New page waiting ... type: handle the Claude Code trigger in n8n". |
+| **Ask to Confirm** | For /off and /on: sends "Switch OFF ...?" with a **Yes** and a **Cancel** button. Nothing is switched yet. |
+| **Is It a Button?** / **Answer the Button** | When an admin taps a button, tells Telegram the tap arrived (so the button stops spinning). |
+| **Licence Calls** / **Ask the Switch** | Asks the install service about the shop's 3 DTJ apps (or switches them), with the bot's own key (the n8n credential **DTJ Catcher Bot Key**). |
+| **Licence Report** | Turns the 3 answers into one message: each app ON or OFF, and "(checked)" when the service confirmed the change. Other admins are told too. |
 
 ### Automation 1: "Store Factory: New Page" (the front door, about 1 second)
 
 | Box in n8n | What it does |
 |---|---|
 | **What to Design (edit me)** | Where you paste the product link and a note (Part C). |
-| **From Another Workflow** | The same front door for the Telegram bot (coming soon). |
+| **From Another Workflow** | The same front door, used by the Telegram bot. |
 | **Take the Request** | Tidies the link and the note. |
 | **Load Stores** | Reads the shops table (dtj_stores). |
 | **Match the Store** | Finds the shop the link belongs to. If anything is wrong it explains it in one sentence (wrong kind of link, shop not set up, no draft theme). |
@@ -314,6 +319,27 @@ A shop can get pages only after these steps, done once:
 2. In n8n: **Data tables > dtj_bot_users > add a row**: telegram_user_id (that number), name, role (`requester`, `designer`
    or `admin`), active = true.
 3. To remove someone, set active = false. Designers and admins get the "New page waiting" messages.
+   Only make someone an `admin` if you trust them to switch a client's apps off: admins can do that from their phone.
+
+### Switch a shop's DTJ apps off or on (admins)
+Use this when a client stops paying, or to bring their apps back. It switches all 3 DTJ apps (Blocks, Sections, Sections 2) of
+that shop at once. Only people with the role `admin` can use it; everyone else gets "Only an admin can ...".
+
+| Send the bot | What happens |
+|---|---|
+| `/shops` | The list of shops and their addresses. |
+| `/status test store` | Each of the shop's 3 apps: ON or OFF. Changes nothing. |
+| `/off test store` | The bot asks "Switch OFF all DTJ apps on DTJ Test Store?" with two buttons. Tap **Yes, switch OFF** within 2 minutes, or **Cancel**. |
+| `/on test store` | The same, to switch them back on. |
+
+- You can use the shop's name, its `.myshopify.com` address or its website address. If more than one shop matches, the bot
+  asks you to be more specific.
+- **OFF means every DTJ block disappears from that shop for its shoppers at once**, until someone switches it back on. The
+  shop's theme and pages are not changed or deleted.
+- After a switch the bot answers each app `ON -> OFF (checked)`. "(checked)" means the service read the switch back and it
+  really changed. If a line says "NOT confirmed" or "failed", send `/status` again and tell Harsh.
+- Every switch is saved in the install service's log with your name ("via Telegram") and every other admin gets a message.
+- Shops that use DTJ's own apps (not client copies, for example Elevate with Harsh) cannot be switched here: the bot says so.
 
 ---
 
@@ -337,6 +363,9 @@ A shop can get pages only after these steps, done once:
 | The bot says "That looks like a password or a key" | Your message looked like a secret | Delete your message (press and hold it, then Delete). Never send passwords to any chat |
 | The bot does not answer at all | n8n is down, or you wrote in a group | Write to the bot directly (not in a group). Still nothing after a minute: tell Harsh |
 | You sent a link but no preview link came back | Nobody has run Claude Code yet, or the page could not be finished | Ask a designer; the bot tells you if the page was not finished, and why |
+| The bot says "That button has expired" | More than 2 minutes passed before you tapped | Send the /off or /on command again |
+| The bot says "the bot's key was refused" | The n8n credential **DTJ Catcher Bot Key** does not match the install service | Harsh: open the credential, check Name is `X-DTJ-Bot-Key`, paste the key again (see HANDOFF, 12 Oct) |
+| The bot says a shop "uses DTJ's own apps" | That shop has DTJ's original apps, not client copies | Nothing to do: the switch is only for client copies |
 
 ---
 
@@ -353,5 +382,6 @@ A shop can get pages only after these steps, done once:
 | **Work order / brief** | One row in dtj_client_intake: one page request. |
 | **Theme Access password** | A password from Shopify that lets the tools write to a shop's draft theme. One per shop, per person. |
 | **n8n token** | Your personal key that lets Claude talk to n8n. |
-| **Requester / designer** | A requester sends links to the bot. A designer also runs Claude Code on a set-up laptop. |
+| **Requester / designer / admin** | A requester sends links to the bot. A designer also runs Claude Code on a set-up laptop. An admin can also switch a shop's DTJ apps off and on. |
+| **App switch** | The on/off switch of a client's copy of our apps. OFF hides every DTJ block on that shop until it is switched back on. |
 | **Preview link** | The address where you can see the draft page. |

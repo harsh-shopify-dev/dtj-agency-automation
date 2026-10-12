@@ -391,7 +391,13 @@
      "timeout": 60000
     }
    },
-   "onError": "continueRegularOutput"
+   "onError": "continueRegularOutput",
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "I32lgulR9ZPulvwb",
+     "name": "DTJ Catcher Bot Key"
+    }
+   }
   },
   {
    "id": "c8679e9a-e961-4a9a-9b49-0df47607a2d0",
