@@ -14,11 +14,18 @@
    ],
    "parameters": {
     "updates": [
-     "message"
+     "message",
+     "callback_query"
     ],
     "additionalFields": {}
    },
-   "webhookId": "94179fbb-0513-47f6-99cc-c55dcf365237"
+   "webhookId": "94179fbb-0513-47f6-99cc-c55dcf365237",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
   },
   {
    "id": "f26ea1de-c250-4e3b-9039-f830619322be",
@@ -32,7 +39,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Read the Message\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns one Telegram update into: who wrote, in which chat, and what they want (help, a page from a product link, or nothing).\nconst update = $input.first().json || {};\nconst msg = update.message || update;\nconst chat = msg.chat || {};\nconst from = msg.from || {};\nconst text = String(msg.text || '').trim();\nconst name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\nconst base = { chat_id: String(chat.id || ''), chat_type: String(chat.type || ''), user_id: String(from.id || ''), name, text };\n\n// group chats, channels, other bots and empty updates are ignored: the bot only talks one to one\nif (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n\n// a message that looks like a password, token or key is never used (the person is asked to delete it)\nconst secret = /\\bshp(at|ca|ss|tka)_[0-9a-z]{8,}/i.test(text) || /\\b[0-9]{8,10}:[A-Za-z0-9_-]{30,}\\b/.test(text)\n  || /\\b[0-9a-f]{32,}\\b/i.test(text) || /\\beyJ[A-Za-z0-9_-]{20,}\\./.test(text) || /\\bsk-ant-[A-Za-z0-9_-]{10,}/.test(text);\nif (secret) return [{ json: { ...base, kind: 'secret' } }];\n\nif (/^\\/(start|help)\\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];\n\n// the first link in the message; everything else is the note for the designer\nconst m = text.match(/https?:\\/\\/[^\\s<>\"]+/i) || text.match(/\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/[^\\s<>\"]*/i);\nif (!m) return [{ json: { ...base, kind: 'nolink' } }];\nconst product_link = m[0].replace(/[).,;!?]+$/, '');\nconst note = (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length)).replace(/\\s+/g, ' ').trim().slice(0, 1500);\nreturn [{ json: { ...base, kind: 'link', product_link, note } }];\n"
+    "jsCode": "// n8n Code node \"Read the Message\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns one Telegram update into: who wrote, in which chat, and what they want: help, a page from a product link, an admin command\n// (/shops, /status, /on, /off) or a tap on one of the bot's buttons.\nconst update = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s);\nconst cq = update.callback_query;\nif (cq) {  // a tap on a button the bot sent (the confirm / cancel buttons of /on and /off)\n  const chat = (cq.message || {}).chat || {};\n  const from = cq.from || {};\n  const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\n  const base = { chat_id: esc(chat.id), chat_type: esc(chat.type), user_id: esc(from.id), name, text: '', callback_id: esc(cq.id) };\n  if (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n  return [{ json: { ...base, kind: 'button', data: esc(cq.data).slice(0, 64) } }];\n}\nconst msg = update.message || update;\nconst chat = msg.chat || {};\nconst from = msg.from || {};\nconst text = String(msg.text || '').trim();\nconst name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\nconst base = { chat_id: String(chat.id || ''), chat_type: String(chat.type || ''), user_id: String(from.id || ''), name, text, callback_id: '' };\n\n// group chats, channels, other bots and empty updates are ignored: the bot only talks one to one\nif (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n\n// a message that looks like a password, token or key is never used (the person is asked to delete it)\nconst secret = /\\bshp(at|ca|ss|tka)_[0-9a-z]{8,}/i.test(text) || /\\b[0-9]{8,10}:[A-Za-z0-9_-]{30,}\\b/.test(text)\n  || /\\b[0-9a-f]{32,}\\b/i.test(text) || /\\beyJ[A-Za-z0-9_-]{20,}\\./.test(text) || /\\bsk-ant-[A-Za-z0-9_-]{10,}/.test(text);\nif (secret) return [{ json: { ...base, kind: 'secret' } }];\n\nif (/^\\/(start|help)\\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];\n\n// admin commands: /shops, /status <shop>, /on <shop>, /off <shop> (the bot's @name may follow the command)\nconst cmd = text.match(/^\\/(shops|status|on|off)(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nif (cmd) return [{ json: { ...base, kind: 'command', command: cmd[1].toLowerCase(), arg: String(cmd[2] || '').trim().slice(0, 100) } }];\n\n// the first link in the message; everything else is the note for the designer\nconst m = text.match(/https?:\\/\\/[^\\s<>\"]+/i) || text.match(/\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/[^\\s<>\"]*/i);\nif (!m) return [{ json: { ...base, kind: 'nolink' } }];\nconst product_link = m[0].replace(/[).,;!?]+$/, '');\nconst note = (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length)).replace(/\\s+/g, ' ').trim().slice(0, 1500);\nreturn [{ json: { ...base, kind: 'link', product_link, note } }];\n"
    }
   },
   {
@@ -73,43 +80,13 @@
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    720,
+    840,
     120
    ],
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both). Output: action \"design\" (start a page) or \"reply\" (just answer).\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $input.all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(me.name || msg.name) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.');\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\nconst designers = users.filter((u) => ['designer', 'admin'].includes(String(u.role || '').toLowerCase().trim()))\n  .map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: (me.name || msg.name) + ' (Telegram)', requester_name: me.name || msg.name, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
-   }
-  },
-  {
-   "id": "f2d7161c-daee-47eb-8d1b-5534c0bcf1a1",
-   "name": "Start a Page?",
-   "type": "n8n-nodes-base.if",
-   "typeVersion": 2.2,
-   "position": [
-    960,
-    120
-   ],
-   "parameters": {
-    "conditions": {
-     "options": {
-      "caseSensitive": true,
-      "leftValue": "",
-      "typeValidation": "strict"
-     },
-     "conditions": [
-      {
-       "leftValue": "={{ $json.action }}",
-       "rightValue": "design",
-       "operator": {
-        "type": "string",
-        "operation": "equals"
-       }
-      }
-     ],
-     "combinator": "and"
-    }
+    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Input: the shops (dtj_stores, from \"Load Shops\"). Output: one item with action\n//   design  -> start a page (Store Factory: New Page)\n//   licence -> ask the install catcher (status, or a confirmed switch)\n//   confirm -> send the \"Yes, switch ...\" / \"Cancel\" buttons\n//   reply   -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst shops = $input.all().map((i) => i.json).filter((s) => s && s.myshopify_domain && s.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists the shops, /status shop shows whether its DTJ apps are on, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only)\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const clientOf = (s) => (String(s.client_registry || '').match(/clients\\/([a-z0-9-]+)\\.json$/) || [])[1] || '';\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    const shop = shops.find((s) => clientOf(s) === b[2]);\n    if (!shop) return reply('That shop is not set up any more. Nothing was switched.');\n    return [{ json: { action: 'licence', chat_id: msg.chat_id, state: b[1] === 'on' ? 'active' : 'inactive', client: b[2],\n      shop_name: shop.store_name || shop.myshopify_domain, approved_by: myName + ' via Telegram', reason: 'Telegram /' + b[1],\n      actor: myName, admins: otherAdmins } }];\n  }\n  if (msg.command === 'shops') {\n    if (!shops.length) return reply('No shops are set up yet.');\n    return reply('Shops:\\n' + shops.map((s) => '- ' + esc(s.store_name || s.myshopify_domain) + ' (' + esc(s.myshopify_domain) + ')').join('\\n')\n      + '\\n\\nUse a name with /status, /on or /off, for example: /status ' + esc(shops[0].store_name || shops[0].myshopify_domain));\n  }\n  if (!msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  const q = msg.arg.toLowerCase().replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '').trim();\n  const names = (s) => [s.store_name, s.myshopify_domain, clientOf(s), ...String(s.other_domains || '').split(',')]\n    .map((x) => String(x || '').toLowerCase().trim()).filter(Boolean);\n  let found = shops.filter((s) => names(s).includes(q));\n  if (!found.length) found = shops.filter((s) => names(s).some((n) => n.includes(q)));\n  if (!found.length) return reply('No shop matches \"' + esc(msg.arg) + '\". Send /shops for the list.');\n  if (found.length > 1) return reply('More than one shop matches \"' + esc(msg.arg) + '\": ' + found.map((s) => esc(s.store_name)).join(', ') + '. Please be more specific.');\n  const shop = found[0];\n  const client = clientOf(shop);\n  const shopName = shop.store_name || shop.myshopify_domain;\n  if (!client) return reply(esc(shopName) + ' has no app copies saved, so it cannot be checked or switched here.');\n  if (msg.command === 'status') {\n    return [{ json: { action: 'licence', chat_id: msg.chat_id, state: 'status', client, shop_name: shopName, approved_by: '', reason: '',\n      actor: myName, admins: [] } }];\n  }\n  const off = msg.command === 'off';\n  const word = off ? 'OFF' : 'ON';\n  const stamp = Math.floor(Date.now() / 1000);\n  return [{ json: { action: 'confirm', chat_id: msg.chat_id,\n    text: 'Switch ' + word + ' all DTJ apps on ' + esc(shopName) + '?\\n'\n      + (off ? 'Every DTJ block disappears from that shop for its shoppers at once.' : 'Every DTJ block comes back on that shop at once.')\n      + '\\nTap the button within 2 minutes.',\n    yes_text: 'Yes, switch ' + word, yes_data: 'lic:' + msg.command + ':' + client + ':' + stamp } }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
    }
   },
   {
@@ -205,7 +182,7 @@
    "type": "n8n-nodes-base.telegram",
    "typeVersion": 1.2,
    "position": [
-    1680,
+    2040,
     120
    ],
    "parameters": {
@@ -220,7 +197,13 @@
     }
    },
    "onError": "continueRegularOutput",
-   "webhookId": "0706eecb-b8f8-44f3-8185-8354cfce045f"
+   "webhookId": "0706eecb-b8f8-44f3-8185-8354cfce045f",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
   },
   {
    "id": "55c5c861-e79d-445d-9bd8-9d73a7d70d3b",
@@ -236,6 +219,299 @@
     "color": 5,
     "width": 980,
     "height": 300
+   }
+  },
+  {
+   "id": "54469a56-1f55-45bc-a5f5-a8bdf91bdb81",
+   "name": "Load Shops",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    600,
+    120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "QaOZ6MuvFLyft2y9",
+     "cachedResultName": "dtj_stores"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "myshopify_domain",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "alwaysOutputData": true,
+   "executeOnce": true
+  },
+  {
+   "id": "60ef5a59-8bcd-4fa8-be7c-1114c9aa6d23",
+   "name": "What to Do",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1080,
+    120
+   ],
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "design",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "design"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "licence",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "licence"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "confirm",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "confirm"
+      }
+     ]
+    },
+    "options": {
+     "fallbackOutput": "extra",
+     "renameFallbackOutput": "reply"
+    }
+   }
+  },
+  {
+   "id": "73ddabbe-a8f9-470d-a6cc-0e56a1669b08",
+   "name": "Licence Calls",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1320,
+    240
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Licence Calls\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// One request per DTJ app of the shop for the install catcher's /licence (the HTTP step \"Ask the Switch\" sends each one with the\n// bot's key from the n8n credential \"DTJ Catcher Bot Key\"). The catcher names a client's apps <client>-blocks / -sections / -sections2.\nconst a = $input.first().json || {};\nconst ts = Math.floor(Date.now() / 1000);\nreturn [['blocks', 'DTJ Blocks'], ['sections', 'DTJ Sections'], ['sections2', 'DTJ Sections 2']].map(([part, label]) => {\n  const app = a.client + '-' + part;\n  const body = a.state === 'status'\n    ? { app, state: 'status', ts }\n    : { app, state: a.state, ts, approved_by: a.approved_by, reason: a.reason || '' };\n  return { json: { app, label, body: JSON.stringify(body) } };\n});\n"
+   }
+  },
+  {
+   "id": "11e40d82-ed29-4ee5-8c65-8f9357cb4a77",
+   "name": "Ask the Switch",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1560,
+    240
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "User-Agent",
+       "value": "dtj-n8n-bot/1"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "json",
+    "specifyBody": "json",
+    "jsonBody": "={{ $json.body }}",
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     },
+     "timeout": 60000
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "c8679e9a-e961-4a9a-9b49-0df47607a2d0",
+   "name": "Licence Report",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1800,
+    240
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Licence Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns the catcher's three answers (full responses: statusCode + body) into the message for the admin who asked and, after a switch,\n// a note to every other admin. Every item out is { chat_id, text } for the \"Send\" step.\nconst a = $('Who Is It').first().json;\nconst calls = $('Licence Calls').all().map((i) => i.json);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst word = (v) => (v === 'active' ? 'ON' : v === 'inactive' ? 'OFF' : v ? String(v) : 'not set');\nconst rows = $input.all().map((it, i) => {\n  const r = it.json || {};\n  const code = Number(r.statusCode || (r.error ? 0 : 200));\n  const body = parse(r.body !== undefined ? r.body : r);\n  return { label: (calls[i] || {}).label || 'App ' + (i + 1), code, body };\n});\nconst unknown = rows.every((r) => r.code === 404 && /unknown app/i.test(String(r.body.error || '')));\nif (unknown) {\n  return [{ json: { chat_id: a.chat_id, text: esc(a.shop_name) + ' uses DTJ\\'s own apps, not client copies: the switch only manages client '\n    + 'app copies (installed through the install catcher). Nothing was changed.' } }];\n}\nconst line = (r) => {\n  if (r.code === 200 && a.state === 'status') return r.label + ': ' + word(r.body.licence);\n  if (r.code === 200) return r.label + ': ' + word(r.body.before) + ' -> ' + word(r.body.after) + (r.body.verified ? ' (checked)' : ' (NOT confirmed)');\n  if (r.code === 404) return r.label + ': not connected (' + esc(r.body.error || 'not installed') + ')';\n  if (r.code === 401) return r.label + ': the bot\\'s key was refused (ask Harsh to check the credential \"DTJ Catcher Bot Key\")';\n  return r.label + ': failed (' + esc(r.body.error || ('HTTP ' + r.code)) + ')';\n};\nconst lines = rows.map(line).join('\\n');\nif (a.state === 'status') return [{ json: { chat_id: a.chat_id, text: 'DTJ apps on ' + esc(a.shop_name) + ':\\n' + lines } }];\n\nconst ok = rows.every((r) => r.code === 200 && r.body.verified);\nconst word2 = a.state === 'active' ? 'ON' : 'OFF';\nconst head = (ok ? 'Done: all DTJ apps on ' + esc(a.shop_name) + ' are ' + word2 + '.' : 'Not everything switched on ' + esc(a.shop_name) + '. Check the lines below.');\nconst out = [{ json: { chat_id: a.chat_id, text: head + '\\n' + lines } }];\nfor (const id of a.admins || []) {\n  out.push({ json: { chat_id: id, text: esc(a.actor) + ' switched ' + word2 + ' the DTJ apps on ' + esc(a.shop_name) + ' via Telegram.\\n' + lines } });\n}\nreturn out;\n"
+   }
+  },
+  {
+   "id": "a985fa79-c33e-4d81-91f4-898799e5d3d8",
+   "name": "Ask to Confirm",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1320,
+    400
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "replyMarkup": "inlineKeyboard",
+    "inlineKeyboard": {
+     "rows": [
+      {
+       "row": {
+        "buttons": [
+         {
+          "text": "={{ $json.yes_text }}",
+          "additionalFields": {
+           "callback_data": "={{ $json.yes_data }}"
+          }
+         },
+         {
+          "text": "Cancel",
+          "additionalFields": {
+           "callback_data": "lic:cancel"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "2a942740-50a5-4810-a7ac-b0563d0235b3",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "ac62abc1-c7f2-4311-9cdb-4a811ebe56cd",
+   "name": "Is It a Button?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    480,
+    320
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.kind }}",
+       "rightValue": "button",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "b8e33cdd-db8d-4c8a-b090-700feb2a4813",
+   "name": "Answer the Button",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    720,
+    320
+   ],
+   "parameters": {
+    "resource": "callback",
+    "operation": "answerQuery",
+    "queryId": "={{ $json.callback_id }}",
+    "additionalFields": {}
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "5b579ba6-1e28-40bf-a2e1-8c9242666dbf",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
    }
   }
  ],
@@ -258,44 +534,9 @@
       "node": "Load Bot Users",
       "type": "main",
       "index": 0
-     }
-    ]
-   ]
-  },
-  "Load Bot Users": {
-   "main": [
-    [
+     },
      {
-      "node": "Who Is It",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Who Is It": {
-   "main": [
-    [
-     {
-      "node": "Start a Page?",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Start a Page?": {
-   "main": [
-    [
-     {
-      "node": "Ask New Page",
-      "type": "main",
-      "index": 0
-     }
-    ],
-    [
-     {
-      "node": "Send",
+      "node": "Is It a Button?",
       "type": "main",
       "index": 0
      }
@@ -318,6 +559,115 @@
     [
      {
       "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Bot Users": {
+   "main": [
+    [
+     {
+      "node": "Load Shops",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Shops": {
+   "main": [
+    [
+     {
+      "node": "Who Is It",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Who Is It": {
+   "main": [
+    [
+     {
+      "node": "What to Do",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "What to Do": {
+   "main": [
+    [
+     {
+      "node": "Ask New Page",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Licence Calls",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Ask to Confirm",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Licence Calls": {
+   "main": [
+    [
+     {
+      "node": "Ask the Switch",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Ask the Switch": {
+   "main": [
+    [
+     {
+      "node": "Licence Report",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Licence Report": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Is It a Button?": {
+   "main": [
+    [
+     {
+      "node": "Answer the Button",
       "type": "main",
       "index": 0
      }

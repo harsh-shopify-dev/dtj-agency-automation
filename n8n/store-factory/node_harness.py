@@ -18,7 +18,8 @@ const items = Array.isArray(given) ? given : [given];
 const $input = { first: () => ({ json: items[0] }), all: () => items.map((json) => ({ json })) };
 const $ = (name) => {
   if (!(name in refs)) throw new Error('node ' + name + ' has not run');
-  return { first: () => ({ json: refs[name] }) };
+  const list = Array.isArray(refs[name]) ? refs[name] : [refs[name]];  // a list = that node's items
+  return { first: () => ({ json: list[0] }), all: () => list.map((json) => ({ json })) };
 };
 const $execution = { resumeUrl: refs.__resume };
 try {

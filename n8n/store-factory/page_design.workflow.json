@@ -273,7 +273,13 @@
     }
    },
    "onError": "continueRegularOutput",
-   "webhookId": "6ac8a46f-45b7-411f-abbe-737ea4be4356"
+   "webhookId": "6ac8a46f-45b7-411f-abbe-737ea4be4356",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
   }
  ],
  "connections": {

@@ -164,6 +164,29 @@ test("the kill switch needs a signature, a fresh timestamp and an approver; it r
   assert.ok(rows.some((r) => r.approved_by === "Harsh" && r.after === "inactive" && r.reason === "unpaid invoice"));
 });
 
+test("the Telegram bot may call /licence with its own key, under the same rules, and is named in the audit", async () => {
+  const BOT = "b".repeat(64);
+  const env = makeEnv({ BOT_KEY: BOT });
+  await install(env);
+  const body = { app: APP, state: "inactive", approved_by: "Harsh via Telegram", reason: "test", ts: Math.floor(Date.now() / 1000) };
+  const asBot = (b, key = BOT) => new Request(`${ORIGIN}/licence`, { method: "POST", body: JSON.stringify(b), headers: { "X-DTJ-Bot-Key": key } });
+  assert.equal((await worker.fetch(asBot(body, "b".repeat(63) + "c"), env)).status, 401);  // a wrong key
+  assert.equal((await worker.fetch(asBot(body), makeEnv())).status, 401);  // no BOT_KEY set: the bot path is off
+  assert.equal((await worker.fetch(asBot(body, "short"), makeEnv({ BOT_KEY: "short" }))).status, 401);  // a short key never counts
+  assert.equal((await worker.fetch(asBot({ ...body, ts: 1000 }), env)).status, 400);  // still needs a fresh request
+  assert.equal((await worker.fetch(asBot({ ...body, approved_by: "" }), env)).status, 400);  // and a named approver
+  const res = await worker.fetch(asBot(body), env);
+  assert.equal(res.status, 200);
+  assert.equal(shopify.licence, "inactive");
+  const status = await worker.fetch(asBot({ app: APP, state: "status", ts: Math.floor(Date.now() / 1000) }), env);
+  assert.equal((await status.json()).licence, "inactive");
+  const rows = env.VAULT.keys("audit:").map((k) => JSON.parse(env.VAULT.data.get(k)));
+  assert.ok(rows.some((r) => r.via === "telegram bot" && r.approved_by === "Harsh via Telegram" && r.after === "inactive"));
+  assert.ok(rows.every((r) => !JSON.stringify(r).includes(BOT)));  // the key itself is never written
+  const signedRes = await worker.fetch(signed({ ...body, state: "active", ts: Math.floor(Date.now() / 1000) }), env);
+  assert.equal(signedRes.status, 200);  // the signed path still works next to it
+});
+
 test("uninstall deletes the store key only for a genuine webhook from that store", async () => {
   const env = makeEnv();
   await install(env);

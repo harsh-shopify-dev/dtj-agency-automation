@@ -8,7 +8,8 @@
 //   vars.APPS           JSON {"<app key>": {"client_id": "...", "shop": "<store>.myshopify.com", "label": "DTJ Blocks - X"}}   (not secret)
 //   secret SECRET_<APP KEY IN CAPITALS>   each app copy's client secret (app key: letters, digits, dashes -> underscores)
 //   secret VAULT_KEY    32 random bytes, base64: encrypts the stored tokens (AES-GCM) and signs the OAuth state
-//   secret CONTROL_KEY  shared key n8n uses to sign /licence requests (HMAC-SHA256, hex)
+//   secret CONTROL_KEY  shared key that signs /licence requests (HMAC-SHA256, hex): tools/licence_call.py
+//   secret BOT_KEY      optional, 32+ characters: the Telegram bot in n8n sends it as X-DTJ-Bot-Key (see licenceCaller)
 //   secret ALERT_URL    optional: where to POST a short alert when the scheduled refresh fails (no secrets in it)
 //   kv     VAULT        token records, used-state marks, audit rows
 // Facts (shopify.dev, 9 Oct 2026): hmac = HMAC-SHA256 hex of the sorted query without hmac, keyed with the client secret; the token
@@ -253,9 +254,20 @@ async function webhook(request, env, app) {
   return new Response("ok");
 }
 
+// Who may call /licence: a request signed with CONTROL_KEY (licence_call.py, HMAC of the exact body), or the Telegram bot in n8n,
+// which cannot sign (n8n Code steps have no crypto) and sends BOT_KEY in a header from an encrypted n8n credential instead. BOT_KEY
+// is a separate secret so it can be revoked alone (Harsh, 12 Oct 2026); unset or short, the bot path is off.
+export async function licenceCaller(request, env, raw) {
+  const sig = request.headers.get("X-DTJ-Signature");
+  if (sig && env.CONTROL_KEY && sameText(await hmacHex(env.CONTROL_KEY, raw), sig)) return "signed request";
+  const botKey = request.headers.get("X-DTJ-Bot-Key");
+  if (botKey && String(env.BOT_KEY || "").length >= 32 && sameText(botKey, env.BOT_KEY)) return "telegram bot";
+  throw new Refuse(401, "bad signature");
+}
+
 async function licence(request, env) {
   const raw = await request.text();
-  if (!env.CONTROL_KEY || !sameText(await hmacHex(env.CONTROL_KEY, raw), request.headers.get("X-DTJ-Signature"))) throw new Refuse(401, "bad signature");
+  const via = await licenceCaller(request, env, raw);
   let body;
   try { body = JSON.parse(raw); } catch { throw new Refuse(400, "body is not JSON"); }
   if (!Number.isFinite(body.ts) || Math.abs(now() - body.ts) > FRESH_SECONDS) throw new Refuse(400, "the request is too old");
@@ -270,10 +282,10 @@ async function licence(request, env) {
   try {
     const access = await freshAccess(env, cfg);
     const change = await writeLicence(cfg.shop, access, body.state);
-    await audit(env, { app: cfg.app, shop: cfg.shop, action: `licence ${body.state}`, result: change.verified ? "success" : "failed", approved_by: body.approved_by, reason: body.reason || "", ...change });
+    await audit(env, { app: cfg.app, shop: cfg.shop, action: `licence ${body.state}`, result: change.verified ? "success" : "failed", approved_by: body.approved_by, reason: body.reason || "", via, ...change });
     return json(change.verified ? 200 : 502, { app: cfg.app, shop: cfg.shop, ...change });
   } catch (err) {
-    await audit(env, { app: cfg.app, shop: cfg.shop, action: `licence ${body.state}`, result: "failed", approved_by: body.approved_by, error: String(err.message || err) });
+    await audit(env, { app: cfg.app, shop: cfg.shop, action: `licence ${body.state}`, result: "failed", approved_by: body.approved_by, via, error: String(err.message || err) });
     throw err;
   }
 }

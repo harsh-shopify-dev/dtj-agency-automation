@@ -124,7 +124,9 @@ class Deployment(unittest.TestCase):
                 self.assertNotIn(value, " ".join(cmd))
         puts = {cmd[5]: stdin for cmd, stdin, _ in fake.calls if cmd[3:5] == ["secret", "put"]}
         self.assertEqual(puts["SECRET_ROYAL_DOSA_BLOCKS"], "shpss_client_secret_blocks")
-        self.assertEqual(set(puts), {"VAULT_KEY", "CONTROL_KEY", "SECRET_ROYAL_DOSA_BLOCKS", "SECRET_ROYAL_DOSA_SECTIONS", "SECRET_ROYAL_DOSA_SECTIONS2"})
+        self.assertEqual(set(puts), {"VAULT_KEY", "CONTROL_KEY", "BOT_KEY", "SECRET_ROYAL_DOSA_BLOCKS", "SECRET_ROYAL_DOSA_SECTIONS", "SECRET_ROYAL_DOSA_SECTIONS2"})
+        self.assertEqual(puts["BOT_KEY"], self.saved["DTJ_CATCHER_BOT_KEY"])
+        self.assertEqual(len(puts["BOT_KEY"]), 64)  # 32 random bytes as hex: the catcher wants 32+ characters
         self.assertEqual(puts["VAULT_KEY"], self.saved["DTJ_CATCHER_VAULT_KEY"])
         self.assertEqual(len(__import__("base64").b64decode(puts["VAULT_KEY"])), 32)
         self.assertEqual(fake.calls[-1][0][3], "deploy")
@@ -137,7 +139,7 @@ class Deployment(unittest.TestCase):
         steps = [c[0][3] if c[0][3] != "secret" else f"secret {c[0][4]}" for c in fake.calls]
         self.assertEqual(steps[:3], ["kv", "secret list", "deploy"])  # first deploy creates the Worker
         self.assertEqual(steps[-1], "deploy")  # and the last one ships code and secrets together
-        self.assertEqual(steps.count("secret put"), 5)
+        self.assertEqual(steps.count("secret put"), 6)
 
     def test_other_wrangler_errors_still_stop(self):
         class Broken(FakeWrangler):
@@ -149,12 +151,22 @@ class Deployment(unittest.TestCase):
             self.deployer(Broken()).run()
 
     def test_existing_catcher_keys_are_reused_not_replaced(self):
-        env = {**self.env, "DTJ_CATCHER_VAULT_KEY": "kept-vault", "DTJ_CATCHER_CONTROL_KEY": "kept-control"}
-        fake = FakeWrangler(existing=["VAULT_KEY", "CONTROL_KEY"])
+        env = {**self.env, "DTJ_CATCHER_VAULT_KEY": "kept-vault", "DTJ_CATCHER_CONTROL_KEY": "kept-control", "DTJ_CATCHER_BOT_KEY": "k" * 64}
+        fake = FakeWrangler(existing=["VAULT_KEY", "CONTROL_KEY", "BOT_KEY"])
         self.deployer(fake, env).run()
         names = [cmd[5] for cmd, _, _ in fake.calls if cmd[3:5] == ["secret", "put"]]
         self.assertNotIn("VAULT_KEY", names)  # replacing it would make every stored store key unreadable
         self.assertEqual(self.saved, {})
+
+    def test_an_older_catcher_without_a_bot_key_gets_one_and_keeps_its_other_keys(self):
+        env = {**self.env, "DTJ_CATCHER_VAULT_KEY": "kept-vault", "DTJ_CATCHER_CONTROL_KEY": "kept-control"}
+        fake = FakeWrangler(existing=["VAULT_KEY", "CONTROL_KEY"])  # deployed on 9 Oct, before the bot existed
+        self.deployer(fake, env).run()
+        names = [cmd[5] for cmd, _, _ in fake.calls if cmd[3:5] == ["secret", "put"]]
+        self.assertIn("BOT_KEY", names)
+        self.assertNotIn("VAULT_KEY", names)
+        self.assertNotIn("CONTROL_KEY", names)
+        self.assertEqual(set(self.saved), {"DTJ_CATCHER_BOT_KEY"})  # only the new key gets a local backup
 
     def test_a_key_set_in_cloudflare_without_its_local_backup_stops_everything(self):
         fake = FakeWrangler(existing=["VAULT_KEY"])

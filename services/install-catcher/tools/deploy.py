@@ -7,7 +7,8 @@ Reads (Windows user variables or this shell's environment; never printed, never 
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID       the Cloudflare login for wrangler
   DTJ_SECRET_<CLIENT>_BLOCKS / _SECTIONS / _SECTIONS2   each client app copy's client secret (see add_client.py)
 Creates once and keeps a local backup as Windows user variables (Cloudflare never shows a secret again; losing VAULT_KEY would
-mean every client reinstalling): DTJ_CATCHER_VAULT_KEY, DTJ_CATCHER_CONTROL_KEY (the second is also what n8n signs with).
+mean every client reinstalling): DTJ_CATCHER_VAULT_KEY, DTJ_CATCHER_CONTROL_KEY (signs licence_call.py requests) and
+DTJ_CATCHER_BOT_KEY (the Telegram bot's key: Harsh copies it into n8n's credential "DTJ Catcher Bot Key", never into chat).
 Secrets reach wrangler only through its standard input (`wrangler secret put NAME` reads the value from stdin).
 """
 from __future__ import annotations
@@ -143,6 +144,8 @@ class Deploy:
         existing = self.existing_secrets()
         self.catcher_key("VAULT_KEY", "DTJ_CATCHER_VAULT_KEY", lambda: base64.b64encode(secrets.token_bytes(32)).decode(), existing)
         self.catcher_key("CONTROL_KEY", "DTJ_CATCHER_CONTROL_KEY", lambda: secrets.token_hex(32), existing)
+        # the Telegram bot's own key (n8n sends it in a header from an encrypted credential; revocable without touching CONTROL_KEY)
+        self.catcher_key("BOT_KEY", "DTJ_CATCHER_BOT_KEY", lambda: secrets.token_hex(32), existing)
         for name, value, var in wanted:
             self.put_secret(name, value, var)
         url = self._deploy()  # the code and the secrets together

@@ -1,17 +1,21 @@
 """Deploy the Telegram bot: "Store Factory: Telegram Bot" + the result message at the end of "Store Factory: Page Design".
 
     python n8n/store-factory/deploy_telegram_bot.py --dry-run             print the generated bot workflow code, change nothing
-    python n8n/store-factory/deploy_telegram_bot.py                       create the bot workflow (or refresh its code) and add the
-                                                                           "Tell the Requester" + "Send Result" steps to Page Design
-    python n8n/store-factory/deploy_telegram_bot.py --attach-credential   after Harsh saved the bot token in n8n as the Telegram API
-                                                                           credential "DTJ Page Bot": put it on the 3 Telegram nodes
+    python n8n/store-factory/deploy_telegram_bot.py                       create the bot (first time); later: add the app switch
+                                                                           once, or refresh the code nodes; add Page Design's
+                                                                           "Tell the Requester" + "Send Result"
+    python n8n/store-factory/deploy_telegram_bot.py --attach-credential   put the saved credentials on their nodes: Telegram API
+                                                                           "DTJ Page Bot" and Header Auth "DTJ Catcher Bot Key"
 
-Telegram Message -> Read the Message -> Load Bot Users (dtj_bot_users) -> Who Is It -> Start a Page?
-    yes -> Ask New Page (Store Factory: New Page, waits for its answer) -> Write the Answers -> Send
-    no  -> Send   (help, "send a product link", "this bot is only for the DTJ team: your number is ...", "delete that password")
+Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is It -> What to Do
+    design  -> Ask New Page (Store Factory: New Page, waits for its answer) -> Write the Answers -> Send
+    licence -> Licence Calls -> Ask the Switch (install catcher /licence, bot key) -> Licence Report -> Send
+    confirm -> Ask to Confirm (the "Yes, switch ..." / "Cancel" buttons)
+    reply   -> Send
+Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
-The bot token never passes through this script or git: Harsh pastes it into n8n's credential screen himself. Everything stays
-UNPUBLISHED; Telegram only delivers messages after Harsh publishes the bot workflow.
+No token or key passes through this script or git: Harsh pastes them into n8n's credential screens himself. Changes to a published
+workflow stay in its draft until it is published again.
 """
 from __future__ import annotations
 
@@ -28,8 +32,12 @@ HERE = Path(__file__).resolve().parent
 NAME = "Store Factory: Telegram Bot"
 NEW_PAGE = "Z3s9hqny1d2shvXT"
 BOT_USERS = "xJ9O19tBBmCJc1Hc"
-CREDENTIAL = "DTJ Page Bot"
-CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js"}
+STORES = "QaOZ6MuvFLyft2y9"
+CREDENTIAL = "DTJ Page Bot"                 # n8n Telegram API credential (the bot token)
+SWITCH_CREDENTIAL = "DTJ Catcher Bot Key"   # n8n Header Auth credential: name X-DTJ-Bot-Key, value = the catcher's BOT_KEY
+CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence"
+CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
+              "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js"}
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
 DESCRIPTION = "Store factory Telegram bot: a team member sends a product link, the bot starts Store Factory: New Page and replies."
@@ -43,13 +51,17 @@ STICKY = ("## DTJ page bot (Telegram)\n"
           "Source in git: `n8n/store-factory/`.")
 
 
+def code(file: str) -> str:
+    return (HERE / file).read_text(encoding="utf-8")
+
+
 def _code(var: str, name: str, file: str, pos: str) -> str:
-    js = json.dumps((HERE / file).read_text(encoding="utf-8"))
     return (f"const {var} = node({{ type: 'n8n-nodes-base.code', version: 2, config: {{ name: {json.dumps(name)}, position: {pos}, "
-            f"parameters: {{ mode: 'runOnceForAllItems', language: 'javaScript', jsCode: {js} }} }} }});\n")
+            f"parameters: {{ mode: 'runOnceForAllItems', language: 'javaScript', jsCode: {json.dumps(code(file))} }} }} }});\n")
 
 
 def sdk_code() -> str:
+    """The first version of the bot (a link in, an answer out). The app switch is added to the live workflow by switch_ops()."""
     inputs = ["product_link", "note", "requested_by", "chat_id"]
     values = json.dumps({k: f"={{{{ $json.{k} }}}}" for k in inputs})
     schema = json.dumps([{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True,
@@ -86,23 +98,97 @@ def sdk_code() -> str:
     )
 
 
-def page_design_ops(live: dict) -> list[dict]:
-    notify = (HERE / NOTIFY_JS).read_text(encoding="utf-8")
-    ops: list[dict] = []
-    if "Tell the Requester" not in live:
-        ops += [
-            {"type": "addNode", "node": {"name": "Tell the Requester", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1200, 240],
-                                         "parameters": {"mode": "runOnceForAllItems", "language": "javaScript", "jsCode": notify}}},
-            {"type": "addNode", "node": {"name": "Send Result", "type": "n8n-nodes-base.telegram", "typeVersion": 1.2, "position": [1440, 240],
-                                         "parameters": {"resource": "message", "operation": "sendMessage", "chatId": "={{ $json.chat_id }}",
-                                                        "text": "={{ $json.text }}", "additionalFields": SEND_FIELDS}}},
-            {"type": "setNodeSettings", "nodeName": "Send Result", "settings": {"onError": "continueRegularOutput"}},
-            {"type": "addConnection", "source": "Claude Code Reply: Page Design", "target": "Tell the Requester"},
-            {"type": "addConnection", "source": "Tell the Requester", "target": "Send Result"},
-        ]
-    else:
-        ops.append({"type": "updateNodeParameters", "nodeName": "Tell the Requester", "parameters": {"jsCode": notify}})
+def credential_id(name: str, ctype: str) -> str | None:
+    found = [c for c in call("list_credentials", {}).get("data", []) if c.get("name") == name and c.get("type") == ctype]
+    return found[0]["id"] if found else None
+
+
+def _action_is(value: str) -> dict:
+    return {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+            "conditions": [{"leftValue": "={{ $json.action }}", "rightValue": value, "operator": {"type": "string", "operation": "equals"}}],
+            "combinator": "and"}
+
+
+def _add(name: str, ntype: str, version: float, pos: list[int], params: dict) -> dict:
+    return {"type": "addNode", "node": {"name": name, "type": ntype, "typeVersion": version, "position": pos, "parameters": params}}
+
+
+def switch_ops(live: set[str], telegram_id: str | None) -> list[dict]:
+    """The app switch (12 Oct 2026): admin commands /shops /status /on /off, confirm buttons, the calls to the install catcher."""
+    ops: list[dict] = [
+        {"type": "setNodeParameter", "nodeName": "Telegram Message", "path": "/updates", "value": ["message", "callback_query"]},
+        {"type": "updateNodeParameters", "nodeName": "Read the Message", "parameters": {"jsCode": code("bot_read.js")}},
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        _add("Load Shops", "n8n-nodes-base.dataTable", 1.1, [600, 120], {
+            "resource": "row", "operation": "get", "dataTableId": {"__rl": True, "mode": "list", "value": STORES, "cachedResultName": "dtj_stores"},
+            "matchType": "allConditions", "filters": {"conditions": [{"keyName": "myshopify_domain", "condition": "isNotEmpty"}]}, "returnAll": True}),
+        {"type": "setNodeSettings", "nodeName": "Load Shops", "settings": {"executeOnce": True, "alwaysOutputData": True}},
+        {"type": "removeConnection", "source": "Load Bot Users", "target": "Who Is It"},
+        {"type": "addConnection", "source": "Load Bot Users", "target": "Load Shops"},
+        {"type": "addConnection", "source": "Load Shops", "target": "Who Is It"},
+        {"type": "setNodePosition", "nodeName": "Who Is It", "position": [840, 120]},
+    ]
+    if "Start a Page?" in live:
+        ops.append({"type": "removeNode", "nodeName": "Start a Page?"})
+    ops += [
+        _add("What to Do", "n8n-nodes-base.switch", 3.2, [1080, 120], {
+            "rules": {"values": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v} for v in ("design", "licence", "confirm")]},
+            "options": {"fallbackOutput": "extra", "renameFallbackOutput": "reply"}}),
+        {"type": "addConnection", "source": "Who Is It", "target": "What to Do"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 0, "target": "Ask New Page"},
+        _add("Licence Calls", "n8n-nodes-base.code", 2, [1320, 240], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                      "jsCode": code("licence_calls.js")}),
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 1, "target": "Licence Calls"},
+        _add("Ask the Switch", "n8n-nodes-base.httpRequest", 4.2, [1560, 240], {
+            "method": "POST", "url": CATCHER, "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+            "sendHeaders": True, "headerParameters": {"parameters": [{"name": "User-Agent", "value": "dtj-n8n-bot/1"}]},
+            "sendBody": True, "contentType": "json", "specifyBody": "json", "jsonBody": "={{ $json.body }}",
+            "options": {"response": {"response": {"fullResponse": True, "neverError": True}}, "timeout": 60000}}),
+        {"type": "setNodeSettings", "nodeName": "Ask the Switch", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "Licence Calls", "target": "Ask the Switch"},
+        _add("Licence Report", "n8n-nodes-base.code", 2, [1800, 240], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                       "jsCode": code("licence_report.js")}),
+        {"type": "addConnection", "source": "Ask the Switch", "target": "Licence Report"},
+        {"type": "addConnection", "source": "Licence Report", "target": "Send"},
+        _add("Ask to Confirm", "n8n-nodes-base.telegram", 1.2, [1320, 400], {
+            "resource": "message", "operation": "sendMessage", "chatId": "={{ $json.chat_id }}", "text": "={{ $json.text }}",
+            "replyMarkup": "inlineKeyboard", "inlineKeyboard": {"rows": [{"row": {"buttons": [
+                {"text": "={{ $json.yes_text }}", "additionalFields": {"callback_data": "={{ $json.yes_data }}"}},
+                {"text": "Cancel", "additionalFields": {"callback_data": "lic:cancel"}}]}}]},
+            "additionalFields": SEND_FIELDS}),
+        {"type": "setNodeSettings", "nodeName": "Ask to Confirm", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 2, "target": "Ask to Confirm"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 3, "target": "Send"},
+        _add("Is It a Button?", "n8n-nodes-base.if", 2.2, [480, 320], {"conditions": {
+            "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+            "conditions": [{"leftValue": "={{ $json.kind }}", "rightValue": "button", "operator": {"type": "string", "operation": "equals"}}],
+            "combinator": "and"}}),
+        {"type": "addConnection", "source": "Read the Message", "target": "Is It a Button?"},
+        _add("Answer the Button", "n8n-nodes-base.telegram", 1.2, [720, 320], {
+            "resource": "callback", "operation": "answerQuery", "queryId": "={{ $json.callback_id }}", "additionalFields": {}}),
+        {"type": "setNodeSettings", "nodeName": "Answer the Button", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "Is It a Button?", "sourceIndex": 0, "target": "Answer the Button"},
+        {"type": "setNodePosition", "nodeName": "Send", "position": [2040, 120]},
+    ]
+    if telegram_id:
+        ops += [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": telegram_id, "credentialName": CREDENTIAL}
+                for n in ("Ask to Confirm", "Answer the Button")]
     return ops
+
+
+def page_design_ops(live: dict) -> list[dict]:
+    notify = code(NOTIFY_JS)
+    if "Tell the Requester" in live:
+        return [{"type": "updateNodeParameters", "nodeName": "Tell the Requester", "parameters": {"jsCode": notify}}]
+    return [
+        _add("Tell the Requester", "n8n-nodes-base.code", 2, [1200, 240], {"mode": "runOnceForAllItems", "language": "javaScript", "jsCode": notify}),
+        _add("Send Result", "n8n-nodes-base.telegram", 1.2, [1440, 240], {"resource": "message", "operation": "sendMessage",
+                                                                         "chatId": "={{ $json.chat_id }}", "text": "={{ $json.text }}",
+                                                                         "additionalFields": SEND_FIELDS}),
+        {"type": "setNodeSettings", "nodeName": "Send Result", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "Claude Code Reply: Page Design", "target": "Tell the Requester"},
+        {"type": "addConnection", "source": "Tell the Requester", "target": "Send Result"},
+    ]
 
 
 def find_bot() -> str | None:
@@ -111,19 +197,27 @@ def find_bot() -> str | None:
 
 
 def attach_credential() -> int:
-    creds = [c for c in call("list_credentials", {}).get("data", []) if c.get("name") == CREDENTIAL and c.get("type") == "telegramApi"]
-    if not creds:
+    cid = credential_id(CREDENTIAL, "telegramApi")
+    if not cid:
         print(f"no Telegram API credential named '{CREDENTIAL}' in n8n yet: Harsh creates it (Credentials > Create > Telegram API)")
         return 1
-    cid = creds[0]["id"]
     bot = find_bot()
     if not bot:
         print("the bot workflow does not exist yet: run this script without --attach-credential first")
         return 1
-    for wf, nodes in ((bot, ["Telegram Message", "Send"]), (PAGE_DESIGN, ["Send Result"])):
+    live = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
+    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button") if n in live]
+    for wf, nodes in ((bot, tg_nodes), (PAGE_DESIGN, ["Send Result"])):
         ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": cid, "credentialName": CREDENTIAL}
                for n in nodes]
-        print(wf, call("update_workflow", {"workflowId": wf, "operations": ops}).get("appliedOperations"), "credential(s) attached")
+        print(wf, call("update_workflow", {"workflowId": wf, "operations": ops}).get("appliedOperations"), "Telegram credential(s) attached")
+    key = credential_id(SWITCH_CREDENTIAL, "httpHeaderAuth")
+    if "Ask the Switch" in live and key:
+        op = {"type": "setNodeCredential", "nodeName": "Ask the Switch", "credentialKey": "httpHeaderAuth", "credentialId": key,
+              "credentialName": SWITCH_CREDENTIAL}
+        print(bot, call("update_workflow", {"workflowId": bot, "operations": [op]}).get("appliedOperations"), "switch key attached")
+    elif "Ask the Switch" in live:
+        print(f"no Header Auth credential named '{SWITCH_CREDENTIAL}' yet: the app switch has no key until Harsh creates it")
     return 0
 
 
@@ -134,29 +228,35 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    code = sdk_code()
     if args.dry_run:
-        print(code)
+        print(sdk_code())
+        for op in switch_ops({"Start a Page?"}, "telegram-credential-id"):
+            print(f"switch op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
+                  f"{op.get('source', '')} {op.get('target', '')}".rstrip())
         return 0
     try:
         if args.attach_credential:
             return attach_credential()
         bot = find_bot()
         if bot:
-            ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": (HERE / f).read_text(encoding="utf-8")}}
-                   for n, f in CODE_NODES.items()]
-            print("bot exists: refreshing its code nodes", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))
+            live_bot = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
+            if "Licence Calls" not in live_bot:
+                ops = switch_ops(live_bot, credential_id(CREDENTIAL, "telegramApi"))
+                print("adding the app switch:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"), "operation(s)")
+            else:
+                ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
+                print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))
         else:
-            check = call("validate_workflow", {"code": code})
+            check = call("validate_workflow", {"code": sdk_code()})
             print("validate:", json.dumps(check)[:600])
             if check.get("valid") is False or check.get("errors"):
                 return 1
-            made = call("create_workflow_from_code", {"code": code, "description": DESCRIPTION, "versionName": "Telegram page bot"})
+            made = call("create_workflow_from_code", {"code": sdk_code(), "description": DESCRIPTION, "versionName": "Telegram page bot"})
             bot = made.get("workflowId") or made.get("id")
             print("created:", bot, made.get("url"))
         live_pd = {n["name"]: n for n in call("get_workflow_details", {"workflowId": PAGE_DESIGN})["workflow"]["nodes"]}
-        ops = page_design_ops(live_pd)
-        print("page design:", call("update_workflow", {"workflowId": PAGE_DESIGN, "operations": ops}).get("appliedOperations"), "operation(s)")
+        print("page design:", call("update_workflow", {"workflowId": PAGE_DESIGN, "operations": page_design_ops(live_pd)}).get("appliedOperations"),
+              "operation(s)")
         after = call("get_workflow_details", {"workflowId": bot})["workflow"]
         pd = call("get_workflow_details", {"workflowId": PAGE_DESIGN})["workflow"]
     except (urllib.error.URLError, RuntimeError, OSError) as exc:
@@ -164,8 +264,8 @@ def main(argv=None) -> int:
         return 1
     live = {n["name"]: n for n in after["nodes"]}
     pd_live = {n["name"]: n for n in pd["nodes"]}
-    mismatched = [n for n, f in CODE_NODES.items() if live.get(n, {}).get("parameters", {}).get("jsCode") != (HERE / f).read_text(encoding="utf-8")]
-    if pd_live.get("Tell the Requester", {}).get("parameters", {}).get("jsCode") != (HERE / NOTIFY_JS).read_text(encoding="utf-8"):
+    mismatched = [n for n, f in CODE_NODES.items() if n in live and live[n].get("parameters", {}).get("jsCode") != code(f)]
+    if pd_live.get("Tell the Requester", {}).get("parameters", {}).get("jsCode") != code(NOTIFY_JS):
         mismatched.append("Page Design / Tell the Requester")
     for wf, file in ((after, "telegram_bot.workflow.json"), (pd, "page_design.workflow.json")):
         export = {k: wf.get(k) for k in ("id", "name", "description", "nodes", "connections", "settings") if k in wf}
