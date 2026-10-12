@@ -76,13 +76,12 @@ by Harsh.
    - `DTJ Store Factory - Designers`: the shops' Theme Access passwords;
    - `DTJ Store Factory - Developers`: the install service's keys, Cloudflare, the Shopify app secrets.
    Designers get the first, developers both.
-3. On Harsh's laptop, in PowerShell, in the project folder:
-   1. `npm install -g @bitwarden/cli`
-   2. `bw login`. If the organization is on Bitwarden's EU server, run `bw config server https://vault.bitwarden.eu` before
-      logging in.
-   3. `python tools\team-setup\vault.py push --all`. This backs up every store-factory key on this laptop, the irreplaceable
-      `DTJ_CATCHER_VAULT_KEY` included. Values travel through a pipe straight to Bitwarden and are never shown.
-   4. `python tools\team-setup\vault.py status`. Every key should say "in the vault".
+3. On Harsh's laptop, back up every store-factory key with ONE command (Claude can open it in its Terminal panel). Type only
+   what Bitwarden asks (email, master password, code) and NOTHING after "Done": whatever is typed then goes to PowerShell in
+   plain text and into its history.
+   `powershell -ExecutionPolicy Bypass -File tools\team-setup\vault-backup.ps1`
+   It signs in, runs `vault.py push --all` (the irreplaceable `DTJ_CATCHER_VAULT_KEY` included), `vault.py pull` and
+   `vault.py status`. DONE on 12 Oct 2026: 17 keys in the vault and on Harsh's laptop.
 4. Add two keys by hand in the Bitwarden app, in the Developers collection, as Login items named EXACTLY like this (the password
    field holds the value). The setup then builds the bot's n8n credentials by itself on any n8n server:
    - `DTJ_TELEGRAM_BOT_TOKEN`: the bot's token, from @BotFather (/mybots, the bot, API Token);

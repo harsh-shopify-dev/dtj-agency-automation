@@ -163,7 +163,11 @@ class Vault:
         return out
 
     def create(self, name: str, value: str, org_id: str, col_id: str) -> None:
-        item = json.loads(self.bw("get", "template", "item"))
+        # each bw call starts Bitwarden's tool afresh (slow on Windows: about a minute per key on 12 Oct 2026), so the item
+        # template is asked for once per run
+        if not hasattr(self, "_template"):
+            self._template = self.bw("get", "template", "item")
+        item = json.loads(self._template)
         item.update({"type": 1, "name": name, "notes": NOTE.format(what=what(name)), "organizationId": org_id, "collectionIds": [col_id],
                      "login": {"username": None, "password": value, "uris": [], "totp": None}})
         self.secrets.append(value)
