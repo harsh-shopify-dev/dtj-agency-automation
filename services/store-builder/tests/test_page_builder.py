@@ -802,31 +802,64 @@ class StandardPageTests(unittest.TestCase):
         self.assertEqual(dark_accent.roles["button_text"], "#FFFFFF")  # a dark accent keeps white text
 
     def test_calm_story_cards_are_the_brand_colour_with_white_accent_words_and_ticks(self):
-        # Harsh, Hope N Skin, 10 Oct 2026: "make the dark orange white and make the icons white and the mark inside orange"
+        # Harsh, Hope N Skin, 10 Oct 2026: "make the dark orange white and make the icons white and the mark inside orange"; a colour
+        # that keeps its character when deepened (a teal here; a bright orange turns brown and gets the light card, test below)
         d = derive({"brand_name": "Glow", "category": "beauty", "vibe": "fresh",
-                    "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}})
+                    "colors": {"primary": "#1F9E8F", "accent": "#1F9E8F", "background": "#FFFFFF", "text": "#1A1A1A"}})
         panel = d.roles["panel"]
         self.assertEqual((d.roles["accent_on_panel"], d.roles["panel_tick"], d.roles["on_panel"]), ("#FFFFFF", panel, "#FFFFFF"))
         self.assertGreaterEqual(style_contrast("#FFFFFF", panel), 4.5)  # white paragraph and points (Harsh: "keep every text white here")
         self.assertGreaterEqual(style_contrast(d.roles["panel_head"], panel), 3.0)  # "Brighter skin," stays dark as a large headline
         self.assertEqual(d.failed_checks(), [])
 
-    def test_a_neutral_card_tone_gives_a_grey_card_with_the_brand_colour_on_the_ticks(self):
-        # Harsh, Hope N Skin, 10 Oct 2026: "how about we use grey color like minimalist instead of that dark brown"
+    def test_a_neutral_card_tone_gives_minimalists_light_grey_with_dark_words_and_the_brand_colour_on_the_ticks(self):
+        # Harsh, Hope N Skin, 10 Oct 2026: "use grey color like minimalist", then "i told to use grey like minimalist -- minimalist brand"
         d = derive({"brand_name": "Glow", "category": "beauty", "vibe": "fresh", "card_tone": "neutral",
                     "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}})
         r = d.roles
-        red, green, blue = (int(r["panel"][i:i + 2], 16) for i in (1, 3, 5))
-        self.assertLessEqual(max(red, green, blue) - min(red, green, blue), 12)  # a true grey, no brand tint
-        self.assertGreaterEqual(style_contrast("#FFFFFF", r["panel"]), 4.5)
-        self.assertGreaterEqual(style_contrast(r["panel_head"], r["panel"]), 3.0)
-        self.assertGreaterEqual(style_contrast(r["panel_tick"], "#FFFFFF"), 3.0)  # the orange check reads on the white tick
-        self.assertNotEqual(r["panel_tick"], r["panel"])
+        self.assertEqual(r["panel"], "#FAFAFA")  # almost white (Harsh: "make it very closer to white", then "more lighter")
+        self.assertEqual((r["on_panel"], r["panel_head"], r["accent_on_panel"]), ("#1A1A1A",) * 3)  # their dark words on light grey
+        self.assertGreaterEqual(style_contrast(r["on_panel"], r["panel"]), 4.5)
+        self.assertEqual(r["panel_tick"], "#FF8C11")  # the orange check inside the dark tick circle
+        self.assertGreaterEqual(style_contrast(r["panel_tick"], r["accent_on_panel"]), 3.0)
         self.assertEqual(d.failed_checks(), [])
         brand, facts = standard_facts()
         brand.update({"vibe": "fresh", "card_tone": "neutral"})
-        story = next(s for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections if s.kind == "story_split")
-        self.assertNotEqual(story.settings["tick_color"], story.settings["panel_bg"])  # the brand colour survives on the built page
+        built = {s.kind: s.settings for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections}
+        story = built["story_split"]
+        self.assertEqual(story["panel_bg"], "#FAFAFA")
+        self.assertNotEqual(story["tick_color"], story["accent_color"])  # the brand colour survives on the built page
+        # the closing banner follows the cards instead of staying dark brown (Harsh: "this section didnt got updated")
+        final = built["final_push"]
+        self.assertEqual((final["background"], final["overlay_color"], final["text_color"]), ("#FAFAFA", "#FAFAFA", derive(brand).roles["text"]))
+        brand["card_tone"] = "brand"
+        final = {s.kind: s.settings for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections}["final_push"]
+        self.assertEqual((final["background"], final["text_color"]), (derive(brand).roles["dark"], "#FFFFFF"))  # default: the dark band
+
+    def test_a_bright_orange_brand_never_turns_brown(self):
+        # Hope N Skin, 10 Oct 2026: orange deepened into the #B2620C card and the #402305 banner; Harsh rejected both (design_checks H11)
+        orange = {"brand_name": "Glow", "category": "beauty", "vibe": "fresh",
+                  "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}}
+        r = derive(orange).roles
+        self.assertEqual((r["panel"], r["banner"]), ("#FAFAFA", "#FAFAFA"))  # the light card look without being asked
+        self.assertEqual(r["dark"], "#1A1A1A")  # the ink, not brown
+        forced = derive({**orange, "card_tone": "brand"}).roles
+        self.assertNotEqual(forced["panel"], "#FAFAFA")  # card_tone "brand" still gives the deepened brand card on request
+        teal = derive({**orange, "colors": {**orange["colors"], "primary": "#1F9E8F", "accent": "#1F9E8F"}}).roles
+        self.assertNotEqual(teal["panel"], "#FAFAFA")  # colours that stay themselves when deepened keep the brand card
+
+    def test_calm_review_star_tiles_are_the_brand_colour_with_white_stars(self):
+        # Harsh, Hope N Skin, 10 Oct 2026: "make the star square blocks orange and stars white"
+        brand, facts = standard_facts()
+        brand.update({"vibe": "fresh", "colors": {"primary": "#FF8C11", "accent": "#FF8C11", "background": "#FFFFFF", "text": "#1A1A1A"}})
+        reviews = {s.kind: s.settings for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections}["reviews_slider"]
+        tile = reviews["tile_color"]
+        self.assertEqual(reviews["tile_star_color"], "#FFFFFF")
+        self.assertGreaterEqual(style_contrast("#FFFFFF", tile), 3.0)  # the white star reads (plain #FF8C11 is 2.3:1)
+        self.assertLess(style_contrast("#FFFFFF", tile), 3.6)  # darkened only as far as needed: still orange, not brown
+        brand["vibe"] = "electric"  # bold pages keep the ink tiles Harsh approved on Go Mints
+        reviews = {s.kind: s.settings for s in build_pdp(brand, facts, recipe="dtj-standard-v1").model.sections}["reviews_slider"]
+        self.assertNotEqual(reviews["tile_star_color"], "#FFFFFF")
 
     def test_the_closing_banner_takes_the_pictures_own_shape(self):
         final = {s.kind: s.settings for s in self.build().model.sections}["final_push"]

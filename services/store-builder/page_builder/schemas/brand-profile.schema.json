@@ -11,7 +11,7 @@
     "category": {"enum": ["beauty", "supplements", "home-care", "food", "apparel", "other"]},
     "price_tier": {"enum": ["value", "mid", "premium"]},
     "voice": {"enum": ["plain", "warm", "clinical", "playful", "luxe"]},
-    "card_tone": {"enum": ["brand", "neutral"], "description": "story cards on calm pages: the brand colour (default) or a neutral grey with the brand colour only on the tick marks (Harsh, Hope N Skin, 10 Oct 2026: 'grey like minimalist')"},
+    "card_tone": {"enum": ["brand", "neutral"], "description": "story cards on calm pages; left out = automatic (the almost-white card for a bright orange, amber or yellow brand, which turns brown when deepened, else the brand colour): the brand colour deepened, or an almost-white grey in the Minimalist brand's style with dark words and the brand colour only on the tick checks (Harsh, Hope N Skin, 10 Oct 2026: 'grey like minimalist -- minimalist brand', then 'more lighter')"},
     "vibe": {"enum": ["electric", "fresh", "calm", "premium", "playful", "editorial", "appetite", "natural"], "description": "the feeling the page must give (.claude/skills/dtj-pdp-factory/references/colour-and-vibe.md); direction.py does not use it yet (gap V1)"},
     "shape_language": {"enum": ["sharp", "soft", "round"]},
     "colors": {

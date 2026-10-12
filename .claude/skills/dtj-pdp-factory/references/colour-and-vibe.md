@@ -52,9 +52,21 @@ Walk the wireframe slots and give each a role so the page has rhythm (lint L04: 
   W08 white, W09 accent, W10 brand with white icon badges, W11 accent, W12 white with ink number cards and accent figures, W13
   brand with INK question boxes (white questions and answers, accent open / close button), W14 white, W15 photo + ink overlay.
   Never two strong bands touching.
-- Calm pages: story cards are the brand colour deepened until white words read (default), or with `brand.card_tone: "neutral"` a
-  minimalist grey with the brand colour only on the tick checks (Harsh's choice for Hope N Skin, 10 Oct 2026, when the orange card
-  felt brown and heavy). Offer the grey when the brand colour turns muddy once deepened (orange, yellow, kraft).
+- A bright orange, amber or yellow brand colour (hue 15-65°, saturation ≥ 70 %, lightness ≥ 45 %) is never darkened into a
+  surface: it turns brown (design_checks H11). The builder gives such brands the light card look and the dark text colour as the
+  ink band by default; the brand colour stays on buttons, check marks and star tiles (design-principles.md 11-14).
+- Calm pages: story cards are the brand colour deepened until white words read (default for colours that stay themselves when
+  deepened), or with `brand.card_tone: "neutral"`
+  the Minimalist look: an almost-white grey, #FAFAFA (Harsh stepped it down from the Minimalist skincare brand's photo-backdrop
+  grey #E5E9EA, "make it very closer to white", and their box grey #F6F6F6, "more lighter")
+  with the page's dark words, dark tick circles and the brand colour only as the check mark (Harsh's choice for Hope N Skin,
+  10 Oct 2026, when the orange card felt brown and heavy: "grey like minimalist -- minimalist brand". "Minimalist" there is the
+  BRAND, not a mid grey with white words; a #767676 card was rejected). The closing banner (W15) follows the same light card colour with dark words instead of the dark band (Harsh: the brown banner
+  "didnt got updated"). Offer it when the brand colour turns muddy once deepened
+  (orange, yellow, kraft). A light grey on a light section is a soft panel, not a smudge (H01 exempts light neutrals).
+- Calm pages: the review cards' star tiles are the brand colour with WHITE stars, the colour deepened only until the white star
+  reads 3:1 (Hope N Skin #FF8C11 -> #D4750E; Harsh, 10 Oct 2026: "make the star square blocks orange and stars white"). Bold
+  pages keep the ink tiles with accent stars approved on Go Mints.
 - White words never sit on the brand colour itself when it is bright: white on Go Mints cyan #12BEE9 is 2.2:1. When Harsh asks
   for white text there, the words go into an ink box instead (his choice, 10 Oct 2026: "navy boxes, white text").
 - calm and premium: white and one soft surface alternating, ONE emphasis band at the signature slot.

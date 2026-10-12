@@ -78,10 +78,57 @@ Hope N Skin, 10 Oct 2026: a peach card with orange-brown accent words, orange-br
 orangish". Go Mints had the same failure in navy and cyan. Every coloured surface needs a detail that is NOT its colour: white
 accent words and white tick circles with the check in the card colour (Harsh's fix), white icon badges, an accent colour from
 another family (Go Mints' volt). When white words must sit on the card, deepen the card until white reads (3:1 for large words)
-while the body text still reads at 4.5:1 (`direction.py` role `panel`). Checked by `design_checks.py` H10 on every build and
-every re-verification.
+while the body text still reads at 4.5:1 (`direction.py` role `panel`), but only for colours that stay themselves when
+deepened (blue, green, red, purple): a bright orange or yellow turns brown (principle 11). Checked by `design_checks.py` H10 on
+every build and every re-verification.
+
+### 11. A bright warm colour is a fill, never a deep surface (H11)
+White words need 4.5:1. Orange #FF8C11 reaches that only at #B2620C, lightness 37 % instead of 53 %, and at that point it is
+brown; as a dark band (#402305) it is brown at once. Blue keeps its character when deepened (navy), orange, amber and yellow do
+not. Use a bright warm brand colour where it stays bright: as a FILL with dark words (the button, 7.5:1), as small marks (the
+check inside a tick, a star tile deepened only to 3:1 for its white star, #D4750E). The builder does this by itself for any
+brand colour with hue 15-65°, saturation ≥ 70 % and lightness ≥ 45 % (`direction._turns_brown`: light cards, the ink as the dark
+band); `card_tone: "brand"` forces the deep card if a client insists.
+
+### 12. On a light, calm page the cards whisper
+Hope N Skin went #767676 → #E5E9EA → #F6F6F6 → #FAFAFA before Harsh said "looks cool". For a calm or clinical page the card is
+almost white (lightness ≥ 96 %, 1.04-1.08:1 from white) with dark words; the picture, the round corners and the content give the
+card its edge, not a colour. Warm meets cool badly: a cool grey (#E5E9EA, hue 192°) on a warm cream band (#F6EFE7) looked dirty;
+a near-white without a visible hue sits on any band. The closing banner follows the same card colour (role `banner`).
+
+### 13. A named reference is a brand until shown otherwise: measure it first
+"Grey like minimalist" meant the Minimalist skincare BRAND; a generic mid grey (#767676) with white words was the wrong reading.
+When Harsh or a client names a brand, a site or a page as the reference, open it and measure its computed colours before
+choosing (beminimalist.co: white page, black words and buttons, #F6F6F6 boxes, #E5E9EA photo backdrop, orange only as a hairline
+on the label). Earlier wishes belong to their context: "keep every text white" was about a dark card; when the card turned
+light the words had to turn dark. Contrast decides the text colour; say so when an old wish can no longer hold.
+
+### 14. Change a role, then sweep the page
+A colour change is page-wide. The dark brown closing banner stayed through 10 card-colour pushes because it used a different
+role (`dark`) than the cards (`panel`), and nobody listed it. After any colour change, read the `palette` inventory that
+`design_checks.py` prints (every area colour and the sections using it): an old colour still listed is a section the change
+missed. Change the role in `direction.py`, never one section by hand.
 
 ## What the old review missed, and why
 The v2 review scored 76/100 with "Calls to action 10/10" (one label was then a RULE) and "Vibe 14/15" (the palette numbers were
 right). It never looked at figure and ground, icon separation, story length, buy-box framing, cropping or edge space. Those are
-now checks (H01-H09), rubric lines and lint rules, so the next page is caught before Harsh has to point at it.
+now checks (H01-H11), rubric lines and lint rules, so the next page is caught before Harsh has to point at it.
+
+## Colour palette: what did not work on Hope N Skin, and what fixed it (10 Oct 2026)
+Brand orange #FF8C11 on a calm "fresh" skincare page; 11 pushes to the draft, measured from the backups in
+`.work/clients/test-store-hopenskin-vitc/run/backup-*` with `design_checks.py`.
+
+| Push | Story card | Words on it | Harsh | What was wrong (measured) |
+|---|---|---|---|---|
+| 1 | peach #FFB567 | dark, burnt-orange accent #794308 | "everything is orangish" | one hue (31°) on card, words, ticks and buttons (H10) |
+| 2 | orange deepened #DB780F | white accent words and ticks, dark body | "keep every text white" | white only 3.13:1 on it, so the paragraph had to stay dark |
+| 3 | deepened to #B2620C | all white (4.52:1) | "that dark brown" | lightness 53 % → 37 %: the orange became brown (H11) |
+| 4 | grey #767676 | all white | "grey like minimalist -- minimalist brand" | "minimalist" read as a style; he meant the brand (principle 13) |
+| 5 | Minimalist photo grey #E5E9EA | dark | "doesn't look good" | cool grey on the warm cream band, heavy (principle 12) |
+| 6 | Minimalist box grey #F6F6F6 | dark | "more lighter" | still too visible next to white |
+| 7 | #FAFAFA | dark words, dark tick circles, orange check | "looks cool" | none: 11 of 11 checks |
+| all | closing banner #402305, brown in pushes 1-7 | white | "this section didnt got updated" | another role, never swept (principle 14) |
+| last | review star tiles ink #1A1A1A, peach stars | | "star square blocks orange and stars white" | white star on #FF8C11 is 2.33:1: tile #D4750E (3.31:1) |
+
+H11 (no brown) fails all 9 earlier serum pushes and passes the final page, Go Mints and the book page. The final page: white
+and cream sections, near-white cards, dark words, orange only as buttons, check marks and star tiles.

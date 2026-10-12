@@ -35,7 +35,7 @@ judgement is used where the rubric says "looks" and must be written down with wh
    - `python scripts/palette_report.py <1280 shot(s)> --profile <vibe> --skip-top 120 --out <review>/palette`
      (and once on the phone shots). Read `dominant_colours`, `metrics`, `vibe.fit_score`.
    - `python scripts/template_audit.py <run folder>` for repeated text, reused pictures and which sections end in a CTA.
-   - `python scripts/design_checks.py <run folder> [--compare <previous template.json>]` for Harsh's design checks H01-H10
+   - `python scripts/design_checks.py <run folder> [--compare <previous template.json>]` for Harsh's design checks H01-H11 (plus the `palette` inventory)
      (card separation, words on cards, icon separation, one label per button, story length, buy-box benefits, picture shape,
      dark weight, background sequence, and H10 one colour everywhere). Use `--compare` with the backup of the version on the store to show before and after.
      Why each check exists: `../dtj-pdp-factory/references/design-principles.md`.
@@ -58,10 +58,15 @@ judgement is used where the rubric says "looks" and must be written down with wh
 - Product photos carry their own colours: for editorial and appetite vibes judge the UI around the photos, not the photos.
 - Never soften a blocking finding. Never invent a fix that needs facts the brand has not given; list the content instead.
 - Report what you could not check (checkout, page speed, the theme editor, a password-protected store).
-- **Every re-verification** (after a fix, after a push, on the real store) runs `design_checks.py` again and all 10 must pass. H10
+- **Every re-verification** (after a fix, after a push, on the real store) runs `design_checks.py` again and all 11 must pass. H10
   in particular: no coloured card or band whose accent words, ticks, icons and button are all the same colour family with nothing
   white on it. Harsh had to point this out twice (Go Mints: navy on navy, icons in the text colour; Hope N Skin: "everything is
-  orangish"); on the real page also look at each screen and ask "is one colour doing every job here?".
+  orangish"); on the real page also look at each screen and ask "is one colour doing every job here?". H11: no bright orange,
+  amber or yellow darkened into brown (Hope N Skin's card and closing banner; Harsh: "that dark brown").
+- **After any colour change**, read the `palette` inventory in the `design_checks.py` output: every area colour with the sections
+  using it. An old colour still listed is a section the change missed (the brown banner survived 10 card-colour pushes). When
+  Harsh names a brand or site as the colour reference, open it and measure its computed colours before choosing
+  (`../dtj-pdp-factory/references/design-principles.md` principles 11-14).
 - Look for what Harsh looks for (his review of Go Mints v2, 10 Oct 2026): cards that melt into their section, icons in the text
   colour, white words on a bright colour, walls of text in a story card, specs in the buy box, one label on every button, cropped
   pictures, too much navy, words touching the screen edge. The old rubric scored that page 76 and missed all of them.

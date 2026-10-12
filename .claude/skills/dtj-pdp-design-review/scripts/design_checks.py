@@ -1,4 +1,4 @@
-"""Harsh's design checks (H01-H10): the things his review of Go Mints v2 caught that lint, the palette score and the CRO rubric missed
+"""Harsh's design checks (H01-H11): the things his review of Go Mints v2 caught that lint, the palette score and the CRO rubric missed
 (10 Oct 2026). Each check is measured from a built template.json, so any model reaches the same verdict on the same page.
 
     python design_checks.py <run dir or template.json> [--compare <older run dir or template.json>]
@@ -58,6 +58,23 @@ def same_family(a: float, b: float) -> bool:
     return min(d, 360 - d) < 25
 
 
+def _hls(hex_colour: str) -> tuple[float, float, float]:
+    h = hex_colour.lstrip("#")
+    hh, light, sat = colorsys.rgb_to_hls(*(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)))
+    return hh * 360, light, sat
+
+
+def vivid_warm(hex_colour: str) -> bool:
+    """A bright orange, amber or yellow (Hope N Skin #FF8C11): darkened for white words or a dark band, it turns brown."""
+    hue, light, sat = _hls(hex_colour)
+    return 15 <= hue <= 65 and sat >= 0.7 and light >= 0.45
+
+
+def brownish(hex_colour: str) -> bool:
+    hue, light, sat = _hls(hex_colour)
+    return 10 <= hue <= 70 and sat >= 0.3 and 0.05 <= light <= 0.40
+
+
 SURFACE_KEYS = ("panel_bg", "card_bg", "card_bg_color", "item_bg")
 DETAIL_KEYS = ("accent_color", "icon_color", "icon_bg", "highlight_color", "number_color", "tile_color", "tile_star_color",
                "toggle_color", "tick_color", "button_bg", "cta_bg")
@@ -97,7 +114,10 @@ def check(template: dict, page: str = WHITE) -> dict:
         if _hex(s.get("panel_bg")):
             cards.append((sid, s["panel_bg"].upper(), bg(sid)))
     rows = [{"section": sid, "card": c, "section_bg": b, "ratio": contrast(c, b)} for sid, c, b in cards]
-    bad = [r for r in rows if MUDDY[0] < r["ratio"] < MUDDY[1]]
+    # light greys on a light section are a deliberate soft panel, not a smudge (Harsh, 10 Oct 2026: "grey like Minimalist", whose
+    # near-white #F6F6F6 sits on white at 1.08:1); the smudge is a tinted or dark card a shade off its section (Go Mints v2 navy on navy)
+    soft_panel = lambda c, b: hue_of(c) is None and hue_of(b) is None and min(luminance(c), luminance(b)) > 0.6  # noqa: E731
+    bad = [r for r in rows if MUDDY[0] < r["ratio"] < MUDDY[1] and not soft_panel(r["card"], r["section_bg"])]
     res["H01_card_separation"] = {"why": "A card a shade off its section reads as a smudge (Harsh: white review cards, white numbers section).",
                                   "cards": rows, "findings": [f"{r['section']}: card {r['card']} on {r['section_bg']} is {r['ratio']}:1" for r in bad],
                                   "pass": not bad}
@@ -201,7 +221,7 @@ def check(template: dict, page: str = WHITE) -> dict:
         hues = [hue_of(c) for c in details]
         relief = any(h is None and luminance(c) > 0.6 for c, h in zip(details, hues)) or any(
             _hex(st.get(k)) and luminance(_hex(st[k])) > 0.6 for _, st in blocks for k in LIGHT_TEXT_KEYS) or any(
-            b == "dtj-slideshow-pro" for b, _ in blocks)  # the banner's words are always white on its overlay (no setting shows it)
+            b == "dtj-slideshow-pro" and not st.get("text_color") for b, st in blocks)  # older banners: white words by default
         tinted = [h for h in hues if h is not None]
         base = hue_of(surfaces[0])
         if len(tinted) >= 2 and all(same_family(h, base) for h in tinted) and not relief:
@@ -212,12 +232,34 @@ def check(template: dict, page: str = WHITE) -> dict:
                                   "a white or contrasting detail (Harsh: Go Mints, Hope N Skin).",
                                   "dominant_family_share": share, "findings": found, "pass": not found}
 
+    # H11 a bright warm brand colour darkened into brown: the Hope N Skin story card #B2620C and closing banner #402305 were both orange
+    # #FF8C11 deepened (for white words, for a dark band). Harsh rejected both ("that dark brown"; the banner "didnt got updated").
+    # A bright orange, amber or yellow keeps its character only as a FILL (button, tick, star tile) or as a light tint, never darkened.
+    every = blocks_of(template)  # (H10 above reuses the name `blocks` for one section)
+    vivid = sorted({c for _, _, st in every for k in DETAIL_KEYS if (c := _hex(st.get(k))) and vivid_warm(c)})
+    found = []
+    for sid, b, st in every:
+        for k in SURFACE_KEYS + ("background", "overlay_color"):
+            c = _hex(st.get(k))
+            if c and brownish(c) and any(same_family(_hls(c)[0], _hls(v)[0]) for v in vivid):
+                found.append(f"{sid}.{k} = {c}: the brand's {vivid[0]} darkened into brown")
+    res["H11_no_brown"] = {"why": "A bright orange or yellow darkened for white words or a dark band turns brown and heavy (Harsh, Hope N Skin): "
+                           "use a light card with dark words and keep the brand colour for fills and marks.",
+                           "vivid_brand_colours": vivid, "findings": sorted(set(found)), "pass": not found}
+
     # H09 the background sequence (for the report: what a shopper scrolls through)
     res["H09_background_sequence"] = {"why": "Read the rhythm at a glance: never two equal neighbours, no long run of one colour.",
                                       "sequence": [{"section": sid, "bg": bg(sid), "dark": luminance(bg(sid)) < DARK_LUMINANCE} for sid in order],
                                       "findings": [], "pass": True}
     passed = sum(1 for r in res.values() if r["pass"])
-    return {"passed": passed, "of": len(res), "checks": res}
+    # the palette inventory: every area colour and where it is used. After ANY colour change, read it: an old colour still listed is a
+    # section the change missed (the brown closing banner stayed through 10 card-colour pushes on Hope N Skin, 10 Oct 2026)
+    palette: dict[str, list[str]] = {}
+    for sid, b, st in every:
+        for k in SURFACE_KEYS + ("background", "overlay_color", "tile_color", "button_bg"):
+            if _hex(st.get(k)):
+                palette.setdefault(_hex(st[k]), []).append(f"{sid}.{k}")
+    return {"passed": passed, "of": len(res), "checks": res, "palette": {c: sorted(set(v)) for c, v in sorted(palette.items())}}
 
 
 def main(argv=None) -> int:

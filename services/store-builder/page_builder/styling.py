@@ -97,7 +97,8 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
             # brand cyan was 2.2:1, so the card turns ink instead)
             put("panel_bg", r["dark"])
             panel_head, panel_acc = r["on_dark"], r["accent_on_dark"]
-        else:  # calm pages: the brand-colour card with white accent words and white ticks (H01: it stands apart from page and band)
+        else:  # calm pages: the brand-colour card with white accent words and white ticks (H01: it stands apart from page and band),
+            # or with card_tone "neutral" Minimalist's light grey with dark words (direction.py)
             put("panel_bg", r["panel"].upper())
             panel_head, panel_acc = r["panel_head"], r["accent_on_panel"]
             if r.get("panel_tick"):
@@ -147,10 +148,14 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("card_text_color", r["on_card"])
         if not dark:
             put("text_color", r["on_card"])
-        tile = r["rating_tile"] if d.dark_mode else r["on_card"]  # a light text colour would leave the star nothing to show on
-        put("tile_color", tile)
-        star = r["accent_on_dark"] if style.contrast(r["accent_on_dark"], tile) >= 3 else best_text_on(tile)
-        put("tile_star_color", star)  # the accent star when it reads on the tile, else black or white (the block's default is Canvas)
+        if not d.dark_mode and not bold:  # calm pages: brand-colour tiles with white stars (Harsh, Hope N Skin, 10 Oct 2026)
+            put("tile_color", r["review_tile"])
+            put("tile_star_color", "#FFFFFF")
+        else:
+            tile = r["rating_tile"] if d.dark_mode else r["on_card"]  # a light text colour would leave the star nothing to show on
+            put("tile_color", tile)
+            star = r["accent_on_dark"] if style.contrast(r["accent_on_dark"], tile) >= 3 else best_text_on(tile)
+            put("tile_star_color", star)  # the accent star when it reads on the tile, else black or white (the block's default is Canvas)
     elif b == "faq":
         put("heading_color_1", head)
         put("accent_color", acc)
@@ -213,8 +218,10 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
             put("button_color", r["button_text"])
         put("button_style", d.shape["button"] if d.shape["button"] in ("pill", "rounded", "square") else "pill")
     elif b == "slideshow-pro":
-        put("accent_color", r["accent_on_dark"])
-        put("overlay_color", r["dark"])
+        # the closing banner: the dark band, or the light card colour with dark words on a "neutral" page (direction.py)
+        put("accent_color", r["accent_on_banner"])
+        put("overlay_color", r["banner"])
+        put("text_color", r["on_banner"])
         put("button_bg", r["button_bg"])
         put("button_color", r["button_text"])
         put("button_style", d.shape["button"])
@@ -224,4 +231,4 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("eyebrow_style", d.type["eyebrow_style"])
         put("transition", d.motion["transition"])
         put("autoplay_seconds", d.motion["seconds"])
-        put("background", r["dark"])
+        put("background", r["banner"])
