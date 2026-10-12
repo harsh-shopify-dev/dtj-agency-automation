@@ -4,28 +4,45 @@ works on DTJ's n8n today and on a brand-new n8n server (a fresh Claude Code sess
     python n8n/store-factory/setup_n8n.py                 the check (read only, same as --check): a plain checklist, the ids it found
                                                           and the exact fix for each problem. Exit 0 = everything ready, 1 = not yet.
     python n8n/store-factory/setup_n8n.py --apply         make n8n match the repo: create a missing data table (tables.json) or workflow
-                                                          (its *.workflow.json export), add missing columns, copy code nodes that
-                                                          differ, attach missing credentials. Never deletes anything, never publishes.
+                                                          (its *.workflow.json export), add missing columns, create a missing
+                                                          credential from this laptop's keys (below), put the shops back into an EMPTY
+                                                          dtj_stores (stores.seed.json), copy code nodes that differ, attach missing
+                                                          credentials. Never deletes anything, never publishes.
     python n8n/store-factory/setup_n8n.py --publish       publish the workflows whose draft is not live yet, each one only after a fresh
                                                           check of it passes. Publishing changes what runs for real: only with the
                                                           person's go-ahead (Harsh's yes). --only "<workflow name>" narrows it to one.
     python n8n/store-factory/setup_n8n.py --save-tables   (read only) write tables.json from the live tables: column names and types.
+    python n8n/store-factory/setup_n8n.py --save-stores   (read only) write stores.seed.json from the dtj_stores rows (the shops: names,
+                                                          domains, draft themes; no ids, no dates), so a new server gets them back.
+    python n8n/store-factory/setup_n8n.py --add-admin <telegram number> --name "<name>"
+                                                          (with Harsh's yes) add the first bot admin to dtj_bot_users. The person gets
+                                                          their number by messaging @DtjPageDesignerBot. The number is never printed.
 
-What it checks: the data tables dtj_client_intake, dtj_stores and dtj_bot_users have the columns in tables.json; the workflows
-"Store Factory: Page Design", "Store Factory: New Page" and "Store Factory: Telegram Bot" exist, are published, live = draft, every
-code node equals the repo export, nodes / connections / links to the tables and workflows match the export, every node that needs a
-credential has one; the credentials the exports use (Telegram API "DTJ Page Bot", Header Auth "DTJ Catcher Bot Key") exist.
+What it checks: the data tables dtj_client_intake, dtj_stores and dtj_bot_users have the columns in tables.json; dtj_stores has
+shops; dtj_bot_users has an active admin (COUNTS only: never a number or a name); the workflows "Store Factory: Page Design",
+"Store Factory: New Page" and "Store Factory: Telegram Bot" exist, are published, live = draft, every code node equals the repo
+export, nodes / connections / links to the tables and workflows match the export, every node that needs a credential has one; the
+credentials the exports use (Telegram API "DTJ Page Bot", Header Auth "DTJ Catcher Bot Key") exist, and whether --apply can create
+a missing one; the n8n API key works (only when this laptop has one).
 A structural difference (a node or connection missing or extra) is reported, never changed here: the deploy_*.py scripts own that.
-Secrets live only in n8n: this script never sees, prints or writes one, and it never reads table rows.
+
+Credentials from this laptop's keys: when one is missing on n8n, --apply creates it through n8n's public API (POST /api/v1/credentials,
+header X-N8N-API-KEY) if this laptop has the Windows user variables N8N_API_KEY and the credential's own value:
+    Telegram API "DTJ Page Bot"          accessToken = DTJ_TELEGRAM_BOT_TOKEN
+    Header Auth "DTJ Catcher Bot Key"    name = X-DTJ-Bot-Key, value = DTJ_CATCHER_BOT_KEY
+It first reads n8n's form for that credential type and refuses (says so, guesses nothing) if the form needs a field not listed here.
+The values go only into that one request body; they are never printed, logged or written, and are hidden in any error text.
 """
 from __future__ import annotations
 
 import argparse
 import http.client
 import json
+import os
 import re
 import sys
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -53,6 +70,17 @@ EDITABLE = {"What to Design (edit me)"}
 CODE_HEADER = re.compile(r'^// n8n Code node "([^"]+)" in "([^"]+)"')  # the first line of every code node's source file here
 ERRORS = (urllib.error.URLError, http.client.HTTPException, RuntimeError, OSError, ValueError, KeyError)
 SELF = "python n8n/store-factory/setup_n8n.py"
+STORES_FILE = HERE / "stores.seed.json"
+SYSTEM_COLUMNS = ("id", "createdAt", "updatedAt")  # n8n adds these to every row; the seed never carries them
+API_KEY_VAR = "N8N_API_KEY"
+USER_AGENT = "dtj-setup/1"
+# what each credential is made of: n8n's field -> "$NAME" (a Windows user variable on this laptop, read only when needed and never
+# printed) or a fixed text
+CREDENTIAL_RECIPES = {("telegramApi", "DTJ Page Bot"): {"accessToken": "$DTJ_TELEGRAM_BOT_TOKEN"},
+                      ("httpHeaderAuth", "DTJ Catcher Bot Key"): {"name": "X-DTJ-Bot-Key", "value": "$DTJ_CATCHER_BOT_KEY"}}
+VAULT = "pull it from the vault: python tools/team-setup/vault.py pull"
+BOT = "@DtjPageDesignerBot"
+TELEGRAM_NUMBER = re.compile(r"^\d{5,15}$")
 
 
 # ---- small helpers -----------------------------------------------------------------------------------------------------------
@@ -73,6 +101,43 @@ def _live_secrets() -> list[str]:
         return [token()]
     except Exception:  # noqa: BLE001 (no token, no registry: nothing to hide)
         return []
+
+
+def user_var(name: str) -> str:
+    """A Windows user variable (the registry first, so a value saved a minute ago counts), else this window's environment; "" if
+    neither has it. The value is only ever passed on, never printed."""
+    if os.name == "nt":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
+                return str(winreg.QueryValueEx(k, name)[0]).strip()
+        except OSError:
+            pass
+    return os.environ.get(name, "").strip()
+
+
+def rest(method: str, url: str, headers: dict, body: dict | None = None) -> tuple[int, dict]:
+    """One call to n8n's public REST API: (HTTP status, the answer as JSON, or {"text": ...}). Raises only when n8n cannot be
+    reached. The body and the headers are never part of any message."""
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    sent = {"Accept": "application/json", "User-Agent": USER_AGENT, **headers}
+    if data is not None:
+        sent["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=data, method=method, headers=sent)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            status, raw = r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        status, raw = e.code, e.read().decode("utf-8", "replace")
+    try:
+        answer = json.loads(raw) if raw.strip() else {}
+    except ValueError:
+        answer = {"text": raw[:500]}
+    return status, answer if isinstance(answer, dict) else {"data": answer}
+
+
+def api_url(path: str) -> str:
+    return f"https://{N8N_HOST}/api/v1{path}"
 
 
 def load_exports() -> dict[str, dict]:
@@ -116,6 +181,21 @@ def find_tables(call, name: str) -> list[dict]:
 def find_workflows(call, name: str) -> list[dict]:
     found = call("search_workflows", {"query": name, "limit": 50}).get("data", [])
     return [w for w in found if w.get("name") == name and not w.get("isArchived")]
+
+
+def table_rows(call, table: dict, filters: list[dict] | None = None) -> list[dict]:
+    """Every row of a data table (pages of 100), optionally filtered. Kept in memory only: rows are never printed whole."""
+    rows: list[dict] = []
+    for _ in range(100):
+        args = {"dataTableId": table["id"], "projectId": table.get("projectId"), "limit": 100, "skip": len(rows)}
+        if filters:
+            args["filter"] = {"type": "and", "filters": filters}
+        page = call("get_data_table_rows", args)
+        got = (page.get("rows") if "rows" in page else page.get("data")) or []
+        rows += got
+        if len(got) < 100 or len(rows) >= page.get("count", float("inf")):
+            break
+    return rows
 
 
 def find_credentials(call) -> list[dict]:
@@ -213,7 +293,7 @@ def compare(export: dict, live: dict, ids: dict[str, str], creds: list[dict]) ->
     diff: dict = {"missing_nodes": [n for n in want if n not in have], "extra_nodes": [n for n in have if n not in want],
                   "changed_type": [], "code": [], "code_nodes": 0, "credentials": [], "credential_nodes": 0, "links": []}
     for name, node in want.items():
-        if "jsCode" in node.get("parameters", {}):
+        if "jsCode" in node.get("parameters", {}) and name not in EDITABLE:
             diff["code_nodes"] += 1
         if node.get("credentials"):
             diff["credential_nodes"] += 1
@@ -273,6 +353,122 @@ def blockers(diff: dict) -> list[str]:
     return out + structure_problems(diff)
 
 
+# ---- credentials from this laptop's keys, the shops, the people --------------------------------------------------------------
+
+def by_hand(ctype: str, name: str) -> str:
+    return (f"in n8n: Credentials > Create credential > {label(ctype)}, named exactly '{name}'; the person who owns the secret pastes it "
+            f"there (never in git or chat). Then {SELF} --apply attaches it.")
+
+
+def recipe_needs(ctype: str, name: str, env) -> list[str] | None:
+    """The Windows user variables a credential is made from that this laptop lacks (N8N_API_KEY included); None = no recipe."""
+    recipe = CREDENTIAL_RECIPES.get((ctype, name))
+    if recipe is None:
+        return None
+    wanted = [v[1:] for v in recipe.values() if v.startswith("$")] + [API_KEY_VAR]
+    return [v for v in wanted if not env(v)]
+
+
+def credential_fix(ctype: str, name: str, env) -> str:
+    """What fixes a missing credential: --apply (this laptop has the values), the vault, or a person in n8n."""
+    needs = recipe_needs(ctype, name, env)
+    if needs is None:
+        return by_hand(ctype, name)
+    made_from = ", ".join(v[1:] for v in CREDENTIAL_RECIPES[(ctype, name)].values() if v.startswith("$"))
+    if not needs:
+        return f"{SELF} --apply creates it through n8n's API from this laptop's {made_from} and attaches it"
+    return (f"this laptop has no {', '.join(needs)}: {VAULT}, then {SELF} --apply creates and attaches it; "
+            f"or create it in n8n by hand: {by_hand(ctype, name)}")
+
+
+def create_credential(http, env, ctype: str, name: str, out=print) -> bool:
+    """Create one missing credential through n8n's public API from this laptop's keys. True when n8n made it. The values are only
+    put into the request body; every message has them (and the API key) hidden."""
+    needs = recipe_needs(ctype, name, env)
+    if needs is None:
+        out(f"  {name} ({label(ctype)}): not created: this tool has no recipe for it; {by_hand(ctype, name)}")
+        return False
+    if needs:
+        out(f"  {name} ({label(ctype)}): not created: this laptop has no {', '.join(needs)} ({VAULT}, then run --apply again)")
+        return False
+    recipe = CREDENTIAL_RECIPES[(ctype, name)]
+    key = env(API_KEY_VAR)
+    data = {field: env(v[1:]) if v.startswith("$") else v for field, v in recipe.items()}
+    hidden = [key] + [env(v[1:]) for v in recipe.values() if v.startswith("$")]
+    auth = {"X-N8N-API-KEY": key}
+    try:
+        status, form = http("GET", api_url(f"/credentials/schema/{ctype}"), auth, None)
+        if status != 200:
+            out(f"  {name}: not created: n8n did not show the {label(ctype)} form (HTTP {status}): {redact(json.dumps(form)[:300], hidden)}")
+            return False
+        fields = form.get("properties") or {}
+        unfilled = [f for f in form.get("required") or [] if f not in data]
+        unknown = [f for f in data if fields and f not in fields]
+        if unfilled or unknown:
+            out(f"  {name}: not created: n8n's {label(ctype)} form "
+                + "; ".join(x for x in (f"needs {', '.join(unfilled)}" if unfilled else "",
+                                        f"has no {', '.join(unknown)}" if unknown else "") if x)
+                + f", which this tool does not fill (it guesses nothing). {by_hand(ctype, name)}")
+            return False
+        status, made = http("POST", api_url("/credentials"), auth, {"name": name, "type": ctype, "data": data})
+    except ERRORS as exc:
+        out(f"  {name}: not created: n8n's API could not be reached: {redact(exc, hidden)[:300]}")
+        return False
+    if status not in (200, 201):
+        out(f"  {name}: not created: n8n answered HTTP {status}: {redact(json.dumps(made)[:300], hidden)}")
+        return False
+    made_from = ", ".join(v[1:] for v in recipe.values() if v.startswith("$"))
+    out(f"  created credential {name} ({label(ctype)}, id {made.get('id', '?')}) from this laptop's {made_from}")
+    return True
+
+
+def api_key_state(http, env) -> tuple[bool | None, str]:
+    """(True = works, False = refused or unreachable, None = this laptop has no N8N_API_KEY; plain words). Reads one workflow."""
+    key = env(API_KEY_VAR)
+    if not key:
+        return None, f"this laptop has no {API_KEY_VAR} (only needed to create a missing credential)"
+    try:
+        status, _ = http("GET", api_url("/workflows?limit=1"), {"X-N8N-API-KEY": key}, None)
+    except ERRORS as exc:
+        return False, f"n8n API key: could not reach n8n's API ({redact(exc, [key])[:200]})"
+    return (True, "n8n API key: works") if status == 200 else (False, f"n8n API key: refused (HTTP {status})")
+
+
+def load_seed(path: Path = STORES_FILE) -> list[dict]:
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+
+
+def rows_json(rows: list[dict]) -> str:
+    """One row per line (plain JSON, easy to read in a diff)."""
+    return "[\n" + ",\n".join(f" {json.dumps(r, ensure_ascii=False)}" for r in rows) + "\n]\n" if rows else "[]\n"
+
+
+def is_active(row: dict) -> bool:
+    return row.get("active") is True or str(row.get("active")).strip().lower() == "true"
+
+
+def people_counts(rows: list[dict]) -> dict:
+    """Counts only: who may use the bot, by role. Never an id or a name."""
+    people = [r for r in rows if str(r.get("telegram_user_id") or "").strip()]
+    active = [r for r in people if is_active(r)]
+    roles = [str(r.get("role") or "").strip().lower() for r in active]
+    return {"people": len(active), "inactive": len(people) - len(active), "admins": roles.count("admin"),
+            "designers": roles.count("designer"), "requesters": roles.count("requester")}
+
+
+def typed(value, ctype: str):
+    """A value as the column's type (tables.json): string, number, boolean."""
+    if ctype == "number":
+        return int(value)
+    if ctype == "boolean":
+        return value is True or str(value).lower() == "true"
+    return str(value)
+
+
 # ---- the checklist ---------------------------------------------------------------------------------------------------------------
 
 class Sheet:
@@ -329,12 +525,15 @@ def stale_files(exports: dict, files: dict) -> list[str]:
     return stale
 
 
-def check(call, out=print, exports: dict | None = None, spec: dict | None = None, files: dict | None = None) -> int:
+def check(call, out=print, exports: dict | None = None, spec: dict | None = None, files: dict | None = None,
+          http=None, env=None, seed: list[dict] | None = None) -> int:
     """Read only. Prints the checklist; returns the number of problems."""
     if files is None:
         files = code_files() if exports is None else {}
     exports = exports if exports is not None else load_exports()
     spec = spec if spec is not None else load_spec()
+    http, env = http or rest, env or user_var
+    seed = seed if seed is not None else load_seed()
     s = survey(call, exports, spec)
     sheet = Sheet(out)
     out(f"Store factory on n8n ({N8N_HOST}): read-only check")
@@ -363,15 +562,46 @@ def check(call, out=print, exports: dict | None = None, spec: dict | None = None
         if not missing and not wrong:
             sheet.ok(f"{name} (id {t['id']}): all {len(want['columns'])} columns" + (f" (+ {len(extra)} more on n8n)" if extra else ""))
 
+    sheet.head("Shops and people (counts only: never a Telegram number or a name)")
+    stores = (s["tables"].get("dtj_stores") or [None])[0]
+    if stores:
+        shops = len(table_rows(call, stores))
+        if shops:
+            sheet.ok(f"dtj_stores: {shops} shop(s)")
+        else:
+            sheet.bad("dtj_stores: 0 shops, so every product link would be refused",
+                      f"{SELF} --apply (restores the {len(seed)} shop(s) in stores.seed.json)" if seed else
+                      "add the shops in n8n (Data tables > dtj_stores), or run --save-stores where they exist and then --apply here")
+    users = (s["tables"].get("dtj_bot_users") or [None])[0]
+    if users:
+        n = people_counts(table_rows(call, users))
+        line = (f"dtj_bot_users: {n['people']} people, {n['admins']} admins, {n['designers']} designers, {n['requesters']} requesters"
+                + (f" ({n['inactive']} inactive not counted)" if n["inactive"] else ""))
+        if n["admins"]:
+            sheet.ok(line)
+        else:
+            sheet.bad(line + ": no active admin, so nobody can run the bot's admin commands",
+                      f"the person messages {BOT}, it replies with their number; then (with Harsh's yes) "
+                      f"{SELF} --add-admin <number> --name \"<name>\"")
+    if not stores and not users:
+        sheet.note("dtj_stores and dtj_bot_users are not on this server yet (see Data tables)")
+
     sheet.head("Credentials (the secrets stay in n8n; only names and ids are read)")
-    for (ctype, name), users in needed_credentials(exports).items():
+    missing_creds = 0
+    for (ctype, name), users_of in needed_credentials(exports).items():
         found = [c for c in s["creds"] if c.get("type") == ctype and c.get("name") == name]
         if found:
-            sheet.ok(f"{name} ({label(ctype)}, id {found[0]['id']}), used by {len(users)} node(s)")
+            sheet.ok(f"{name} ({label(ctype)}, id {found[0]['id']}), used by {len(users_of)} node(s)")
         else:
-            sheet.bad(f"{name} ({label(ctype)}): not on this n8n server; needed by {', '.join(users)}",
-                      f"in n8n: Credentials > Create credential > {label(ctype)}, named exactly '{name}'; the person who owns the secret "
-                      f"pastes it there (never in git or chat). Then {SELF} --apply attaches it.")
+            missing_creds += 1
+            sheet.bad(f"{name} ({label(ctype)}): not on this n8n server; needed by {', '.join(users_of)}", credential_fix(ctype, name, env))
+    works, words = api_key_state(http, env)
+    if works:
+        sheet.ok(words)
+    elif works is False and missing_creds:
+        sheet.bad(words, f"make a new API key in n8n (Settings > n8n API) and save it as the Windows user variable {API_KEY_VAR} ({VAULT})")
+    else:
+        sheet.note(words)
 
     sheet.head("Workflows")
     for name, export in exports.items():
@@ -569,10 +799,35 @@ def sync_workflow(call, name: str, export: dict, live: dict, ids: dict[str, str]
     return left
 
 
-def apply(call, out=print, exports: dict | None = None, spec: dict | None = None) -> int:
+def restore_shops(call, table: dict, spec: dict, seed: list[dict], out=print) -> int:
+    """Put the seed's shops into dtj_stores, but only when it has no rows at all. Returns the problems left."""
+    have = len(table_rows(call, table))
+    if have:
+        out(f"  dtj_stores: {have} shop(s) already there (not touched)")
+        return 0
+    if not seed:
+        out("  dtj_stores is empty and there is no stores.seed.json: add the shops in n8n (Data tables > dtj_stores)")
+        return 1
+    columns = {c["name"]: c["type"] for c in (spec.get("dtj_stores") or {}).get("columns", [])}
+    rows, dropped = [], set()
+    for r in seed:
+        dropped |= {k for k in r if k not in columns}
+        rows.append({k: v for k, v in r.items() if k in columns and k not in SYSTEM_COLUMNS})
+    if dropped:
+        out(f"  warning: stores.seed.json fields that dtj_stores has no column for were left out: {', '.join(sorted(dropped))}")
+    for i in range(0, len(rows), 1000):
+        call("add_data_table_rows", {"dataTableId": table["id"], "projectId": table.get("projectId"), "rows": rows[i:i + 1000]})
+    out(f"  dtj_stores was empty: added {len(rows)} shop(s) from stores.seed.json")
+    return 0
+
+
+def apply(call, out=print, exports: dict | None = None, spec: dict | None = None, http=None, env=None,
+          seed: list[dict] | None = None) -> int:
     """Make n8n match the repo without deleting or publishing anything. Returns the problems left."""
     exports = exports if exports is not None else load_exports()
     spec = spec if spec is not None else load_spec()
+    http, env = http or rest, env or user_var
+    seed = seed if seed is not None else load_seed()
     if not spec:
         out(f"tables.json is missing: run {SELF} --save-tables on a server that has the tables first")
         return 1
@@ -587,6 +842,7 @@ def apply(call, out=print, exports: dict | None = None, spec: dict | None = None
 
     out(f"Store factory on n8n ({N8N_HOST}): apply (never deletes, never publishes)")
     out("Data tables")
+    tables: dict[str, dict] = {}
     for name, want in spec.items():
         found = s["tables"].get(name) or []
         if not found:
@@ -594,8 +850,10 @@ def apply(call, out=print, exports: dict | None = None, spec: dict | None = None
             ids[name] = first_id(made) or next((t["id"] for t in find_tables(call, name)), None)
             if not ids[name]:
                 raise RuntimeError(f"data table {name} was sent to n8n but cannot be found afterwards")
+            tables[name] = {"id": ids[name], "projectId": project_id()}
             out(f"  created {name}: id {ids[name]} in project {project_id()}, {len(want['columns'])} columns")
             continue
+        tables[name] = found[0]
         t = found[0]
         have = {c["name"]: c.get("type") for c in t.get("columns", [])}
         for col in want["columns"]:
@@ -607,9 +865,20 @@ def apply(call, out=print, exports: dict | None = None, spec: dict | None = None
                 left += 1
                 out(f"  {name}: column {col['name']} is {have[col['name']]}, not {col['type']}: not changed (ask Harsh)")
         out(f"  {name} (id {t['id']}): columns in place")
+    if "dtj_stores" in tables:
+        left += restore_shops(call, tables["dtj_stores"], spec, seed, out)
+
+    out("Credentials")
+    creds, made_any = s["creds"], False
+    for ctype, name in needed_credentials(exports):
+        if credential_id(creds, ctype, name):
+            out(f"  {name} ({label(ctype)}): already on n8n")
+        else:
+            made_any |= create_credential(http, env, ctype, name, out)
+    if made_any:
+        creds = find_credentials(call)  # the new ids, so the workflows below get them attached
 
     out("Workflows")
-    creds = s["creds"]
     for name, export in exports.items():  # in creation order, so each one can point at those before it
         if name not in s["live"]:
             ids[name], missing = create_workflow(call, export, ids, creds, project_id(), out)
@@ -689,19 +958,77 @@ def save_tables(call, path: Path = TABLES_FILE, out=print) -> int:
     return 0
 
 
-def main(argv=None, call=None) -> int:
+def save_stores(call, path: Path = STORES_FILE, out=print, spec: dict | None = None) -> int:
+    """Read only against n8n: write the shops (dtj_stores rows without n8n's id / createdAt / updatedAt) to stores.seed.json."""
+    found = find_tables(call, "dtj_stores")
+    if not found:
+        out("not written: dtj_stores is not on this n8n server")
+        return 1
+    rows = table_rows(call, found[0])
+    if not rows:
+        out("not written: dtj_stores has no rows on this server (an empty seed would restore nothing)")
+        return 1
+    order = [c["name"] for c in ((spec if spec is not None else load_spec()).get("dtj_stores") or {}).get("columns", [])]
+    shops = []
+    for r in rows:
+        row = {k: v for k, v in r.items() if k not in SYSTEM_COLUMNS}
+        shops.append({k: row[k] for k in [k for k in order if k in row] + sorted(k for k in row if k not in order)})
+    shops.sort(key=lambda r: (str(r.get("myshopify_domain") or ""), str(r.get("store_name") or ""), json.dumps(r, sort_keys=True)))
+    path.write_text(rows_json(shops), encoding="utf-8")
+    out(f"wrote {path.name}: {len(shops)} shop(s), {len(shops[0])} columns each (no ids or dates)")
+    return 0
+
+
+def add_admin(call, number: str, name: str, out=print, spec: dict | None = None) -> int:
+    """Add one active admin to dtj_bot_users (with Harsh's yes). The number is checked, never printed, never written to a file."""
+    number, name = str(number or "").strip(), " ".join(str(name or "").split())
+    if not TELEGRAM_NUMBER.match(number):
+        out("refused: a Telegram number is 5 to 15 digits (the bot replies with it when the person messages it)")
+        return 1
+    if not name or len(name) > 80:
+        out("refused: give the person's name with --name \"<name>\" (at most 80 characters)")
+        return 1
+    found = find_tables(call, "dtj_bot_users")
+    if not found:
+        out(f"refused: dtj_bot_users is not on this n8n server ({SELF} --apply creates it)")
+        return 1
+    table = found[0]
+    spec = spec if spec is not None else load_spec()
+    columns = {c["name"]: c["type"] for c in (spec.get("dtj_bot_users") or {}).get("columns", [])} or \
+              {c["name"]: c.get("type", "string") for c in table.get("columns", [])}
+    wanted = {"telegram_user_id": number, "name": name, "role": "admin", "active": True}
+    if set(wanted) - set(columns):
+        out(f"refused: dtj_bot_users has no column {', '.join(sorted(set(wanted) - set(columns)))} (see tables.json)")
+        return 1
+    row = {k: typed(v, columns[k]) for k, v in wanted.items()}
+    same = table_rows(call, table, [{"columnName": "telegram_user_id", "condition": "eq", "value": row["telegram_user_id"]}])
+    if same:
+        out("refused: that Telegram number is already in dtj_bot_users (change its role or active there in n8n instead)")
+        return 1
+    call("add_data_table_rows", {"dataTableId": table["id"], "projectId": table.get("projectId"), "rows": [row]})
+    out(f"added an admin ({name}) to dtj_bot_users")
+    return 0
+
+
+def main(argv=None, call=None, http=None, env=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="read only (the default)")
-    mode.add_argument("--apply", action="store_true", help="create what is missing, copy code, attach credentials; never deletes/publishes")
+    mode.add_argument("--apply", action="store_true", help="create what is missing (tables, shops, credentials, workflows), copy code, "
+                                                           "attach credentials; never deletes/publishes")
     mode.add_argument("--save-tables", action="store_true", help="read only: write tables.json (column names and types)")
+    mode.add_argument("--save-stores", action="store_true", help="read only: write stores.seed.json (the shops, no ids or dates)")
+    mode.add_argument("--add-admin", metavar="NUMBER", help="with Harsh's yes: add an active admin to dtj_bot_users (needs --name)")
+    ap.add_argument("--name", help="with --add-admin: the person's name")
     ap.add_argument("--publish", action="store_true", help="publish after a fresh check passes (needs Harsh's go-ahead); alone or after --apply")
     ap.add_argument("--only", choices=list(WORKFLOWS), help="with --publish: just this workflow")
     args = ap.parse_args(argv)
-    if args.publish and (args.check or args.save_tables):
+    if args.publish and (args.check or args.save_tables or args.save_stores or args.add_admin):
         ap.error("--publish goes alone or with --apply")
     if args.only and not args.publish:
         ap.error("--only goes with --publish")
+    if bool(args.add_admin) != bool(args.name):
+        ap.error("--add-admin and --name go together")
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
@@ -709,18 +1036,26 @@ def main(argv=None, call=None) -> int:
     if call is None:
         from n8n_mcp import call  # the real server (the token is read inside, never printed)
         secrets = _live_secrets
+    env = env or user_var
+    hidden = [args.add_admin] if args.add_admin else []  # a Telegram number never appears in a message
     try:
         if args.save_tables:
             return save_tables(call)
+        if args.save_stores:
+            return save_stores(call)
+        if args.add_admin:
+            return add_admin(call, args.add_admin, args.name)
         if args.apply or args.publish:
-            left = apply(call) if args.apply else 0
+            left = apply(call, http=http, env=env) if args.apply else 0
             if args.publish:
                 print("")
                 left += publish(call, only=args.only)
             return 1 if left else 0
-        return 1 if check(call) else 0
+        return 1 if check(call, http=http, env=env) else 0
     except ERRORS as exc:
-        print(f"stopped: n8n could not be read or refused: {redact(exc, secrets() if secrets else ())}", file=sys.stderr)
+        hidden += secrets() if secrets else []
+        hidden += [env(v) for v in (API_KEY_VAR, *(x[1:] for r in CREDENTIAL_RECIPES.values() for x in r.values() if x.startswith("$")))]
+        print(f"stopped: n8n could not be read or refused: {redact(exc, hidden)}", file=sys.stderr)
         return 1
 
 
