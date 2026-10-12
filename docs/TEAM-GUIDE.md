@@ -355,10 +355,15 @@ A shop can get pages only after these steps, done once:
 
 ### Add a person to the bot (Harsh)
 1. The person messages **@DtjPageDesignerBot** and sends you the number it replies with.
-2. In n8n: **Data tables > dtj_bot_users > add a row**: telegram_user_id (that number), name, role (`requester`, `designer`
-   or `admin`), active = true.
-3. To remove someone, set active = false. Designers and admins get the "New page waiting" messages.
-   Only make someone an `admin` if you trust them to switch a client's apps off: admins can do that from their phone.
+2. **Everyone on the bot gets full access** (Harsh, 12 Oct 2026): role `admin`. That means product links, preview links, the
+   "New page waiting" messages and the app switch (`/shops`, `/status`, `/off`, `/on`). Either:
+   - tell Claude "add <name> to the bot, number <number>": it runs
+     `python n8n/store-factory/setup_n8n.py --add-admin <number> --name "<name>"`; or
+   - in n8n: **Data tables > dtj_bot_users > add a row**: telegram_user_id (that number), name, role `admin`, active = true.
+3. To remove someone, set active = false on their row. Do it the day they leave: the bot stops answering them at once.
+- Safety net for the app switch: every /off and /on needs a button tap within 2 minutes, is saved in the install service's log
+  with the person's name, and every other admin gets a message. The roles `requester` and `designer` still work if you ever
+  want someone with less access.
 
 ### Switch a shop's DTJ apps off or on (admins)
 Use this when a client stops paying, or to bring their apps back. It switches all 3 DTJ apps (Blocks, Sections, Sections 2) of
