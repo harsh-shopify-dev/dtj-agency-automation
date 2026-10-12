@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dtj-landing",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-Command", "Set-Location -LiteralPath 'D:\\CODE CONTAINERR\\WEB DEV\\DTJ'; npm run dev -- -p 3100"],
+      "port": 3100
+    }
+  ]
+}
