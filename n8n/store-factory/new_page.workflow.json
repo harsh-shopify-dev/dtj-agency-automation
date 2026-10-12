@@ -26,7 +26,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"What to Design (edit me)\" in \"Store Factory: New Page\" (mode: Run Once for All Items).\n// 1. Open the product on the shop's own website and copy the address from the top of the browser.\n// 2. Paste it between the quotes below. Add a note if you like.\n// 3. Press \"Execute workflow\". Nothing else needs filling in: the shop's details come from the stores table (dtj_stores).\nconst product_link = ''; // e.g. https://test-store-harsh-dtj.myshopify.com/products/pore-clarifying-serum-2-salicylic-acid-30ml\nconst note = '';         // optional, plain words: what to lead with, the real rating and where it comes from, a look you like\n\nreturn [{ json: { product_link, note, requested_by: 'n8n (run by hand)', chat_id: '' } }];\n"
+    "jsCode": "// n8n Code node \"What to Design (edit me)\" in \"Store Factory: New Page\" (mode: Run Once for All Items).\n// 1. Open the product on the shop's own website and copy the address from the top of the browser.\n// 2. Paste it between the two ` marks on the product_link line below. Add a note between the ` marks on the note line if you like.\n// 3. Press \"Execute workflow\". Nothing else needs filling in: the shop's details come from the stores table (dtj_stores).\nconst product_link = ``; // e.g. https://test-store-harsh-dtj.myshopify.com/products/pore-clarifying-serum-2-salicylic-acid-30ml\nconst note = ``;         // optional, plain words (apostrophes are fine): what to lead with, the real rating and its source, a look you like\n\nreturn [{ json: { product_link, note, requested_by: 'n8n (run by hand)', chat_id: '' } }];\n"
    }
   },
   {
