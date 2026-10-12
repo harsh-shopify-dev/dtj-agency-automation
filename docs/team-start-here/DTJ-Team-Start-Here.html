@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DTJ Team Start Here</title>
+<!-- Source of DTJ-Team-Start-Here.pdf (the file to share offline). Same content as docs/START-HERE.md, plus the laptop install steps
+     (TEAM-GUIDE A1-A4) because a new designer does not have the project yet. Rebuild the PDF: see docs/team-start-here/README.md -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Print layout: A4, one reading column, DTJ's own palette (paper, ink, DTJ orange) and fonts (Figtree, Instrument Serif, Geist Mono). */
+:root {
+  --paper: #ffffff; --tint: #f7f5f2; --ink: #151515; --ink-2: #555555; --ink-3: #63636b; --line: #e4e0da;
+  --brand: #d64000; --brand-soft: #fbe9df; --code-bg: #f1eee9;
+  --ok: #1f7a4d; --ok-soft: #e7f3ec; --warn: #8f5400; --warn-soft: #fbf1df; --stop: #b3261e; --stop-soft: #f9e5e3;
+  --f-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --f-accent: "Instrument Serif", Georgia, serif;
+  --f-mono: "Geist Mono", "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@page { size: A4; margin: 16mm 15mm 16mm; }
+* { box-sizing: border-box; }
+html, body { background: var(--paper); color: var(--ink); }
+body { margin: 0; font: 11pt/1.5 var(--f-body); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; display: grid; gap: 20px; }
+@media print { .wrap { padding-inline: 0; max-width: none; } }
+header { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 2px solid var(--brand); }
+.eyebrow { font: 500 8.5pt/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font-size: 26pt; line-height: 1.1; margin: 0; font-weight: 700; }
+h1 em, h2 em { font-family: var(--f-accent); font-weight: 400; color: var(--brand); }
+.lede { margin: 0; color: var(--ink-2); max-width: 64ch; }
+.lede b { color: var(--ink); }
+h2 { font-size: 15pt; margin: 0; line-height: 1.25; display: flex; align-items: baseline; gap: 10px; }
+h2 .n { font: 600 9pt/1 var(--f-mono); color: var(--paper); background: var(--brand); border-radius: 4px; padding: 4px 6px; }
+h3 { font-size: 11.5pt; margin: 0; }
+section { display: grid; gap: 10px; break-inside: avoid-page; }
+section.long { break-inside: auto; }
+p { margin: 0; }
+.muted { color: var(--ink-2); }
+ol, ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; }
+li::marker { color: var(--ink-3); }
+code, .cmd { font-family: var(--f-mono); font-size: 9.5pt; }
+code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { margin: 4px 0 0; background: var(--code-bg); border-radius: 6px; padding: 8px 10px; font: 9.5pt/1.5 var(--f-mono); white-space: pre-wrap;
+  overflow-wrap: anywhere; break-inside: avoid; }
+.say { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; padding: 8px 12px; background: var(--tint); border-left: 3px solid var(--brand);
+  border-radius: 6px; break-inside: avoid; }
+.say .label { font: 500 8pt/1 var(--f-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; flex: none; }
+.say .cmd { font-size: 10.5pt; font-weight: 500; }
+.box { display: grid; gap: 6px; padding: 12px 14px; background: var(--tint); border-radius: 8px; break-inside: avoid; }
+.steps { display: grid; gap: 12px; counter-reset: step; }
+.step { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; break-inside: avoid; }
+.step::before { counter-increment: step; content: counter(step); font: 600 10pt/26px var(--f-mono); text-align: center; width: 26px; height: 26px;
+  border-radius: 50%; background: var(--brand-soft); color: var(--brand); }
+.step > div { display: grid; gap: 4px; min-width: 0; }
+.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .rules, .split { grid-template-columns: 1fr !important; } }
+.rule { display: grid; align-content: start; gap: 6px; padding: 12px; border-radius: 8px; break-inside: avoid; }
+.rule h3 { font-size: 11pt; }
+.rule ul { padding-left: 16px; gap: 3px; font-size: 10pt; }
+.rule p { font-size: 9.5pt; color: var(--ink-2); }
+.rule.ok { background: var(--ok-soft); } .rule.ok h3 { color: var(--ok); }
+.rule.yes { background: var(--warn-soft); } .rule.yes h3 { color: var(--warn); }
+.rule.never { background: var(--stop-soft); } .rule.never h3 { color: var(--stop); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.time { font: 500 8.5pt/1 var(--f-mono); color: var(--brand); text-transform: uppercase; letter-spacing: .05em; }
+.warn { padding: 10px 12px; border: 1px solid var(--stop); color: var(--ink); border-radius: 8px; font-size: 10pt; break-inside: avoid; }
+.warn b { color: var(--stop); }
+footer { padding-top: 10px; border-top: 1px solid var(--line); font-size: 9.5pt; color: var(--ink-2); display: grid; gap: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">DTJ store factory · team guide · 12 Oct 2026</div>
+    <h1>Start here, <em>whatever your job</em></h1>
+    <p class="lede">How DTJ makes Shopify product pages and switches its apps on or off on every shop, without depending on one
+      person. <b>Most people only need Telegram (part 1).</b> Designers also do part 2; a developer taking over does part 3.</p>
+  </header>
+
+  <section>
+    <h2><span class="n">1</span>Everyone: the Telegram bot <em>(2 minutes)</em></h2>
+    <ol>
+      <li>In Telegram, search <b>@DtjPageDesignerBot</b> and send <code>/start</code>.</li>
+      <li>It replies with your number. Send that number to Harsh. If Harsh doesn't answer, send it to any teammate who already uses
+        the bot; they tell Claude "add &lt;your name&gt; to the bot, number &lt;number&gt;".</li>
+      <li>You then have <b>full access</b>:
+        <ul>
+          <li><b>A product page:</b> send a product link from the shop's website (a note after it is fine). The bot sends the
+            preview link back when the page is ready.</li>
+          <li><b>The app switch:</b> <code>/shops</code> lists every shop and whether DTJ's apps are ON; <code>/status shop</code>
+            shows one; <code>/off shop</code> and <code>/on shop</code> switch them after you tap a confirm button.</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <section class="long">
+    <h2><span class="n">2</span>Designers: a laptop that designs the pages <em>(30 minutes, once)</em></h2>
+    <div class="box">
+      <h3>You'll receive privately (never in a group chat)</h3>
+      <ul>
+        <li>the DTJ <b>Claude</b> login (the team's shared account)</li>
+        <li>an invite to the <b>GitHub</b> repo <code>harsh-shopify-dev/dtj-agency-automation</code> (make a free account at
+          github.com first, and accept the invite from your email)</li>
+        <li>an <b>n8n</b> invite to your email (accept it and set a password)</li>
+        <li>a <b>Bitwarden Send</b> link with the Theme Access password of each shop you'll design for</li>
+      </ul>
+    </div>
+    <div class="steps">
+      <div class="step"><div>
+        <h3>Install Claude</h3>
+        <p>Open <b>claude.ai/download</b>, download <b>Claude for Windows</b>, install it and sign in with the DTJ Claude login.</p>
+      </div></div>
+      <div class="step"><div>
+        <h3>Open PowerShell</h3>
+        <p>Press the Windows key, type <b>PowerShell</b>, click <b>Windows PowerShell</b>. To run a command: copy it, right-click
+          inside PowerShell to paste, press Enter, and wait for the line to end with <code>&gt;</code> again.</p>
+      </div></div>
+      <div class="step"><div>
+        <h3>Install Git</h3>
+        <pre>winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements</pre>
+        <p class="muted">When it's done, close PowerShell and open it again. If it says "winget is not recognised": install
+          <b>App Installer</b> from the Microsoft Store, then try again.</p>
+      </div></div>
+      <div class="step"><div>
+        <h3>Download the project</h3>
+        <pre>cd $HOME
+git clone https://github.com/harsh-shopify-dev/dtj-agency-automation.git</pre>
+        <p class="muted">A GitHub window opens the first time: sign in with the GitHub account that got the invite.</p>
+      </div></div>
+      <div class="step"><div>
+        <h3>Let Claude set everything up</h3>
+        <p>In Claude, open the <b>Code</b> tab, choose the folder <code>dtj-agency-automation</code> in your user folder, and type:</p>
+        <div class="say"><span class="label">Type in Claude</span><span class="cmd">set up the store factory</span></div>
+        <p class="muted">Claude installs what's missing and opens a terminal tab for the two things only you can type: your n8n token
+          (in n8n: <b>Settings &gt; MCP Access</b>) and your shop passwords. Type them only in that terminal tab, never in the chat,
+          and type nothing there after it says "Done". Claude finishes with "Ready".</p>
+      </div></div>
+      <div class="step"><div>
+        <h3>Design pages</h3>
+        <div class="say"><span class="label">Type in Claude</span><span class="cmd">listen for the telegram call</span></div>
+        <p class="muted">Claude designs every request people send to the bot, while you're at the laptop (it stops after 8 hours).
+          Only one laptop should listen at a time. For a single page instead: <code>handle the Claude Code trigger in n8n</code>.</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>A developer taking over the technical side</h2>
+    <ol>
+      <li><b>Bitwarden:</b> Tushar or Harsh adds you to the <b>DTJ</b> organization (the free plan has 2 members, so the person
+        leaving is swapped out).</li>
+      <li>Do part 2. The setup then fills <b>every</b> key from the vault.</li>
+      <li>Read, in the project: <code>docs/ACCESS-AND-KEYS.md</code> (every account and key, and the leave checklist) and the newest
+        entry of <code>docs/HANDOFF.md</code> (what is open right now).</li>
+      <li>Get added to: the GitHub repo (admin), Cloudflare (DTJ's account), n8n (owner), Hostinger and the Shopify Dev Dashboard
+        organization that owns DTJ's apps.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>If Harsh doesn't answer: <em>who decides</em></h2>
+    <div class="rules">
+      <div class="rule ok">
+        <h3>No yes needed</h3>
+        <ul><li>The bot</li><li>Designing pages into a shop's <b>draft</b> theme</li><li>The app switch (it has its own confirm button)</li></ul>
+      </div>
+      <div class="rule yes">
+        <h3>A yes from Harsh, or any teammate</h3>
+        <ul><li>Deploying the install service</li><li>Releasing app updates</li><li>Creating a store</li><li>Publishing an n8n workflow</li><li>Anything customers see live</li></ul>
+        <p>When Harsh isn't reachable, tell Claude: "Harsh isn't reachable, I approve &lt;the action&gt;", with your name. One yes covers one action.</p>
+      </div>
+      <div class="rule never">
+        <h3>Never, whoever asks</h3>
+        <ul><li>Deleting things</li><li>Force-pushing code</li><li>Passwords or keys in any chat</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>"We need a store ready <em>in a few hours</em>"</h2>
+    <div class="split">
+      <div class="box">
+        <span class="time">About 20 minutes a page</span>
+        <h3>The shop is already set up</h3>
+        <p class="muted">It shows in <code>/shops</code>. Send product links to the bot, and a designer types
+          <code>listen for the telegram call</code>.</p>
+      </div>
+      <div class="box">
+        <span class="time">1 to 3 hours</span>
+        <h3>A brand-new shop</h3>
+        <p class="muted">In Claude, type <code>add a new shop</code>; it walks through every step. From the client you need
+          collaborator access for DTJ and the <b>store owner</b> available to click three install links. A shop inside DTJ's own
+          Shopify organization takes about 30 minutes.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="warn"><b>Passwords and keys:</b> only ever in the hidden prompts and terminal tabs Claude opens, or in Bitwarden.
+    Never in WhatsApp, Telegram, email, a document or the Claude chat.</div>
+
+  <footer>
+    <p><b>Who to ask:</b> Harsh first. If he isn't reachable, Tushar. If neither is, any teammate on the bot: the rules in part 4 let you carry on.</p>
+    <p>The full guide is in the project once you've downloaded it: <code>docs/TEAM-GUIDE.md</code> and <code>docs/START-HERE.md</code>.</p>
+  </footer>
+</div>
+</body>
+</html>
