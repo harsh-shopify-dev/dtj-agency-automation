@@ -1,0 +1,22 @@
+# Per-client copy of DTJ Sections for Rupa Divine (rupa-divine-crystals.myshopify.com). Written by services/install-catcher/tools/add_client.py.
+# Linked with: shopify app config link --path services/block-library-sections --client-id 42a9bb7fc532b10ea04ca161d76f874a --file-name shopify.app.rupa-divine-crystals.toml --force --no-input
+# Released with: shopify app deploy --path services/block-library-sections --config rupa-divine-crystals --allow-updates
+
+client_id = "42a9bb7fc532b10ea04ca161d76f874a"
+name = "DTJ Sections - Rupa Divine"
+application_url = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/start/rupa-divine-crystals-sections"
+embedded = false
+
+[access_scopes]
+# no store data at all: the licence is a metafield on our own app installation
+scopes = ""
+
+[auth]
+redirect_urls = [ "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/callback/rupa-divine-crystals-sections" ]
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/webhooks/rupa-divine-crystals-sections"

@@ -1,0 +1,82 @@
+.dtj-mq {
+  display: block;
+  overflow: hidden;
+  color: var(--dtj-text-color, inherit);
+  background: var(--dtj-background, transparent);
+  font-size: var(--dtj-text-size, 14px);
+}
+
+/* two identical sets side by side; the track slides left by exactly one set, then jumps back: a seamless loop */
+.dtj-mq__track {
+  display: flex;
+  width: max-content;
+  animation: dtj-mq-scroll var(--mq-speed, 30s) linear infinite;
+}
+
+.dtj-mq--pause:hover .dtj-mq__track { animation-play-state: paused; }
+
+/* each set is at least a screen wide, otherwise a short list would leave a gap before the loop restarts */
+.dtj-mq__set {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-around;
+  gap: var(--mq-gap, 40px);
+  min-width: 100vw;
+  padding-inline-end: var(--mq-gap, 40px);
+}
+
+.dtj-mq__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: var(--mq-ls, 0.02em);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dtj-mq--upper .dtj-mq__item { text-transform: uppercase; }
+
+.dtj-mq__icon {
+  display: block;
+  flex: none;
+  width: var(--mq-icon, 18px);
+  height: var(--mq-icon, 18px);
+  max-width: none;
+  object-fit: contain;
+}
+
+.dtj-mq__tick {
+  flex: none;
+  width: var(--mq-icon, 18px);
+  height: var(--mq-icon, 18px);
+  color: var(--mq-accent, currentColor);
+}
+
+.dtj-mq__dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--mq-accent, currentColor);
+  opacity: 0.5;
+}
+
+@keyframes dtj-mq-scroll {
+  to { transform: translateX(-50%); }
+}
+
+[dir="rtl"] .dtj-mq__track { animation-direction: reverse; }
+
+@media screen and (max-width: 749px) {
+  .dtj-mq__set { gap: calc(var(--mq-gap, 40px) * 0.7); padding-inline-end: calc(var(--mq-gap, 40px) * 0.7); }
+}
+
+/* no motion: a plain scrollable row, one set only */
+@media (prefers-reduced-motion: reduce) {
+  .dtj-mq { overflow-x: auto; }
+  .dtj-mq__track { width: auto; animation: none; }
+  .dtj-mq__set[aria-hidden="true"] { display: none; }
+  .dtj-mq__set { min-width: 0; }
+}

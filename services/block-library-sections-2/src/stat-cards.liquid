@@ -1,0 +1,68 @@
+{%- liquid
+  assign sc_count = 0
+  for i in (1..6)
+    assign nk = 'number_' | append: i
+    assign lk = 'label_' | append: i
+    assign ok = 'note_' | append: i
+    assign nv = bs[nk] | strip
+    assign lv = bs[lk] | strip
+    assign ov = bs[ok] | strip
+    if nv != blank or lv != blank or ov != blank
+      assign sc_count = sc_count | plus: 1
+    endif
+  endfor
+  assign sc_h1 = bs.heading | strip
+  assign sc_h2 = bs.heading_accent | strip
+  assign sc_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3' or 'h4' or 'p'
+      assign sc_tag = bs.heading_tag
+  endcase
+  assign sc_cols = sc_count
+  if sc_count > 4
+    assign sc_cols = 3
+  endif
+  case bs.columns
+    when '2' or '3' or '4'
+      assign sc_cols = bs.columns | plus: 0
+  endcase
+  if sc_cols < 1
+    assign sc_cols = 1
+  endif
+-%}
+{%- if sc_count > 0 or sc_h1 != blank or sc_h2 != blank -%}
+  <div class="dtj-b dtj-sc{% if bs.mobile_layout == 'swipe' %} dtj-sc--swipe{% endif %}{% if bs.card_shadow %} dtj-sc--shadow{% endif %}" style="{{ dtj_std_style | strip_newlines }} --sc-w: {{ bs.container_width }}px; --sc-cols: {{ sc_cols }}; --sc-gap: {{ bs.card_gap }}px; --sc-r: {{ bs.card_radius }}px; --sc-pad-d: {{ bs.card_padding_desktop }}px; --sc-pad-m: {{ bs.card_padding_mobile }}px; --sc-n-d: {{ bs.number_size_desktop }}px; --sc-n-m: {{ bs.number_size_mobile }}px; --sc-l: {{ bs.label_size }}px; --sc-o: {{ bs.note_size }}px; --sc-h-d: {{ bs.heading_size_desktop }}px; --sc-h-m: {{ bs.heading_size_mobile }}px; --sc-hg: {{ bs.heading_gap }}px;{% if bs.heading_color != blank %} --sc-hc: {{ bs.heading_color }};{% endif %}{% if bs.accent_color != blank %} --sc-accent: {{ bs.accent_color }};{% endif %}{% if bs.card_bg != blank %} --sc-bg: {{ bs.card_bg }};{% endif %}{% if bs.number_color != blank %} --sc-num: {{ bs.number_color }};{% endif %}{% if bs.label_color != blank %} --sc-lc: {{ bs.label_color }};{% endif %}{% if bs.note_color != blank %} --sc-oc: {{ bs.note_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-sc__wrap">
+      {%- if sc_h1 != blank or sc_h2 != blank -%}
+        <{{ sc_tag }} class="dtj-sc__heading">
+          {%- if sc_h1 != blank -%}<span>{{ sc_h1 | escape }}</span>{%- endif -%}
+          {%- if sc_h1 != blank and sc_h2 != blank -%}{{ ' ' }}{%- endif -%}
+          {%- if sc_h2 != blank -%}<span class="dtj-sc__accent">{{ sc_h2 | escape }}{% if bs.underline %}<svg class="dtj-sc__underline" viewBox="0 0 120 14" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M2 8.5C28 4 66 3.5 118 6.5" stroke-width="3.2"/><path d="M12 11.8C48 9.2 84 9.4 108 10.6" stroke-width="1.6"/></svg>{% endif %}</span>{%- endif -%}
+        </{{ sc_tag }}>
+      {%- endif -%}
+      {%- if sc_count > 0 -%}
+        <div class="dtj-sc__grid">
+          {%- for i in (1..6) -%}
+            {%- liquid
+              assign nk = 'number_' | append: i
+              assign lk = 'label_' | append: i
+              assign ok = 'note_' | append: i
+              assign sc_n = bs[nk] | strip
+              assign sc_lab = bs[lk] | strip
+              assign sc_note = bs[ok] | strip
+            -%}
+            {%- if sc_n != blank or sc_lab != blank or sc_note != blank -%}
+              <div class="dtj-sc__card">
+                {%- if sc_n != blank -%}<p class="dtj-sc__number">{{ sc_n | escape }}</p>{%- endif -%}
+                {%- if sc_lab != blank -%}<p class="dtj-sc__label">{{ sc_lab | escape }}</p>{%- endif -%}
+                {%- if sc_note != blank -%}<p class="dtj-sc__note">{{ sc_note | escape }}</p>{%- endif -%}
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Stat Cards is empty. Type a figure into "Card 1: figure" (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -1,0 +1,60 @@
+{
+ "skill_name": "dtj-pdp-factory",
+ "note": "Eval 2 exercises dtj-pdp-design-review (the factory's P6 gate). Workspaces live in .work/skill-evals/ (git-ignored).",
+ "evals": [
+  {
+   "id": 1,
+   "name": "gomints-energy-plan",
+   "prompt": "Plan and design the product page for Go Mints Energy + Focus on our Test Store (store qaxv3r-8g.myshopify.com, shown as test-store-harsh-dtj; live theme 167599112389; product handle gomint). The brand and facts we have are in .work/clients/test-store-gomints/ (brand.json, facts.json, SOURCES.md) and the brand's design guide is D:\\CODE CONTAINERR\\WEB DEV\\GOMINT\\GOMINTSBUILDGUIDE.md. Harsh said the first version looked dull and thin. Design only: do not write to any store, do not deploy or release anything, do not run git commands, do not edit repo files. Save into the outputs folder: wireframe-plan.md (your section-by-section plan), brand.json (as you would use it), content-needed.md (what to ask the client for) and summary.md (the page you would build and why, in plain words for Harsh).",
+   "expected_output": "A plan that follows the fixed wireframe slots in order, chooses an electric/energetic look with measured contrast, omits proof sections honestly and lists the content needed, avoids repeating claims or pictures, flags the 'gomint' title and the sold-out button, and names the block/colour gaps instead of hand-editing.",
+   "files": [],
+   "assertions": [
+    "The plan accounts for every slot of the fixed wireframe (W00-W16 or the same 16 sections in the same order), filling or omitting each",
+    "It chooses an energetic look for an energy product: strong brand-colour or dark bands, not pale tints (vibe 'electric' or equivalent)",
+    "Every new colour pair it proposes comes with a measured contrast ratio",
+    "No invented proof: no reviews, ratings, customer counts or quotes stated as fact; '10,000+ Happy Customers' is not used as a fact",
+    "content-needed.md asks the client for the missing proof and objection content (reviews or UGC, guarantee, how to use or dose)",
+    "It flags the store problems: the 'gomint' placeholder title and/or the sold-out buy button",
+    "It prevents repetition explicitly (a claim ledger or each claim given one home section)",
+    "It defines ONE call-to-action label and what the button does",
+    "It names what our blocks or builder cannot do yet (e.g. a CTA block, icon row, bold colours in the builder) instead of planning hand edits to template.json"
+   ]
+  },
+  {
+   "id": 2,
+   "name": "gomints-live-review",
+   "prompt": "Review the Go Mints product page we built: live at https://test-store-harsh-dtj.myshopify.com/products/gomint?view=dtj-gomint, build files in .work/clients/test-store-gomints/run/ (page-390.png, page-1280.png, template.json). Harsh thinks it looks dull and under-designed. Is it converting, does the colour fit the product, and what would a senior designer change? Read-only: do not change the store, the build or any repo file, no git. Save review.md (plus any measurements you take) to the outputs folder.",
+   "expected_output": "A scored review with blocking findings (sold out), measured palette vs an energetic vibe, the repeated picture and claims, the missing calls to action, the placeholder title, and concrete colour changes with contrast ratios.",
+   "files": [],
+   "assertions": [
+    "review.md gives a clear verdict and a numeric score",
+    "The sold-out buy button is reported as a blocking or top-priority finding",
+    "Colour is judged with measurements (shares of white / dark / vivid colour or a palette fit score), not only by eye",
+    "It counts how often the same picture is reused (about 10-11 times)",
+    "It identifies the same claims repeated across sections",
+    "It notes the missing calls to action between sections",
+    "It flags the placeholder title 'gomint'",
+    "It recommends specific colours for an energetic look with contrast ratios"
+   ]
+  },
+  {
+   "id": 3,
+   "name": "kurta-fashion-plan",
+   "prompt": "New client. Plan the product page for this women's kurta: the brief is in .claude/skills/dtj-pdp-factory/evals/files/kurta-brief.md. Design only: no store, no deploy, no git, no repo edits. Save into the outputs folder: wireframe-plan.md, brand.json, facts.json, content-needed.md and summary.md (plain words for Harsh).",
+   "expected_output": "An editorial (fashion) plan: photo-led, restrained motion (no marquee or typewriter), size and fit prominent (size guide flagged as a gap), exchange/COD/shipping trust near the buy button, no invented reviews or follower proof without a source, content-needed list, palette roles from indigo/rust/off-white with contrast checked.",
+   "files": [
+    "evals/files/kurta-brief.md"
+   ],
+   "assertions": [
+    "It chooses a restrained, photo-led (editorial/fashion) look and avoids marquees, typewriter text and decorative motion",
+    "Size and fit are prominent (size chart in the buy box, size guide flagged as needed)",
+    "Exchange, COD and shipping are placed near the buy button",
+    "No invented proof: no reviews; the 12k Instagram followers are not used as proof without a source",
+    "content-needed.md asks for reviews/UGC and fit details (model size, measurements) among others",
+    "facts.json gives every fact a source",
+    "Proposed colour pairs (indigo / rust / off-white) come with contrast ratios",
+    "The plan follows the fixed wireframe's section order (W00-W16 or the same sequence)"
+   ]
+  }
+ ]
+}

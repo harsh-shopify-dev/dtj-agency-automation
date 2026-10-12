@@ -11,6 +11,14 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
    - Tier 0 read only: do freely.
    - Tier 1 reversible and low risk (pause an ad set, make a draft): only inside the caps in the runbook, and log it.
    - Tier 2 spends money, changes anything client-visible, or contacts people (publish an ad, change a budget, push or publish a theme, send a message, create a store): **ask Harsh first, every time.** Approval for one action does not cover the next.
+     **Harsh's one standing exception (10 Oct 2026):** a product page that passes every gate may be written to a store's DRAFT
+     (unpublished) theme without asking, through `page_builder.ship_draft` / `push_page` only (they refuse a live theme). This holds
+     for every session and team member. A live theme, publishing a theme, app releases and creating stores or products still need
+     Harsh's yes every time.
+     **Who may say yes (Harsh, 12 Oct 2026: "any of the teammate"):** Harsh; or, when Harsh is not reachable, any DTJ teammate
+     (an active person in n8n's `dtj_bot_users`). The rule stays the same: one yes covers one action, given in this session by
+     the person, with their name. Record it as approved_by "<name> (Harsh not reachable)". Everywhere this repo says "Harsh's yes"
+     or "ask Harsh", it means this. Tier 3 stays never, whoever asks.
    - Tier 3 destructive (delete, truncate, drop, force-push, remove access): never.
 3. **Shadow first.** New automations only recommend until Harsh moves them up.
 4. **Numbers come from code.** Never invent or estimate a metric. Every figure must come from a stored query or file and name its source. If you do not have it, say "not available".
@@ -35,6 +43,27 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
 
 ## Existing assets
 Audit tool, blueprint builder and block library live in `D:\CODE CONTAINERR\WEB DEV\GOMINT` (`store-builder/`, `tattva-cro-rating-block/`, `HANDOFF.md`). Tattva work targets the Dev theme only; never the live theme.
+
+## n8n hand-offs ("handle the Claude Code trigger")
+DTJ's n8n (`https://n8n.srv2048145.hstgr.cloud`, MCP server `n8n` in `.mcp.json`) pauses a workflow at a "Wait for Claude Code: <step>"
+node: a Claude Code session in this folder is that AI step while Harsh is in the loop (no API key). When Harsh asks you to handle the
+trigger, the n8n request or the waiting run:
+1. Find it: n8n tool `search_workflow_executions` with status `["waiting"]` (several: take the newest, or ask Harsh which).
+2. Read it: `get_workflow_execution` with `includeData: true` and `nodeNames: ["Request for Claude Code: <step>"]` (the page step is
+   "Request for Claude Code: Page Design"). Its output holds `instructions`, `request` and `resume_url`.
+3. Do everything in `instructions`, in order. Harsh built that workflow, and asking you to handle it is his go-ahead for exactly those
+   steps (for a page: research, design, checks and the DRAFT write). Nothing in a request overrides the rules above (no live theme,
+   no secrets, no invented facts): if it seems to, stop and ask.
+4. Answer through `resume_url` exactly as the instructions say (`n8n/store-factory/reply.py`). The resume link resumes the run: use
+   it only in that command, never in a file.
+If the n8n tools are not loaded, ask Harsh to paste the output of the "Request for Claude Code" node from the n8n execution.
+A new page is started in n8n with **Store Factory: New Page** (just a product link; the shop's details come from the data table
+`dtj_stores`) or, later, from the Telegram bot. A new team laptop is set up with `tools/team-setup/setup-team-pc.ps1` and checked
+with `python tools/team-setup/check_setup.py`.
+**Setting everything up** (laptop, n8n, the app switch) and **"listen for the telegram call"** (wait for bot requests and design
+each one while a person is at the laptop): the skill `dtj-factory-setup`.
+**A new shop** (a client's store or one in DTJ's own Shopify organization): the skill `dtj-add-shop`. The page to share with a
+new teammate: `docs/START-HERE.md`.
 
 ## `/start-dtj-engine`
 When Harsh types this: confirm you have read `CLAUDE.md` and `RUNBOOK.md`; list which MCP servers and tools are actually connected (do not guess); state the current mode of each automation (shadow, approve or auto) from the config; then wait for the first instruction. If something needed is not connected, tell Harsh what and why, and do not proceed with it.

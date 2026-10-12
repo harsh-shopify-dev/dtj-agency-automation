@@ -1,0 +1,599 @@
+{
+  "id": "measured-results",
+  "title": "DTJ Measured Results",
+  "block_file": "extensions/dtj-sections-2/blocks/dtj-measured-results.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "card_heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "card_heading_accent",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "card_subline",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "card_figure",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "card_figure_label",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading_accent",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "subheading",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "figure_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text_1",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "figure_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "figure_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "figure_4",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_4",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "figure_5",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_5",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "footnote",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 32,
+    "padding_bottom": 32,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Panel"
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Content width",
+      "min": 600,
+      "max": 1400,
+      "step": 20,
+      "unit": "px",
+      "default": 1100
+    },
+    {
+      "type": "range",
+      "id": "panel_radius",
+      "label": "Panel corner radius",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "panel_padding_desktop",
+      "label": "Panel padding, desktop",
+      "min": 12,
+      "max": 64,
+      "step": 2,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "panel_padding_mobile",
+      "label": "Panel padding, phone",
+      "min": 8,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "column_gap",
+      "label": "Gap between the two sides",
+      "min": 16,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Picture card (left)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Picture",
+      "info": "Fills the card. Empty = a plain tinted card."
+    },
+    {
+      "type": "select",
+      "id": "image_focus",
+      "label": "Picture focus",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "card_min_height",
+      "label": "Card height",
+      "min": 280,
+      "max": 700,
+      "step": 10,
+      "unit": "px",
+      "default": 420
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Card corner radius",
+      "min": 0,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "checkbox",
+      "id": "image_overlay",
+      "label": "Put the card text over the picture",
+      "default": false,
+      "info": "Off = the picture sits below the text, so the two never overlap. On = the picture fills the whole card and the text sits on top of it (use a picture with empty space at the top)."
+    },
+    {
+      "type": "checkbox",
+      "id": "card_scrim",
+      "label": "Soft light haze behind the card text",
+      "default": false,
+      "info": "Only when the text is over the picture. Helps the text stay readable."
+    },
+    {
+      "type": "text",
+      "id": "card_heading",
+      "label": "Card heading, first part"
+    },
+    {
+      "type": "text",
+      "id": "card_heading_accent",
+      "label": "Card heading, italic part",
+      "info": "Continues the heading in italics. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "card_subline",
+      "label": "Card line under the heading"
+    },
+    {
+      "type": "text",
+      "id": "card_figure",
+      "label": "Card big figure",
+      "info": "Only a figure you can prove, for example from a study. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "card_figure_label",
+      "label": "Card figure caption"
+    },
+    {
+      "type": "range",
+      "id": "card_heading_size_desktop",
+      "label": "Card heading size, desktop",
+      "min": 20,
+      "max": 56,
+      "step": 1,
+      "unit": "px",
+      "default": 34
+    },
+    {
+      "type": "range",
+      "id": "card_heading_size_mobile",
+      "label": "Card heading size, phone",
+      "min": 18,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 26
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Card text color",
+      "info": "Empty = dark."
+    },
+    {
+      "type": "color",
+      "id": "card_accent_color",
+      "label": "Card figure color",
+      "info": "Empty = same as the card text."
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card background",
+      "info": "Shows when there is no picture, or behind a transparent one."
+    },
+    {
+      "type": "header",
+      "content": "Right side"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading, first part"
+    },
+    {
+      "type": "text",
+      "id": "heading_accent",
+      "label": "Heading, accent part",
+      "info": "Continues the heading in the accent color. Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h1",
+          "label": "H1"
+        },
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        },
+        {
+          "value": "p",
+          "label": "Paragraph"
+        }
+      ],
+      "info": "For search engines."
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 20,
+      "max": 48,
+      "step": 1,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phone",
+      "min": 18,
+      "max": 36,
+      "step": 1,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "figure_size_desktop",
+      "label": "Row figure size, desktop",
+      "min": 24,
+      "max": 72,
+      "step": 1,
+      "unit": "px",
+      "default": 38
+    },
+    {
+      "type": "range",
+      "id": "figure_size_mobile",
+      "label": "Row figure size, phone",
+      "min": 22,
+      "max": 56,
+      "step": 1,
+      "unit": "px",
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "Row title size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "text_size_row",
+      "label": "Row text size",
+      "min": 11,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "default": 13
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Accent word and row figures. Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Rows (up to 5) and footnote"
+    },
+    {
+      "type": "text",
+      "id": "figure_1",
+      "label": "Row 1: figure",
+      "info": "Only figures you can prove. A row shows when it has a figure, a title or a text."
+    },
+    {
+      "type": "text",
+      "id": "title_1",
+      "label": "Row 1: title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_1",
+      "label": "Row 1: text"
+    },
+    {
+      "type": "text",
+      "id": "figure_2",
+      "label": "Row 2: figure"
+    },
+    {
+      "type": "text",
+      "id": "title_2",
+      "label": "Row 2: title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_2",
+      "label": "Row 2: text"
+    },
+    {
+      "type": "text",
+      "id": "figure_3",
+      "label": "Row 3: figure"
+    },
+    {
+      "type": "text",
+      "id": "title_3",
+      "label": "Row 3: title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_3",
+      "label": "Row 3: text"
+    },
+    {
+      "type": "text",
+      "id": "figure_4",
+      "label": "Row 4: figure"
+    },
+    {
+      "type": "text",
+      "id": "title_4",
+      "label": "Row 4: title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_4",
+      "label": "Row 4: text"
+    },
+    {
+      "type": "text",
+      "id": "figure_5",
+      "label": "Row 5: figure"
+    },
+    {
+      "type": "text",
+      "id": "title_5",
+      "label": "Row 5: title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_5",
+      "label": "Row 5: text"
+    },
+    {
+      "type": "text",
+      "id": "footnote",
+      "label": "Footnote",
+      "info": "Where the figures come from. Shown in a dashed box with an info icon. Empty = hidden."
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "heading_accent": "Accent sample",
+      "subheading": "Sub sample",
+      "card_heading": "Card sample",
+      "card_heading_accent": "Italic sample",
+      "card_figure": "CARDFIG",
+      "figure_1": "FIG1",
+      "title_1": "Title one",
+      "text_1": "Text one",
+      "figure_2": "FIG2",
+      "footnote": "Footnote sample"
+    },
+    "expect": [
+      "Heading sample",
+      "Accent sample",
+      "Sub sample",
+      "Card sample",
+      "Italic sample",
+      "CARDFIG",
+      "FIG1",
+      "Title one",
+      "Text one",
+      "FIG2",
+      "Footnote sample",
+      "dtj-mr__row",
+      "dtj-mr__note"
+    ]
+  }
+}

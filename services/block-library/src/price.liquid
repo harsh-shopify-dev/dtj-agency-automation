@@ -1,0 +1,31 @@
+{%- liquid
+  assign pr_variant = product.selected_or_first_available_variant
+  assign pr_price = pr_variant.price | default: 0 | plus: 0
+  assign pr_compare = pr_variant.compare_at_price | default: 0 | plus: 0
+  assign pr_save = 0
+  assign pr_off = 0
+  if pr_compare > pr_price
+    assign pr_save = pr_compare | minus: pr_price
+    assign pr_off = pr_save | times: 100.0 | divided_by: pr_compare | round
+    if pr_off < 1
+      assign pr_off = 1
+    endif
+  endif
+  assign pr_suffix = bs.badge_suffix | strip
+-%}
+{%- if pr_variant.price != nil -%}
+  <div class="dtj-b dtj-price" style="{{ dtj_std_style | strip_newlines }} --pr-size: {{ bs.price_size }}px; --pr-compare: {{ bs.compare_size }}px; --pr-badge: {{ bs.badge_size }}px; --pr-r: {{ bs.badge_radius }}px; --pr-gap: {{ bs.gap }}px;{% if bs.compare_color != blank %} --pr-was: {{ bs.compare_color }};{% endif %}{% if bs.badge_bg != blank %} --pr-badge-bg: {{ bs.badge_bg }};{% endif %}{% if bs.badge_color != blank %} --pr-badge-color: {{ bs.badge_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <span class="dtj-price__now">{% if bs.trim_zeros %}{{ pr_price | money_without_trailing_zeros }}{% else %}{{ pr_price | money }}{% endif %}</span>
+    {%- if pr_off > 0 and bs.show_compare -%}
+      <s class="dtj-price__was">{% if bs.trim_zeros %}{{ pr_compare | money_without_trailing_zeros }}{% else %}{{ pr_compare | money }}{% endif %}</s>
+    {%- endif -%}
+    {%- if pr_off > 0 and bs.show_badge -%}
+      <span class="dtj-price__badge">
+        {%- if bs.badge_type == 'amount' -%}-{% if bs.trim_zeros %}{{ pr_save | money_without_trailing_zeros }}{% else %}{{ pr_save | money }}{% endif %}{%- else -%}-{{ pr_off }}%{%- endif -%}
+        {%- if pr_suffix != blank -%}{{ ' ' }}{{ pr_suffix | escape }}{%- endif -%}
+      </span>
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Price shows the product's price on a product page (editor only: shoppers see nothing here).</p>
+{%- endif -%}

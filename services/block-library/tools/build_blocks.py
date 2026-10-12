@@ -17,12 +17,30 @@ Every block gets the same standard controls, so no block ships with missing sett
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-BLOCKS = ROOT / "extensions" / "dtj-blocks" / "blocks"
-ASSETS = ROOT / "extensions" / "dtj-blocks" / "assets"
+TOOLS_HOME = Path(__file__).resolve().parents[1]  # the folder these shared tools live in (services/block-library)
+
+
+def extension_dir(root: Path) -> Path:
+    """The app's single theme extension folder (one extension per app), e.g. extensions/dtj-blocks."""
+    found = [p for p in (root / "extensions").iterdir() if p.is_dir()] if (root / "extensions").is_dir() else []
+    if len(found) != 1:
+        raise SystemExit(f"{root}: expected exactly one folder under extensions/, found {[p.name for p in found]}")
+    return found[0]
+
+
+def use_root(root: Path) -> None:
+    """Point the builder at an app folder. Default = the first app; the second app sets DTJ_APP_ROOT or passes --root."""
+    global ROOT, BLOCKS, ASSETS
+    ROOT = Path(root).resolve()
+    BLOCKS = extension_dir(ROOT) / "blocks"
+    ASSETS = extension_dir(ROOT) / "assets"
+
+
+use_root(os.environ.get("DTJ_APP_ROOT") or TOOLS_HOME)
 
 # ---- standard controls (single definition, used by every generated block) ----
 
@@ -41,6 +59,15 @@ def standard_controls(defaults: dict) -> dict:
             _range("margin_top", "Top margin", -40, 100, 2, d("margin_top", 0)),
             _range("margin_bottom", "Bottom margin", -40, 100, 2, d("margin_bottom", 0)),
         ],
+        # top and bottom padding only: the section already controls the sides, and every setting costs bytes (100 KB cap) and one of 75 slots
+        "spacing_v": [
+            _range("padding_top", "Top padding", 0, 100, 2, d("padding_top", 0)),
+            _range("padding_bottom", "Bottom padding", 0, 100, 2, d("padding_bottom", 0)),
+        ],
+        # side space: keeps a full-width section off the screen edges (a phone needs ~16 px); uses the same left/right variables as `spacing`
+        "gutter": [
+            _range("side_padding", "Side space", 0, 64, 2, d("side_padding", 16)),
+        ],
         "align": [
             {"type": "select", "id": "align", "label": "Alignment", "default": d("align", "start"),
              "options": [{"value": "start", "label": "Left"}, {"value": "center", "label": "Center"}, {"value": "end", "label": "Right"}]},
@@ -56,24 +83,45 @@ def standard_controls(defaults: dict) -> dict:
 
 # Liquid that turns the standard settings into CSS custom properties (only for the controls a block uses).
 PRELUDE = {
-    "spacing": ("--dtj-pad-top: {{ block.settings.padding_top | default: 0 }}px; --dtj-pad-bottom: {{ block.settings.padding_bottom | default: 0 }}px; "
-                "--dtj-pad-left: {{ block.settings.padding_left | default: 0 }}px; --dtj-pad-right: {{ block.settings.padding_right | default: 0 }}px; "
-                "--dtj-margin-top: {{ block.settings.margin_top | default: 0 }}px; --dtj-margin-bottom: {{ block.settings.margin_bottom | default: 0 }}px;"),
-    "align": ("--dtj-align: {{ block.settings.align | default: 'start' }}; "
-              "--dtj-justify: {% case block.settings.align %}{% when 'center' %}center{% when 'end' %}flex-end{% else %}flex-start{% endcase %};"),
-    "colors": ("{% if block.settings.text_color != blank %}--dtj-text-color: {{ block.settings.text_color }};{% endif %} "
-               "{% if block.settings.background != blank %}--dtj-background: {{ block.settings.background }};{% endif %}"),
-    "shape": "--dtj-radius: {{ block.settings.corner_radius | default: 0 }}px;",
-    "text_size": "--dtj-text-size: {{ block.settings.text_size | default: 14 }}px;",
+    "spacing": ("--dtj-pad-top: {{ bs.padding_top | default: 0 }}px; --dtj-pad-bottom: {{ bs.padding_bottom | default: 0 }}px; "
+                "--dtj-pad-left: {{ bs.padding_left | default: 0 }}px; --dtj-pad-right: {{ bs.padding_right | default: 0 }}px; "
+                "--dtj-margin-top: {{ bs.margin_top | default: 0 }}px; --dtj-margin-bottom: {{ bs.margin_bottom | default: 0 }}px;"),
+    "spacing_v": "--dtj-pad-top: {{ bs.padding_top | default: 0 }}px; --dtj-pad-bottom: {{ bs.padding_bottom | default: 0 }}px;",
+    "gutter": "--dtj-pad-left: {{ bs.side_padding | default: 16 }}px; --dtj-pad-right: {{ bs.side_padding | default: 16 }}px;",
+    "align": ("--dtj-align: {{ bs.align | default: 'start' }}; "
+              "--dtj-justify: {% case bs.align %}{% when 'center' %}center{% when 'end' %}flex-end{% else %}flex-start{% endcase %};"),
+    "colors": ("{% if bs.text_color != blank %}--dtj-text-color: {{ bs.text_color }};{% endif %} "
+               "{% if bs.background != blank %}--dtj-background: {{ bs.background }};{% endif %}"),
+    "shape": "--dtj-radius: {{ bs.corner_radius | default: 0 }}px;",
+    "text_size": "--dtj-text-size: {{ bs.text_size | default: 14 }}px;",
 }
 
 BASE_CSS = """/* GENERATED by tools/build_blocks.py: shared base. Do not edit. */
 .dtj-b {
   box-sizing: border-box;
+  /* never wider than the container, whatever a merchant types: a long unbroken word must wrap, not stretch the page (6 Oct 2026) */
+  min-width: 0;
+  max-width: 100%;
   margin: var(--dtj-margin-top, 0) 0 var(--dtj-margin-bottom, 0);
   padding: var(--dtj-pad-top, 0) var(--dtj-pad-right, 0) var(--dtj-pad-bottom, 0) var(--dtj-pad-left, 0);
   text-align: var(--dtj-align, start);
   font-size: var(--dtj-text-size, inherit);
+}
+
+/* A long unbroken word must wrap, not stretch the page. It is set on EVERY element inside the block, not just the block: themes set
+   `overflow-wrap: break-word` straight on p and h1-h6 (Horizon does), which beats an inherited value, and `break-word` (unlike `anywhere`)
+   does not shrink the minimum width, so one long word made the whole block wider than the screen (6 Oct 2026). */
+.dtj-b,
+.dtj-b * {
+  overflow-wrap: anywhere;
+}
+
+/* Horizon wraps every app block in <div class="shopify-block">, and inside its flex column that wrapper is only as wide as its content wants
+   to be: a slider row or a marquee strip made it far wider than the screen. Make the wrapper fill the space instead. */
+.shopify-block:has(> .dtj-b) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 """
 
@@ -105,6 +153,9 @@ def build_one(manifest: dict, body: str, css: str, shared_css: str = "") -> tupl
     block = (
         f"{{%- comment -%}} GENERATED by tools/build_blocks.py from manifests/{manifest['id']}.json and src/{manifest['id']}.liquid. "
         "Do not edit this file. {%- endcomment -%}\n"
+        # `bs` is the block's settings under a short name: Shopify counts every byte of Liquid (100 KB cap per app) and the long
+        # prefix was repeated hundreds of times (about 5 KB per app)
+        "{%- assign bs = block.settings -%}\n"
         f"{{%- capture dtj_std_style -%}}{prelude}{{%- endcapture -%}}\n"
         "{%- capture dtj_content -%}\n" + body.strip("\n") + "\n{%- endcapture -%}\n\n"
         # compact JSON: Shopify counts every byte of Liquid (100 KB cap per app), and pretty-printing cost about 18 KB
@@ -132,6 +183,8 @@ def targets() -> list[tuple[Path, str]]:
 
 
 def main(argv: list[str]) -> int:
+    if "--root" in argv:
+        use_root(Path(argv[argv.index("--root") + 1]))
     check = "--check" in argv
     stale = []
     for path, text in targets():

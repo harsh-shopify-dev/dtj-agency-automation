@@ -1,0 +1,77 @@
+{%- liquid
+  assign fq_count = 0
+  assign fq_used = ','
+  for i in (1..12)
+    assign qk = 'question_' | append: i
+    assign kk = 'cat_' | append: i
+    assign qv = bs[qk] | strip
+    assign kv = bs[kk]
+    if qv != blank
+      assign fq_count = fq_count | plus: 1
+      assign fq_used = fq_used | append: kv | append: ','
+    endif
+  endfor
+  assign fq_head1 = bs.heading | strip
+  assign fq_head2 = bs.heading_accent | strip
+  assign fq_sub = bs.subheading | strip
+  assign fq_pills = 0
+  for c in (1..6)
+    assign ck = 'category_' | append: c
+    assign cv = bs[ck] | strip
+    assign cm = ',' | append: c | append: ','
+    if cv != blank and fq_used contains cm
+      assign fq_pills = fq_pills | plus: 1
+    endif
+  endfor
+-%}
+{%- if fq_count > 0 or fq_head1 != blank or fq_head2 != blank or fq_sub != blank -%}
+  <dtj-faq class="dtj-b dtj-faq" style="{{ dtj_std_style | strip_newlines }} --fq-h: {{ bs.heading_size }}px; --fq-w: {{ bs.max_width }}px; --fq-lw: {{ bs.list_width }}px; --fq-r: {{ bs.item_radius }}px; --fq-q: {{ bs.q_size }}px; --fq-a: {{ bs.a_size }}px;{% if bs.heading_color_1 != blank %} --fq-c1: {{ bs.heading_color_1 }};{% endif %}{% if bs.accent_color != blank %} --fq-accent: {{ bs.accent_color }};{% endif %}{% if bs.subheading_color != blank %} --fq-sub: {{ bs.subheading_color }};{% endif %}{% if bs.pill_bg != blank %} --fq-pill-bg: {{ bs.pill_bg }};{% endif %}{% if bs.pill_color != blank %} --fq-pill-text: {{ bs.pill_color }};{% endif %}{% if bs.pill_border != blank %} --fq-pill-line: {{ bs.pill_border }};{% endif %}{% if bs.pill_active_bg != blank %} --fq-pill-on: {{ bs.pill_active_bg }};{% endif %}{% if bs.pill_active_color != blank %} --fq-pill-on-text: {{ bs.pill_active_color }};{% endif %}{% if bs.item_bg != blank %} --fq-item-bg: {{ bs.item_bg }};{% endif %}{% if bs.item_border != blank %} --fq-item-line: {{ bs.item_border }};{% endif %}{% if bs.q_color != blank %} --fq-q-color: {{ bs.q_color }};{% endif %}{% if bs.a_color != blank %} --fq-a-color: {{ bs.a_color }};{% endif %}{% if bs.toggle_color != blank %} --fq-tg: {{ bs.toggle_color }};{% if bs.item_bg != blank %} --fq-tg-x: {{ bs.item_bg }};{% endif %}{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-faq__wrap">
+      {%- if fq_head1 != blank or fq_head2 != blank -%}
+        <h2 class="dtj-faq__head">
+          {%- if fq_head1 != blank -%}<span class="dtj-faq__line">{{ fq_head1 | escape }}</span>{%- endif -%}
+          {%- if fq_head2 != blank -%}<span class="dtj-faq__line dtj-faq__line--accent">{{ fq_head2 | escape }}</span>{%- endif -%}
+        </h2>
+      {%- endif -%}
+      {%- if fq_sub != blank -%}<p class="dtj-faq__sub">{{ fq_sub | escape }}</p>{%- endif -%}
+      {%- if bs.show_filters and fq_pills > 0 -%}
+        <div class="dtj-faq__filters" role="group">
+          <button type="button" class="dtj-faq__pill" data-cat="all" aria-pressed="true"><span>{{ bs.all_label | strip | default: 'All' | escape }}</span></button>
+          {%- for c in (1..6) -%}
+            {%- assign ck = 'category_' | append: c -%}
+            {%- assign cv = bs[ck] | strip -%}
+            {%- assign cm = ',' | append: c | append: ',' -%}
+            {%- if cv != blank and fq_used contains cm -%}
+              <button type="button" class="dtj-faq__pill" data-cat="{{ c }}" aria-pressed="false"><span>{{ cv | escape }}</span></button>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+    {%- if fq_count > 0 -%}
+      <div class="dtj-faq__list">
+        {%- assign fq_shown = 0 -%}
+        {%- for i in (1..12) -%}
+          {%- liquid
+            assign qk = 'question_' | append: i
+            assign ak = 'answer_' | append: i
+            assign kk = 'cat_' | append: i
+            assign fq_q = bs[qk] | strip
+          -%}
+          {%- if fq_q != blank -%}
+            {%- assign fq_shown = fq_shown | plus: 1 -%}
+            <details class="dtj-faq__item" data-cat="{{ bs[kk] }}"{% if fq_shown == 1 and bs.first_open %} open{% endif %}>
+              <summary class="dtj-faq__q">
+                <span class="dtj-faq__qtext">{{ fq_q | escape }}</span>
+                <span class="dtj-faq__toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </summary>
+              <div class="dtj-faq__a">{{ bs[ak] }}</div>
+            </details>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </dtj-faq>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ FAQ is empty. Type a question into "Question 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

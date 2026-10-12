@@ -1,0 +1,46 @@
+{
+  "_comment": "Measurable targets per vibe, used by palette_report.py. Starting points set 10 Oct 2026 from the Go Mints page Harsh called dull; calibrate with every page Harsh judges (record the verdict and the metrics in references/calibration-log.md). Ranges are inclusive [min, max]; null = no limit.",
+  "metrics": {
+    "white_share": "share of the page that is near-white (lightness > 0.92, saturation < 0.10)",
+    "dark_share": "share that is dark (lightness < 0.22)",
+    "vivid_share": "share that is vivid colour (saturation > 0.45 and 0.25 < lightness < 0.85)",
+    "colourfulness": "Hasler-Susstrunk colourfulness: <15 not, 15-33 slightly, 33-45 moderately, 45-59 averagely, 59-82 quite, >82 highly colourful",
+    "chroma_saturation": "mean saturation of the non-neutral pixels",
+    "hue_families": "number of 30-degree hue families holding at least 4% of the non-neutral pixels",
+    "warm_share": "share of non-neutral pixels with warm hues (reds, oranges, yellows: 0-60 and 330-360 degrees)"
+  },
+  "profiles": {
+    "electric": {
+      "for": "energy, caffeine, sports nutrition, pre-workout, gaming, adventure",
+      "targets": {"white_share": [null, 0.55], "vivid_share": [0.18, null], "colourfulness": [38, null], "dark_share": [0.06, 0.45], "chroma_saturation": [0.55, null]}
+    },
+    "fresh": {
+      "for": "everyday supplements, clinical skincare, oral care, home care, hygiene",
+      "targets": {"white_share": [0.40, 0.85], "vivid_share": [0.04, 0.25], "colourfulness": [18, 48], "dark_share": [null, 0.20]}
+    },
+    "calm": {
+      "for": "sleep, stress, mental wellness, baby care, intimate care",
+      "targets": {"vivid_share": [null, 0.12], "colourfulness": [8, 35], "chroma_saturation": [null, 0.45], "dark_share": [null, 0.35]}
+    },
+    "premium": {
+      "for": "premium beauty, fragrance, jewellery, luxury gifting",
+      "targets": {"colourfulness": [null, 30], "hue_families": [null, 2], "vivid_share": [null, 0.08]}
+    },
+    "playful": {
+      "for": "kids, snacks, pet, novelty, confectionery",
+      "targets": {"colourfulness": [45, null], "hue_families": [3, null], "vivid_share": [0.15, null]}
+    },
+    "editorial": {
+      "for": "fashion, apparel, footwear, accessories, books",
+      "targets": {"vivid_share": [null, 0.10], "hue_families": [null, 3], "colourfulness": [null, 40]}
+    },
+    "appetite": {
+      "for": "food, beverages (non-energy), spices, sweets",
+      "targets": {"warm_share": [0.45, null], "colourfulness": [35, null], "vivid_share": [0.12, null]}
+    },
+    "natural": {
+      "for": "ayurveda, herbal, organic, eco home",
+      "targets": {"colourfulness": [15, 45], "chroma_saturation": [0.20, 0.60], "vivid_share": [null, 0.15]}
+    }
+  }
+}

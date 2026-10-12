@@ -1,0 +1,926 @@
+{
+  "id": "feature-showcase",
+  "title": "DTJ Feature Showcase",
+  "block_file": "extensions/dtj-sections-2/blocks/dtj-feature-showcase.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "subheading",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "f1_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "f1_text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "f1_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "f2_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "f2_text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "f2_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "f3_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "f3_text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "f3_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "f4_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "f4_text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "f4_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "f5_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "f5_text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "f5_image",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "f6_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "f6_text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "f6_image",
+      "type": "image_picker",
+      "required": false
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 40,
+    "padding_bottom": 40,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h1",
+          "label": "H1"
+        },
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        },
+        {
+          "value": "p",
+          "label": "Paragraph"
+        }
+      ],
+      "info": "For search engines."
+    },
+    {
+      "type": "select",
+      "id": "heading_align",
+      "label": "Heading alignment",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 24,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "default": 38
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phone",
+      "min": 20,
+      "max": 44,
+      "step": 1,
+      "unit": "px",
+      "default": 26
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "header",
+      "content": "Centre image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "A product photo with a transparent background looks best. Its description (Content, Files) is read aloud for screen readers."
+    },
+    {
+      "type": "range",
+      "id": "image_width_desktop",
+      "label": "Image width, desktop",
+      "min": 160,
+      "max": 640,
+      "step": 10,
+      "unit": "px",
+      "default": 300
+    },
+    {
+      "type": "range",
+      "id": "image_width_mobile",
+      "label": "Image width, phone",
+      "min": 120,
+      "max": 420,
+      "step": 10,
+      "unit": "px",
+      "default": 240
+    },
+    {
+      "type": "range",
+      "id": "image_radius",
+      "label": "Image corner radius",
+      "min": 0,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "checkbox",
+      "id": "image_shadow",
+      "label": "Soft shadow under the image",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "mobile_image",
+      "label": "Image on phones",
+      "default": "top",
+      "options": [
+        {
+          "value": "top",
+          "label": "Above the features"
+        },
+        {
+          "value": "bottom",
+          "label": "Below the features"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Feature style"
+    },
+    {
+      "type": "select",
+      "id": "feature_align",
+      "label": "Text alignment",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "title_size_desktop",
+      "label": "Title size, desktop",
+      "min": 14,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "title_size_mobile",
+      "label": "Title size, phone",
+      "min": 13,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "text_size_desktop",
+      "label": "Text size, desktop",
+      "min": 12,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "default": 15
+    },
+    {
+      "type": "range",
+      "id": "text_size_mobile",
+      "label": "Text size, phone",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "default": 13
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 20,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "desc_color",
+      "label": "Description color",
+      "info": "Empty = a softer shade of the text."
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon color",
+      "info": "Empty = same as the title."
+    },
+    {
+      "type": "color",
+      "id": "icon_bg",
+      "label": "Icon circle color",
+      "info": "Puts each icon in a round badge of this color, so the icons stand apart from the text. Empty = no badge."
+    },
+    {
+      "type": "range",
+      "id": "feature_width",
+      "label": "Feature text width",
+      "min": 160,
+      "max": 360,
+      "step": 10,
+      "unit": "px",
+      "default": 250,
+      "info": "How wide each feature is before its text wraps."
+    },
+    {
+      "type": "range",
+      "id": "feature_gap",
+      "label": "Space between features, desktop",
+      "min": 16,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 56
+    },
+    {
+      "type": "range",
+      "id": "column_gap",
+      "label": "Space between columns, desktop",
+      "min": 16,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Content width",
+      "min": 600,
+      "max": 1400,
+      "step": 20,
+      "unit": "px",
+      "default": 1100
+    },
+    {
+      "type": "select",
+      "id": "mobile_columns",
+      "label": "Features per row on phones",
+      "default": "2",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Left features"
+    },
+    {
+      "type": "text",
+      "id": "f1_title",
+      "label": "Left 1: title",
+      "info": "A feature shows when it has a title, text or icon image."
+    },
+    {
+      "type": "textarea",
+      "id": "f1_text",
+      "label": "Left 1: text"
+    },
+    {
+      "type": "select",
+      "id": "f1_icon",
+      "label": "Left 1: icon",
+      "default": "wind_calm",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Capsule"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield with plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield with focus"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check mark"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "f1_image",
+      "label": "Left 1: your own icon",
+      "info": "Replaces the icon above. A small square image works best."
+    },
+    {
+      "type": "text",
+      "id": "f2_title",
+      "label": "Left 2: title"
+    },
+    {
+      "type": "textarea",
+      "id": "f2_text",
+      "label": "Left 2: text"
+    },
+    {
+      "type": "select",
+      "id": "f2_icon",
+      "label": "Left 2: icon",
+      "default": "wind_calm",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Capsule"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield with plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield with focus"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check mark"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "f2_image",
+      "label": "Left 2: your own icon"
+    },
+    {
+      "type": "text",
+      "id": "f3_title",
+      "label": "Left 3: title"
+    },
+    {
+      "type": "textarea",
+      "id": "f3_text",
+      "label": "Left 3: text"
+    },
+    {
+      "type": "select",
+      "id": "f3_icon",
+      "label": "Left 3: icon",
+      "default": "wind_calm",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Capsule"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield with plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield with focus"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check mark"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "f3_image",
+      "label": "Left 3: your own icon"
+    },
+    {
+      "type": "header",
+      "content": "Right features"
+    },
+    {
+      "type": "text",
+      "id": "f4_title",
+      "label": "Right 1: title"
+    },
+    {
+      "type": "textarea",
+      "id": "f4_text",
+      "label": "Right 1: text"
+    },
+    {
+      "type": "select",
+      "id": "f4_icon",
+      "label": "Right 1: icon",
+      "default": "wind_calm",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Capsule"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield with plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield with focus"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check mark"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "f4_image",
+      "label": "Right 1: your own icon"
+    },
+    {
+      "type": "text",
+      "id": "f5_title",
+      "label": "Right 2: title"
+    },
+    {
+      "type": "textarea",
+      "id": "f5_text",
+      "label": "Right 2: text"
+    },
+    {
+      "type": "select",
+      "id": "f5_icon",
+      "label": "Right 2: icon",
+      "default": "wind_calm",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Capsule"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield with plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield with focus"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check mark"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "f5_image",
+      "label": "Right 2: your own icon"
+    },
+    {
+      "type": "text",
+      "id": "f6_title",
+      "label": "Right 3: title"
+    },
+    {
+      "type": "textarea",
+      "id": "f6_text",
+      "label": "Right 3: text"
+    },
+    {
+      "type": "select",
+      "id": "f6_icon",
+      "label": "Right 3: icon",
+      "default": "wind_calm",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "wind_calm",
+          "label": "Wind"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "flask",
+          "label": "Flask"
+        },
+        {
+          "value": "pill",
+          "label": "Capsule"
+        },
+        {
+          "value": "microscope",
+          "label": "Microscope"
+        },
+        {
+          "value": "heart_pulse",
+          "label": "Heart pulse"
+        },
+        {
+          "value": "shield_plus",
+          "label": "Shield with plus"
+        },
+        {
+          "value": "shield_focus",
+          "label": "Shield with focus"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "eye",
+          "label": "Eye"
+        },
+        {
+          "value": "check",
+          "label": "Check mark"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "f6_image",
+      "label": "Right 3: your own icon"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "image": "SWATCH",
+      "f1_title": "Left title",
+      "f1_text": "Left text",
+      "f4_title": "Right title",
+      "f4_text": "Right text"
+    },
+    "expect": [
+      "Heading sample",
+      "Left title",
+      "Left text",
+      "Right title",
+      "Right text",
+      "dtj-fs__feature",
+      "dtj-fs__media"
+    ]
+  }
+}

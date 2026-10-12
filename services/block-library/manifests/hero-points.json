@@ -18,6 +18,8 @@
     { "type": "checkbox", "id": "show_star", "label": "Star inside the eyebrow", "default": true },
     { "type": "inline_richtext", "id": "subheading", "label": "Subheading", "info": "Bold is allowed. Empty = hidden." },
     { "type": "textarea", "id": "benefits", "label": "Benefits", "info": "One benefit per line, up to 8. Empty = hidden." },
+    { "type": "select", "id": "columns", "label": "Columns", "default": "1", "options": [{ "value": "1", "label": "1 column" }, { "value": "2", "label": "2 columns" }], "info": "2 columns reads left to right, then down: 1 2 / 3 4." },
+    { "type": "checkbox", "id": "stack_mobile", "label": "Use 1 column on phones", "default": false, "info": "Only matters with 2 columns. Off = keep 2 columns on phones too." },
     { "type": "color", "id": "accent_color", "label": "Accent color", "info": "Eyebrow pill, star and tick circles. Empty = same as the text." },
     { "type": "color", "id": "eyebrow_color", "label": "Eyebrow text color", "info": "Empty = same as the text." },
     { "type": "header", "content": "Sizes and gaps" },
@@ -26,7 +28,8 @@
     { "type": "range", "id": "tick_size", "label": "Benefit text size", "min": 12, "max": 24, "step": 1, "unit": "px", "default": 14 },
     { "type": "range", "id": "check_size", "label": "Tick circle size", "min": 14, "max": 36, "step": 2, "unit": "px", "default": 20 },
     { "type": "range", "id": "gap", "label": "Space between the parts", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 12 },
-    { "type": "range", "id": "tick_gap", "label": "Space between benefits", "min": 0, "max": 24, "step": 2, "unit": "px", "default": 8 }
+    { "type": "range", "id": "tick_gap", "label": "Space between benefits", "min": 0, "max": 24, "step": 2, "unit": "px", "default": 8 },
+    { "type": "range", "id": "column_gap", "label": "Space between columns", "min": 8, "max": 48, "step": 2, "unit": "px", "default": 20 }
   ],
   "data_needs": [],
   "reference_image": null,

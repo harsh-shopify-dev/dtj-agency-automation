@@ -36,7 +36,7 @@ class FakeShopify:
 def run(args, shop=None, env=ENV):
     shop = shop or FakeShopify()
     with tempfile.TemporaryDirectory() as d, mock.patch("sys.stdout", new_callable=StringIO) as out, mock.patch("sys.stderr", new_callable=StringIO) as err:
-        code = licence.main([*args, "--log", str(Path(d, "log.jsonl"))], env=env, post=shop)
+        code = licence.main([*args, "--log", str(Path(d, "log.jsonl"))], env=env, post=shop, ask=False)  # False: never wait for a typed secret in tests
         log = Path(d, "log.jsonl").read_text(encoding="utf-8") if Path(d, "log.jsonl").exists() else ""
     return code, out.getvalue(), err.getvalue(), log, shop
 
@@ -104,6 +104,92 @@ class LicenceToolTests(unittest.TestCase):
 
     def test_client_id_is_read_from_the_toml(self):
         self.assertRegex(licence.client_id(), r"^[0-9a-f]{32}$")
+
+    def test_the_sections_app_uses_its_own_secret_variable_never_the_blocks_one(self):
+        # only the blocks secret is set: asking for the sections app must stop before any call, naming ITS variable
+        code, _, err, _, shop = run([*S, "--status", "--app", "sections"])
+        self.assertEqual(code, 2)
+        self.assertIn("DTJ_SECTIONS_CLIENT_SECRET", err)
+        self.assertEqual(shop.calls, [])
+
+    def test_the_sections_app_needs_to_be_linked_before_its_flag_can_be_touched(self):
+        with tempfile.TemporaryDirectory() as d:
+            missing = Path(d, "shopify.app.toml")
+            with mock.patch.dict(licence.APPS, {"sections": (missing, "DTJ_SECTIONS_CLIENT_SECRET")}):
+                code, _, err, _, shop = run([*S, "--status", "--app", "sections"], env={"DTJ_SECTIONS_CLIENT_SECRET": "OTHERSECRET"})
+        self.assertEqual(code, 1)
+        self.assertIn("link the app first", err)
+        self.assertEqual(shop.calls, [])
+
+    def test_the_second_sections_app_has_its_own_secret_variable_and_needs_linking(self):
+        code, _, err, _, shop = run([*S, "--status", "--app", "sections2"], env={"DTJ_SECTIONS_CLIENT_SECRET": "NOT_THE_RIGHT_ONE"})
+        self.assertEqual(code, 2)
+        self.assertIn("DTJ_SECTIONS2_CLIENT_SECRET", err)
+        self.assertEqual(shop.calls, [])
+        with tempfile.TemporaryDirectory() as d:
+            missing = Path(d, "shopify.app.toml")
+            with mock.patch.dict(licence.APPS, {"sections2": (missing, "DTJ_SECTIONS2_CLIENT_SECRET")}):
+                code, _, err, _, shop = run([*S, "--status", "--app", "sections2"], env={"DTJ_SECTIONS2_CLIENT_SECRET": "THIRD"})
+        self.assertEqual(code, 1)
+        self.assertIn("link the app first", err)
+        self.assertEqual(shop.calls, [])
+
+    def test_the_sections_app_uses_its_own_client_id_and_secret(self):
+        with tempfile.TemporaryDirectory() as d:
+            toml = Path(d, "shopify.app.toml")
+            toml.write_text('client_id = "' + "ab" * 16 + '"\n', encoding="utf-8")
+            with mock.patch.dict(licence.APPS, {"sections": (toml, "DTJ_SECTIONS_CLIENT_SECRET")}):
+                code, out, err, log, shop = run([*S, "--status", "--app", "sections"], FakeShopify(current="active"), env={"DTJ_SECTIONS_CLIENT_SECRET": "OTHERSECRET"})
+        self.assertEqual(code, 0)
+        token_call = [c for c in shop.calls if c[0].endswith("/oauth/access_token")][0]
+        self.assertIn("ab" * 16, json.dumps(token_call[1]))
+        self.assertIn("OTHERSECRET", json.dumps(token_call[1]))
+        self.assertNotIn("OTHERSECRET", out + err + log)
+
+    def _three_apps(self, d):
+        apps = {}
+        for i, (name, var) in enumerate((("blocks", licence.SECRET_ENV), ("sections", "DTJ_SECTIONS_CLIENT_SECRET"), ("sections2", "DTJ_SECTIONS2_CLIENT_SECRET"))):
+            toml = Path(d, f"{name}.toml")
+            toml.write_text('client_id = "' + f"{i + 1:02x}" * 16 + '"\n', encoding="utf-8")
+            apps[name] = (toml, var)
+        return apps
+
+    def test_all_apps_in_one_go_each_with_its_own_secret(self):
+        env = {licence.SECRET_ENV: "SECRET_ONE", "DTJ_SECTIONS_CLIENT_SECRET": "SECRET_TWO", "DTJ_SECTIONS2_CLIENT_SECRET": "SECRET_THREE"}
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(licence.APPS, self._three_apps(d)):
+            code, out, err, log, shop = run([*S, "--set", "inactive", "--approved-by", "Harsh", "--app", "all"], FakeShopify(current="active"), env=env)
+        self.assertEqual(code, 0)
+        tokens = [json.dumps(c[1]) for c in shop.calls if c[0].endswith("/oauth/access_token")]
+        self.assertEqual(len(tokens), 3)
+        for secret in ("SECRET_ONE", "SECRET_TWO", "SECRET_THREE"):
+            self.assertEqual(sum(secret in t for t in tokens), 1)  # every app used ITS secret, once
+            self.assertNotIn(secret, out + err + log)
+        self.assertEqual(len(log.strip().splitlines()), 3)  # one log row per app
+        self.assertEqual({json.loads(line)["app_key"] for line in out.strip().splitlines()}, {"blocks", "sections", "sections2"})
+
+    def test_one_missing_secret_does_not_stop_the_other_apps_and_the_run_is_not_a_success(self):
+        env = {licence.SECRET_ENV: "SECRET_ONE", "DTJ_SECTIONS2_CLIENT_SECRET": "SECRET_THREE"}
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(licence.APPS, self._three_apps(d)):
+            code, out, err, _, shop = run([*S, "--status", "--app", "all"], FakeShopify(current="active"), env=env)
+        self.assertEqual(code, 2)
+        self.assertIn("DTJ_SECTIONS_CLIENT_SECRET", err)
+        self.assertEqual(len(out.strip().splitlines()), 2)
+
+    def test_a_missing_secret_is_asked_for_hidden_and_never_saved(self):
+        asked = []
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(licence.APPS, self._three_apps(d)),                 mock.patch("sys.stdout", new_callable=StringIO) as out, mock.patch("sys.stderr", new_callable=StringIO) as err:
+            code = licence.main([*S, "--status", "--app", "all", "--log", str(Path(d, "log.jsonl"))], env={},
+                                post=FakeShopify(current="active"), ask=lambda prompt: asked.append(prompt) or "TYPED_SECRET")
+        self.assertEqual(code, 0)
+        self.assertEqual(len(asked), 3)
+        self.assertTrue(all("never saved" in a for a in asked))
+        self.assertNotIn("TYPED_SECRET", out.getvalue() + err.getvalue())
+
+    def test_all_still_needs_a_named_approver_to_change_anything(self):
+        code, _, err, _, shop = run([*S, "--set", "inactive", "--app", "all"])
+        self.assertEqual(code, 2)
+        self.assertIn("--approved-by", err)
+        self.assertEqual(shop.calls, [])
 
 
 if __name__ == "__main__":

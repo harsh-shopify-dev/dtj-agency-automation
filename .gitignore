@@ -11,3 +11,5 @@ output/
 .work/
 .venv/
 .shopify/
+.claude/settings.local.json
+.mcp.json

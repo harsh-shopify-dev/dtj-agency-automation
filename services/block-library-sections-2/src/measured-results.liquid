@@ -1,0 +1,105 @@
+{%- liquid
+  assign mr_rows = 0
+  for i in (1..5)
+    assign fk = 'figure_' | append: i
+    assign tk = 'title_' | append: i
+    assign xk = 'text_' | append: i
+    assign fv = bs[fk] | strip
+    assign tv = bs[tk] | strip
+    assign xv = bs[xk] | strip
+    if fv != blank or tv != blank or xv != blank
+      assign mr_rows = mr_rows | plus: 1
+    endif
+  endfor
+  assign mr_h1 = bs.heading | strip
+  assign mr_h2 = bs.heading_accent | strip
+  assign mr_sub = bs.subheading | strip
+  assign mr_note = bs.footnote | strip
+  assign mr_c1 = bs.card_heading | strip
+  assign mr_c2 = bs.card_heading_accent | strip
+  assign mr_cline = bs.card_subline | strip
+  assign mr_cfig = bs.card_figure | strip
+  assign mr_ccap = bs.card_figure_label | strip
+  assign mr_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3' or 'h4' or 'p'
+      assign mr_tag = bs.heading_tag
+  endcase
+  assign mr_card = false
+  if bs.image != blank or mr_c1 != blank or mr_c2 != blank or mr_cline != blank or mr_cfig != blank
+    assign mr_card = true
+  endif
+  assign mr_right = false
+  if mr_h1 != blank or mr_h2 != blank or mr_sub != blank or mr_rows > 0 or mr_note != blank
+    assign mr_right = true
+  endif
+-%}
+{%- if mr_card or mr_right -%}
+  <div class="dtj-b dtj-mr{% unless mr_card and mr_right %} dtj-mr--single{% endunless %}" style="{{ dtj_std_style | strip_newlines }} --mr-w: {{ bs.container_width }}px; --mr-r: {{ bs.panel_radius }}px; --mr-pad-d: {{ bs.panel_padding_desktop }}px; --mr-pad-m: {{ bs.panel_padding_mobile }}px; --mr-gap: {{ bs.column_gap }}px; --mr-card-h: {{ bs.card_min_height }}px; --mr-card-r: {{ bs.card_radius }}px; --mr-ch-d: {{ bs.card_heading_size_desktop }}px; --mr-ch-m: {{ bs.card_heading_size_mobile }}px; --mr-h-d: {{ bs.heading_size_desktop }}px; --mr-h-m: {{ bs.heading_size_mobile }}px; --mr-f-d: {{ bs.figure_size_desktop }}px; --mr-f-m: {{ bs.figure_size_mobile }}px; --mr-t: {{ bs.title_size }}px; --mr-x: {{ bs.text_size_row }}px; --mr-focus: {{ bs.image_focus | default: 'center' }};{% if bs.accent_color != blank %} --mr-accent: {{ bs.accent_color }};{% endif %}{% if bs.card_text_color != blank %} --mr-card-color: {{ bs.card_text_color }};{% endif %}{% if bs.card_accent_color != blank %} --mr-card-accent: {{ bs.card_accent_color }};{% endif %}{% if bs.card_bg != blank %} --mr-card-bg: {{ bs.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-mr__panel">
+      {%- if mr_card -%}
+        <div class="dtj-mr__card{% if bs.image_overlay %} dtj-mr__card--over{% endif %}{% if bs.card_scrim and bs.image_overlay %} dtj-mr__card--scrim{% endif %}">
+          <div class="dtj-mr__card-text">
+            {%- if mr_c1 != blank or mr_c2 != blank -%}
+              <p class="dtj-mr__card-heading">
+                {%- if mr_c1 != blank -%}<span>{{ mr_c1 | escape }}</span>{%- endif -%}
+                {%- if mr_c1 != blank and mr_c2 != blank -%}{{ ' ' }}{%- endif -%}
+                {%- if mr_c2 != blank -%}<em>{{ mr_c2 | escape }}</em>{%- endif -%}
+              </p>
+            {%- endif -%}
+            {%- if mr_cline != blank -%}<p class="dtj-mr__card-line">{{ mr_cline | escape }}</p>{%- endif -%}
+            {%- if mr_cfig != blank or mr_ccap != blank -%}
+              <p class="dtj-mr__card-stat">
+                {%- if mr_cfig != blank -%}<span class="dtj-mr__card-figure">{{ mr_cfig | escape }}</span>{%- endif -%}
+                {%- if mr_ccap != blank -%}<span class="dtj-mr__card-caption">{{ mr_ccap | escape }}</span>{%- endif -%}
+              </p>
+            {%- endif -%}
+          </div>
+          {%- if bs.image != blank -%}
+            <img class="dtj-mr__img" src="{{ bs.image | image_url: width: 1000 }}" alt="" width="1000" height="1000" loading="lazy">
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+      {%- if mr_right -%}
+        <div class="dtj-mr__side">
+          {%- if mr_h1 != blank or mr_h2 != blank -%}
+            <{{ mr_tag }} class="dtj-mr__heading">
+              {%- if mr_h1 != blank -%}<span>{{ mr_h1 | escape }}</span>{%- endif -%}
+              {%- if mr_h1 != blank and mr_h2 != blank -%}{{ ' ' }}{%- endif -%}
+              {%- if mr_h2 != blank -%}<span class="dtj-mr__accent">{{ mr_h2 | escape }}</span>{%- endif -%}
+            </{{ mr_tag }}>
+          {%- endif -%}
+          {%- if mr_sub != blank -%}<p class="dtj-mr__sub">{{ mr_sub | escape | newline_to_br }}</p>{%- endif -%}
+          {%- if mr_rows > 0 -%}
+            <div class="dtj-mr__rows">
+              {%- for i in (1..5) -%}
+                {%- liquid
+                  assign fk = 'figure_' | append: i
+                  assign tk = 'title_' | append: i
+                  assign xk = 'text_' | append: i
+                  assign mr_f = bs[fk] | strip
+                  assign mr_t = bs[tk] | strip
+                  assign mr_x = bs[xk] | strip
+                -%}
+                {%- if mr_f != blank or mr_t != blank or mr_x != blank -%}
+                  <div class="dtj-mr__row">
+                    {%- if mr_f != blank -%}<p class="dtj-mr__figure">{{ mr_f | escape }}</p>{%- endif -%}
+                    <div class="dtj-mr__row-text">
+                      {%- if mr_t != blank -%}<p class="dtj-mr__row-title">{{ mr_t | escape }}</p>{%- endif -%}
+                      {%- if mr_x != blank -%}<p class="dtj-mr__row-body">{{ mr_x | escape }}</p>{%- endif -%}
+                    </div>
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+          {%- if mr_note != blank -%}
+            <p class="dtj-mr__note"><svg class="dtj-mr__note-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="7"/><rect class="dtj-mr__note-glyph" x="7.2" y="7" width="1.6" height="4.6" rx="0.4"/><circle class="dtj-mr__note-glyph" cx="8" cy="4.8" r="1"/></svg><span>{{ mr_note | escape }}</span></p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Measured Results is empty. Type a heading or a row figure (editor only: shoppers see nothing).</p>
+{%- endif -%}

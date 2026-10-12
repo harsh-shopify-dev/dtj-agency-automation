@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://page-builder/brand-profile.schema.json",
+  "title": "Brand profile for the page builder",
+  "description": "What the page design adapts to. Everything except brand_name and category is optional; anything missing is filled in from the category and reported, never silently.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["brand_name", "category"],
+  "properties": {
+    "brand_name": {"type": "string", "minLength": 1, "maxLength": 60},
+    "category": {"enum": ["beauty", "supplements", "home-care", "food", "apparel", "other"]},
+    "price_tier": {"enum": ["value", "mid", "premium"]},
+    "voice": {"enum": ["plain", "warm", "clinical", "playful", "luxe"]},
+    "card_tone": {"enum": ["brand", "neutral"], "description": "story cards on calm pages; left out = automatic (the almost-white card for a bright orange, amber or yellow brand, which turns brown when deepened, else the brand colour): the brand colour deepened, or an almost-white grey in the Minimalist brand's style with dark words and the brand colour only on the tick checks (Harsh, Hope N Skin, 10 Oct 2026: 'grey like minimalist -- minimalist brand', then 'more lighter')"},
+    "vibe": {"enum": ["electric", "fresh", "calm", "premium", "playful", "editorial", "appetite", "natural"], "description": "the feeling the page must give (.claude/skills/dtj-pdp-factory/references/colour-and-vibe.md); direction.py does not use it yet (gap V1)"},
+    "shape_language": {"enum": ["sharp", "soft", "round"]},
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+        "accent": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+        "background": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+        "text": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"}
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "heading_class": {"enum": ["theme", "sans", "serif"]},
+        "heading": {"type": "string", "pattern": "^[A-Za-z0-9 ]{2,40}$"},
+        "body": {"type": "string", "pattern": "^[A-Za-z0-9 ]{2,40}$"}
+      }
+    },
+    "logo": {"type": "string", "pattern": "^[^/\\\\]+\\.(png|jpg|jpeg|webp)$"}
+  }
+}

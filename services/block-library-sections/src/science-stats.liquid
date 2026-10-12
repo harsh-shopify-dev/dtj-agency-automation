@@ -1,0 +1,98 @@
+{%- liquid
+  assign ss_count = 0
+  for i in (1..6)
+    assign nk = 'number_' | append: i
+    assign dk = 'description_' | append: i
+    assign ik = 'image_' | append: i
+    assign nv = bs[nk] | strip
+    assign dv = bs[dk] | strip
+    assign iv = bs[ik]
+    if nv != blank or dv != blank or iv != blank
+      assign ss_count = ss_count | plus: 1
+    endif
+  endfor
+  assign ss_heading = bs.heading | strip
+  assign ss_sub = bs.subheading | strip
+  assign ss_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3' or 'h4' or 'p'
+      assign ss_tag = bs.heading_tag
+  endcase
+  assign ss_align = 'center'
+  case bs.heading_alignment
+    when 'left' or 'right'
+      assign ss_align = bs.heading_alignment
+  endcase
+  assign ss_ratio = '4 / 5'
+  assign ss_adapt = false
+  case bs.card_image_aspect_ratio
+    when '3 / 4' or '1 / 1' or '16 / 9'
+      assign ss_ratio = bs.card_image_aspect_ratio
+    when 'adapt'
+      assign ss_adapt = true
+  endcase
+  assign ss_grad = false
+  if bs.number_color != blank and bs.number_color_2 != blank
+    assign ss_grad = true
+  endif
+  assign ss_shadow = bs.card_shadow_opacity | divided_by: 100.0
+  assign ss_overlay = bs.bg_overlay_opacity | divided_by: 100.0
+-%}
+{%- if ss_count > 0 or ss_heading != blank or ss_sub != blank -%}
+  <div class="dtj-b dtj-ssg{% if bs.card_hover_lift %} dtj-ssg--lift{% endif %}{% if ss_adapt %} dtj-ssg--adapt{% endif %}{% if ss_grad %} dtj-ssg--grad{% endif %}{% if bs.bg_overlay_enable and bs.bg_overlay_gradient != blank %} dtj-ssg--overlay{% endif %}" style="{{ dtj_std_style | strip_newlines }} --ssg-width: {{ bs.container_max_width }}px; --ssg-align: {{ ss_align }}; --ssg-hstyle: {{ bs.heading_font_style | default: 'italic' }}; --ssg-hweight: {{ bs.heading_font_weight | default: '400' }}; --ssg-hspace: {{ bs.heading_letter_spacing | times: 0.01 }}em; --ssg-h-d: {{ bs.heading_size_desktop }}px; --ssg-h-m: {{ bs.heading_size_mobile }}px; --ssg-sub-d: {{ bs.subheading_size_desktop }}px; --ssg-sub-m: {{ bs.subheading_size_mobile }}px; --ssg-num-d: {{ bs.stat_number_size_desktop }}px; --ssg-num-m: {{ bs.stat_number_size_mobile }}px; --ssg-txt-d: {{ bs.stat_text_size_desktop }}px; --ssg-txt-m: {{ bs.stat_text_size_mobile }}px; --ssg-gap-d: {{ bs.card_gap_desktop }}px; --ssg-gap-m: {{ bs.card_gap_mobile }}px; --ssg-pad-d: {{ bs.card_padding_desktop }}px; --ssg-pad-m: {{ bs.card_padding_mobile }}px; --ssg-head-d: {{ bs.header_bottom_spacing_desktop }}px; --ssg-head-m: {{ bs.header_bottom_spacing_mobile }}px; --ssg-pt-m: {{ bs.padding_top_mobile }}px; --ssg-pb-m: {{ bs.padding_bottom_mobile }}px; --ssg-radius: {{ bs.card_border_radius }}px; --ssg-wave-d: {{ bs.wave_height_desktop }}px; --ssg-wave-m: {{ bs.wave_height_mobile }}px;{% if bs.heading_text_color != blank %} --ssg-heading-color: {{ bs.heading_text_color }};{% endif %}{% if bs.subheading_text_color != blank %} --ssg-sub-color: {{ bs.subheading_text_color }};{% endif %}{% if bs.card_bg_color != blank %} --ssg-card-bg: {{ bs.card_bg_color }};{% endif %}{% if bs.card_text_color != blank %} --ssg-card-text: {{ bs.card_text_color }};{% endif %}{% if bs.number_color != blank %} --ssg-n1: {{ bs.number_color }};{% endif %}{% if bs.number_color_2 != blank %} --ssg-n2: {{ bs.number_color_2 }};{% endif %}{% if bs.wave_color != blank %} --ssg-wave-color: {{ bs.wave_color }};{% endif %}{% if bs.card_shadow_enable %} --ssg-shadow: 0 {{ bs.card_shadow_y }}px {{ bs.card_shadow_blur }}px rgba(0, 0, 0, {{ ss_shadow }});{% endif %}{% if bs.bg_overlay_enable and bs.bg_overlay_gradient != blank %} --ssg-overlay: {{ bs.bg_overlay_gradient | escape }}; --ssg-overlay-opacity: {{ ss_overlay }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-ssg__container">
+      {%- if ss_heading != blank or ss_sub != blank -%}
+        <div class="dtj-ssg__header">
+          {%- if ss_heading != blank -%}<{{ ss_tag }} class="dtj-ssg__heading">{{ ss_heading | escape }}</{{ ss_tag }}>{%- endif -%}
+          {%- if ss_sub != blank -%}<p class="dtj-ssg__subheading">{{ ss_sub | escape }}</p>{%- endif -%}
+        </div>
+      {%- endif -%}
+      {%- if ss_count > 0 -%}
+        <div class="dtj-ssg__grid" role="list">
+          {%- for i in (1..6) -%}
+            {%- liquid
+              assign nk = 'number_' | append: i
+              assign dk = 'description_' | append: i
+              assign ik = 'image_' | append: i
+              assign ss_num = bs[nk] | strip
+              assign ss_desc = bs[dk] | strip
+              assign ss_image = bs[ik]
+              assign ss_alt = ss_image.alt | default: ss_num
+              assign ss_card_ratio = ss_ratio
+              if ss_adapt and ss_image.aspect_ratio
+                assign ss_card_ratio = ss_image.aspect_ratio
+              endif
+            -%}
+            {%- if ss_num != blank or ss_desc != blank or ss_image != blank -%}
+              <div class="dtj-ssg__card-pair" role="listitem" style="--ssg-card-aspect: {{ ss_card_ratio }};">
+                <div class="dtj-ssg__card dtj-ssg__card--text">
+                  {%- if ss_num != blank -%}<p class="dtj-ssg__stat-number">{{ ss_num | escape }}</p>{%- endif -%}
+                  {%- if ss_desc != blank -%}<p class="dtj-ssg__stat-text">{{ ss_desc | escape }}</p>{%- endif -%}
+                </div>
+                <div class="dtj-ssg__card dtj-ssg__card--image">
+                  {%- if ss_image and ss_image != blank -%}
+                    <img class="dtj-ssg__img" src="{{ ss_image | image_url: width: 800 }}" alt="{{ ss_alt | escape }}" width="320" height="400" loading="lazy">
+                  {%- else -%}
+                    <div class="dtj-ssg__image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                  {%- endif -%}
+                </div>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+    {%- if bs.show_wave_divider -%}
+      <div class="dtj-ssg__wave" aria-hidden="true">
+        {%- case bs.wave_style -%}
+          {%- when 'gentle' -%}<svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,60 Q360,0 720,60 Q1080,120 1440,60 L1440,120 L0,120 Z"/></svg>
+          {%- when 'pointed' -%}<svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,80 L480,20 L960,100 L1440,40 L1440,120 L0,120 Z"/></svg>
+          {%- when 'layered' -%}<svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,60 C240,100 480,20 720,60 C960,100 1200,20 1440,60 L1440,120 L0,120 Z" opacity="0.35"/><path d="M0,80 C360,40 720,110 1080,50 C1260,20 1380,80 1440,70 L1440,120 L0,120 Z"/></svg>
+          {%- else -%}<svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,40 C360,120 1080,0 1440,80 L1440,120 L0,120 Z"/></svg>
+        {%- endcase -%}
+      </div>
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Science Stats Grid is empty. Type text into "Card 1 text" (editor only: shoppers see nothing).</p>
+{%- endif -%}

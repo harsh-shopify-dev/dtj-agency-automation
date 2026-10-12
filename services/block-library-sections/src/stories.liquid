@@ -1,0 +1,94 @@
+{%- liquid
+  assign cs_count = 0
+  for i in (1..8)
+    assign a = 'name_' | append: i
+    assign b = 'photo_' | append: i
+    assign c = 'tags_' | append: i
+    assign d = 'quote_' | append: i
+    assign av = bs[a] | strip
+    assign bv = bs[b]
+    assign cv = bs[c] | strip
+    assign dv = bs[d] | strip
+    if av != blank or bv != blank or cv != blank or dv != blank
+      assign cs_count = cs_count | plus: 1
+    endif
+  endfor
+  assign cs_heading = bs.heading | strip
+  assign cs_sub = bs.subheading | strip
+  assign cs_rating = bs.rating_text | strip
+  assign cs_cta = bs.cta_text | strip
+  assign cs_trust = bs.trust_text | strip
+  assign cs_badge = bs.verified_label | strip
+  assign cs_align = 'center'
+  if bs.text_align == 'left'
+    assign cs_align = 'left'
+  endif
+  assign cs_ratio = bs.photo_aspect | default: '1/1'
+-%}
+{%- if cs_count > 0 or cs_heading != blank or cs_sub != blank or bs.show_rating -%}
+  <div class="dtj-b dtj-cs dtj-cs--{{ cs_align }}" style="{{ dtj_std_style | strip_newlines }} --cs-w: {{ bs.max_width }}px; --cs-h: {{ bs.heading_size }}px; --cs-sub: {{ bs.subheading_size }}px; --cs-cw: {{ bs.card_width_desktop }}px; --cs-r: {{ bs.card_radius }}px; --cs-name: {{ bs.name_size }}px; --cs-pr: {{ bs.photo_radius }}px; --cs-ratio: {{ cs_ratio | replace: '/', ' / ' }}; --cs-q: {{ bs.quote_size }}px; --cs-btn-r: {{ bs.cta_radius }}px;{% if bs.heading_color != blank %} --cs-heading: {{ bs.heading_color }};{% endif %}{% if bs.subheading_color != blank %} --cs-sub-color: {{ bs.subheading_color }};{% endif %}{% if bs.star_color != blank %} --cs-star: {{ bs.star_color }};{% endif %}{% if bs.card_bg != blank %} --cs-card-bg: {{ bs.card_bg }};{% endif %}{% if bs.card_border != blank %} --cs-card-line: {{ bs.card_border }};{% endif %}{% if bs.name_color != blank %} --cs-name-color: {{ bs.name_color }};{% endif %}{% if bs.verified_color != blank %} --cs-badge: {{ bs.verified_color }};{% endif %}{% if bs.tag_bg != blank %} --cs-tag-bg: {{ bs.tag_bg }};{% endif %}{% if bs.tag_color != blank %} --cs-tag: {{ bs.tag_color }};{% endif %}{% if bs.quote_color != blank %} --cs-quote: {{ bs.quote_color }};{% endif %}{% if bs.cta_bg != blank %} --cs-btn: {{ bs.cta_bg }};{% endif %}{% if bs.cta_text_color != blank %} --cs-btn-text: {{ bs.cta_text_color }};{% endif %}{% if bs.trust_color != blank %} --cs-trust: {{ bs.trust_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-cs__wrap">
+      {%- if bs.show_rating -%}
+        <div class="dtj-cs__rating">
+          <span class="dtj-cs__stars" aria-hidden="true">
+            {%- for i in (1..5) -%}<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 7.1-1.01L12 2z"/></svg>{%- endfor -%}
+          </span>
+          {%- if cs_rating != blank -%}<span class="dtj-cs__rating-text">{{ cs_rating | escape }}</span>{%- endif -%}
+        </div>
+      {%- endif -%}
+      {%- if cs_heading != blank -%}<h2 class="dtj-cs__heading">{{ cs_heading | escape }}</h2>{%- endif -%}
+      {%- if cs_sub != blank -%}<div class="dtj-cs__sub">{{ bs.subheading }}</div>{%- endif -%}
+      {%- if cs_count > 0 -%}
+        <div class="dtj-cs__track-wrap">
+          <div class="dtj-cs__track">
+            {%- for i in (1..8) -%}
+              {%- liquid
+                assign a = 'name_' | append: i
+                assign b = 'photo_' | append: i
+                assign c = 'tags_' | append: i
+                assign d = 'quote_' | append: i
+                assign cs_name = bs[a] | strip
+                assign cs_photo = bs[b]
+                assign cs_tags = bs[c] | strip
+                assign cs_quote = bs[d] | strip
+              -%}
+              {%- if cs_name != blank or cs_photo != blank or cs_tags != blank or cs_quote != blank -%}
+                <article class="dtj-cs__card">
+                  {%- if cs_name != blank or cs_badge != blank -%}
+                    <div class="dtj-cs__card-head">
+                      {%- if cs_name != blank -%}<span class="dtj-cs__name">{{ cs_name | escape }}</span>{%- endif -%}
+                      {%- if cs_badge != blank -%}<span class="dtj-cs__badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><polyline points="9 12 11 14 15 10"/></svg>{{ cs_badge | escape }}</span>{%- endif -%}
+                    </div>
+                  {%- endif -%}
+                  {%- if cs_photo and cs_photo != blank -%}
+                    <div class="dtj-cs__photo"><img class="dtj-cs__img" src="{{ cs_photo | image_url: width: 600 }}" alt="{{ cs_photo.alt | default: cs_name | escape }}" width="{{ cs_photo.width | default: 600 }}" height="{{ cs_photo.height | default: 600 }}" loading="lazy"></div>
+                  {%- endif -%}
+                  {%- if cs_tags != blank -%}
+                    <ul class="dtj-cs__tags">
+                      {%- assign cs_tag_list = cs_tags | split: ',' -%}
+                      {%- for t in cs_tag_list limit: 3 -%}
+                        {%- assign cs_tag = t | strip -%}
+                        {%- if cs_tag != blank -%}<li class="dtj-cs__tag"><span class="dtj-cs__dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>{{ cs_tag | escape }}</li>{%- endif -%}
+                      {%- endfor -%}
+                    </ul>
+                  {%- endif -%}
+                  {%- if cs_quote != blank -%}<p class="dtj-cs__quote">&ldquo;{{ cs_quote | escape }}&rdquo;</p>{%- endif -%}
+                </article>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        </div>
+      {%- endif -%}
+      {%- if cs_cta != blank or cs_trust != blank -%}
+        <div class="dtj-cs__cta-wrap">
+          {%- if cs_cta != blank -%}<a class="dtj-cs__cta{% if bs.cta_full_width %} dtj-cs__cta--full{% endif %}" href="{{ bs.cta_link | default: '#' }}"><span>{{ cs_cta | escape }}</span></a>{%- endif -%}
+          {%- if cs_trust != blank -%}
+            <span class="dtj-cs__trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{{ cs_trust | escape }}</span>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Stories is empty. Type a name or quote into "Card 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -1,0 +1,26 @@
+{
+  "id": "pdp-conversion-v1",
+  "purpose": "The part of a product page BELOW the first screen. The first screen is the theme's gallery and buy box (see buybox). The order follows how a hesitant shopper reads: quick proof, why this product, the numbers, the story, how to use it, what is in it, what is not in it, how it differs, what others say, last doubts.",
+  "sections": [
+    {"builder": "trust_marquee", "why": "A scannable strip of things the brand can stand behind, right under the buy box, answers 'can I trust this?' before the shopper scrolls."},
+    {"builder": "why_features", "why": "The 4 or 6 reasons to choose it, next to the pack shot, so the product is never abstract."},
+    {"builder": "proof_panel", "only_if_signature": ["proof_panel"], "why": "For brands whose strength is figures: one dark panel with the numbers and where they come from."},
+    {"builder": "facts_glance", "unless_signature": ["proof_panel"], "why": "The few figures a shopper compares on: size, count, what it holds, each with its source."},
+    {"builder": "story_split", "why": "One photo-led story that explains the product's idea in a paragraph and a few ticks."},
+    {"builder": "how_split", "why": "Steps remove the fear of 'will I get it wrong?'. Placed right after the story so it reads as one narrative."},
+    {"builder": "pack_inside", "why": "What arrives in the box: removes surprise."},
+    {"builder": "free_from", "why": "What is deliberately NOT in it. On a dark band when this is the brand's emphasised section."},
+    {"builder": "comparison", "why": "A side-by-side against ordinary alternatives, only with the owner's approval because it makes claims about others."},
+    {"builder": "reviews_slider", "why": "Real reviews only. Placed after the shopper knows the product, before the last doubts."},
+    {"builder": "faq", "why": "Last objections answered in plain words, directly above the footer."}
+  ],
+  "overrides": {
+    "beauty": {"order": ["story_split", "why_features", "facts_glance", "how_split", "pack_inside", "trust_marquee", "reviews_slider", "comparison", "faq"]},
+    "supplements": {"order": ["trust_marquee", "why_features", "proof_panel", "how_split", "pack_inside", "story_split", "comparison", "reviews_slider", "faq"]},
+    "home-care": {"order": ["trust_marquee", "why_features", "facts_glance", "story_split", "how_split", "free_from", "pack_inside", "comparison", "reviews_slider", "faq"]}
+  },
+  "buybox": {
+    "order": ["rating (above the title, only with a real rating)", "title", "price (live, with the real compare-at price and a worked-out badge)", "bullet points", "option picker (only with 2+ variant products)", "add-ons (only with add-on products)", "buy buttons", "reviews directly under the buy buttons (only real ones)"],
+    "why": "Everything that answers 'what is it, what does it cost, why believe it' sits within one thumb of the Add to cart button. Reviews sit directly under the buttons because that is where the last doubt appears."
+  }
+}

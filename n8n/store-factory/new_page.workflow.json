@@ -1,0 +1,607 @@
+{
+ "id": "Z3s9hqny1d2shvXT",
+ "name": "Store Factory: New Page",
+ "description": "Store factory: a product link (by hand or from the Telegram bot) -> the shop from dtj_stores -> a saved brief -> Store Factory: Page Design (Claude Code designs the page into the draft theme).",
+ "nodes": [
+  {
+   "id": "214f82b1-cb52-4176-983c-470e17a9d84c",
+   "name": "Run by Hand",
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {}
+  },
+  {
+   "id": "12a81333-3a70-4028-a942-7e444b95d2b1",
+   "name": "What to Design (edit me)",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"What to Design (edit me)\" in \"Store Factory: New Page\" (mode: Run Once for All Items).\n// 1. Open the product on the shop's own website and copy the address from the top of the browser.\n// 2. Paste it between the two ` marks on the product_link line below. Add a note between the ` marks on the note line if you like.\n// 3. Press \"Execute workflow\". Nothing else needs filling in: the shop's details come from the stores table (dtj_stores).\nconst product_link = ``; // e.g. https://test-store-harsh-dtj.myshopify.com/products/pore-clarifying-serum-2-salicylic-acid-30ml\nconst note = ``;         // optional, plain words (apostrophes are fine): what to lead with, the real rating and its source, a look you like\n\nreturn [{ json: { product_link, note, requested_by: 'n8n (run by hand)', chat_id: '' } }];\n"
+   }
+  },
+  {
+   "id": "86952e00-b191-46b0-8b80-67294fed0cda",
+   "name": "Take the Request",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    480,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Take the Request\" in \"Store Factory: New Page\" (mode: Run Once for All Items).\n// One shape for every way in: \"What to Design (edit me)\" (by hand) or another workflow (the Telegram bot) calling this one with\n// { product_link, note, requested_by, chat_id }.\nconst r = $input.first().json || {};\nreturn [{ json: {\n  product_link: String(r.product_link || '').trim(),\n  note: String(r.note || '').trim().slice(0, 1500),\n  requested_by: String(r.requested_by || 'unknown').trim().slice(0, 120),\n  chat_id: String(r.chat_id || '').trim(),\n} }];\n"
+   }
+  },
+  {
+   "id": "3393368a-0ca5-46dc-ae32-ac143d46c398",
+   "name": "From Another Workflow",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    240,
+    240
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "product_link",
+       "type": "string"
+      },
+      {
+       "name": "note",
+       "type": "string"
+      },
+      {
+       "name": "requested_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "9cca5ab0-66c4-4e83-a142-a377befd0f17",
+   "name": "Load Stores",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    720,
+    120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "QaOZ6MuvFLyft2y9",
+     "cachedResultName": "dtj_stores"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "myshopify_domain",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "b6fcead4-39e7-4384-a045-9bb8a012a343",
+   "name": "Match the Store",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Match the Store\" in \"Store Factory: New Page\" (mode: Run Once for All Items).\n// Finds the shop a product link belongs to in the stores table (dtj_stores: one row per shop, set up once by Harsh) and builds the\n// brief row for dtj_client_intake. Every refusal is a plain sentence the person (or the Telegram bot) can show as it is.\nconst req = $('Take the Request').first().json;\nconst stores = $input.all().map((i) => i.json).filter((s) => s && s.myshopify_domain);\nconst fail = (message) => [{ json: { ok: false, message } }];\nconst link = String(req.product_link || '').trim();\nif (!link) return fail('Please send the product link: open the product on the shop\\'s website and copy the address from the top of the browser.');\n\n// read the link with plain text matching: n8n's Code sandbox has no URL() (seen in test execution 330, 12 Oct 2026)\nconst parts = /\\s/.test(link) ? null : link.match(/^(?:https?:\\/\\/)?([^/?#]+)([^?#]*)/i);\nconst host = parts ? parts[1].toLowerCase().replace(/:\\d+$/, '').replace(/^www\\./, '') : '';\nif (!/^[a-z0-9-]+(\\.[a-z0-9-]+)+$/.test(host)) {\n  return fail('That does not look like a link. Open the product on the shop\\'s website and copy the address from the top of the browser.');\n}\nif (host === 'admin.shopify.com' || host.endsWith('.admin.shopify.com')) {\n  return fail('That is a Shopify admin link. In the product page of the admin, click \"View\" (or open the shop) and send the link of the product on the shop\\'s own website.');\n}\nconst m = parts[2].match(/\\/products\\/([a-z0-9][a-z0-9-]*)/i);\nif (!m) return fail('That link is not a product page. A product link has /products/ in it, like https://myshop.com/products/my-product');\nconst handle = m[1].toLowerCase();\n\nconst norm = (d) => String(d || '').trim().toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').replace(/\\/.*$/, '');\nconst store = stores.find((s) => [s.myshopify_domain, ...String(s.other_domains || '').split(',')].map(norm).filter(Boolean).includes(host));\nif (!store) return fail('The shop ' + host + ' is not set up for page design yet. Ask Harsh to add it.');\nif (store.active === false) return fail('Page design is paused for ' + (store.store_name || host) + '. Ask Harsh.');\nif (!/^[0-9]{6,20}$/.test(String(store.draft_theme_id || ''))) return fail((store.store_name || host) + ' has no draft theme saved yet. Ask Harsh.');\nif (!/^page_builder\\/clients\\/[a-z0-9-]+\\.json$/.test(String(store.client_registry || ''))) return fail((store.store_name || host) + ' has no app copies saved yet. Ask Harsh.');\n\nconst note = String(req.note || '').trim();\nreturn [{ json: {\n  ok: true,\n  store_name: store.store_name || norm(store.myshopify_domain),\n  handle,\n  row: {\n    submitted_at: new Date().toISOString(),\n    status: 'new',\n    store_domain: norm(store.myshopify_domain),\n    theme_id: String(store.draft_theme_id),\n    brand_name: String(store.brand_name || ''),\n    product_title: '',\n    product_url: 'https://' + host + '/products/' + handle,\n    brand_website: String(store.brand_website || ''),\n    reference_brands: String(store.reference_brands || ''),\n    client_registry: String(store.client_registry),\n    template_suffix: ('dtj-' + handle).slice(0, 48).replace(/-+$/, ''),\n    notes: [note, store.store_notes ? 'About this shop: ' + store.store_notes : ''].filter(Boolean).join(' | '),\n    problems: '',\n    problem_count: 0,\n    brand_json: '{}',\n    facts_json: '{}',\n    picture_links_json: '[]',\n    raw_json: JSON.stringify({ source: 'Store Factory: New Page', product_link: link, note, requested_by: req.requested_by }),\n    requested_by: String(req.requested_by || ''),\n    telegram_chat_id: String(req.chat_id || ''),\n  },\n} }];\n"
+   }
+  },
+  {
+   "id": "76321be0-9fcc-4804-a2c7-e8258a875e43",
+   "name": "Matched?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1200,
+    120
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.ok }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "e142f271-6a78-440b-915b-2037b084154f",
+   "name": "Save Brief",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1440,
+    0
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "7FWesTH7eVyLNuOQ",
+     "cachedResultName": "dtj_client_intake"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "submitted_at": "={{ $json.row.submitted_at }}",
+      "status": "={{ $json.row.status }}",
+      "store_domain": "={{ $json.row.store_domain }}",
+      "theme_id": "={{ $json.row.theme_id }}",
+      "brand_name": "={{ $json.row.brand_name }}",
+      "product_title": "={{ $json.row.product_title }}",
+      "product_url": "={{ $json.row.product_url }}",
+      "brand_website": "={{ $json.row.brand_website }}",
+      "reference_brands": "={{ $json.row.reference_brands }}",
+      "client_registry": "={{ $json.row.client_registry }}",
+      "template_suffix": "={{ $json.row.template_suffix }}",
+      "notes": "={{ $json.row.notes }}",
+      "problems": "={{ $json.row.problems }}",
+      "problem_count": "={{ $json.row.problem_count }}",
+      "brand_json": "={{ $json.row.brand_json }}",
+      "facts_json": "={{ $json.row.facts_json }}",
+      "picture_links_json": "={{ $json.row.picture_links_json }}",
+      "raw_json": "={{ $json.row.raw_json }}",
+      "requested_by": "={{ $json.row.requested_by }}",
+      "telegram_chat_id": "={{ $json.row.telegram_chat_id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "submitted_at",
+       "displayName": "submitted_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "status",
+       "displayName": "status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "store_domain",
+       "displayName": "store_domain",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "theme_id",
+       "displayName": "theme_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "brand_name",
+       "displayName": "brand_name",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "product_title",
+       "displayName": "product_title",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "product_url",
+       "displayName": "product_url",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "brand_website",
+       "displayName": "brand_website",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "reference_brands",
+       "displayName": "reference_brands",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "client_registry",
+       "displayName": "client_registry",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "template_suffix",
+       "displayName": "template_suffix",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "notes",
+       "displayName": "notes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "problems",
+       "displayName": "problems",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "problem_count",
+       "displayName": "problem_count",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "brand_json",
+       "displayName": "brand_json",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "facts_json",
+       "displayName": "facts_json",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "picture_links_json",
+       "displayName": "picture_links_json",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "raw_json",
+       "displayName": "raw_json",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      },
+      {
+       "id": "telegram_chat_id",
+       "displayName": "telegram_chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "readOnly": false,
+       "removed": false
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "43c16426-5f57-40c8-b219-492e2059a4c3",
+   "name": "Start Page Design",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    1680,
+    0
+   ],
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "n8MzskKamTbVhZ3h",
+     "cachedResultName": "Store Factory: Page Design"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "row_id": "={{ $json.id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "row_id",
+       "displayName": "row_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "number"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "mode": "each",
+    "options": {
+     "waitForSubWorkflow": false
+    }
+   }
+  },
+  {
+   "id": "d06aae24-420d-4da4-9014-90f94abfbcba",
+   "name": "Started",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1920,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Started\" in \"Store Factory: New Page\" (mode: Run Once for All Items): the answer for the person who asked\n// (shown in n8n, and sent back by the Telegram bot).\nconst match = $('Match the Store').first().json;\nconst saved = $('Save Brief').first().json;\nreturn [{ json: {\n  ok: true,\n  row_id: saved.id,\n  handle: match.handle,\n  store_name: match.store_name,\n  message: 'Got it: designing ' + match.handle + ' on ' + match.store_name + ' (brief ' + saved.id + '). '\n    + 'Next: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n. '\n    + 'The preview link comes back when the page is in the draft theme (about 15 to 20 minutes).',\n} }];\n"
+   }
+  },
+  {
+   "id": "2e35d9ed-0043-44a8-a79f-defb4be097ad",
+   "name": "Not Started",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1440,
+    240
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Not Started\" in \"Store Factory: New Page\" (mode: Run Once for All Items): the plain reason, nothing was saved.\nconst m = $input.first().json || {};\nreturn [{ json: { ok: false, row_id: null, message: String(m.message || 'Something was missing. Ask Harsh.') } }];\n"
+   }
+  },
+  {
+   "id": "d40afbd3-2f5d-41fc-8a70-c177d0290c7a",
+   "name": "Sticky Note 70fe5fb0",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -380
+   ],
+   "parameters": {
+    "content": "## New page: just a product link\n**By hand:** open **What to Design (edit me)**, paste the product link from the shop's website (and a note if you like), save, press **Execute workflow**. The output of **Started** (or **Not Started**) says what happens next.\n\n**From the Telegram bot:** the bot calls this workflow with the link and the person's note.\n\nThe shop is found in the data table **dtj_stores** (one row per shop: addresses, draft theme, app copies, brand site). A shop that is not in it is refused with a plain message. Source in git: `n8n/store-factory/`.",
+    "color": 5,
+    "width": 760,
+    "height": 340
+   }
+  }
+ ],
+ "connections": {
+  "Run by Hand": {
+   "main": [
+    [
+     {
+      "node": "What to Design (edit me)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "What to Design (edit me)": {
+   "main": [
+    [
+     {
+      "node": "Take the Request",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Take the Request": {
+   "main": [
+    [
+     {
+      "node": "Load Stores",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "From Another Workflow": {
+   "main": [
+    [
+     {
+      "node": "Take the Request",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Stores": {
+   "main": [
+    [
+     {
+      "node": "Match the Store",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Match the Store": {
+   "main": [
+    [
+     {
+      "node": "Matched?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Matched?": {
+   "main": [
+    [
+     {
+      "node": "Save Brief",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Not Started",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save Brief": {
+   "main": [
+    [
+     {
+      "node": "Start Page Design",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Start Page Design": {
+   "main": [
+    [
+     {
+      "node": "Started",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

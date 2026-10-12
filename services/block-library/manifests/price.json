@@ -1,0 +1,171 @@
+{
+  "id": "price",
+  "title": "DTJ Price",
+  "block_file": "extensions/dtj-blocks/blocks/dtj-price.liquid",
+  "placements": [
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "badge_suffix",
+      "type": "text",
+      "required": false,
+      "max_length": 12
+    }
+  ],
+  "standard_controls": [
+    "spacing",
+    "align",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 4,
+    "padding_bottom": 4
+  },
+  "data_needs": [
+    "product.selected_or_first_available_variant.price",
+    "product.selected_or_first_available_variant.compare_at_price"
+  ],
+  "settings": [
+    {
+      "type": "header",
+      "content": "Price"
+    },
+    {
+      "type": "range",
+      "id": "price_size",
+      "label": "Price size",
+      "min": 16,
+      "max": 56,
+      "step": 1,
+      "unit": "px",
+      "default": 26
+    },
+    {
+      "type": "checkbox",
+      "id": "show_compare",
+      "label": "Show the compare-at price struck through",
+      "default": true,
+      "info": "Only when the product has a compare-at price higher than its price. Nothing is invented."
+    },
+    {
+      "type": "range",
+      "id": "compare_size",
+      "label": "Compare-at price size",
+      "min": 12,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "compare_color",
+      "label": "Compare-at price color",
+      "info": "Empty = a softer shade of the text."
+    },
+    {
+      "type": "checkbox",
+      "id": "trim_zeros",
+      "label": "Hide empty cents (Rs. 699 instead of Rs. 699.00)",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Gap between the parts",
+      "min": 6,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 10
+    },
+    {
+      "type": "header",
+      "content": "Discount badge"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_badge",
+      "label": "Show the discount badge",
+      "default": true,
+      "info": "Worked out from the real price and compare-at price. Hidden when there is no discount."
+    },
+    {
+      "type": "select",
+      "id": "badge_type",
+      "label": "Badge shows",
+      "default": "percent",
+      "options": [
+        {
+          "value": "percent",
+          "label": "Percent off, for example -21%"
+        },
+        {
+          "value": "amount",
+          "label": "Amount off, for example -Rs. 10.00"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "badge_suffix",
+      "label": "Word after the badge number",
+      "info": "For example OFF. Empty = just the number."
+    },
+    {
+      "type": "range",
+      "id": "badge_size",
+      "label": "Badge text size",
+      "min": 10,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "badge_radius",
+      "label": "Badge corner radius",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 4
+    },
+    {
+      "type": "color",
+      "id": "badge_bg",
+      "label": "Badge background",
+      "info": "Empty = dark."
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "Badge text color",
+      "info": "Empty = light."
+    }
+  ],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "badge_suffix": "OFF"
+    },
+    "product": {
+      "selected_or_first_available_variant": {
+        "price": 69900,
+        "compare_at_price": 140000
+      }
+    },
+    "expect": [
+      "Rs. 69900",
+      "Rs. 140000",
+      "-50% OFF",
+      "dtj-price__badge",
+      "dtj-price__was"
+    ]
+  }
+}

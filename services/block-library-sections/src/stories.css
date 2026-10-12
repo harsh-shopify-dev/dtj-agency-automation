@@ -1,0 +1,276 @@
+/* Stories: a port of the pack's dtj-beauty-customer-stories (rating strip, heading, a swipeable row of photo cards with check-mark tags and a quote,
+   a button with a slow shimmer and a trust line). Differences: colours are settings (empty = the theme's own), the three tag fields are one
+   comma-separated field, and the stars, the badge next to the name and every line of text only appear when the merchant types them. */
+.dtj-cs {
+  display: block;
+  background: var(--dtj-background, transparent);
+  color: var(--dtj-text-color, inherit);
+}
+
+.dtj-cs__wrap {
+  max-width: var(--cs-w, 720px);
+  margin-inline: auto;
+}
+
+.dtj-cs--center .dtj-cs__wrap { text-align: center; }
+.dtj-cs--left .dtj-cs__wrap { text-align: left; }
+
+/* rating strip */
+.dtj-cs__rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.dtj-cs--center .dtj-cs__rating { justify-content: center; }
+
+.dtj-cs__stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.dtj-cs__stars svg {
+  width: 16px;
+  height: 16px;
+  color: var(--cs-star, currentColor);
+  fill: currentColor;
+}
+
+.dtj-cs__rating-text {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* heading */
+.dtj-cs__heading {
+  margin: 0 0 12px;
+  color: var(--cs-heading, inherit);
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: var(--cs-h, 30px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.dtj-cs__sub {
+  max-width: 640px;
+  margin: 0 0 22px;
+  color: var(--cs-sub-color, color-mix(in srgb, currentColor 75%, transparent));
+  font-size: var(--cs-sub, 15px);
+  line-height: 1.5;
+}
+
+.dtj-cs--center .dtj-cs__sub { margin-inline: auto; }
+.dtj-cs__sub p { margin: 0; }
+
+/* the row of cards: swipe sideways, each card snaps to the start */
+.dtj-cs__track-wrap {
+  padding: 4px 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dtj-cs__track-wrap::-webkit-scrollbar { display: none; }
+
+.dtj-cs__track {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.dtj-cs__card {
+  display: flex;
+  flex: 0 0 var(--cs-cw, 300px);
+  flex-direction: column;
+  gap: 12px;
+  max-width: var(--cs-cw, 300px);
+  padding: 14px;
+  border: 1px solid var(--cs-card-line, color-mix(in srgb, currentColor 14%, transparent));
+  border-radius: var(--cs-r, 14px);
+  background: var(--cs-card-bg, transparent);
+  scroll-snap-align: start;
+  text-align: left;
+}
+
+.dtj-cs__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dtj-cs__name {
+  color: var(--cs-name-color, inherit);
+  font-size: var(--cs-name, 15px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dtj-cs__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--cs-badge, color-mix(in srgb, currentColor 70%, transparent));
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dtj-cs__badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dtj-cs__photo {
+  width: 100%;
+  overflow: hidden;
+  aspect-ratio: var(--cs-ratio, 1 / 1);
+  border-radius: var(--cs-pr, 8px);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+.dtj-cs__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+
+/* tags: a round check mark in the tag colour, the check itself in the page colour */
+.dtj-cs__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dtj-cs__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--cs-tag-bg, color-mix(in srgb, currentColor 10%, transparent));
+  color: var(--cs-tag, inherit);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.dtj-cs__dot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dtj-cs__dot svg {
+  width: 8px;
+  height: 8px;
+  color: Canvas;
+}
+
+.dtj-cs__quote {
+  margin: 0;
+  color: var(--cs-quote, inherit);
+  font-size: var(--cs-q, 14px);
+  font-style: normal;
+  line-height: 1.5;
+}
+
+/* button + trust line */
+.dtj-cs__cta-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.dtj-cs--center .dtj-cs__cta-wrap { align-items: center; }
+
+/* the link colour is reset first, in its own rule: the button fill is currentColor, so a link colour from the theme would repaint it */
+.dtj-cs__cta {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dtj-cs__cta {
+  position: relative;
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  max-width: 520px;
+  padding: 16px 32px;
+  overflow: hidden;
+  border-radius: var(--cs-btn-r, 8px);
+  background: var(--cs-btn, currentColor);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dtj-cs__cta--full { width: 100%; }
+
+.dtj-cs__cta span { color: var(--cs-btn-text, Canvas); }
+
+.dtj-cs__cta:hover { opacity: 0.92; }
+
+/* a slow shine that sweeps across the button */
+.dtj-cs__cta::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(105deg, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.3) 45%, rgba(255, 255, 255, 0.15) 55%, transparent 60%, transparent 100%);
+  animation: dtj-cs-shimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dtj-cs-shimmer {
+  0% { transform: translateX(0) rotate(25deg); }
+  100% { transform: translateX(350%) rotate(25deg); }
+}
+
+.dtj-cs__trust {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cs-trust, color-mix(in srgb, currentColor 65%, transparent));
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dtj-cs__trust svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media screen and (max-width: 749px) {
+  .dtj-cs__card {
+    flex-basis: 280px;
+    max-width: 280px;
+  }
+
+  .dtj-cs__heading { font-size: calc(var(--cs-h, 30px) - 6px); }
+  .dtj-cs__sub { font-size: calc(var(--cs-sub, 15px) - 1px); }
+  .dtj-cs__quote { font-size: calc(var(--cs-q, 14px) - 1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-cs__cta::after { animation: none; display: none; }
+}

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from collections.abc import Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +44,21 @@ class HeroPointsTests(unittest.TestCase):
         self.assertNotIn("dtj-hero-points__star", render(self.m, {"eyebrow": "New", "show_star": False}))
         self.assertNotIn("--hp-accent", render(self.m, {"eyebrow": "New"}))
         self.assertIn("--hp-accent: rgb(1, 2, 3)", render(self.m, {"eyebrow": "New", "accent_color": "rgb(1, 2, 3)"}))
+
+    def test_one_column_is_the_default_and_two_columns_is_opt_in(self):
+        self.assertIn("--hp-cols: 1;", render(self.m, {"benefits": "A\nB"}))
+        html = render(self.m, {"benefits": "A\nB\nC", "columns": "2"})
+        self.assertIn("--hp-cols: 2;", html)
+        self.assertIn('data-columns="2"', html)
+        self.assertEqual(html.count("<li"), 3)  # same items, only the layout changes
+
+    def test_an_unknown_column_value_falls_back_to_one(self):
+        self.assertIn("--hp-cols: 1;", render(self.m, {"benefits": "A\nB", "columns": "7"}))
+
+    def test_stacking_on_phones_only_applies_to_two_columns(self):
+        self.assertIn("dtj-hero-points--stack", render(self.m, {"benefits": "A\nB", "columns": "2", "stack_mobile": True}))
+        self.assertNotIn("dtj-hero-points--stack", render(self.m, {"benefits": "A\nB", "columns": "2", "stack_mobile": False}))
+        self.assertNotIn("dtj-hero-points--stack", render(self.m, {"benefits": "A\nB", "columns": "1", "stack_mobile": True}))
 
     def test_each_part_is_optional(self):
         self.assertNotIn("dtj-hero-points__list", render(self.m, {"eyebrow": "Only eyebrow"}))
@@ -111,12 +127,96 @@ class SocialProofTests(unittest.TestCase):
     def test_stars_can_be_turned_off(self):
         self.assertEqual(render(self.m, {"show_stars": False}, product=product(rating="4.5")), "")
 
+    def test_badge_is_optional_escaped_and_can_drop_its_shield(self):
+        self.assertEqual(render(self.m, {}, product=product()), "")
+        html = render(self.m, {"badge_text": "<b>Tag</b>", "badge_icon": True})
+        self.assertIn("dtj-social-proof__badge", html)
+        self.assertIn("&lt;b&gt;Tag&lt;/b&gt;", html)
+        self.assertIn("<svg", html)
+        self.assertNotIn("<svg", render(self.m, {"badge_text": "Tag", "badge_icon": False}))
+
+    def test_single_star_style_shows_one_star_and_the_number(self):
+        html = render(self.m, {"rating_style": "single", "show_rating_number": False}, product=product(rating="4.5"))
+        self.assertEqual(html.count("&#9733;"), 1)
+        self.assertNotIn("&#9734;", html)
+        self.assertIn(">4.5<", html)
+        self.assertEqual(render(self.m, {"rating_style": "single"}, product=product()), "")  # still no invented rating
+
+    def test_customer_photos_show_only_when_set_and_are_decorative(self):
+        self.assertNotIn("dtj-social-proof__avatar", render(self.m, {"proof_text_1": "Line"}))
+        html = render(self.m, {"avatar_1": "face-1", "avatar_3": "face-3", "avatar_size": 32})
+        self.assertEqual(html.count("dtj-social-proof__avatar\""), 2)
+        self.assertIn('alt=""', html)
+        self.assertIn('aria-hidden="true"', html)
+
+    def test_badge_or_photos_keep_the_row_on_one_line(self):
+        self.assertIn("dtj-social-proof--one-line", render(self.m, {"badge_text": "Tag"}))
+        self.assertIn("dtj-social-proof--one-line", render(self.m, {"avatar_1": "face-1"}))
+        self.assertNotIn("dtj-social-proof--one-line", render(self.m, {"proof_text_1": "Line"}))  # plain lines may still wrap
+
     def test_works_off_the_product_page(self):
         self.assertIn("Proof line", render(self.m, {"proof_text_1": "Proof line"}))  # no product object at all
 
     def test_count_placeholder_text_is_escaped(self):
         html = render(self.m, {**self.TEXTS, "low_stock_text": "<b>{count}</b>"}, product=product(qty=2))
         self.assertIn("&lt;b&gt;2&lt;/b&gt;", html)
+
+
+def priced(price, compare=None):
+    variant = {"price": price}
+    if compare is not None:
+        variant["compare_at_price"] = compare
+    return {"selected_or_first_available_variant": variant}
+
+
+@unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
+class PriceTests(unittest.TestCase):
+    m = manifest("price")
+
+    def test_shows_the_real_price_compare_price_and_worked_out_percentage(self):
+        html = render(self.m, {}, product=priced(3800, 4800))
+        self.assertIn("Rs. 3800", html)
+        self.assertIn("Rs. 4800", html)
+        self.assertIn("-21%", html)  # (4800 - 3800) / 4800 = 20.8 % rounds to 21, like the reference screenshot
+
+    def test_no_discount_means_no_compare_price_and_no_badge(self):
+        for compare in (None, 0, 3800, 2000):
+            html = render(self.m, {}, product=priced(3800, compare))
+            self.assertIn("dtj-price__now", html)
+            self.assertNotIn("dtj-price__was", html)
+            self.assertNotIn("dtj-price__badge", html)
+
+    def test_a_tiny_discount_never_shows_as_zero_percent(self):
+        self.assertIn("-1%", render(self.m, {}, product=priced(99999, 100000)))
+
+    def test_amount_badge_uses_the_real_difference(self):
+        html = render(self.m, {"badge_type": "amount"}, product=priced(3800, 4800))
+        self.assertIn("-Rs. 1000", html)
+        self.assertNotIn("%", html)
+
+    def test_parts_can_be_switched_off(self):
+        html = render(self.m, {"show_compare": False, "show_badge": False}, product=priced(3800, 4800))
+        self.assertNotIn("dtj-price__was", html)
+        self.assertNotIn("dtj-price__badge", html)
+        self.assertIn("dtj-price__now", html)
+
+    def test_suffix_is_optional_and_escaped(self):
+        self.assertIn("-21% OFF", render(self.m, {"badge_suffix": "OFF"}, product=priced(3800, 4800)))
+        self.assertNotIn("OFF", render(self.m, {"badge_suffix": ""}, product=priced(3800, 4800)))
+        self.assertIn("&lt;b&gt;", render(self.m, {"badge_suffix": "<b>"}, product=priced(3800, 4800)))
+
+    def test_colours_are_set_only_when_chosen(self):
+        plain = render(self.m, {}, product=priced(3800, 4800))
+        for var in ("--pr-badge-bg", "--pr-badge-color", "--pr-was"):
+            self.assertNotIn(var, plain)
+        html = render(self.m, {"badge_bg": "rgb(1, 2, 3)", "badge_color": "rgb(4, 5, 6)", "compare_color": "rgb(7, 8, 9)"}, product=priced(3800, 4800))
+        self.assertIn("--pr-badge-bg: rgb(1, 2, 3)", html)
+        self.assertIn("--pr-badge-color: rgb(4, 5, 6)", html)
+        self.assertIn("--pr-was: rgb(7, 8, 9)", html)
+
+    def test_nothing_without_a_product_and_a_placeholder_in_the_editor(self):
+        self.assertEqual(render(self.m, {}, product={}), "")
+        self.assertIn("DTJ Price shows", render(self.m, {}, product={}, design_mode=True))
 
 
 @unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
@@ -131,6 +231,13 @@ class TestimonialsTests(unittest.TestCase):
     def test_up_to_five_reviews(self):
         html = render(self.m, {f"quote_{i}": f"Review {i}" for i in range(1, 6)})
         self.assertEqual(html.count("data-slide"), 5)
+
+    def test_avatar_letter_colour_is_passed_only_when_chosen_and_falls_back_to_canvas(self):
+        # Canvas alone gave a white initial on a gold accent (2.4:1, page-builder review loop, 9 Oct 2026)
+        self.assertIn("--tt-on-accent: #000000", render(self.m, {"quote_1": "A", "name_1": "Asha", "avatar_text_color": "#000000"}))
+        self.assertNotIn("--tt-on-accent", render(self.m, {"quote_1": "A", "name_1": "Asha"}))
+        css = (ROOT / "extensions/dtj-blocks/assets/dtj-testimonials.css").read_text(encoding="utf-8")
+        self.assertIn("color: var(--tt-on-accent, Canvas)", css)
 
     def test_a_single_review_has_no_next_button_or_progress_bar(self):
         html = render(self.m, {"quote_1": "Only one"})
@@ -217,10 +324,43 @@ class ShoppableReelsTests(unittest.TestCase):
         self.assertIn('data-play-label="Chalao"', html)
         self.assertIn('data-pause-label="Roko"', html)
 
+    def test_video_cards_get_a_sound_button_that_starts_off_and_image_cards_do_not(self):
+        html = render(self.m, {"media_type_1": "video", "video_1": "video-file"})
+        self.assertEqual(html.count("data-sound data-target"), 1)
+        self.assertIn('aria-pressed="false"', html)
+        self.assertIn('aria-label="Turn sound on"', html)
+        self.assertNotIn("data-sound data-target", render(self.m, {"media_type_1": "image", "image_1": "x"}))
+
+    def test_sound_labels_default_to_english_and_can_be_translated(self):
+        html = render(self.m, {"image_1": "x"})
+        self.assertIn('data-sound-on-label="Turn sound on"', html)
+        self.assertIn('data-sound-off-label="Turn sound off"', html)
+        html = render(self.m, {"image_1": "x", "sound_on_label": "Awaaz chalu", "sound_off_label": "Awaaz band"})
+        self.assertIn('data-sound-on-label="Awaaz chalu"', html)
+        self.assertIn('data-sound-off-label="Awaaz band"', html)
+
     def test_heading_is_optional_and_escaped(self):
         self.assertNotIn("dtj-reels__heading", render(self.m, {"image_1": "x"}))
         html = render(self.m, {"image_1": "x", "heading": "<b>Hi</b>"})
         self.assertIn("&lt;b&gt;Hi&lt;/b&gt;", html)
+
+
+class LoopOnly(Sequence):
+    """Stand-in for Shopify's product_list: it can be looped over (as Shopify documents) but NOT read by position.
+    Reading item [0] gives nothing: the suspected cause of the empty Option Picker in the real editor on 6 Oct 2026.
+    It is a Sequence only because python-liquid loops over nothing else; __iter__ is used for loops, never __getitem__."""
+
+    def __init__(self, items):
+        self._items = list(items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __len__(self):
+        return len(self._items)
+
+    def __getitem__(self, index):
+        raise TypeError("a product_list cannot be read by position")
 
 
 def option(handle, title, available=True):
@@ -356,6 +496,88 @@ class AddonsTests(unittest.TestCase):
         self.assertNotIn("<script>", render(self.m, {**self.ONE, "heading": "<script>x</script>", "s1_headline": "<script>y</script>"}))
 
 
+@unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
+class LoopOnlyProductListTests(unittest.TestCase):
+    """The three blocks that take a product_list must work when the list can only be looped over, like Shopify's."""
+
+    def test_the_stand_in_really_cannot_be_read_by_position(self):
+        from tests.test_generated_blocks import Environment as Env
+        self.assertEqual(Env().from_string("{{ l[0].title }}").render(l=LoopOnly([{"title": "X"}])).strip(), "")
+
+    def test_option_picker_shows_every_picked_product_in_order(self):
+        products = LoopOnly([option("a", "Product A"), option("b", "Product B"), option("c", "Product C")])
+        html = render(manifest("shade-picker"), {"products": products, "s2_label": "Second name"}, product={"handle": "b"})
+        self.assertEqual(html.count("data-item"), 3)
+        # order of the option buttons (the current name also appears earlier, beside the label)
+        self.assertLess(html.index('data-label="Product A"'), html.index('data-label="Second name"'))
+        self.assertLess(html.index('data-label="Second name"'), html.index('data-label="Product C"'))
+        self.assertEqual(html.count('data-current="true"'), 1)
+
+    def test_add_ons_show_cards_and_the_swap_from_position_five(self):
+        five = LoopOnly([addon_product(i, f"P{i}", 1000 * i) for i in range(1, 5)] + [addon_product(9, "Alt Product", 60000)])
+        html = render(manifest("addons"), {"products": five, "s1_alt": "5"})
+        self.assertEqual(html.count("data-card"), 4)
+        self.assertIn('data-variant-alt="90"', html)
+        self.assertNotIn("P5", html)
+
+    def test_reels_link_each_card_to_the_product_in_the_same_position(self):
+        second = {"title": "Second product", "url": "/products/second", "price": 100}
+        html = render(manifest("shoppable-reels"), {"image_1": "a", "image_2": "b", "products": LoopOnly([ShoppableReelsTests.PRODUCT, second])})
+        self.assertEqual(html.count("dtj-reels__product"), 2)
+        self.assertLess(html.index("Sample product"), html.index("Second product"))
+
+    def test_the_editor_note_says_how_many_products_arrived(self):
+        self.assertIn("Products received: 0.", render(manifest("shade-picker"), {}, design_mode=True))
+        self.assertIn("Products received: 1.", render(manifest("shade-picker"), {"products": LoopOnly([None])}, design_mode=True))
+        self.assertIn("Products received: 0.", render(manifest("addons"), {}, design_mode=True))
+
+
+@unittest.skipIf(Environment is None, "python-liquid not installed (use .work/.venv)")
+class EmptyBlockNoteTests(unittest.TestCase):
+    """An empty block hides itself. In the theme editor only, it must say what to fill in, naming real settings."""
+
+    # block id -> labels the note must mention (each must also be a real setting label in the manifest)
+    NEEDS = {
+        "testimonials": ["Review 1 text"],
+        "shoppable-reels": ["Card 1 shows", "Card 1 video", "Card 1 image"],
+        "shade-picker": ["Option products"],
+        "addons": ["Add-on products"],
+    }
+
+    def test_empty_block_in_the_editor_says_what_to_fill_in(self):
+        for block_id, labels in self.NEEDS.items():
+            m = manifest(block_id)
+            real = {s.get("label") for s in m["settings"]}
+            html = render(m, {}, design_mode=True)
+            self.assertIn("is empty", html, block_id)
+            self.assertIn("editor only", html, block_id)
+            for label in labels:
+                self.assertIn(label, real, f"{block_id}: the note names a setting that does not exist: {label}")
+                self.assertIn(f'"{label}"', html, f"{block_id}: the note must name {label}")
+
+    def test_empty_block_on_the_storefront_still_prints_nothing(self):
+        for block_id in self.NEEDS:
+            self.assertEqual(render(manifest(block_id), {}, design_mode=False), "", block_id)
+
+    def test_a_block_with_content_never_shows_the_note(self):
+        samples = {m["id"]: m["test"]["sample"] for m in generated()}
+        for block_id in self.NEEDS:
+            html = render(manifest(block_id), samples[block_id], design_mode=True)
+            self.assertNotIn("is empty", html, block_id)
+
+    def test_with_the_licence_off_the_editor_shows_only_the_licence_note(self):
+        for block_id in self.NEEDS:
+            html = render(manifest(block_id), {}, metafield="inactive", design_mode=True)
+            self.assertIn("flag seen: inactive", html, block_id)
+            self.assertNotIn("is empty", html, block_id)
+
+    def test_reels_with_a_video_but_the_card_left_on_image_explains_itself(self):
+        # the exact situation seen on 6 Oct 2026: a video was chosen but "Card N shows" was still Image
+        html = render(manifest("shoppable-reels"), {"media_type_1": "image", "video_1": "video-file"}, design_mode=True)
+        self.assertIn("is empty", html)
+        self.assertNotIn("dtj-reels__slide", html)
+
+
 class JavascriptTests(unittest.TestCase):
     def test_the_add_ons_cart_logic_runs_correctly_under_node(self):
         node = shutil.which("node")
@@ -363,6 +585,14 @@ class JavascriptTests(unittest.TestCase):
             self.skipTest("node is not installed")
         done = subprocess.run([node, str(ROOT / "tests" / "addons_logic.js")], capture_output=True, text=True, timeout=60)
         self.assertEqual(done.returncode, 0, done.stdout[-1500:] + done.stderr[-500:])
+        self.assertIn("ALL OK", done.stdout)
+
+    def test_the_reels_tap_and_sound_logic_runs_correctly_under_node(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not installed")
+        done = subprocess.run([node, str(ROOT / "tests" / "reels_logic.js")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stdout[-1500:] + done.stderr[-1500:])
         self.assertIn("ALL OK", done.stdout)
 
 
@@ -391,3 +621,4 @@ class AssetAndBudgetTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

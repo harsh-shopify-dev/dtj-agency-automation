@@ -1,0 +1,56 @@
+{%- liquid
+  assign wn_heading = bs.heading | strip | escape
+  assign wn_hl = bs.highlight_word | strip | escape
+  if wn_hl != blank and wn_heading contains wn_hl
+    assign wn_wrapped = '<em class="dtj-wni__em">' | append: wn_hl | append: '</em>'
+    assign wn_heading = wn_heading | replace: wn_hl, wn_wrapped
+  endif
+  assign wn_sub = bs.subheading | strip
+  assign wn_frame = 'none'
+  if bs.frame_style == 'circle'
+    assign wn_frame = 'circle'
+  endif
+  assign wn_items = 0
+  for i in (1..12)
+    assign nk = 'name_' | append: i
+    assign nv = bs[nk] | strip
+    if nv != blank
+      assign wn_items = wn_items | plus: 1
+    endif
+  endfor
+-%}
+{%- if wn_items > 0 or wn_heading != blank or wn_sub != blank -%}
+  <div class="dtj-b dtj-wni dtj-wni--frame-{{ wn_frame }}" data-align="{{ bs.align | default: 'center' }}" style="{{ dtj_std_style | strip_newlines }} --wn-size: {{ bs.image_size }}px; --wn-h: {{ bs.heading_size }}px;{% if bs.x_color != blank %} --wn-x: {{ bs.x_color }};{% endif %}{% if bs.highlight_color != blank %} --wn-hl: {{ bs.highlight_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if wn_heading != blank or wn_sub != blank -%}
+      <div class="dtj-wni__intro">
+        {%- if wn_heading != blank -%}<h2 class="dtj-wni__head">{{ wn_heading }}</h2>{%- endif -%}
+        {%- if wn_sub != blank -%}<p class="dtj-wni__sub">{{ wn_sub | escape }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if wn_items > 0 -%}
+      <div class="dtj-wni__track">
+        {%- for i in (1..12) -%}
+          {%- liquid
+            assign nk = 'name_' | append: i
+            assign ik = 'image_' | append: i
+            assign wn_name = bs[nk] | strip
+            assign wn_image = bs[ik]
+          -%}
+          {%- if wn_name != blank -%}
+            <div class="dtj-wni__item">
+              <span class="dtj-wni__circle">
+                {%- if wn_image and wn_image != blank -%}
+                  <img class="dtj-wni__img" src="{{ wn_image | image_url: width: 280 }}" alt="" width="92" height="92" loading="lazy">
+                {%- endif -%}
+                {%- if bs.show_x -%}<span class="dtj-wni__x" aria-hidden="true">&times;</span>{%- endif -%}
+              </span>
+              <span class="dtj-wni__name">{{ wn_name | escape }}</span>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Not Inside is empty. Type a name into "Item 1 name" (editor only: shoppers see nothing).</p>
+{%- endif -%}

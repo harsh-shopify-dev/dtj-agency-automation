@@ -1,5 +1,25 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(cd services/store-builder)",
+      "Bash(python -m page_builder.fetch_product:*)",
+      "Bash(python -m page_builder.ship_draft:*)",
+      "Bash(python n8n/store-factory/reply.py:*)",
+      "Bash(python tools/team-setup/check_setup.py:*)",
+      "Bash(python n8n/store-factory/setup_n8n.py --check)",
+      "Bash(python n8n/store-factory/setup_n8n.py --apply)",
+      "Bash(powershell -ExecutionPolicy Bypass -File tools/team-setup/setup-team-pc.ps1 -Auto)",
+      "Bash(curl -s -A dtj-setup/1 https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/health)",
+      "Bash(python n8n/store-factory/setup_n8n.py)",
+      "Bash(python n8n/store-factory/listen.py:*)",
+      "Bash(python .claude/skills/dtj-pdp-design-review/scripts/design_checks.py:*)",
+      "Edit(.work/**)",
+      "Edit(docs/HANDOFF.md)",
+      "mcp__n8n__search_workflow_executions",
+      "mcp__n8n__get_workflow_execution",
+      "mcp__n8n__search_workflows",
+      "mcp__n8n__get_data_table_rows"
+    ],
     "deny": [
       "Bash(git push origin main:*)",
       "Bash(git push origin master:*)",
@@ -12,7 +32,12 @@
       "Bash(*--allow-live*)",
       "Read(./.env)",
       "Read(./.env.*)",
-      "Read(./secrets/**)"
+      "Read(./secrets/**)",
+      "Bash(bw get:*)",
+      "Bash(bw list:*)",
+      "Bash(bw export:*)",
+      "Bash(bw unlock:*)",
+      "Bash(bw login:*)"
     ]
   }
 }

@@ -3,7 +3,7 @@
   {%- assign rt_comma = false -%}
   {%- for i in (1..6) -%}
     {%- assign rt_key = 'phrase_' | append: i -%}
-    {%- assign rt_phrase = block.settings[rt_key] | strip -%}
+    {%- assign rt_phrase = bs[rt_key] | strip -%}
     {%- if rt_phrase != blank -%}
       {%- if rt_comma %},{% endif -%}
       {{- rt_phrase | json -}}
@@ -13,16 +13,16 @@
 ]{%- endcapture -%}
 {%- for i in (1..6) -%}
   {%- assign rt_key = 'phrase_' | append: i -%}
-  {%- assign rt_candidate = block.settings[rt_key] | strip -%}
+  {%- assign rt_candidate = bs[rt_key] | strip -%}
   {%- if rt_first == blank and rt_candidate != blank -%}
     {%- assign rt_first = rt_candidate -%}
   {%- endif -%}
 {%- endfor -%}
 {%- if rt_first != blank -%}
-  <dtj-rotating-text class="dtj-b dtj-rotating-text" data-phrases="{{ rt_json | escape }}" data-type-speed="{{ block.settings.type_speed }}" data-delete-speed="{{ block.settings.delete_speed }}" data-pause="{{ block.settings.pause_time }}" style="{{ dtj_std_style | strip_newlines }} --dtj-rt-weight: {{ block.settings.text_weight }};{% if block.settings.prefix_color != blank %} --dtj-rt-prefix: {{ block.settings.prefix_color }};{% endif %}" {{ block.shopify_attributes }}>
+  <dtj-rotating-text class="dtj-b dtj-rotating-text" data-phrases="{{ rt_json | escape }}" data-type-speed="{{ bs.type_speed }}" data-delete-speed="{{ bs.delete_speed }}" data-pause="{{ bs.pause_time }}" style="{{ dtj_std_style | strip_newlines }} --dtj-rt-weight: {{ bs.text_weight }};{% if bs.prefix_color != blank %} --dtj-rt-prefix: {{ bs.prefix_color }};{% endif %}" {{ block.shopify_attributes }}>
     <p class="dtj-rotating-text__line">
-      {%- if block.settings.prefix_text != blank -%}
-        <span class="dtj-rotating-text__prefix">{{ block.settings.prefix_text | escape }}</span>{{ ' ' }}
+      {%- if bs.prefix_text != blank -%}
+        <span class="dtj-rotating-text__prefix">{{ bs.prefix_text | escape }}</span>{{ ' ' }}
       {%- endif -%}
       <span class="dtj-rotating-text__typed" data-typed>{{ rt_first | escape }}</span><span class="dtj-rotating-text__cursor" aria-hidden="true"></span>
     </p>

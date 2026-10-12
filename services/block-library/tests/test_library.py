@@ -102,6 +102,28 @@ class LibraryRuleTests(unittest.TestCase):
         css.write_text(css.read_text(encoding="utf-8") + "\n.x-img { width: 20px; height: 20px; }\n", encoding="utf-8")
         self.assertEqual([p for p in self.problems() if "no explicit width" in p], [])
 
+    def test_colour_and_currentcolor_fill_in_one_css_rule_is_rejected(self):
+        # the Add-ons tick never showed (6 Oct 2026): `color: Canvas` and `background: currentColor` in one rule = white on white
+        css = self.root / "extensions/dtj-blocks/assets/dtj-hero-points.css"
+        original = css.read_text(encoding="utf-8")
+        css.write_text(original + "\n.x-dot { background: var(--a, currentColor); color: Canvas; }\n", encoding="utf-8")
+        self.assertTrue(any("currentColor background" in p for p in self.problems()))
+        css.write_text(original + "\n.x-dot { background: var(--a, currentColor); }\n.x-dot span { color: Canvas; }\n", encoding="utf-8")
+        self.assertEqual([p for p in self.problems() if "currentColor background" in p], [])
+
+    def test_more_than_75_interactive_settings_are_rejected(self):
+        # Shopify refused a real deploy (6 Oct 2026): 'settings: must have a maximum of 75 for interactive settings'
+        def too_many(schema):
+            schema["settings"] += [{"type": "text", "id": f"extra_{n}", "label": f"Extra {n}"} for n in range(80)]
+        self.edit_schema(too_many)
+        self.assertTrue(any("at most 75" in p for p in self.problems()))
+
+    def test_headers_do_not_count_as_interactive_settings(self):
+        def headers(schema):
+            schema["settings"] = [{"type": "header", "content": "H"}] * 3 + schema["settings"]
+        self.edit_schema(headers)
+        self.assertEqual([p for p in self.problems() if "interactive" in p], [])
+
     def test_blank_range_unit_is_rejected(self):
         # Shopify refused a real deploy: 'settings: with id="stock_threshold" unit can't be blank'
         def blank_unit(schema):
@@ -128,6 +150,22 @@ class LibraryRuleTests(unittest.TestCase):
     def test_one_product_list_is_fine(self):
         self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
         self.assertEqual([p for p in self.problems() if "settings: an app block may have only 1" in p], [])
+
+    def test_reading_a_product_list_by_position_is_rejected(self):
+        # suspected cause of the Option Picker staying empty in the real theme editor (6 Oct 2026)
+        self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
+        self.edit_block("{%- capture dtj_content -%}", "{%- capture dtj_content -%}{%- assign lst = block.settings.pl -%}{{ lst[0].title }}")
+        self.assertTrue(any("by position" in p for p in self.problems()))
+
+    def test_reading_the_setting_itself_by_position_is_rejected(self):
+        self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
+        self.edit_block("{%- capture dtj_content -%}", "{%- capture dtj_content -%}{{ block.settings.pl[1].title }}")
+        self.assertTrue(any("by position" in p for p in self.problems()))
+
+    def test_looping_over_a_product_list_is_fine(self):
+        self.edit_schema(lambda schema: schema["settings"].append({"type": "product_list", "id": "pl", "label": "Products", "limit": 4}))
+        self.edit_block("{%- capture dtj_content -%}", "{%- capture dtj_content -%}{%- for p in block.settings.pl limit: 4 -%}{{ p.title }}{%- endfor -%}")
+        self.assertEqual([p for p in self.problems() if "by position" in p], [])
 
     def test_long_block_name_is_rejected(self):
         self.edit_schema(lambda schema: schema.update({"name": "DTJ Option Picker (products)"}))

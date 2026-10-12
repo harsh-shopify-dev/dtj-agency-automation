@@ -1,0 +1,84 @@
+{%- liquid
+  assign ct_rows = 0
+  for i in (1..10)
+    assign a = 'our_text_' | append: i
+    assign b = 'other_text_' | append: i
+    assign c = 'our_image_' | append: i
+    assign d = 'other_image_' | append: i
+    assign av = bs[a] | strip
+    assign bv = bs[b] | strip
+    assign cv = bs[c]
+    assign dv = bs[d]
+    if av != blank or bv != blank or cv != blank or dv != blank
+      assign ct_rows = ct_rows | plus: 1
+    endif
+  endfor
+  assign ct_heading = bs.heading | strip
+  assign ct_review = bs.review_text | strip
+  assign ct_our = bs.brand_label | strip
+  assign ct_other = bs.other_label | strip
+  assign ct_total = ct_rows | plus: 1
+  assign ct_our_img = bs.our_brand_image
+  assign ct_other_img = bs.other_brand_image
+-%}
+{%- if ct_rows > 0 or ct_heading != blank or ct_review != blank or ct_our != blank or ct_other != blank -%}
+  <div class="dtj-b dtj-ct{% if bs.header_layout != 'top' %} dtj-ct--side{% endif %}" style="{{ dtj_std_style | strip_newlines }} --ct-w: {{ bs.max_width }}px; --ct-hw: {{ bs.header_col_width }}px; --ct-hg: {{ bs.header_gap }}px; --ct-r: {{ bs.border_radius }}px; --ct-pad: {{ bs.card_padding }}px; --ct-row: {{ bs.row_spacing }}px;{% if bs.heading_color != blank %} --ct-heading: {{ bs.heading_color }};{% endif %}{% if bs.muted_color != blank %} --ct-muted: {{ bs.muted_color }};{% endif %}{% if bs.line_color != blank %} --ct-line: {{ bs.line_color }};{% endif %}{% if bs.highlight_our_brand %}{% if bs.our_bg_color != blank %} --ct-our-bg: {{ bs.our_bg_color }};{% endif %}{% else %} --ct-our-bg: transparent;{% endif %}{% if bs.other_bg_color != blank %} --ct-other-bg: {{ bs.other_bg_color }};{% endif %}{% if bs.our_text_color != blank %} --ct-our-text: {{ bs.our_text_color }};{% endif %}{% if bs.other_text_color != blank %} --ct-other-text: {{ bs.other_text_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-ct__inner">
+      {%- if ct_heading != blank or ct_review != blank -%}
+        <div class="dtj-ct__header">
+          {%- if ct_heading != blank -%}<h2 class="dtj-ct__heading">{{ ct_heading | escape }}</h2>{%- endif -%}
+          {%- if ct_review != blank -%}
+            <div class="dtj-ct__reviews">
+              {%- if bs.show_stars -%}<span class="dtj-ct__stars" aria-hidden="true"><span><i>★</i></span><span><i>★</i></span><span><i>★</i></span><span><i>★</i></span><span><i>★</i></span></span>{%- endif -%}
+              <span>{{ ct_review | escape }}</span>
+            </div>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+      <div class="dtj-ct__table">
+        <div class="dtj-ct__grid">
+          <div class="dtj-ct__card-bg dtj-ct__card-bg--our" style="grid-column: 1; grid-row: 1 / span {{ ct_total }};"></div>
+          <div class="dtj-ct__card-bg dtj-ct__card-bg--other" style="grid-column: 2; grid-row: 1 / span {{ ct_total }};"></div>
+          <div class="dtj-ct__cell dtj-ct__cell--header dtj-ct__cell--our" style="grid-column: 1; grid-row: 1;">
+            {%- if ct_our != blank -%}<h3 class="dtj-ct__brand">{{ ct_our | escape }}</h3>{%- endif -%}
+            {%- if ct_our_img and ct_our_img != blank -%}
+              <div class="dtj-ct__pic"><img class="dtj-ct__img" src="{{ ct_our_img | image_url: width: 400 }}" alt="{{ ct_our_img.alt | default: ct_our | escape }}" width="200" height="200" loading="lazy" style="max-height: {{ bs.our_image_height }}px;"></div>
+            {%- endif -%}
+          </div>
+          <div class="dtj-ct__cell dtj-ct__cell--header dtj-ct__cell--other" style="grid-column: 2; grid-row: 1;">
+            {%- if ct_other != blank -%}<h3 class="dtj-ct__brand">{{ ct_other | escape }}</h3>{%- endif -%}
+            {%- if ct_other_img and ct_other_img != blank -%}
+              <div class="dtj-ct__pic"><img class="dtj-ct__img" src="{{ ct_other_img | image_url: width: 400 }}" alt="{{ ct_other_img.alt | default: ct_other | escape }}" width="200" height="200" loading="lazy" style="max-height: {{ bs.other_image_height }}px;"></div>
+            {%- endif -%}
+          </div>
+          {%- assign ct_at = 1 -%}
+          {%- for i in (1..10) -%}
+            {%- liquid
+              assign a = 'our_text_' | append: i
+              assign b = 'other_text_' | append: i
+              assign c = 'our_image_' | append: i
+              assign d = 'other_image_' | append: i
+              assign av = bs[a] | strip
+              assign bv = bs[b] | strip
+              assign cv = bs[c]
+              assign dv = bs[d]
+            -%}
+            {%- if av != blank or bv != blank or cv != blank or dv != blank -%}
+              {%- assign ct_at = ct_at | plus: 1 -%}
+              <div class="dtj-ct__cell dtj-ct__cell--row dtj-ct__cell--our" style="grid-column: 1; grid-row: {{ ct_at }};">
+                {%- if cv and cv != blank -%}<div class="dtj-ct__pic dtj-ct__pic--row"><img class="dtj-ct__img" src="{{ cv | image_url: width: 300 }}" alt="" width="120" height="120" loading="lazy" style="max-height: {{ bs.our_row_image_height }}px;"></div>{%- endif -%}
+                {%- if av != blank -%}<div class="dtj-ct__text">{{ av | escape }}</div>{%- endif -%}
+              </div>
+              <div class="dtj-ct__cell dtj-ct__cell--row dtj-ct__cell--other" style="grid-column: 2; grid-row: {{ ct_at }};">
+                {%- if dv and dv != blank -%}<div class="dtj-ct__pic dtj-ct__pic--row"><img class="dtj-ct__img" src="{{ dv | image_url: width: 300 }}" alt="" width="120" height="120" loading="lazy" style="max-height: {{ bs.other_row_image_height }}px;"></div>{%- endif -%}
+                {%- if bv != blank -%}<div class="dtj-ct__text">{{ bv | escape }}</div>{%- endif -%}
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Comparison Table is empty. Type text into "Row 1: our text" (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -1,0 +1,1032 @@
+{
+  "id": "faq",
+  "title": "DTJ FAQ",
+  "block_file": "extensions/dtj-sections/blocks/dtj-faq.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "script": true,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "heading_accent",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subheading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "all_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "category_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "category_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "category_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "category_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "category_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "category_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "question_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_1",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_2",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_3",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_4",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_5",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_6",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_7",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_7",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_8",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_8",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_9",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_9",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_10",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_10",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_11",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_11",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "question_12",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "answer_12",
+      "type": "richtext",
+      "required": false,
+      "max_length": 300
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 40,
+    "padding_bottom": 40,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading line 1",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "heading_accent",
+      "label": "Heading line 2",
+      "info": "Shown below line 1 in the accent color. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading size",
+      "min": 20,
+      "max": 48,
+      "step": 1,
+      "unit": "px",
+      "default": 30
+    },
+    {
+      "type": "color",
+      "id": "heading_color_1",
+      "label": "Line 1 color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Heading line 2, the toggle and the open question. Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "subheading_color",
+      "label": "Subheading color",
+      "info": "Empty = a softer shade of the text."
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "Heading and pills width",
+      "min": 500,
+      "max": 1200,
+      "step": 20,
+      "unit": "px",
+      "default": 800
+    },
+    {
+      "type": "range",
+      "id": "list_width",
+      "label": "Questions width",
+      "min": 480,
+      "max": 960,
+      "step": 20,
+      "unit": "px",
+      "default": 720
+    },
+    {
+      "type": "header",
+      "content": "Category pills"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "Show category pills",
+      "default": true,
+      "info": "Visitors tap a pill to see one category. A pill appears only when a question uses that category."
+    },
+    {
+      "type": "text",
+      "id": "all_label",
+      "label": "\"All\" pill label"
+    },
+    {
+      "type": "color",
+      "id": "pill_bg",
+      "label": "Pill background",
+      "info": "Empty = transparent."
+    },
+    {
+      "type": "color",
+      "id": "pill_color",
+      "label": "Pill text color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "pill_border",
+      "label": "Pill border color",
+      "info": "Empty = a soft line."
+    },
+    {
+      "type": "color",
+      "id": "pill_active_bg",
+      "label": "Active pill background",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "pill_active_color",
+      "label": "Active pill text color",
+      "info": "Empty = the page background."
+    },
+    {
+      "type": "text",
+      "id": "category_1",
+      "label": "Category 1 label",
+      "info": "Empty = no pill."
+    },
+    {
+      "type": "text",
+      "id": "category_2",
+      "label": "Category 2 label"
+    },
+    {
+      "type": "text",
+      "id": "category_3",
+      "label": "Category 3 label"
+    },
+    {
+      "type": "text",
+      "id": "category_4",
+      "label": "Category 4 label"
+    },
+    {
+      "type": "text",
+      "id": "category_5",
+      "label": "Category 5 label"
+    },
+    {
+      "type": "text",
+      "id": "category_6",
+      "label": "Category 6 label"
+    },
+    {
+      "type": "header",
+      "content": "Accordion"
+    },
+    {
+      "type": "checkbox",
+      "id": "first_open",
+      "label": "Open the first question",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "item_radius",
+      "label": "Corner radius",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "item_bg",
+      "label": "Question background",
+      "info": "Empty = transparent."
+    },
+    {
+      "type": "color",
+      "id": "item_border",
+      "label": "Question border color",
+      "info": "Empty = a soft line."
+    },
+    {
+      "type": "range",
+      "id": "q_size",
+      "label": "Question size",
+      "min": 13,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 15
+    },
+    {
+      "type": "color",
+      "id": "q_color",
+      "label": "Question color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "range",
+      "id": "a_size",
+      "label": "Answer size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "color",
+      "id": "a_color",
+      "label": "Answer color",
+      "info": "Empty = a softer shade of the text."
+    },
+    {
+      "type": "color",
+      "id": "toggle_color",
+      "label": "Open / close button color",
+      "info": "The round + / x button. Empty = the accent color. Use it when the questions sit in dark boxes."
+    },
+    {
+      "type": "header",
+      "content": "Questions"
+    },
+    {
+      "type": "text",
+      "id": "question_1",
+      "label": "Question 1",
+      "info": "A question only shows when it has text."
+    },
+    {
+      "type": "richtext",
+      "id": "answer_1",
+      "label": "Answer 1"
+    },
+    {
+      "type": "select",
+      "id": "cat_1",
+      "label": "Question 1 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ],
+      "info": "Which pill this question sits under."
+    },
+    {
+      "type": "text",
+      "id": "question_2",
+      "label": "Question 2"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_2",
+      "label": "Answer 2"
+    },
+    {
+      "type": "select",
+      "id": "cat_2",
+      "label": "Question 2 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_3",
+      "label": "Question 3"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_3",
+      "label": "Answer 3"
+    },
+    {
+      "type": "select",
+      "id": "cat_3",
+      "label": "Question 3 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_4",
+      "label": "Question 4"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_4",
+      "label": "Answer 4"
+    },
+    {
+      "type": "select",
+      "id": "cat_4",
+      "label": "Question 4 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_5",
+      "label": "Question 5"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_5",
+      "label": "Answer 5"
+    },
+    {
+      "type": "select",
+      "id": "cat_5",
+      "label": "Question 5 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_6",
+      "label": "Question 6"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_6",
+      "label": "Answer 6"
+    },
+    {
+      "type": "select",
+      "id": "cat_6",
+      "label": "Question 6 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_7",
+      "label": "Question 7"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_7",
+      "label": "Answer 7"
+    },
+    {
+      "type": "select",
+      "id": "cat_7",
+      "label": "Question 7 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_8",
+      "label": "Question 8"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_8",
+      "label": "Answer 8"
+    },
+    {
+      "type": "select",
+      "id": "cat_8",
+      "label": "Question 8 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_9",
+      "label": "Question 9"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_9",
+      "label": "Answer 9"
+    },
+    {
+      "type": "select",
+      "id": "cat_9",
+      "label": "Question 9 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_10",
+      "label": "Question 10"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_10",
+      "label": "Answer 10"
+    },
+    {
+      "type": "select",
+      "id": "cat_10",
+      "label": "Question 10 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_11",
+      "label": "Question 11"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_11",
+      "label": "Answer 11"
+    },
+    {
+      "type": "select",
+      "id": "cat_11",
+      "label": "Question 11 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "question_12",
+      "label": "Question 12"
+    },
+    {
+      "type": "richtext",
+      "id": "answer_12",
+      "label": "Answer 12"
+    },
+    {
+      "type": "select",
+      "id": "cat_12",
+      "label": "Question 12 category",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "None"
+        },
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        },
+        {
+          "value": "5",
+          "label": "5"
+        },
+        {
+          "value": "6",
+          "label": "6"
+        }
+      ]
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "heading_accent": "Accent line",
+      "question_1": "Question one?",
+      "answer_1": "<p>Answer one</p>",
+      "question_2": "Question two?",
+      "answer_2": "<p>Answer two</p>",
+      "show_filters": true,
+      "all_label": "All",
+      "category_1": "Shipping",
+      "cat_2": "1"
+    },
+    "expect": [
+      "Heading sample",
+      "Accent line",
+      "Question one?",
+      "Answer one",
+      "Question two?",
+      "dtj-faq__pill",
+      "Shipping",
+      "dtj-faq"
+    ]
+  }
+}

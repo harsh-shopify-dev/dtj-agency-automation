@@ -1,0 +1,41 @@
+{%- liquid
+  assign mq_count = 0
+  for i in (1..10)
+    assign tk = 'text_' | append: i
+    assign tv = bs[tk] | strip
+    if tv != blank
+      assign mq_count = mq_count | plus: 1
+    endif
+  endfor
+-%}
+{%- if mq_count > 0 -%}
+  {%- capture mq_items -%}
+    {%- for i in (1..10) -%}
+      {%- liquid
+        assign tk = 'text_' | append: i
+        assign ik = 'image_' | append: i
+        assign mq_text = bs[tk] | strip
+        assign mq_image = bs[ik]
+      -%}
+      {%- if mq_text != blank -%}
+        <span class="dtj-mq__item">
+          {%- if mq_image and mq_image != blank -%}
+            <img class="dtj-mq__icon" src="{{ mq_image | image_url: width: 96 }}" alt="" width="18" height="18" loading="lazy">
+          {%- elsif bs.show_default_icon -%}
+            <svg class="dtj-mq__tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+          {%- endif -%}
+          <span>{{ mq_text | escape }}</span>
+        </span>
+        {%- if bs.show_dividers -%}<span class="dtj-mq__dot" aria-hidden="true"></span>{%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+  <div class="dtj-b dtj-mq{% if bs.pause_on_hover %} dtj-mq--pause{% endif %}{% if bs.uppercase %} dtj-mq--upper{% endif %}" style="{{ dtj_std_style | strip_newlines }} --mq-speed: {{ bs.speed }}s; --mq-gap: {{ bs.gap }}px; --mq-icon: {{ bs.icon_size }}px; --mq-ls: {{ bs.letter_spacing | times: 0.01 }}em;{% if bs.accent_color != blank %} --mq-accent: {{ bs.accent_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-mq__track">
+      <div class="dtj-mq__set">{{ mq_items }}</div>
+      <div class="dtj-mq__set" aria-hidden="true">{{ mq_items }}</div>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Marquee is empty. Type text into "Item 1 text" (editor only: shoppers see nothing).</p>
+{%- endif -%}

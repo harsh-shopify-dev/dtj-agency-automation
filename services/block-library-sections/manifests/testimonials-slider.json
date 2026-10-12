@@ -1,0 +1,929 @@
+{
+  "id": "testimonials-slider",
+  "title": "DTJ Testimonials Slider",
+  "block_file": "extensions/dtj-sections/blocks/dtj-testimonials-slider.liquid",
+  "placements": [
+    "product",
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subheading",
+      "type": "inline_richtext",
+      "required": false
+    },
+    {
+      "id": "rating_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "rating_value",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "rating_note",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "more_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "less_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "cta_text",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "cta_url",
+      "type": "url",
+      "required": false
+    },
+    {
+      "id": "image_1",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_1",
+      "type": "textarea",
+      "required": true,
+      "max_length": 300
+    },
+    {
+      "id": "author_1",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_2",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_2",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_2",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_3",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_3",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_3",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_4",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_4",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_4",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_5",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_5",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_5",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_6",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_6",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_6",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_7",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_7",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_7",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_7",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "image_8",
+      "type": "image_picker",
+      "required": false
+    },
+    {
+      "id": "heading_8",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "text_8",
+      "type": "textarea",
+      "required": false,
+      "max_length": 300
+    },
+    {
+      "id": "author_8",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "colors",
+    "shape",
+    "align"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "corner_radius": 16,
+    "align": "center"
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "rating_label",
+      "label": "Rating word",
+      "info": "For example the word beside the score. Only type what is true. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "rating_value",
+      "label": "Rating score",
+      "info": "Typed by you, never calculated. Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "rating_stars",
+      "label": "Stars beside the rating",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "rating_note",
+      "label": "Line under the rating",
+      "info": "For example how many reviews it is based on. Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "per_view",
+      "label": "Cards in view on desktop",
+      "default": "3",
+      "options": [
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "per_view_mobile",
+      "label": "Cards in view on phones",
+      "default": "1.2",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "1.2",
+          "label": "1 and a peek of the next"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Arrows on desktop",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Dots",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "image_shape",
+      "label": "Photo shape",
+      "default": "circle",
+      "options": [
+        {
+          "value": "circle",
+          "label": "Circle"
+        },
+        {
+          "value": "rounded",
+          "label": "Rounded"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "image_size",
+      "label": "Photo size",
+      "min": 40,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "words",
+      "label": "Cut long reviews after",
+      "min": 0,
+      "max": 60,
+      "step": 2,
+      "unit": "w",
+      "default": 20,
+      "info": "Number of words. 0 = never cut. A cut review gets a view more link."
+    },
+    {
+      "type": "text",
+      "id": "more_label",
+      "label": "View more link text",
+      "info": "Empty = View more."
+    },
+    {
+      "type": "text",
+      "id": "less_label",
+      "label": "View less link text",
+      "info": "Empty = View less."
+    },
+    {
+      "type": "color",
+      "id": "tile_color",
+      "label": "Star tile color",
+      "info": "The square behind each star. Empty = same as the text."
+    },
+    {
+      "type": "color",
+      "id": "tile_star_color",
+      "label": "Star color on the tiles",
+      "info": "The star drawn on each tile. Pick black or white, whichever reads on the tile color. Empty = the page background color."
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card color",
+      "info": "Empty = the block background, or white."
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Card text color",
+      "info": "Text and star tiles inside the cards. Empty = the block's text color. Set it when the cards are light on a dark background."
+    },
+    {
+      "type": "color",
+      "id": "card_glow",
+      "label": "Glow around the cards",
+      "info": "Soft colored shadow. Empty = a neutral shadow."
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button color",
+      "info": "Empty = same as the text."
+    },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "Button text",
+      "info": "Empty = no button."
+    },
+    {
+      "type": "url",
+      "id": "cta_url",
+      "label": "Button link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Review 1 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_1",
+      "label": "Review 1 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ],
+      "info": "Only show stars the reviewer really gave."
+    },
+    {
+      "type": "text",
+      "id": "heading_1",
+      "label": "Review 1 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_1",
+      "label": "Review 1 text",
+      "info": "A review only shows when it has text."
+    },
+    {
+      "type": "text",
+      "id": "author_1",
+      "label": "Review 1 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Review 2 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_2",
+      "label": "Review 2 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_2",
+      "label": "Review 2 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_2",
+      "label": "Review 2 text"
+    },
+    {
+      "type": "text",
+      "id": "author_2",
+      "label": "Review 2 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Review 3 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_3",
+      "label": "Review 3 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_3",
+      "label": "Review 3 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_3",
+      "label": "Review 3 text"
+    },
+    {
+      "type": "text",
+      "id": "author_3",
+      "label": "Review 3 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Review 4 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_4",
+      "label": "Review 4 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_4",
+      "label": "Review 4 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_4",
+      "label": "Review 4 text"
+    },
+    {
+      "type": "text",
+      "id": "author_4",
+      "label": "Review 4 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Review 5 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_5",
+      "label": "Review 5 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_5",
+      "label": "Review 5 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_5",
+      "label": "Review 5 text"
+    },
+    {
+      "type": "text",
+      "id": "author_5",
+      "label": "Review 5 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Review 6 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_6",
+      "label": "Review 6 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_6",
+      "label": "Review 6 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_6",
+      "label": "Review 6 text"
+    },
+    {
+      "type": "text",
+      "id": "author_6",
+      "label": "Review 6 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_7",
+      "label": "Review 7 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_7",
+      "label": "Review 7 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_7",
+      "label": "Review 7 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_7",
+      "label": "Review 7 text"
+    },
+    {
+      "type": "text",
+      "id": "author_7",
+      "label": "Review 7 author and date"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_8",
+      "label": "Review 8 photo"
+    },
+    {
+      "type": "select",
+      "id": "stars_8",
+      "label": "Review 8 stars",
+      "default": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "No stars"
+        },
+        {
+          "value": "1",
+          "label": "1 star"
+        },
+        {
+          "value": "2",
+          "label": "2 stars"
+        },
+        {
+          "value": "3",
+          "label": "3 stars"
+        },
+        {
+          "value": "4",
+          "label": "4 stars"
+        },
+        {
+          "value": "5",
+          "label": "5 stars"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "heading_8",
+      "label": "Review 8 title"
+    },
+    {
+      "type": "textarea",
+      "id": "text_8",
+      "label": "Review 8 text"
+    },
+    {
+      "type": "text",
+      "id": "author_8",
+      "label": "Review 8 author and date"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": null,
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "rating_label": "Label",
+      "rating_value": "4.5 / 5",
+      "rating_stars": "5",
+      "rating_note": "Note sample",
+      "text_1": "Review one",
+      "author_1": "Author One",
+      "stars_1": "4",
+      "heading_1": "Title one",
+      "text_2": "Review two",
+      "text_3": "Review three",
+      "cta_text": "Button",
+      "cta_url": "/x"
+    },
+    "expect": [
+      "Heading sample",
+      "Label",
+      "4.5 / 5",
+      "Note sample",
+      "Review one",
+      "Author One",
+      "Title one",
+      "Review two",
+      "Review three",
+      "dtj-ts__track",
+      "dtj-ts__cta"
+    ]
+  },
+  "script": true
+}

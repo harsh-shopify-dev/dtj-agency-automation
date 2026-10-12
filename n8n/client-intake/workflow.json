@@ -1,0 +1,757 @@
+{
+  "id": "dvM7g6Opt6m8Nbdp",
+  "name": "Shopify Automation",
+  "versionId": "51475607-69c4-4934-acf3-1725e7e9af44",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "nodes": [
+    {
+      "id": "1aa573df-5e2b-48ea-a7de-b9e46454d50c",
+      "name": "Client Brief Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "authentication": "none",
+        "formTitle": "DTJ store brief: your brand and product facts",
+        "formDescription": "This tells us what your product page may say. Only write facts you can back up, for example from your pack, your product description or your own records. Nothing goes on your store until a DTJ person has checked it with you.",
+        "formFields": {
+          "values": [
+            {
+              "fieldType": "html",
+              "elementName": "section_store",
+              "html": "<h3>1. Your store and brand</h3>"
+            },
+            {
+              "fieldName": "store_domain",
+              "fieldLabel": "Shopify store address",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "yourbrand.myshopify.com"
+            },
+            {
+              "fieldName": "theme_id",
+              "fieldLabel": "Draft theme ID",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "Optional: the number of the draft theme copy, or its editor link (DTJ can add it later)"
+            },
+            {
+              "fieldName": "brand_name",
+              "fieldLabel": "Brand name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldName": "category",
+              "fieldLabel": "Category",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "beauty"
+                  },
+                  {
+                    "option": "supplements"
+                  },
+                  {
+                    "option": "home-care"
+                  },
+                  {
+                    "option": "food"
+                  },
+                  {
+                    "option": "apparel"
+                  },
+                  {
+                    "option": "other"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldName": "price_tier",
+              "fieldLabel": "Price level",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Not sure"
+                  },
+                  {
+                    "option": "value (lower price than most)"
+                  },
+                  {
+                    "option": "mid (around the usual price)"
+                  },
+                  {
+                    "option": "premium (higher price than most)"
+                  }
+                ]
+              },
+              "requiredField": false,
+              "defaultValue": "Not sure"
+            },
+            {
+              "fieldName": "voice",
+              "fieldLabel": "Brand voice",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Not sure"
+                  },
+                  {
+                    "option": "plain (simple and direct)"
+                  },
+                  {
+                    "option": "warm (friendly and caring)"
+                  },
+                  {
+                    "option": "clinical (science-led)"
+                  },
+                  {
+                    "option": "playful (fun and light)"
+                  },
+                  {
+                    "option": "luxe (premium and elegant)"
+                  }
+                ]
+              },
+              "requiredField": false,
+              "defaultValue": "Not sure"
+            },
+            {
+              "fieldName": "shape_language",
+              "fieldLabel": "Shape style",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Not sure"
+                  },
+                  {
+                    "option": "sharp (square corners)"
+                  },
+                  {
+                    "option": "soft (slightly rounded)"
+                  },
+                  {
+                    "option": "round (fully rounded)"
+                  }
+                ]
+              },
+              "requiredField": false,
+              "defaultValue": "Not sure"
+            },
+            {
+              "fieldName": "color_primary",
+              "fieldLabel": "Main brand colour",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "#0B4A6F"
+            },
+            {
+              "fieldName": "color_accent",
+              "fieldLabel": "Accent colour",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "#12803B"
+            },
+            {
+              "fieldName": "color_background",
+              "fieldLabel": "Page background colour",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "#FFFFFF"
+            },
+            {
+              "fieldName": "color_text",
+              "fieldLabel": "Text colour",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "#0F2A3A"
+            },
+            {
+              "fieldName": "heading_style",
+              "fieldLabel": "Heading font style",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Not sure"
+                  },
+                  {
+                    "option": "theme (keep the store's font)"
+                  },
+                  {
+                    "option": "sans (clean and modern)"
+                  },
+                  {
+                    "option": "serif (classic)"
+                  }
+                ]
+              },
+              "requiredField": false,
+              "defaultValue": "Not sure"
+            },
+            {
+              "fieldName": "logo_link",
+              "fieldLabel": "Logo link",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "https://... (a link to your logo file)"
+            },
+            {
+              "fieldType": "html",
+              "elementName": "section_product",
+              "html": "<h3>2. The product</h3>"
+            },
+            {
+              "fieldName": "product_title",
+              "fieldLabel": "Product name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldName": "product_link",
+              "fieldLabel": "Product page link",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "https://yourbrand.myshopify.com/products/..."
+            },
+            {
+              "fieldName": "picture_links",
+              "fieldLabel": "Picture links",
+              "fieldType": "textarea",
+              "placeholder": "One picture link per line. Optional label first, e.g.\npack | https://.../front.jpg\nhttps://.../lifestyle.jpg",
+              "requiredField": false
+            },
+            {
+              "fieldType": "html",
+              "elementName": "section_facts",
+              "html": "<h3>3. What the page may say</h3><p>One item per line. To say where a fact comes from, add it in [square brackets] at the end of the line, e.g. <i>Acid-free [pack]</i>. Lines without brackets use your answer to the next question. Leave anything you are not sure about empty: an empty answer leaves that part off the page. Please do not add reviews, ratings or claims you cannot show.</p>"
+            },
+            {
+              "fieldName": "default_source",
+              "fieldLabel": "Where do these facts come from?",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. product description, pack, lab report"
+            },
+            {
+              "fieldName": "buybox_tagline",
+              "fieldLabel": "Short tagline next to the price",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "Up to 40 characters, e.g. Brush-free. No touch."
+            },
+            {
+              "fieldName": "trust_points",
+              "fieldLabel": "Trust points",
+              "fieldType": "textarea",
+              "placeholder": "Up to 6, one per line, e.g.\nNo scrubbing needed\nSafe for septic tanks [pack]",
+              "requiredField": false
+            },
+            {
+              "fieldName": "benefits",
+              "fieldLabel": "Benefits",
+              "fieldType": "textarea",
+              "placeholder": "Up to 6, one per line: title | one short sentence, e.g.\nAcid-free and safe | No toxic fumes.",
+              "requiredField": false
+            },
+            {
+              "fieldName": "story_heading",
+              "fieldLabel": "Story heading",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "e.g. Foam that actually works."
+            },
+            {
+              "fieldName": "story_body",
+              "fieldLabel": "Story text",
+              "fieldType": "textarea",
+              "placeholder": "A few sentences about the product, up to 400 characters.",
+              "requiredField": false
+            },
+            {
+              "fieldName": "steps",
+              "fieldLabel": "How to use (steps)",
+              "fieldType": "textarea",
+              "placeholder": "2 to 5 steps, one per line, e.g.\nDrop the sachet in\nWait for the foam\nFlush",
+              "requiredField": false
+            },
+            {
+              "fieldName": "key_facts",
+              "fieldLabel": "Key facts",
+              "fieldType": "textarea",
+              "placeholder": "Up to 6, one per line: value | label | note (optional), e.g.\n400 g | Net weight [pack]",
+              "requiredField": false
+            },
+            {
+              "fieldName": "pack_contents",
+              "fieldLabel": "What is in the pack",
+              "fieldType": "textarea",
+              "placeholder": "Up to 6, one per line: item | detail (optional), e.g.\nFoam powder sachets | Lemon Fresh",
+              "requiredField": false
+            },
+            {
+              "fieldName": "free_from",
+              "fieldLabel": "Free from",
+              "fieldType": "textarea",
+              "placeholder": "Up to 12, one per line, e.g.\nParabens\nSulphates [lab report]",
+              "requiredField": false
+            },
+            {
+              "fieldName": "faqs",
+              "fieldLabel": "Questions and answers",
+              "fieldType": "textarea",
+              "placeholder": "Up to 12, one per line: question | answer, e.g.\nDo I need a brush? | No, the foam does the work.",
+              "requiredField": false
+            },
+            {
+              "fieldName": "reviews",
+              "fieldLabel": "Real customer reviews",
+              "fieldType": "textarea",
+              "placeholder": "Real reviews only, up to 8, one per line: stars 1-5 | name, city | what they wrote [where it was posted], e.g.\n5 | Priya, Pune | Works really well [Judge.me]",
+              "requiredField": false
+            },
+            {
+              "fieldName": "rating",
+              "fieldLabel": "Average star rating",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "Only if real, e.g. 4.6 [Judge.me]"
+            },
+            {
+              "fieldName": "guarantees",
+              "fieldLabel": "Guarantees and policies",
+              "fieldType": "textarea",
+              "placeholder": "Up to 4, one per line, e.g.\n7-day easy returns [returns policy]",
+              "requiredField": false
+            },
+            {
+              "fieldName": "comparison_other_label",
+              "fieldLabel": "Comparison: who are you compared with?",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "e.g. Regular cleaners"
+            },
+            {
+              "fieldName": "comparison_rows",
+              "fieldLabel": "Comparison rows",
+              "fieldType": "textarea",
+              "placeholder": "3 to 10 rows, one per line: us | them, e.g.\nNo scrubbing | Scrubbing required",
+              "requiredField": false
+            },
+            {
+              "fieldName": "comparison_approved",
+              "fieldLabel": "Comparison approval",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "The brand has approved these comparison claims"
+                  }
+                ]
+              },
+              "requiredField": false
+            },
+            {
+              "fieldName": "notes",
+              "fieldLabel": "Anything else for the DTJ team",
+              "fieldType": "textarea",
+              "placeholder": "Not shown on the page.",
+              "requiredField": false
+            },
+            {
+              "fieldName": "facts_confirmed",
+              "fieldLabel": "Confirmation",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes, these facts are true and can be shown on the store"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "appendAttribution": false,
+          "ignoreBots": true,
+          "path": "dtj-client-brief",
+          "buttonLabel": "Send brief"
+        }
+      },
+      "webhookId": "e74d4c4f-4d14-4b77-b1d1-493dc39f1249"
+    },
+    {
+      "id": "7b4f1717-4a39-4779-b51b-a6920fcc46d7",
+      "name": "Build Brand and Facts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// n8n Code node \"Build Brand and Facts\" (mode: Run Once for Each Item).\n// Turns one client intake form answer into the page builder's two inputs:\n//   brand  -> services/store-builder/page_builder/schemas/brand-profile.schema.json\n//   facts  -> services/store-builder/page_builder/schemas/product-facts.schema.json\n// Rules: nothing is invented. An empty answer leaves the section out. A line that\n// does not fit the format is reported in `problems`, never silently dropped or cut.\n// `demo` is never set, so client pages can never use placeholders.\n// Source of truth for the node's code: keep this file and the n8n node identical\n// (n8n/client-intake/test_build_brand_and_facts.py checks the export).\n\nconst LABELS = {\n  store_domain: 'Shopify store address',\n  theme_id: 'Draft theme ID',\n  brand_name: 'Brand name',\n  category: 'Category',\n  price_tier: 'Price level',\n  voice: 'Brand voice',\n  shape_language: 'Shape style',\n  color_primary: 'Main brand colour',\n  color_accent: 'Accent colour',\n  color_background: 'Page background colour',\n  color_text: 'Text colour',\n  heading_style: 'Heading font style',\n  logo_link: 'Logo link',\n  product_title: 'Product name',\n  product_link: 'Product page link',\n  picture_links: 'Picture links',\n  default_source: 'Where do these facts come from?',\n  buybox_tagline: 'Short tagline next to the price',\n  trust_points: 'Trust points',\n  benefits: 'Benefits',\n  story_heading: 'Story heading',\n  story_body: 'Story text',\n  steps: 'How to use (steps)',\n  key_facts: 'Key facts',\n  pack_contents: 'What is in the pack',\n  free_from: 'Free from',\n  faqs: 'Questions and answers',\n  reviews: 'Real customer reviews',\n  rating: 'Average star rating',\n  guarantees: 'Guarantees and policies',\n  comparison_other_label: 'Comparison: who are you compared with?',\n  comparison_rows: 'Comparison rows',\n  comparison_approved: 'Comparison approval',\n  facts_confirmed: 'Confirmation',\n  notes: 'Anything else for the DTJ team',\n};\n\nconst CATEGORIES = ['beauty', 'supplements', 'home-care', 'food', 'apparel', 'other'];\nconst PRICE_TIERS = ['value', 'mid', 'premium'];\nconst VOICES = ['plain', 'warm', 'clinical', 'playful', 'luxe'];\nconst SHAPES = ['sharp', 'soft', 'round'];\nconst HEADING_CLASSES = ['theme', 'sans', 'serif'];\n\nfunction buildIntake(answers) {\n  const problems = [];\n  const problem = (msg) => problems.push(msg);\n\n  const raw = (key) => {\n    let v = answers[key];\n    if (v === undefined) v = answers[LABELS[key]];\n    if (v === undefined || v === null) return '';\n    if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean).join('\\n');\n    return String(v).trim();\n  };\n  const lines = (key) => raw(key).split(/\\r?\\n/).map((l) => l.trim()).filter(Boolean);\n\n  // \"text [source]\" -> { body: \"text\", source: \"source\" }; source falls back to the default.\n  const defaultSource = raw('default_source');\n  const sourceOk = (s) => s.length >= 2 && s.length <= 120;\n  const splitSource = (line, field) => {\n    const m = line.match(/^(.*?)\\s*\\[([^\\[\\]]+)\\]\\s*$/);\n    const body = (m ? m[1] : line).trim();\n    const source = (m ? m[2] : defaultSource).trim();\n    if (!sourceOk(source)) {\n      problem(`${LABELS[field]}: \"${line}\" has no usable source. Add it in [brackets] or fill in \"${LABELS.default_source}\".`);\n      return null;\n    }\n    return { body, source };\n  };\n  const textOk = (t, field, line, max = 400) => {\n    if (!t) { problem(`${LABELS[field]}: \"${line}\" is missing text.`); return false; }\n    if (t.length > max) { problem(`${LABELS[field]}: \"${t.slice(0, 40)}...\" is longer than ${max} characters. Please shorten it.`); return false; }\n    return true;\n  };\n  const cap = (list, max, field) => {\n    if (list.length > max) {\n      problem(`${LABELS[field]}: only ${max} are allowed, so the first ${max} were kept. Please choose your best ${max}.`);\n      return list.slice(0, max);\n    }\n    return list;\n  };\n  const parts = (body) => body.split('|').map((p) => p.trim());\n  const chosen = (key, allowed) => {\n    const v = raw(key).toLowerCase();\n    if (!v || v.startsWith('not sure')) return undefined;\n    const hit = allowed.find((a) => v === a || v.startsWith(a + ' '));\n    if (!hit) problem(`${LABELS[key]}: \"${raw(key)}\" is not one of the choices.`);\n    return hit;\n  };\n  const colour = (key) => {\n    let v = raw(key);\n    if (!v) return undefined;\n    if (!v.startsWith('#')) v = '#' + v;\n    if (/^#[0-9A-Fa-f]{3}$/.test(v)) v = '#' + v.slice(1).split('').map((c) => c + c).join('');\n    if (!/^#[0-9A-Fa-f]{6}$/.test(v)) {\n      problem(`${LABELS[key]}: \"${raw(key)}\" is not a colour code like #0B4A6F.`);\n      return undefined;\n    }\n    return v.toUpperCase();\n  };\n\n  // ---- who and where\n  let storeDomain = raw('store_domain').toLowerCase().replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '');\n  if (!/^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$/.test(storeDomain)) {\n    problem(`${LABELS.store_domain}: \"${raw('store_domain')}\" must be the store's .myshopify.com address (Shopify admin > Settings > Domains).`);\n  }\n\n  // The draft theme the page builder writes into: the number, or a theme editor link containing /themes/<number>.\n  // Optional here (DTJ can add it later); the page builder refuses to write without it and checks it is not the live theme.\n  const themeAnswer = raw('theme_id');\n  const themeId = (themeAnswer.match(/\\/themes\\/(\\d+)/) || [])[1] || (/^\\d+$/.test(themeAnswer) ? themeAnswer : '');\n  if (themeAnswer && !themeId) problem(`${LABELS.theme_id}: \"${themeAnswer}\" should be the theme's number (Online Store > Themes > ... > Edit code: the number in the address).`);\n\n  const brand = {};\n  const brandName = raw('brand_name');\n  if (!brandName) problem(`${LABELS.brand_name} is missing.`);\n  else if (brandName.length > 60) problem(`${LABELS.brand_name} is longer than 60 characters.`);\n  else brand.brand_name = brandName;\n\n  const category = chosen('category', CATEGORIES);\n  if (category) brand.category = category;\n  else if (!raw('category')) problem(`${LABELS.category} is missing.`);\n\n  const tier = chosen('price_tier', PRICE_TIERS);\n  if (tier) brand.price_tier = tier;\n  const voice = chosen('voice', VOICES);\n  if (voice) brand.voice = voice;\n  const shape = chosen('shape_language', SHAPES);\n  if (shape) brand.shape_language = shape;\n\n  const colors = {};\n  for (const [field, key] of [['color_primary', 'primary'], ['color_accent', 'accent'], ['color_background', 'background'], ['color_text', 'text']]) {\n    const c = colour(field);\n    if (c) colors[key] = c;\n  }\n  if (Object.keys(colors).length) brand.colors = colors;\n  const headingClass = chosen('heading_style', HEADING_CLASSES);\n  if (headingClass) brand.fonts = { heading_class: headingClass };\n\n  const logoLink = raw('logo_link');\n  if (logoLink && !/^https?:\\/\\/\\S+$/.test(logoLink)) problem(`${LABELS.logo_link}: \"${logoLink}\" is not a web link.`);\n\n  // ---- product\n  const facts = {};\n  const title = raw('product_title');\n  if (!title) problem(`${LABELS.product_title} is missing.`);\n  else if (title.length > 80) problem(`${LABELS.product_title} is longer than 80 characters.`);\n  const product = { title };\n  const productLink = raw('product_link');\n  const handle = (productLink.match(/\\/products\\/([a-z0-9][a-z0-9-]*)/i) || [])[1];\n  if (handle) product.handle = handle.toLowerCase();\n  else if (productLink) problem(`${LABELS.product_link}: \"${productLink}\" is not a product page link (it should contain /products/...).`);\n  facts.product = product;\n\n  const pictures = [];\n  lines('picture_links').forEach((line, i) => {\n    const p = parts(line);\n    const url = p.length > 1 ? p[1] : p[0];\n    const role = (p.length > 1 ? p[0] : `photo_${i + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\n    if (!/^https?:\\/\\/\\S+$/.test(url)) { problem(`${LABELS.picture_links}: \"${line}\" is not a web link.`); return; }\n    if (!/^[a-z0-9_]{2,30}$/.test(role)) { problem(`${LABELS.picture_links}: the label in \"${line}\" should be 2 to 30 letters or numbers.`); return; }\n    pictures.push({ role, url });\n  });\n\n  // ---- facts the page may say\n  const simpleList = (field, max, make) => {\n    const out = [];\n    for (const line of lines(field)) {\n      const s = splitSource(line, field);\n      if (!s) continue;\n      const item = make(s, line);\n      if (item) out.push(item);\n    }\n    return cap(out, max, field);\n  };\n\n  const trust = simpleList('trust_points', 6, (s, line) => textOk(s.body, 'trust_points', line) && { text: s.body, source: s.source });\n  if (trust.length) facts.trust_points = trust;\n\n  const benefits = simpleList('benefits', 6, (s, line) => {\n    const [t, ...rest] = parts(s.body);\n    const more = rest.join(' | ');\n    if (!textOk(t, 'benefits', line) || !(!more || textOk(more, 'benefits', line))) return null;\n    return more ? { title: t, text: more, source: s.source } : { title: t, source: s.source };\n  });\n  if (benefits.length) facts.benefits = benefits;\n\n  const storyHeading = raw('story_heading');\n  const storyBody = raw('story_body');\n  if (storyHeading) {\n    const s = splitSource(storyHeading, 'story_heading');\n    if (s && textOk(s.body, 'story_heading', storyHeading) && (!storyBody || textOk(storyBody, 'story_body', storyBody))) {\n      facts.story = storyBody ? { heading: s.body, body: storyBody, source: s.source } : { heading: s.body, source: s.source };\n    }\n  } else if (storyBody) {\n    problem(`${LABELS.story_body} was given without a ${LABELS.story_heading}, so the story was left out.`);\n  }\n\n  const stepLines = lines('steps');\n  if (stepLines.length) {\n    const items = [];\n    let stepSource = null;\n    for (const line of stepLines) {\n      const s = splitSource(line, 'steps');\n      if (!s || !textOk(s.body, 'steps', line)) continue;\n      items.push(s.body);\n      stepSource = stepSource || s.source;\n    }\n    if (items.length < 2) problem(`${LABELS.steps}: at least 2 steps are needed, so the steps were left out.`);\n    else facts.steps = { items: cap(items, 5, 'steps'), source: stepSource };\n  }\n\n  const keyFacts = simpleList('key_facts', 6, (s, line) => {\n    const [value, label, note] = parts(s.body);\n    if (!value || !label) { problem(`${LABELS.key_facts}: \"${line}\" should look like \"400 g | Net weight\".`); return null; }\n    if (value.length > 40) { problem(`${LABELS.key_facts}: the value \"${value}\" is longer than 40 characters.`); return null; }\n    if (!textOk(label, 'key_facts', line)) return null;\n    if (note && note.length > 200) { problem(`${LABELS.key_facts}: the note \"${note.slice(0, 40)}...\" is longer than 200 characters.`); return null; }\n    const item = { value, label, source: s.source };\n    if (note) item.note = note;\n    return item;\n  });\n  if (keyFacts.length) facts.key_facts = keyFacts;\n\n  const pack = simpleList('pack_contents', 6, (s, line) => {\n    const [name, detail] = parts(s.body);\n    if (!textOk(name, 'pack_contents', line)) return null;\n    return detail ? { name, detail, source: s.source } : { name, source: s.source };\n  });\n  if (pack.length) facts.pack_contents = pack;\n\n  const freeFrom = simpleList('free_from', 12, (s, line) => textOk(s.body, 'free_from', line) && { name: s.body, source: s.source });\n  if (freeFrom.length) facts.free_from = freeFrom;\n\n  const faqs = simpleList('faqs', 12, (s, line) => {\n    const [q, ...rest] = parts(s.body);\n    const a = rest.join(' | ');\n    if (!q || !a) { problem(`${LABELS.faqs}: \"${line}\" should look like \"Question? | Answer\".`); return null; }\n    if (!textOk(q, 'faqs', line) || !textOk(a, 'faqs', line)) return null;\n    return { q, a, source: s.source };\n  });\n  if (faqs.length) facts.faqs = faqs;\n\n  const reviews = simpleList('reviews', 8, (s, line) => {\n    const [stars, who, ...rest] = parts(s.body);\n    const quote = rest.join(' | ');\n    const rating = Number(stars);\n    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !who || !quote) {\n      problem(`${LABELS.reviews}: \"${line}\" should look like \"5 | Name, City | What they wrote [where it was posted]\".`);\n      return null;\n    }\n    if (!textOk(quote, 'reviews', line)) return null;\n    const [name, ...place] = who.split(',').map((x) => x.trim());\n    const item = { quote, name, rating, source: s.source };\n    if (place.length && place.join(', ')) item.location = place.join(', ');\n    return item;\n  });\n  if (reviews.length) facts.reviews = reviews;\n\n  const ratingLine = raw('rating');\n  if (ratingLine) {\n    const s = splitSource(ratingLine, 'rating');\n    if (s) {\n      if (/^[0-5](\\.[0-9])?$/.test(s.body) && Number(s.body) <= 5) facts.rating = { value: s.body, source: s.source };\n      else problem(`${LABELS.rating}: \"${ratingLine}\" should be a number from 0 to 5 with at most one decimal, like 4.6.`);\n    }\n  }\n\n  const guarantees = simpleList('guarantees', 4, (s, line) => textOk(s.body, 'guarantees', line) && { text: s.body, source: s.source });\n  if (guarantees.length) facts.guarantees = guarantees;\n\n  const compLines = lines('comparison_rows');\n  if (compLines.length) {\n    const rows = [];\n    let compSource = null;\n    for (const line of compLines) {\n      const s = splitSource(line, 'comparison_rows');\n      if (!s) continue;\n      const [ours, other] = parts(s.body);\n      if (!ours || !other) { problem(`${LABELS.comparison_rows}: \"${line}\" should look like \"Us | Them\".`); continue; }\n      if (!textOk(ours, 'comparison_rows', line) || !textOk(other, 'comparison_rows', line)) continue;\n      rows.push({ ours, other });\n      compSource = compSource || s.source;\n    }\n    if (rows.length < 3) problem(`${LABELS.comparison_rows}: at least 3 rows are needed, so the comparison was left out.`);\n    else {\n      const comparison = { rows: cap(rows, 10, 'comparison_rows'), claims_approved: raw('comparison_approved') !== '', source: compSource };\n      if (brand.brand_name) comparison.ours_label = brand.brand_name;\n      const otherLabel = raw('comparison_other_label');\n      if (otherLabel) comparison.other_label = otherLabel;\n      facts.comparison = comparison;\n    }\n  }\n\n  const tagline = raw('buybox_tagline');\n  if (tagline) {\n    const s = splitSource(tagline, 'buybox_tagline');\n    if (s && s.body.length > 40) problem(`${LABELS.buybox_tagline}: \"${s.body}\" is longer than 40 characters.`);\n    else if (s && s.body) facts.buybox = { tagline: s.body, source: s.source };\n  }\n\n  if (!raw('facts_confirmed')) problem(`${LABELS.facts_confirmed}: the facts were not confirmed as true.`);\n\n  return {\n    submitted_at: String(answers.submittedAt || ''),\n    status: problems.length ? 'needs-fixes' : 'new',\n    store_domain: storeDomain,\n    theme_id: themeId,\n    brand_name: brandName,\n    product_title: title,\n    problems: problems.join('\\n'),\n    problem_count: problems.length,\n    brand_json: JSON.stringify(brand),\n    facts_json: JSON.stringify(facts),\n    picture_links_json: JSON.stringify(pictures),\n    logo_link: logoLink,\n    notes: raw('notes'),\n    raw_json: JSON.stringify(answers),\n  };\n}\n\nreturn { json: buildIntake($json) };\n"
+      }
+    },
+    {
+      "id": "fb7d2080-d857-46e8-accd-628bf18cd8f7",
+      "name": "Save Brief",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "7FWesTH7eVyLNuOQ",
+          "cachedResultName": "dtj_client_intake"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "submitted_at": "={{ $json.submitted_at }}",
+            "status": "={{ $json.status }}",
+            "store_domain": "={{ $json.store_domain }}",
+            "theme_id": "={{ $json.theme_id }}",
+            "brand_name": "={{ $json.brand_name }}",
+            "product_title": "={{ $json.product_title }}",
+            "problems": "={{ $json.problems }}",
+            "problem_count": "={{ $json.problem_count }}",
+            "brand_json": "={{ $json.brand_json }}",
+            "facts_json": "={{ $json.facts_json }}",
+            "picture_links_json": "={{ $json.picture_links_json }}",
+            "logo_link": "={{ $json.logo_link }}",
+            "notes": "={{ $json.notes }}",
+            "raw_json": "={{ $json.raw_json }}"
+          },
+          "schema": [
+            {
+              "id": "submitted_at",
+              "displayName": "submitted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "store_domain",
+              "displayName": "store_domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "theme_id",
+              "displayName": "theme_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "brand_name",
+              "displayName": "brand_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "product_title",
+              "displayName": "product_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "problems",
+              "displayName": "problems",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "problem_count",
+              "displayName": "problem_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "brand_json",
+              "displayName": "brand_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "facts_json",
+              "displayName": "facts_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "picture_links_json",
+              "displayName": "picture_links_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "logo_link",
+              "displayName": "logo_link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "raw_json",
+              "displayName": "raw_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bcf77c56-a1ca-4e97-87c1-58bc110f7c44",
+      "name": "Thank You Page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1260,
+        0
+      ],
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Thank you, we have your brief",
+        "completionMessage": "={{ $('Build Brand and Facts').item.json.problem_count ? 'We saved your answers, but ' + $('Build Brand and Facts').item.json.problem_count + ' thing(s) need a fix before we can use them:\\n\\n' + $('Build Brand and Facts').item.json.problems + '\\n\\nYou can send the form again with the fixes. A DTJ person will also go through it with you.' : 'We saved your answers. A DTJ person will check them with you before anything is added to your store.' }}"
+      },
+      "webhookId": "95b46f3c-f203-43d8-92a9-5312995a529a"
+    },
+    {
+      "id": "ccc604a9-3641-48e5-944f-6c6c854a74b2",
+      "name": "About This Workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -320
+      ],
+      "parameters": {
+        "width": 1340,
+        "height": 260,
+        "color": 5,
+        "content": "## Client brief intake (shadow: collects only)\nCollects a client's real brand and product facts for the page builder. Nothing here touches a store.\n\n- Every answer is saved in the data table **dtj_client_intake** with status `new` or `needs-fixes`; the raw answer is kept.\n- A brief saved as `new` starts **Store Factory: Page Design** (without waiting), which hands the design to Claude Code; the client still sees the thank-you page straight away.\n- The code node's source and its tests live in git at `n8n/client-intake/`. Change it there first, then here."
+      }
+    },
+    {
+      "id": "42b7a5a5-61e5-4c20-9269-4f6d4ab5f0d3",
+      "name": "Brief Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "brief-is-new",
+              "leftValue": "={{ $('Build Brand and Facts').item.json.status }}",
+              "rightValue": "new",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e2ff5c2c-a7ba-4610-a86d-3c7594666919",
+      "name": "Start Page Design",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1020,
+        -120
+      ],
+      "parameters": {
+        "mode": "each",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8MzskKamTbVhZ3h",
+          "cachedResultName": "Store Factory: Page Design"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Client Brief Form": {
+      "main": [
+        [
+          {
+            "node": "Build Brand and Facts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Brand and Facts": {
+      "main": [
+        [
+          {
+            "node": "Save Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Brief": {
+      "main": [
+        [
+          {
+            "node": "Brief Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief Ready?": {
+      "main": [
+        [
+          {
+            "node": "Start Page Design",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Thank You Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Page Design": {
+      "main": [
+        [
+          {
+            "node": "Thank You Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

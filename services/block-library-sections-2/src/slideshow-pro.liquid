@@ -1,0 +1,163 @@
+{%- liquid
+  assign sl_icons = ',leaf,shield,check,globe,heart,bolt,snowflake,bulb,brain,drop,sparkle,star,truck,clock,award,atom,'
+  assign sl_n = 0
+  assign sl_first = nil
+  for i in (1..3)
+    assign ik = 'image_' | append: i
+    assign ek = 'eyebrow_' | append: i
+    assign hk = 'heading_' | append: i
+    assign rk = 'rating_' | append: i
+    assign dk = 'description_' | append: i
+    assign ck = 'chips_' | append: i
+    assign bk = 'button_label_' | append: i
+    assign nk = 'note_' | append: i
+    assign has = false
+    if bs[ik] != blank or bs[ek] != blank or bs[hk] != blank or bs[rk] != blank or bs[dk] != blank or bs[ck] != blank or bs[bk] != blank or bs[nk] != blank
+      assign has = true
+    endif
+    if has
+      assign sl_n = sl_n | plus: 1
+      if sl_first == nil and bs[ik] != blank
+        assign sl_first = bs[ik]
+      endif
+    endif
+  endfor
+  assign sl_rd = bs.ratio_desktop
+  assign sl_rm = bs.ratio_mobile
+  if sl_rd == 'adapt'
+    assign sl_rd = sl_first.aspect_ratio | default: '3 / 2'
+  endif
+  if sl_rm == 'adapt'
+    assign sl_rm = sl_first.aspect_ratio | default: '4 / 5'
+  endif
+  assign sl_auto = false
+  if bs.autoplay and sl_n > 1
+    assign sl_auto = true
+  endif
+  assign sl_pos = 'left'
+  case bs.content_position
+    when 'right' or 'center'
+      assign sl_pos = bs.content_position
+  endcase
+-%}
+{%- if sl_n > 0 -%}
+  <dtj-slideshow class="dtj-b dtj-sl dtj-sl--pos-{{ sl_pos }} dtj-sl--v-{{ bs.content_align | default: 'center' }} dtj-sl--ov-{{ bs.overlay_style | default: 'side' }} dtj-sl--tr-{{ bs.transition | default: 'slide' }} dtj-sl--arrows-{{ bs.arrows_position | default: 'right-bottom' }} dtj-sl--chips-{{ bs.chip_style | default: 'outline' }} dtj-sl--rating-{{ bs.rating_style | default: 'plain' }} dtj-sl--btn-{{ bs.button_style | default: 'pill' }} dtj-sl--accent-{{ bs.accent_font | default: 'serif' }} dtj-sl--hf-{{ bs.heading_font | default: 'theme' }} dtj-sl--eyebrow-{{ bs.eyebrow_style | default: 'sans' }}{% if sl_auto %} dtj-sl--auto{% endif %}{% if bs.show_progress %} dtj-sl--progress{% endif %}{% if sl_n < 2 %} dtj-sl--single{% endif %}" data-auto="{{ sl_auto }}" style="{{ dtj_std_style | strip_newlines }} --sl-w: {{ bs.container_width }}px; --sl-r: {{ bs.corner_radius }}px; --sl-rd: {{ sl_rd }}; --sl-rm: {{ sl_rm }}; --sl-cw: {{ bs.content_width }}px; --sl-pad: {{ bs.content_padding }}px; --sl-focus: {{ bs.image_focus | default: 'center' }}; --sl-ov-pct: {{ bs.overlay_opacity }}%; --sl-ov-size: {{ bs.overlay_size }}%; --sl-blur: {{ bs.overlay_blur }}px; --sl-h-d: {{ bs.heading_size_desktop }}px; --sl-h-m: {{ bs.heading_size_mobile }}px; --sl-desc: {{ bs.description_size }}px; --sl-dur: {{ bs.autoplay_seconds }}s; --sl-pw: {{ bs.progress_width }}px;{% if bs.overlay_color != blank %} --sl-ov-c: {{ bs.overlay_color }};{% endif %}{% if bs.accent_color != blank %} --sl-accent: {{ bs.accent_color }};{% endif %}{% if bs.star_color != blank %} --sl-star: {{ bs.star_color }};{% endif %}{% if bs.button_bg != blank %} --sl-btn-bg: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --sl-btn-c: {{ bs.button_color }};{% endif %}{% if bs.arrow_bg != blank %} --sl-ab: {{ bs.arrow_bg }};{% endif %}{% if bs.arrow_color != blank %} --sl-ac: {{ bs.arrow_color }};{% endif %}{% if bs.progress_color != blank %} --sl-pc: {{ bs.progress_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-sl__viewport" role="region" aria-roledescription="carousel" aria-label="Slideshow">
+      <div class="dtj-sl__track">
+        {%- assign sl_shown = 0 -%}
+        {%- for i in (1..3) -%}
+          {%- liquid
+            assign ik = 'image_' | append: i
+            assign ek = 'eyebrow_' | append: i
+            assign hk = 'heading_' | append: i
+            assign rk = 'rating_' | append: i
+            assign dk = 'description_' | append: i
+            assign ck = 'chips_' | append: i
+            assign bk = 'button_label_' | append: i
+            assign uk = 'button_url_' | append: i
+            assign nk = 'note_' | append: i
+            assign s_img = bs[ik]
+            assign s_eyebrow = bs[ek] | strip
+            assign s_head = bs[hk] | strip
+            assign s_rating = bs[rk] | strip
+            assign s_desc = bs[dk] | strip
+            assign s_chips = bs[ck] | strip
+            assign s_btn = bs[bk] | strip
+            assign s_url = bs[uk]
+            assign s_note = bs[nk] | strip
+            assign has = false
+            if s_img != blank or s_eyebrow != blank or s_head != blank or s_rating != blank or s_desc != blank or s_chips != blank or s_btn != blank or s_note != blank
+              assign has = true
+            endif
+          -%}
+          {%- if has -%}
+            {%- assign sl_shown = sl_shown | plus: 1 -%}
+            <div class="dtj-sl__slide{% if sl_shown == 1 %} is-active{% endif %}" role="group" aria-roledescription="slide" aria-label="{{ sl_shown }} / {{ sl_n }}"{% if sl_shown > 1 %} aria-hidden="true" inert{% endif %}>
+              <div class="dtj-sl__media">
+                {%- if s_img != blank -%}
+                  <img class="dtj-sl__img" src="{{ s_img | image_url: width: 1600 }}" srcset="{{ s_img | image_url: width: 800 }} 800w, {{ s_img | image_url: width: 1200 }} 1200w, {{ s_img | image_url: width: 1600 }} 1600w, {{ s_img | image_url: width: 2000 }} 2000w" sizes="(min-width: 750px) min(100vw, {{ bs.container_width }}px), 100vw" width="{{ s_img.width | default: 1600 }}" height="{{ s_img.height | default: 1000 }}" alt="{{ s_img.alt | escape }}" loading="{% if sl_shown == 1 %}eager{% else %}lazy{% endif %}">
+                {%- endif -%}
+              </div>
+              <div class="dtj-sl__fade" aria-hidden="true"></div>
+              <div class="dtj-sl__content">
+                <div class="dtj-sl__inner">
+                  {%- if s_eyebrow != blank -%}<p class="dtj-sl__eyebrow">{{ s_eyebrow | escape }}</p>{%- endif -%}
+                  {%- if s_head != blank -%}
+                    {%- assign h_parts = s_head | split: '*' -%}
+                    <h2 class="dtj-sl__heading">
+                      {%- for part in h_parts -%}
+                        {%- if part != blank -%}
+                          {%- assign odd = forloop.index | modulo: 2 -%}
+                          {%- if odd == 1 -%}<span>{{ part | escape }}</span>{%- else -%}<em class="dtj-sl__accent">{{ part | escape }}</em>{%- endif -%}
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </h2>
+                  {%- endif -%}
+                  {%- if s_rating != blank -%}
+                    <p class="dtj-sl__rating"><span class="dtj-sl__stars" aria-hidden="true">{%- for k in (1..5) -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9L12 2.5z"/></svg>{%- endfor -%}</span><span class="dtj-sl__rating-text">{{ s_rating | escape }}</span></p>
+                  {%- endif -%}
+                  {%- if s_desc != blank -%}<p class="dtj-sl__desc">{{ s_desc | escape | newline_to_br }}</p>{%- endif -%}
+                  {%- if s_chips != blank -%}
+                    {%- assign c_lines = s_chips | newline_to_br | strip_newlines | split: '<br />' -%}
+                    {%- assign c_count = 0 -%}
+                    <ul class="dtj-sl__chips">
+                      {%- for c_line in c_lines -%}
+                        {%- assign c_line = c_line | strip -%}
+                        {%- if c_line != blank and c_count < 4 -%}
+                          {%- assign c_count = c_count | plus: 1 -%}
+                          {%- liquid
+                            assign c_text = c_line
+                            assign c_icon = ''
+                            assign c_bits = c_line | split: ':'
+                            if c_bits.size > 1
+                              assign c_key = c_bits[0] | strip | downcase
+                              assign c_probe = ',' | append: c_key | append: ','
+                              if sl_icons contains c_probe
+                                assign c_icon = c_key
+                                assign c_text = c_line | remove_first: c_bits[0] | remove_first: ':' | strip
+                              endif
+                            endif
+                          -%}
+                          <li class="dtj-sl__chip">{%- if c_icon != blank -%}<span class="dtj-sl__icon">{% render 'dtj-sl-icon', name: c_icon %}</span>{%- endif -%}<span>{{ c_text | escape }}</span></li>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </ul>
+                  {%- endif -%}
+                  {%- if s_btn != blank -%}
+                    {%- capture b_arrow -%}{%- if bs.button_arrow -%}<svg class="dtj-sl__btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>{%- endif -%}{%- endcapture -%}
+                    {%- if s_url != blank -%}<a class="dtj-sl__btn" href="{{ s_url }}"><span>{{ s_btn | escape }}</span>{{ b_arrow }}</a>{%- else -%}<span class="dtj-sl__btn"><span>{{ s_btn | escape }}</span>{{ b_arrow }}</span>{%- endif -%}
+                  {%- endif -%}
+                  {%- if s_note != blank -%}
+                    {%- liquid
+                      assign n_text = s_note
+                      assign n_icon = ''
+                      assign n_bits = s_note | split: ':'
+                      if n_bits.size > 1
+                        assign n_key = n_bits[0] | strip | downcase
+                        assign n_probe = ',' | append: n_key | append: ','
+                        if sl_icons contains n_probe
+                          assign n_icon = n_key
+                          assign n_text = s_note | remove_first: n_bits[0] | remove_first: ':' | strip
+                        endif
+                      endif
+                    -%}
+                    <p class="dtj-sl__note">{%- if n_icon != blank -%}<span class="dtj-sl__icon">{% render 'dtj-sl-icon', name: n_icon %}</span>{%- endif -%}<span>{{ n_text | escape }}</span></p>
+                  {%- endif -%}
+                  <div class="dtj-sl__progress" aria-hidden="true"><i class="dtj-sl__fill"></i></div>
+                </div>
+              </div>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      {%- if sl_n > 1 and bs.arrows_position != 'none' -%}
+        <div class="dtj-sl__nav">
+          <button type="button" class="dtj-sl__arrow dtj-sl__arrow--prev" data-dir="-1" aria-label="Previous slide"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button type="button" class="dtj-sl__arrow dtj-sl__arrow--next" data-dir="1" aria-label="Next slide"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      {%- endif -%}
+    </div>
+  </dtj-slideshow>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Slideshow Pro is empty. Add a picture or a heading to "Slide 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

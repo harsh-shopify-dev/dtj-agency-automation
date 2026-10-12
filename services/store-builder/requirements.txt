@@ -1,1 +1,6 @@
 jsonschema>=4.18
+# page builder: render.py draws the real block files (review loop); style.py and render.py read picture sizes
+python-liquid>=2.3
+Pillow>=10
+# page builder: copy_step.py, only for a LIVE Claude API call (the dry run and the tests do not need it); key from ANTHROPIC_API_KEY
+anthropic

@@ -1,0 +1,18 @@
+{
+ "_comment": "Written by services/install-catcher/tools/client_registry.py. handle: the store's own name for the installed app (catcher status); uuid: the theme extension id from the CLI release record.",
+ "store": "qaxv3r-8g.myshopify.com",
+ "apps": {
+  "dtj-blocks": {
+   "handle": "dtj-blocks-test-store",
+   "uuid": "01a120c6-e14a-7384-83fa-a85c39a6a36f"
+  },
+  "dtj-sections": {
+   "handle": "dtj-sections-test-store",
+   "uuid": "01a120c7-1f9b-7ba5-8162-39e69d062937"
+  },
+  "dtj-sections-2": {
+   "handle": "dtj-sections-2-test-store",
+   "uuid": "01a120c7-5e8a-7880-9ddb-cd50586af29e"
+  }
+ }
+}

@@ -1,0 +1,92 @@
+{%- liquid
+  assign ss_h1 = bs.heading | strip
+  assign ss_h2 = bs.heading_accent | strip
+  assign ss_body = bs.body | strip
+  assign ss_image = bs.image
+  assign ss_has_image = false
+  if ss_image and ss_image != blank
+    assign ss_has_image = true
+  endif
+  assign ss_points = 0
+  for i in (1..5)
+    assign bk = 'bullet_' | append: i
+    assign bv = bs[bk] | strip
+    if bv != blank
+      assign ss_points = ss_points | plus: 1
+    endif
+  endfor
+  assign ss_review = bs.review_text | strip
+  assign ss_name = bs.review_name | strip
+  assign ss_avatar = bs.review_image
+  assign ss_has_avatar = false
+  if ss_avatar and ss_avatar != blank
+    assign ss_has_avatar = true
+  endif
+  assign ss_stars = bs.review_stars | plus: 0
+  assign ss_limit = ss_stars | plus: 1
+  assign ss_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3' or 'h4' or 'p'
+      assign ss_tag = bs.heading_tag
+  endcase
+  assign ss_focus = 'center'
+  case bs.image_focus
+    when 'top' or 'bottom' or 'left' or 'right'
+      assign ss_focus = bs.image_focus
+  endcase
+  assign ss_ratio = bs.image_ratio_mobile | default: '4 / 3'
+  assign ss_has_review = false
+  if ss_review != blank or ss_name != blank
+    assign ss_has_review = true
+  endif
+  assign ss_has_text = false
+  if ss_h1 != blank or ss_h2 != blank or ss_body != blank or ss_points > 0 or ss_has_review
+    assign ss_has_text = true
+  endif
+-%}
+{%- if ss_has_text or ss_has_image -%}
+  <div class="dtj-b dtj-ss" style="{{ dtj_std_style | strip_newlines }} --ss-r: {{ bs.corner_radius }}px; --ss-iw: {{ bs.image_width }}%; --ss-minh: {{ bs.image_min_height }}px; --ss-ratio: {{ ss_ratio }}; --ss-focus: {{ ss_focus }}; --ss-h-d: {{ bs.heading_size_desktop }}px; --ss-h-m: {{ bs.heading_size_mobile }}px; --ss-t-d: {{ bs.body_size_desktop }}px; --ss-t-m: {{ bs.body_size_mobile }}px; --ss-pad-d: {{ bs.panel_padding_desktop }}px; --ss-pad-m: {{ bs.panel_padding_mobile }}px;{% if bs.heading_color != blank %} --ss-hc: {{ bs.heading_color }};{% endif %}{% if bs.tick_color != blank %} --ss-tick-c: {{ bs.tick_color }};{% endif %}{% if bs.accent_color != blank %} --ss-accent: {{ bs.accent_color }};{% endif %}{% if bs.body_color != blank %} --ss-bc: {{ bs.body_color }};{% endif %}{% if bs.panel_bg != blank %} --ss-panel: {{ bs.panel_bg }};{% endif %}{% if bs.card_bg != blank %} --ss-card: {{ bs.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-ss__card{% if bs.image_side == 'end' %} dtj-ss__card--flip{% endif %}{% if bs.image_fit == 'adapt' and ss_has_image %} dtj-ss__card--adapt{% endif %}{% unless ss_has_image %} dtj-ss__card--noimg{% endunless %}{% unless ss_has_text %} dtj-ss__card--notext{% endunless %}">
+      {%- if ss_has_image -%}
+        <div class="dtj-ss__media"{% if bs.image_fit == 'adapt' %} style="--ss-img-ratio: {{ ss_image.width | default: 4 }} / {{ ss_image.height | default: 3 }};"{% endif %}><img class="dtj-ss__img" src="{{ ss_image | image_url: width: 1200 }}" alt="{{ ss_image.alt | default: ss_h1 | escape }}" width="{{ ss_image.width | default: 1200 }}" height="{{ ss_image.height | default: 900 }}" loading="lazy"></div>
+      {%- endif -%}
+      {%- if ss_has_text -%}
+        <div class="dtj-ss__panel">
+          {%- if ss_h1 != blank or ss_h2 != blank -%}
+            <{{ ss_tag }} class="dtj-ss__heading">
+              {%- if ss_h1 != blank -%}<span class="dtj-ss__h1">{{ ss_h1 | escape }}</span>{%- endif -%}
+              {%- if ss_h1 != blank and ss_h2 != blank -%}{{ ' ' }}{%- endif -%}
+              {%- if ss_h2 != blank -%}<span class="dtj-ss__h2">{{ ss_h2 | escape }}</span>{%- endif -%}
+            </{{ ss_tag }}>
+          {%- endif -%}
+          {%- if ss_body != blank -%}<p class="dtj-ss__body">{{ ss_body | escape }}</p>{%- endif -%}
+          {%- if ss_points > 0 -%}
+            <ul class="dtj-ss__points">
+              {%- for i in (1..5) -%}
+                {%- assign bk = 'bullet_' | append: i -%}
+                {%- assign bv = bs[bk] | strip -%}
+                {%- if bv != blank -%}<li class="dtj-ss__point"><span class="dtj-ss__tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>{{ bv | escape }}</span></li>{%- endif -%}
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+          {%- if ss_has_review -%}
+            <figure class="dtj-ss__review">
+              {%- if ss_has_avatar -%}<img class="dtj-ss__avatar" src="{{ ss_avatar | image_url: width: 160 }}" alt="" width="40" height="40" loading="lazy">{%- endif -%}
+              <div class="dtj-ss__review-main">
+                {%- if ss_review != blank -%}<blockquote class="dtj-ss__quote">{{ ss_review | escape }}</blockquote>{%- endif -%}
+                {%- if ss_stars > 0 or ss_name != blank -%}
+                  <figcaption class="dtj-ss__meta">
+                    {%- if ss_stars > 0 -%}<span class="dtj-ss__stars" role="img" aria-label="{{ ss_stars }} / 5">{%- for n in (1..5) -%}{%- if n < ss_limit -%}<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 7.1-1.01L12 2z"/></svg>{%- endif -%}{%- endfor -%}</span>{%- endif -%}
+                    {%- if ss_name != blank -%}<span class="dtj-ss__name">{{ ss_name | escape }}</span>{%- endif -%}
+                  </figcaption>
+                {%- endif -%}
+              </div>
+            </figure>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Split Story Card is empty. Add an image or type a heading (editor only: shoppers see nothing).</p>
+{%- endif -%}
