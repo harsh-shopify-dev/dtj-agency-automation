@@ -126,14 +126,18 @@ What you will see, step by step:
 2. Choose the folder `dtj-agency-automation` (in your user folder).
 3. If Claude asks whether to use the **n8n** server for this project, choose **Allow**.
 
-### A10. Let Claude check everything (any time)
+### A10. Let Claude set everything up (any time)
 In Claude (Code tab, this folder) type:
 ```
 set up the store factory
 ```
-Claude checks this laptop, n8n (the tables, the three automations and their passwords) and the app switch on every shop. It only
-reads, and it tells you in plain words anything you must do (for example "run the setup script" or "ask Harsh to publish"). It
-never asks you to type a password into the chat. At the end it says **"Ready. Say 'listen for the telegram call'"**.
+Claude does the rest by itself:
+1. It installs whatever is missing on the laptop.
+2. It opens the setup in your Terminal panel. Type **Y** for the vault, your Bitwarden master password, and your n8n token there,
+   never in the chat.
+3. It builds or repairs n8n and checks the app switch on every shop.
+It stops only for a password, a new account, a Telegram number, or one "yes" from Harsh for shared changes (it lists them all in
+one message). At the end it says **"Ready. Say 'listen for the telegram call'"**.
 
 Your laptop is ready.
 

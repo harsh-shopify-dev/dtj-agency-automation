@@ -5,6 +5,9 @@ DTJ page design: set up this laptop. Run it once (running it again is safe: it o
       powershell -ExecutionPolicy Bypass -File tools\team-setup\setup-team-pc.ps1
   To type a secret again (for example a new password):
       powershell -ExecutionPolicy Bypass -File tools\team-setup\setup-team-pc.ps1 -Replace
+  Without any question (Claude Code runs this for the skill dtj-factory-setup): installs what is missing and asks for no secret;
+  the keys then come from DTJ's Bitwarden vault (python tools\team-setup\vault.py pull, in your own PowerShell):
+      powershell -ExecutionPolicy Bypass -File tools\team-setup\setup-team-pc.ps1 -Auto
 
 What it does:
   1. installs Git, Python, Node.js and Google Chrome if they are missing (asks first)
@@ -15,7 +18,7 @@ What it does:
   5. runs the readiness check (tools\team-setup\check_setup.py)
 It never changes anything on a Shopify store.
 #>
-param([switch]$Replace)
+param([switch]$Replace, [switch]$Auto)
 $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $Repo
@@ -45,7 +48,7 @@ if ($missing.Count -eq 0) {
 } else {
   if (-not (Has 'winget')) { throw "Windows 'App Installer' (winget) is missing. Install 'App Installer' from the Microsoft Store, then run this again." }
   Write-Host ('These will be installed: ' + (($missing | ForEach-Object { $_.Name }) -join ', '))
-  $answer = Read-Host 'Type Y and press Enter to install them'
+  $answer = if ($Auto) { 'Y' } else { Read-Host 'Type Y and press Enter to install them' }
   if ($answer -notmatch '^[Yy]$') { throw 'Stopped: nothing was installed.' }
   foreach ($m in $missing) { winget install --id $m.Id -e --accept-source-agreements --accept-package-agreements }
   Refresh-Path
@@ -54,6 +57,7 @@ if ($missing.Count -eq 0) {
 
 Say '2/5 Shopify CLI and Python packages'
 if (-not (Has 'shopify')) { npm install -g '@shopify/cli@latest'; Refresh-Path }
+if (-not (Has 'bw')) { npm install -g '@bitwarden/cli'; Refresh-Path }  # DTJ's key vault (docs/ACCESS-AND-KEYS.md)
 python -m pip install --quiet --upgrade pip
 python -m pip install --quiet -r services\store-builder\requirements.txt
 Write-Host 'Done.'
@@ -65,6 +69,11 @@ else { Write-Host '.mcp.json is already there.' }
 python -c "import json,pathlib; p=pathlib.Path('.claude/settings.local.json'); d=json.loads(p.read_text(encoding='utf-8')) if p.exists() else {}; s=d.setdefault('enabledMcpjsonServers', []); s.append('n8n') if 'n8n' not in s else None; p.write_text(json.dumps(d, indent=2), encoding='utf-8'); print('Claude Code will use the n8n server in this folder.')"
 
 Say '4/5 Your secret settings'
+if ($Auto) {
+  Write-Host 'No secret is asked in -Auto mode. Get your keys from DTJ''s Bitwarden vault, in your own PowerShell:'
+  Write-Host '    python tools\team-setup\vault.py pull' -ForegroundColor Yellow
+  Write-Host 'Your personal n8n token: run this script without -Auto (Claude can open it for you).'
+} else {
 Write-Host 'Each one is typed into a hidden prompt (nothing shows while you paste), saved only in your Windows user settings.'
 Write-Host 'Never paste these into a chat, an email or a file.'
 function Save-Secret([string]$Name) {
@@ -109,6 +118,7 @@ if ($Replace) {
 }
 if ($shops.Count -eq 0) { Write-Host 'Every shop password is already saved.' }
 foreach ($n in $shops) { Save-Secret $n }
+}
 
 Say '5/5 Readiness check'
 python tools\team-setup\check_setup.py

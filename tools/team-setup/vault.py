@@ -35,7 +35,9 @@ DEVELOPERS = "DTJ Store Factory - Developers"
 PERSONAL = {"N8N_MCP_TOKEN"}
 # the store factory's shared keys: exact names, or one of these patterns (see docs/ACCESS-AND-KEYS.md)
 KNOWN = {"DTJ_CATCHER_VAULT_KEY", "DTJ_CATCHER_CONTROL_KEY", "DTJ_CATCHER_BOT_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID",
-         "DTJ_BLOCKS_CLIENT_SECRET", "DTJ_SECTIONS_CLIENT_SECRET", "DTJ_SECTIONS2_CLIENT_SECRET"}
+         "DTJ_BLOCKS_CLIENT_SECRET", "DTJ_SECTIONS_CLIENT_SECRET", "DTJ_SECTIONS2_CLIENT_SECRET",
+         # n8n/store-factory/setup_n8n.py --apply builds the bot's n8n credentials from these (n8n API key: n8n > Settings > n8n API)
+         "DTJ_TELEGRAM_BOT_TOKEN", "N8N_API_KEY"}
 PATTERNS = (re.compile(r"^DTJ_THEME_ACCESS_[A-Z0-9_]+$"), re.compile(r"^DTJ_SECRET_[A-Z0-9_]+_(BLOCKS|SECTIONS|SECTIONS2)$"))
 NOTE = "Store factory key ({what}). Managed with tools/team-setup/vault.py; see docs/ACCESS-AND-KEYS.md. Never paste it into a chat."
 
@@ -59,6 +61,10 @@ def what(name: str) -> str:
         return "Theme Access password for the shop " + name[len("DTJ_THEME_ACCESS_"):].lower().replace("_", "-")
     if name.startswith("DTJ_SECRET_"):
         return "client secret of a client's app copy"
+    if name == "DTJ_TELEGRAM_BOT_TOKEN":
+        return "the token of @DtjPageDesignerBot, from @BotFather"
+    if name == "N8N_API_KEY":
+        return "n8n API key: lets the setup create the bot's n8n credentials"
     if name.startswith("DTJ_CATCHER_"):
         return "install service key" + (": IRREPLACEABLE, every client reinstalls without it" if name == "DTJ_CATCHER_VAULT_KEY" else "")
     return "developer key"

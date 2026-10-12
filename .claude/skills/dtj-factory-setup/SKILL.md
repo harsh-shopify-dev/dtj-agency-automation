@@ -1,89 +1,117 @@
 ---
 name: dtj-factory-setup
-description: Set up and run DTJ's store factory from this repo, end to end. Setup checks this laptop, builds or repairs the n8n side (the data tables, the three "Store Factory" workflows, their credentials), and checks the install service and the Telegram app switch on every shop. Listen then waits for page requests sent to the Telegram bot and designs each one. Use it whenever someone says "set up the store factory", "set up the automation", "set everything up", "is everything ready", "new laptop", "new n8n", "listen for the telegram call", "listen for page requests", "start listening", "wait for the bot" or "stop listening". Use it even when they don't name the skill.
+description: Set up and run DTJ's store factory from this repo, end to end and by itself. Setup installs what this laptop needs, fills its keys from DTJ's Bitwarden vault, builds or repairs the whole n8n side (data tables, the shops list, the three "Store Factory" workflows, the bot's credentials), and checks the install service and the Telegram app switch on every shop. Listen then waits for page requests sent to the Telegram bot and designs each one. Use it whenever someone says "set up the store factory", "set up the automation", "set everything up", "is everything ready", "new laptop", "new n8n", "listen for the telegram call", "listen for page requests", "start listening", "wait for the bot" or "stop listening". Use it even when they don't name the skill.
 ---
 
-# DTJ store factory: set up, then listen
+# DTJ store factory: set up by itself, then listen
 
-This skill has two jobs:
-- **Setup** gets this laptop, n8n and the app switch ready, and proves it with read-only checks. Run it on every new laptop, after a
-  pull that changed `n8n/store-factory/`, or when something looks broken.
-- **Listen** waits for page requests that people send to the Telegram bot (@DtjPageDesignerBot), and designs each one. Once setup
-  has passed, the person only has to say "listen for the telegram call".
+Harsh, 12 Oct 2026: "as soon as we run the skill, the skill sets up everything on its own; only designing pages and developer jobs
+remain". So:
+- **Setup** does every step itself, in order, without asking. It stops only for the four things no tool can do (see "When to stop").
+  It ends by proving the setup with read-only checks.
+- **Listen** then waits for page requests sent to the Telegram bot (@DtjPageDesignerBot) and designs each one.
 
-How the parts fit together is in `docs/TEAM-GUIDE.md` Part B; read it once if this is a new session.
+What stays with people afterwards: designing pages (Listen, or "handle the Claude Code trigger in n8n") and **developer jobs**:
+app releases, adding a client's app copies, changes to the install service or the workflows. How the parts fit together is in
+`docs/TEAM-GUIDE.md` Part B; the accounts and keys are in `docs/ACCESS-AND-KEYS.md`.
 
 ## Rules that never bend (CLAUDE.md, and why)
-- **Secrets never pass through Claude.** Tokens, passwords and keys are typed into hidden prompts in the person's own PowerShell, or
-  pasted by the person into n8n's credential screens. Never ask for one in chat, and never put one in a file, a command line or a log.
-  The tools here check secrets by name and length only.
-- **Every check in Setup is read-only and needs no permission.** Anything that changes a shared system needs Harsh's yes for that
-  action, every time: publishing an n8n workflow, deploying the install service, switching a shop's apps, adding people to the bot.
-  `--apply` only builds missing pieces and copies code from git; it never deletes or publishes anything.
-- **Pages only ever go to a DRAFT theme** (`page_builder.ship_draft` / `push_page`). Never a live theme.
-- **Telegram numbers (people) and shop rows live only in n8n's tables, not in git.** Read them when a step needs them, and never
-  copy them into files or chat.
+- **Secrets never pass through Claude.** Keys come from DTJ's Bitwarden vault through `tools/team-setup/vault.py`, which a person
+  runs in their own terminal; the tools read them from the Windows user settings and send them only where they belong. Never ask
+  for a secret in chat, and never put one in a file, a command line or a log. `.claude/settings.json` blocks Claude from `bw get`,
+  `bw list`, `bw export`, `bw login` and `bw unlock`.
+- **Read-only checks and building missing pieces need no permission.** The following need Harsh's yes for that action, every time:
+  publishing an n8n workflow, deploying the install service, adding an admin to the bot, switching a shop's apps. `--apply` never
+  deletes and never publishes.
+- **Pages only ever go to a DRAFT theme** (`page_builder.ship_draft` / `push_page`).
+- **Telegram numbers and people's names stay in n8n's tables.** Never in git, files or chat. The tools print counts only.
+
+## When to stop (the only four)
+1. **A password only the person knows** (their Bitwarden master password, their personal n8n token). Open the command in the
+   person's own terminal with the `run_in_terminal` tool (if this session has it), so they only type there. Otherwise give them
+   the one command to paste into their PowerShell.
+2. **Creating an account**, first time only, Harsh: the DTJ Bitwarden organization, a person's n8n login, the Telegram bot. Accounts
+   are made by people, never by Claude.
+3. **A yes for a shared change.** Collect them all and ask ONCE, in one message with a numbered list (for example "publish
+   Store Factory: Telegram Bot; add Riya as admin"). Then do exactly those.
+4. **A Telegram number:** the person messages @DtjPageDesignerBot, which replies with their number.
+
+Everything else: do it, then report.
 
 ## Setup
 
-Run the steps in order. When a step needs the person, stop, tell them exactly what to click or run (numbered, plain words), then
-check again once they say "done".
+### S0. Orient (read, do not ask)
+Read `CLAUDE.md`, the newest entry of `docs/HANDOFF.md`, `docs/TEAM-GUIDE.md` Part B and `docs/DTJ-CONTEXT.md`.
 
-### S0. Orient
-Read `CLAUDE.md`, the newest entry of `docs/HANDOFF.md`, and `docs/TEAM-GUIDE.md` Part B. Then say in one line what this setup is:
-a designer's laptop, Harsh's laptop, or a new n8n server.
+### S1. This laptop's programs (Claude runs it)
+`powershell -ExecutionPolicy Bypass -File tools/team-setup/setup-team-pc.ps1 -Auto` (forward slashes: the Bash tool is Git Bash)
+- Run it with the Bash tool's `run_in_background: true`; it can take several minutes.
+- It installs whatever is missing without questions: Git, Python, Node.js, Chrome, the Shopify CLI, the Bitwarden CLI and the
+  Python packages. It connects Claude Code to n8n. It asks for no secret.
+- Windows may show an administrator prompt for an install: tell the person to click Yes.
 
-### S1. This laptop
-`python tools/team-setup/check_setup.py`
-- Programs or secrets missing: the person runs this in their own PowerShell, in the project folder. It installs what is missing and
-  asks for each secret in a hidden prompt:
-  `powershell -ExecutionPolicy Bypass -File tools\team-setup\setup-team-pc.ps1`
-  Then they close and reopen Claude, so it sees the new settings, and you run the check again.
-- Keys come from DTJ's Bitwarden vault when the person has access: the setup script asks, or they run
-  `python tools/team-setup/vault.py pull` in their own PowerShell. Claude never runs `bw` itself: reading the vault is blocked
-  in `.claude/settings.json`, and only the person can type their master password.
-- `vault.py status` (run by the person) warns if `DTJ_CATCHER_VAULT_KEY` exists only on one laptop: point them to
-  docs/ACCESS-AND-KEYS.md, "The company vault".
-- "draft theme ... is live": the shop's draft was published. Harsh duplicates the live theme and puts the new number in dtj_stores
-  (TEAM-GUIDE Part E step 2).
+### S2. This laptop's keys (the person types one password)
+`python tools/team-setup/check_setup.py`. If keys are missing:
+1. Open the full setup in the person's terminal with `run_in_terminal`, title "DTJ setup":
+   `powershell -ExecutionPolicy Bypass -File tools\team-setup\setup-team-pc.ps1`
+2. Tell them, in this order:
+   - answer **Y** to "access to DTJ's Bitwarden vault?";
+   - sign in with their email and master password, typed only in that terminal;
+   - paste their personal n8n token when asked. They get it in n8n: Settings > MCP Access. No n8n login yet? Harsh invites them.
+3. Watch with `read_terminal` until it prints the readiness check, then run `check_setup.py` again.
+- The tools in this folder read keys straight from the Windows settings, so Setup goes on without a restart. Claude Code's own
+  n8n connection (the `mcp__n8n__*` tools) needs a restart if the n8n token was new: say so at the end.
+- No vault access yet: the same script asks for each key in a hidden prompt instead. Tell Harsh to add the person to the vault
+  (docs/ACCESS-AND-KEYS.md).
 
-### S2. n8n
-1. `python n8n/store-factory/setup_n8n.py`: a read-only checklist covering the data tables, the three workflows (published, live =
-   draft, code equal to git), and the credentials. "Cannot connect" usually means N8N_MCP_TOKEN or `.mcp.json` is missing: back
-   to S1. The n8n address comes from `.mcp.json`, so a new server is one edit there.
-2. Anything missing or different: `python n8n/store-factory/setup_n8n.py --apply`, then check again. On a brand-new server this
-   builds the tables and all three workflows from the exports in git. A structural difference it reports but cannot repair is fixed
-   with the matching `n8n/store-factory/deploy_*.py`.
-3. A missing **credential** can only be made by a person (n8n never shows a secret to these tools, on purpose):
-   - Telegram API **DTJ Page Bot**: the bot token from @BotFather. In n8n: Overview > Credentials > Create credential > Telegram API,
-     paste, save.
-   - Header Auth **DTJ Catcher Bot Key**: Name `X-DTJ-Bot-Key`. On Harsh's laptop, copy the Value without showing it:
-     `[Environment]::GetEnvironmentVariable('DTJ_CATCHER_BOT_KEY','User') | Set-Clipboard`. Paste it into Value (Ctrl+A, then
-     Ctrl+V), save, then clear the clipboard: `Set-Clipboard -Value ' '`.
-   After "done", run `--apply` again (it attaches them), then check.
-4. A workflow that is not published, or whose draft differs from live: ask Harsh "publish <names>?". Only after his yes, run
-   `python n8n/store-factory/setup_n8n.py --publish`.
-5. **Rows:** shops (dtj_stores) and people (dtj_bot_users) are not in git. On a new server Harsh adds the shops (TEAM-GUIDE Part E)
-   and the people: each person messages the bot, which replies with their number, and Harsh adds a row.
+### S3. n8n (Claude runs it; builds whatever is missing)
+1. `python n8n/store-factory/setup_n8n.py`: the read-only checklist (tables and their columns, the shops list, the people (counts
+   only), the three workflows, code equal to git, credentials, published state).
+2. If it isn't READY, run `python n8n/store-factory/setup_n8n.py --apply`, then the check again. `--apply`:
+   - creates missing tables and workflows from the exports in git (on a brand-new server too);
+   - restores the shops list from `n8n/store-factory/stores.seed.json` into an empty dtj_stores table;
+   - copies code that differs;
+   - creates the bot's two credentials from the keys the vault put on this laptop (`DTJ_TELEGRAM_BOT_TOKEN`,
+     `DTJ_CATCHER_BOT_KEY`, `N8N_API_KEY`);
+   - attaches the credentials.
+3. Left over after `--apply`, and their fixes:
+   - **"not published / draft not live":** add "publish <names>" to the one question (stop 3). After the yes:
+     `python n8n/store-factory/setup_n8n.py --publish`.
+   - **"no admin":** the person messages the bot to get their number (stop 4). Then add "add <name> as admin" to the one question.
+     After the yes: `python n8n/store-factory/setup_n8n.py --add-admin <number> --name "<name>"`. The number goes only into that
+     command and n8n, never into chat replies or files.
+   - **A credential it cannot create** (a key missing on this laptop): it names the key. Harsh puts that key in the vault, the
+     person runs `vault.py pull`, and you run `--apply` again.
+   - **A structural difference** (a node or connection) that `--apply` cannot repair: run the matching
+     `n8n/store-factory/deploy_*.py`. That's a developer job, so say so.
+4. The n8n address comes from `.mcp.json`. A move to a new server means changing that one address; then S3 builds the rest.
 
-### S3. The switch and the shops (read-only)
-1. Check the bot end to end without anyone getting a message. Run `mcp__n8n__test_workflow` on "Store Factory: Telegram Bot" with this
-   pin data:
+### S4. The switch and the shops (read-only)
+1. Install service: `curl -s -A dtj-setup/1 https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/health` should answer
+   `{"ok":true,...}`.
+2. The bot end to end, without anyone getting a message: `mcp__n8n__test_workflow` on "Store Factory: Telegram Bot" with this pin
+   data:
    - `Telegram Message`: an update with `text: "/shops"` from an admin of dtj_bot_users, in a private chat. Read the admin's number
      with `get_data_table_rows` and use it only in this call.
-   - `Send`, `Ask to Confirm` and `Answer the Button`: each `[{"json": {"ok": true}}]`, so no Telegram message goes out.
+   - `Send`, `Ask to Confirm` and `Answer the Button`: each `[{"json": {"ok": true}}]`.
 
-   Then read that run's **Licence Report** node (`get_workflow_execution` with `includeData` and `nodeNames: ["Licence Report"]`).
-   It lists every shop the switch reaches, each DTJ app ON / OFF / not installed, and the page shops that are not on the switch yet.
-2. Every shop in dtj_stores should be on the switch. For each one that is not, tell Harsh to follow TEAM-GUIDE Part E step 1:
-   `add_client.py` for a client's own app copies, or `add_client.py --org` for a store in DTJ's own Shopify organization. Then the
-   install service is deployed, with his yes.
-3. A "the bot's key was refused" line means the credential DTJ Catcher Bot Key is wrong: S2 step 3.
+   Then read that run's **Licence Report** node: every shop the switch reaches, with each app ON / OFF / not installed, plus the
+   page shops that are not on the switch yet.
+3. Any page shop not on the switch: adding it is a developer job (TEAM-GUIDE Part E step 1: `add_client.py`, or `add_client.py
+   --org` plus `tools\team-setup\save-dtj-app-secrets.ps1`, then deploying the install service with Harsh's yes). Report it;
+   don't start it.
 
-### S4. Report
-Give a short table: the laptop, the n8n tables, workflows, credentials and publish state, every switch shop with its state, the page
-shops not on the switch, and what the person still has to do. If everything passed, end with:
-**"Ready. Say 'listen for the telegram call' and keep this window open."**
+### S5. The one question, then the report
+If S3 or S4 left yeses to collect, ask them now in one message. Do exactly what was approved, then run the checks of S3 and S4
+again. Finish with a short table:
+- the laptop;
+- the keys (names only);
+- n8n: tables, shops, people (counts), workflows, credentials, published;
+- the switch: each shop and its state;
+- what is left, and who does it (a developer job, or Harsh).
+
+If everything passed, end with: **"Ready. Say 'listen for the telegram call' and keep this window open."** Add "restart Claude
+first" if the n8n token was new in S2.
 
 ## Listen
 
@@ -106,10 +134,10 @@ L3. **When it exits:**
       3. Answer through `n8n/store-factory/reply.py` exactly as the instructions say.
       4. Tell the person in three lines: the shop, the product, and the result (preview link, checks, samples).
       5. Go back to L2, unless the person has said stop.
-    - **Exit 3:** the time limit was reached. Say so, and offer to start again.
     - **Exit 1:** wrong arguments; fix the command.
     - **Exit 2:** n8n could not be reached 3 times in a row. Say what failed and stop. This follows CLAUDE.md's self-healing rule:
       after 3 failures, stop and report.
+    - **Exit 3:** the time limit was reached. Say so, and offer to start again.
 L4. **A request that cannot be finished** still gets an answer through `reply.py`, with the failure status its instructions name.
     That way the person who asked hears back, and the run does not wait 3 days. Say why, then keep listening.
     If you stopped halfway without answering, run `python n8n/store-factory/listen.py --forget <execution id>` so the request is

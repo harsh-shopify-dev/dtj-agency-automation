@@ -53,6 +53,7 @@ by Harsh.
 | `DTJ_THEME_ACCESS_<SHOP>` | each designer's laptop | the shop's Theme Access app | ask for a new one |
 | `N8N_MCP_TOKEN` | each person's laptop | each person, in n8n | make your own |
 | Telegram bot token | the n8n credential "DTJ Page Bot" | the bot's owner, in @BotFather | get a new one, paste it into the credential |
+| `DTJ_TELEGRAM_BOT_TOKEN`, `N8N_API_KEY` (vault items) | Bitwarden only (pulled to developer laptops) | the bot's owner / any n8n admin | make new ones, update the vault items |
 | n8n's own encryption key | the n8n server | the server's owner | every n8n credential has to be made again |
 
 ## When someone leaves (checklist)
@@ -82,11 +83,11 @@ by Harsh.
    3. `python tools\team-setup\vault.py push --all`. This backs up every store-factory key on this laptop, the irreplaceable
       `DTJ_CATCHER_VAULT_KEY` included. Values travel through a pipe straight to Bitwarden and are never shown.
    4. `python tools\team-setup\vault.py status`. Every key should say "in the vault".
-4. Add the keys that live only in n8n or in people's heads by hand, in the Bitwarden app:
-   - the Telegram bot token (item "Telegram bot token - DtjPageDesignerBot");
-   - the n8n owner login;
-   - the Hostinger login;
-   - the Cloudflare login.
+4. Add two keys by hand in the Bitwarden app, in the Developers collection, as Login items named EXACTLY like this (the password
+   field holds the value). The setup then builds the bot's n8n credentials by itself on any n8n server:
+   - `DTJ_TELEGRAM_BOT_TOKEN`: the bot's token, from @BotFather (/mybots, the bot, API Token);
+   - `N8N_API_KEY`: an n8n API key (n8n > Settings > n8n API > Create an API key).
+   Also keep the account logins there as normal items: the n8n owner, Hostinger and Cloudflare.
 5. Invite each person to the organization and give them the right collection.
 
 **A new person's laptop:**
