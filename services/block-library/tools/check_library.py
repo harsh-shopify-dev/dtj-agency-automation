@@ -115,6 +115,12 @@ def check_block(manifest_path: Path, root: Path = ROOT) -> list[str]:
     non_interactive = [s for s in settings if s.get("type") in ("header", "paragraph")]
     if len(non_interactive) > 6:
         problems.append(f"{len(non_interactive)} header/paragraph settings: Shopify allows at most 6 non-interactive settings in an app block")
+    # rule 21: a select option label is limited to 50 characters. Shopify refused the first DTJ Commerce release for exactly this (13 Oct 2026:
+    # "option label is too long (max 50 characters)" on three blocks) although every local check had passed.
+    for s in settings:
+        for option in s.get("options", []) or []:
+            if len(str(option.get("label", ""))) > 50:
+                problems.append(f"setting {s.get('id')}: option label {option['label']!r} is {len(option['label'])} characters: Shopify allows 50")
     ids = [s["id"] for s in settings if "id" in s]
     if len(ids) != len(set(ids)):
         problems.append("duplicate setting ids")

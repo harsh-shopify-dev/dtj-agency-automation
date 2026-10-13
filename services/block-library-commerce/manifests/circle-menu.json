@@ -267,7 +267,7 @@
       "options": [
         {
           "value": "ring",
-          "label": "Story rings: small circles with a colored ring, no names"
+          "label": "Story rings: small ringed circles, no names"
         },
         {
           "value": "circle",

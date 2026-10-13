@@ -187,7 +187,7 @@
         },
         {
           "value": "first",
-          "label": "Add the first available variant of the picked swatch"
+          "label": "Add the first available option of the swatch"
         }
       ],
       "info": "Size and color together cannot be chosen in a small card."

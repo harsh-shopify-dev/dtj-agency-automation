@@ -4,8 +4,7 @@ Why it exists: the shopping sections a multi-product HOME page needs (category t
 Design and limits: `docs/block-library-design.md`; state and history: `docs/HANDOFF.md`. Harsh's list of what a multi-product home page needs and we lacked (13 Oct 2026): shop by category, bundles and
 offers, press / logo strip, best sellers in our look, a "which one is right for me" finder, before and after, an offer banner. "We will create 2 more after this" (Harsh).
 
-**Status (13 Oct 2026): built and tested locally ONLY. The app does not exist in the Dev Dashboard yet, nothing is deployed, no store has it.**
-`shopify.app.toml` is a placeholder (`client_id = ""`) until Harsh creates the app and links it.
+**Status (13 Oct 2026): app created and linked (client id in `shopify.app.toml`); first release `dtj-commerce-2` is ACTIVE (deployed 13 Oct 2026 with Harsh's yes after Shopify refused a first try: select option labels must be 50 characters or less, now rule 21 of `check_library.py`). Installed by Harsh on the test store; licence flag not yet checked; page-builder registry/tags not yet filled (needs the extension uuid from a block reference).**
 
 ## Blocks (7; 94 KB of 100 KB: nearly full, the next sections need a new app)
 | Block (file `dtj-<id>`) | Editor name | Notes |

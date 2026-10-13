@@ -2,8 +2,7 @@
 
 Why it exists: DTJ Commerce is nearly full (94 of 100 KB, 7 blocks), so the product-card sections that follow live in their own app. First block: Harsh's "Shop by Concern" slider (screenshot of 13 Oct 2026).
 
-**Status (13 Oct 2026): built and tested locally ONLY. The app does not exist in the Dev Dashboard yet, nothing is deployed, no store has it.**
-`shopify.app.toml` is a placeholder (`client_id = ""`) until Harsh creates the app and links it. Setup steps are the same as DTJ Commerce's (see `services/block-library-commerce/README.md`, "First-time setup"), with the name `DTJ Shop`; register it in `licence.py` (`DTJ_SHOP_CLIENT_SECRET`), `dtj-licence.ps1`, `registry.json`, `block_tags.json`, the vault, install catcher and bot only AFTER it is linked. (A placeholder id would break `--app all`.)
+**Status (13 Oct 2026): app created and linked (client id in `shopify.app.toml`); first release `dtj-shop-2` is ACTIVE (deployed 13 Oct 2026 with Harsh's yes). Installed by Harsh on the test store; licence flag not yet checked; page-builder registry/tags not yet filled (needs the extension uuid from a block reference).** Setup steps are the same as DTJ Commerce's (see `services/block-library-commerce/README.md`, "First-time setup"), with the name `DTJ Shop`; register it in `licence.py` (`DTJ_SHOP_CLIENT_SECRET`), `dtj-licence.ps1`, `registry.json`, `block_tags.json`, the vault, install catcher and bot only AFTER it is linked. (A placeholder id would break `--app all`.)
 
 ## Blocks (2; 38 KB of 100 KB)
 | Block (file `dtj-<id>`) | Editor name | Notes |
