@@ -16,6 +16,14 @@
     "dtj-heroes": {
       "uuid": "01a1304c-d26f-7ac9-aad2-dd5d41d7a942",
       "folder": "block-library-heroes/extensions/dtj-heroes/blocks"
+    },
+    "dtj-commerce": {
+      "uuid": "01a13473-6d78-796e-b593-adbe59703cb0",
+      "folder": "block-library-commerce/extensions/dtj-commerce/blocks"
+    },
+    "dtj-shop": {
+      "uuid": "01a13473-ad4c-7f4c-9fcb-1352566e358a",
+      "folder": "block-library-shop/extensions/dtj-shop/blocks"
     }
   }
 }

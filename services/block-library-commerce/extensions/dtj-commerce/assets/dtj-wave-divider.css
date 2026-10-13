@@ -48,6 +48,9 @@
   inset: 0 auto 0 0;
   display: block;
   width: calc(100% * var(--wv-periods, 1));
+  /* the theme caps every svg at the width of its parent (Horizon base.css gives every svg max-width 100%); a drifting wave is TWICE as wide on purpose, so without
+     this the layers were screen-wide and left a gap as they slid (seen on the real storefront, 13 Oct 2026) */
+  max-width: none;
   height: 100%;
   fill: var(--wv-color);
   opacity: var(--wv-op, 1);

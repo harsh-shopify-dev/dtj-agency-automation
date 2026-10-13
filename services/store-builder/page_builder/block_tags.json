@@ -48,6 +48,97 @@
       "niches": [],
       "wired": true
     },
+    "dtj-commerce/best-sellers": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-commerce/category-grid": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-commerce/category-slider": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-commerce/circle-menu": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-commerce/marquee-band": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-commerce/press-strip": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-commerce/wave-divider": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-heroes/compare-showcase": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-heroes/feature-cards": {
+      "niches": [
+        "beauty",
+        "wellness",
+        "food"
+      ],
+      "wired": true
+    },
+    "dtj-heroes/feature-tiles": {
+      "niches": [
+        "home",
+        "fashion"
+      ],
+      "wired": true
+    },
+    "dtj-heroes/hero-banner": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-heroes/video-reviews": {
+      "niches": [
+        "beauty",
+        "fashion",
+        "wellness"
+      ],
+      "wired": true
+    },
+    "dtj-sections-2/cta": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections-2/feature-showcase": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections-2/measured-results": {
+      "niches": [
+        "wellness",
+        "beauty",
+        "home"
+      ],
+      "wired": true
+    },
+    "dtj-sections-2/slideshow-pro": {
+      "niches": [
+        "fashion",
+        "beauty",
+        "food"
+      ],
+      "wired": true
+    },
+    "dtj-sections-2/split-story": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections-2/stat-cards": {
+      "niches": [],
+      "wired": true
+    },
     "dtj-sections/comparison-table": {
       "niches": [],
       "wired": true
@@ -92,64 +183,20 @@
       ],
       "wired": true
     },
-    "dtj-sections-2/cta": {
-      "niches": [],
-      "wired": true
-    },
-    "dtj-sections-2/feature-showcase": {
-      "niches": [],
-      "wired": true
-    },
-    "dtj-sections-2/measured-results": {
+    "dtj-shop/before-after": {
       "niches": [
-        "wellness",
         "beauty",
+        "wellness",
         "home"
       ],
-      "wired": true
+      "wired": false
     },
-    "dtj-sections-2/slideshow-pro": {
-      "niches": [
-        "fashion",
-        "beauty",
-        "food"
-      ],
-      "wired": true
-    },
-    "dtj-sections-2/split-story": {
-      "niches": [],
-      "wired": true
-    },
-    "dtj-sections-2/stat-cards": {
-      "niches": [],
-      "wired": true
-    },
-    "dtj-heroes/feature-cards": {
+    "dtj-shop/concern-slider": {
       "niches": [
         "beauty",
-        "wellness",
-        "food"
-      ],
-      "wired": true
-    },
-    "dtj-heroes/feature-tiles": {
-      "niches": [
-        "home",
-        "fashion"
-      ],
-      "wired": true
-    },
-    "dtj-heroes/hero-banner": {
-      "niches": [],
-      "wired": true
-    },
-    "dtj-heroes/video-reviews": {
-      "niches": [
-        "beauty",
-        "fashion",
         "wellness"
       ],
-      "wired": true
+      "wired": false
     }
   }
 }

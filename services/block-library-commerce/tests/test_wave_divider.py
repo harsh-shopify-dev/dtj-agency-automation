@@ -107,6 +107,7 @@ class WaveDividerTests(unittest.TestCase):
         self.assertRegex(css, r"prefers-reduced-motion: reduce\)[^@]*animation: none")
         self.assertRegex(css, r"(?m)^\.dtj-wv \{[^}]*width: 100%")
         self.assertRegex(css, r"overflow: hidden")
+        self.assertRegex(css, r"(?m)^\.dtj-wv__svg \{[^}]*max-width: none")  # the theme caps svg width at 100%: a 2-screen-wide layer must override it
         self.assertIn("pointer-events: none", css)  # never in the way of a click on the section above or below
 
     def test_the_block_has_a_sane_number_of_settings_and_headers(self):

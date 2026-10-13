@@ -1,5 +1,5 @@
 {
- "_comment": "Harsh's own dev store runs DTJ's ORIGINAL apps (not per-client copies): handles and extension uuids as read from the blocks in its theme 188893495469 on 12 Oct 2026, identical to page_builder/registry.json. Original apps released 12 Oct 2026 with the 10 Oct blocks.",
+ "_comment": "Harsh's own dev store runs DTJ's ORIGINAL apps (not per-client copies): handles and extension uuids as read from the blocks in its theme 188893495469 on 12 Oct 2026, identical to page_builder/registry.json. Original apps released 12 Oct 2026 with the 10 Oct blocks. DTJ Commerce and DTJ Shop added 13 Oct 2026 (uuids read from blocks placed by Harsh in the same theme; handles dtj-commerce / dtj-shop).",
  "store": "elevate-with-harsh.myshopify.com",
  "apps": {
   "dtj-blocks": {
@@ -17,6 +17,14 @@
   "dtj-heroes": {
    "handle": "dtj-heroes",
    "uuid": "01a1304c-d26f-7ac9-aad2-dd5d41d7a942"
+  },
+  "dtj-commerce": {
+   "handle": "dtj-commerce",
+   "uuid": "01a13473-6d78-796e-b593-adbe59703cb0"
+  },
+  "dtj-shop": {
+   "handle": "dtj-shop",
+   "uuid": "01a13473-ad4c-7f4c-9fcb-1352566e358a"
   }
  }
 }
