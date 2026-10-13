@@ -146,34 +146,34 @@ class LicenceToolTests(unittest.TestCase):
         self.assertIn("OTHERSECRET", json.dumps(token_call[1]))
         self.assertNotIn("OTHERSECRET", out + err + log)
 
-    def _three_apps(self, d):
+    def _three_apps(self, d):  # name kept: it now builds one temporary entry for EVERY registered app
         apps = {}
-        for i, (name, var) in enumerate((("blocks", licence.SECRET_ENV), ("sections", "DTJ_SECTIONS_CLIENT_SECRET"), ("sections2", "DTJ_SECTIONS2_CLIENT_SECRET"))):
+        for i, (name, (_, var)) in enumerate(dict(licence.APPS).items()):
             toml = Path(d, f"{name}.toml")
             toml.write_text('client_id = "' + f"{i + 1:02x}" * 16 + '"\n', encoding="utf-8")
             apps[name] = (toml, var)
         return apps
 
     def test_all_apps_in_one_go_each_with_its_own_secret(self):
-        env = {licence.SECRET_ENV: "SECRET_ONE", "DTJ_SECTIONS_CLIENT_SECRET": "SECRET_TWO", "DTJ_SECTIONS2_CLIENT_SECRET": "SECRET_THREE"}
+        env = {licence.SECRET_ENV: "SECRET_ONE", "DTJ_SECTIONS_CLIENT_SECRET": "SECRET_TWO", "DTJ_SECTIONS2_CLIENT_SECRET": "SECRET_THREE", "DTJ_HEROES_CLIENT_SECRET": "SECRET_FOUR"}
         with tempfile.TemporaryDirectory() as d, mock.patch.dict(licence.APPS, self._three_apps(d)):
             code, out, err, log, shop = run([*S, "--set", "inactive", "--approved-by", "Harsh", "--app", "all"], FakeShopify(current="active"), env=env)
         self.assertEqual(code, 0)
         tokens = [json.dumps(c[1]) for c in shop.calls if c[0].endswith("/oauth/access_token")]
-        self.assertEqual(len(tokens), 3)
-        for secret in ("SECRET_ONE", "SECRET_TWO", "SECRET_THREE"):
+        self.assertEqual(len(tokens), 4)
+        for secret in ("SECRET_ONE", "SECRET_TWO", "SECRET_THREE", "SECRET_FOUR"):
             self.assertEqual(sum(secret in t for t in tokens), 1)  # every app used ITS secret, once
             self.assertNotIn(secret, out + err + log)
-        self.assertEqual(len(log.strip().splitlines()), 3)  # one log row per app
-        self.assertEqual({json.loads(line)["app_key"] for line in out.strip().splitlines()}, {"blocks", "sections", "sections2"})
+        self.assertEqual(len(log.strip().splitlines()), 4)  # one log row per app
+        self.assertEqual({json.loads(line)["app_key"] for line in out.strip().splitlines()}, {"blocks", "sections", "sections2", "heroes"})
 
     def test_one_missing_secret_does_not_stop_the_other_apps_and_the_run_is_not_a_success(self):
-        env = {licence.SECRET_ENV: "SECRET_ONE", "DTJ_SECTIONS2_CLIENT_SECRET": "SECRET_THREE"}
+        env = {licence.SECRET_ENV: "SECRET_ONE", "DTJ_SECTIONS2_CLIENT_SECRET": "SECRET_THREE", "DTJ_HEROES_CLIENT_SECRET": "SECRET_FOUR"}
         with tempfile.TemporaryDirectory() as d, mock.patch.dict(licence.APPS, self._three_apps(d)):
             code, out, err, _, shop = run([*S, "--status", "--app", "all"], FakeShopify(current="active"), env=env)
         self.assertEqual(code, 2)
         self.assertIn("DTJ_SECTIONS_CLIENT_SECRET", err)
-        self.assertEqual(len(out.strip().splitlines()), 2)
+        self.assertEqual(len(out.strip().splitlines()), 3)
 
     def test_a_missing_secret_is_asked_for_hidden_and_never_saved(self):
         asked = []
@@ -181,7 +181,7 @@ class LicenceToolTests(unittest.TestCase):
             code = licence.main([*S, "--status", "--app", "all", "--log", str(Path(d, "log.jsonl"))], env={},
                                 post=FakeShopify(current="active"), ask=lambda prompt: asked.append(prompt) or "TYPED_SECRET")
         self.assertEqual(code, 0)
-        self.assertEqual(len(asked), 3)
+        self.assertEqual(len(asked), 4)
         self.assertTrue(all("never saved" in a for a in asked))
         self.assertNotIn("TYPED_SECRET", out.getvalue() + err.getvalue())
 

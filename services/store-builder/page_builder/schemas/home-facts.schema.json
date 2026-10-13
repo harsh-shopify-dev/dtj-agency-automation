@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://page-builder/home-facts.schema.json",
+  "title": "Home page facts for the page builder",
+  "description": "Everything the HOME page may say. Same rules as the product facts: every text-bearing fact names its SOURCE, a section whose facts are missing is omitted, a source starting with SAMPLE marks sample content (draft themes only), 'demo': true allows test pictures on our own stores. Customer cards need permission; never invent them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "hero"
+  ],
+  "$defs": {
+    "source": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 120
+    },
+    "role": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{2,30}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    }
+  },
+  "properties": {
+    "demo": {
+      "type": "boolean"
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "file"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/$defs/role"
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^[^/\\\\]+\\.(png|jpg|jpeg|webp)$"
+          },
+          "alt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headline",
+        "cta_label",
+        "image_role",
+        "source"
+      ],
+      "properties": {
+        "headline": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80,
+          "description": "*accent words* between asterisks; | starts a new line"
+        },
+        "sub": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "badge": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "cta_label": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 30
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "image_mobile_role": {
+          "$ref": "#/$defs/role"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "rating": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "source"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^[0-5](\\.[0-9])?$"
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "trust_points": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "source"
+        ],
+        "properties": {
+          "text": {
+            "$ref": "#/$defs/text"
+          },
+          "source": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      }
+    },
+    "value_props": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "badge": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "source"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "icon": {
+                "type": "string"
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "story": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "heading",
+        "body",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "bullets": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "cta_label": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "quote",
+            "name",
+            "source"
+          ],
+          "properties": {
+            "quote": {
+              "$ref": "#/$defs/text"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            },
+            "source": {
+              "$ref": "#/$defs/source"
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "video_reviews": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "image_role",
+              "source"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "line": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "image_role": {
+                "$ref": "#/$defs/role"
+              },
+              "video": {
+                "type": "string",
+                "pattern": "^[^/\\\\]+\\.(mp4|mov|webm|m4v)$"
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "faqs": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "q",
+          "a",
+          "source"
+        ],
+        "properties": {
+          "q": {
+            "$ref": "#/$defs/text"
+          },
+          "a": {
+            "$ref": "#/$defs/text"
+          },
+          "source": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      }
+    }
+  }
+}

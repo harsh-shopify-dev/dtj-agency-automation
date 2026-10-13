@@ -12,12 +12,12 @@ Order and the job of each block:
 | 2 | Hero (`SimpleHero`) | Name the pain, one promise, the button, one real proof | Headline = pain question with an italic accent phrase, ≤ 9 words. No eyebrow line above it (Harsh removed it). Sub-line ≤ 14 words. Under the button: "Free · No pressure · Takes under a minute". Proof card on the right (desktop) / below (phone): `meta-report`, `page-screens` (scrollable before/after phones, auto-pan on touch) or `royal-dosa`. |
 | 3 | Real results (`ResultCards`) | Numbers first | Heading "Real results" + every `ROWS` brand: earlier sales small in red → today's big in green, "in sales". 2 per row on phones, 3 on desktop. Footnote "From each brand's own Shopify sales report." |
 | 4 | Logo wall (`LogoWall`) | "Others like me trust them" | Small centred label "Trusted by 90+ D2C brands". 12 logos on phones, 27 from md. Never linked. |
-| 5 | Symptoms (`Symptoms`) | Recognition: "that's me" | "Does this sound like you?" + 4 short tick cards (2×2 from sm) + button. |
-| 6 | What we fix (`Fixes`) | Problem → result, no process | Dark band (rhythm: light → dark → light). 3 cards: ✕ problem (muted) → fix (bold). |
+| 4a | Meet Tushar Joshi (`FounderBand`) | Trust: a face and the agency's numbers | Photo, title, company line, ₹70Cr+ / 90+ tiles, button. |
+| 5 | Today vs with DTJ (`TodayVsAfter today={page.symptoms} withDtj={fixes} ctaLocation`) | Recognition + result in one glance | Red ✗ "Today" box (the page's 4 symptoms) next to a green ✓ "With DTJ" box (the fix side of its 3 fixes) + button. Replaced the separate Symptoms and What-we-fix blocks on 12 Oct 2026 (~580 px shorter on a phone); `PainSections.tsx` kept unused for comparison. |
 | 7 | Case studies (`CaseStories`) | Full proof | Every case study (picture + brand + numbers). Swipe row on phones, 2×2 grid from md. |
 | 8 | Our work (reels) | Show the ads | "Ads that get people interested in buying." + `PerformanceCreative embedded showHeader={false} keyboardRows`, full bleed. |
 | 9 | Reviews (`SimpleReviews`) | Social proof | Every review as it is, full text, one swipe row with arrow buttons on desktop. No second rating badge. |
-| 10 | Form (`SimpleForm`) | Convert | Dark panel, kept short: "Get your free growth audit", "Takes under a minute. It's free.", 3 numbered step titles (shared `STEPS`, list labelled "How it works"), `LeadForm markRequired compact`. The "clear opportunity" line is in the FAQ right below, so it isn't repeated here. Ids `#audit` / `#audit-form`. |
+| 10 | Form (`SimpleForm location`) | Convert | Dark panel: "Get your free growth audit", "Takes under a minute. It's free.", "What it shows you" (where your ad money is leaking · what to fix first · a clear action plan: the outcome, not our process), the 5-step `StepForm`, and one line under it: "We check every request first. Then our team gets in touch." Ids `#audit` / `#audit-form`. |
 | 11 | FAQ (`Faq headingClass=…`) | Remove last doubts | 4 questions, confirmed answers only, ≤ 16 words each. Ends with a button. |
 
 Since 12 Oct 2026 every variant also has `FounderBand` (after the logo wall) and `StickyCta` (phones).

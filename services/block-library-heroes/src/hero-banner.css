@@ -1,0 +1,582 @@
+/* Hero Banner: one full-width hero. Desktop: the picture fills the banner and the text sits on it over a fade (left, right or centre);
+   phones: the picture sits on top and fades into the text below (or the text sits on the picture's lower edge). */
+.dtj-hb {
+  display: block;
+  width: 100%; /* the theme's wrapper aligns its children to the start, which would shrink a block to its text */
+  background: transparent;
+}
+
+.dtj-hb__wrap {
+  position: relative;
+  max-width: var(--hb-w, 1920px);
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--hb-r, 0);
+  background: var(--dtj-background, CanvasText);
+  color: var(--dtj-text-color, Canvas);
+}
+
+/* a slide: phones first = the picture, then the text */
+.dtj-hb__slide {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.dtj-hb__media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--hb-rm, 4 / 5);
+}
+
+.dtj-hb__pic {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.dtj-hb__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--hb-focus-m, center);
+}
+
+/* phones, stacked: the picture's lower edge melts into the text area */
+.dtj-hb__mfade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--dtj-background, CanvasText) 0%, transparent var(--hb-mfade, 40%));
+  pointer-events: none;
+}
+
+.dtj-hb__fade { display: none; }
+
+.dtj-hb__content {
+  position: relative;
+  z-index: 1;
+  padding: 4px 20px 28px;
+  margin-top: calc(-1 * var(--hb-curve, 0px));
+  border-radius: var(--hb-curve, 0) var(--hb-curve, 0) 0 0;
+  background: var(--dtj-background, CanvasText);
+}
+
+.dtj-hb__inner {
+  display: flex;
+  max-width: var(--hb-cw, 560px);
+  margin-inline: auto;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: start;
+}
+
+.dtj-hb--ma-center .dtj-hb__inner {
+  align-items: center;
+  text-align: center;
+}
+
+/* badge */
+.dtj-hb__badge {
+  margin: 0 0 14px;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, currentcolor 30%, transparent);
+  border-radius: 8px;
+  background: var(--hb-badge-bg, color-mix(in srgb, currentcolor 14%, transparent));
+  color: var(--hb-badge-c, inherit);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.dtj-hb--badge-solid .dtj-hb__badge {
+  border-color: transparent;
+  background: var(--hb-badge-bg, var(--hb-accent, Canvas));
+  color: var(--hb-badge-c, CanvasText);
+}
+
+.dtj-hb--badge-outline .dtj-hb__badge {
+  background: transparent;
+}
+
+.dtj-hb--badge-pill .dtj-hb__badge { border-radius: 999px; }
+
+/* heading */
+.dtj-hb__heading {
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: var(--hb-h-m, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.dtj-hb--hf-sans .dtj-hb__heading { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+.dtj-hb--hf-serif .dtj-hb__heading { font-family: Georgia, "Times New Roman", serif; }
+
+.dtj-hb__accent {
+  color: var(--hb-accent, color-mix(in srgb, currentcolor 78%, transparent));
+  font-style: normal;
+}
+
+.dtj-hb--accent-serif .dtj-hb__accent {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dtj-hb--accent-italic .dtj-hb__accent { font-style: italic; }
+
+.dtj-hb--accent-bold .dtj-hb__accent { font-weight: 800; }
+
+.dtj-hb__sub {
+  max-width: 44ch;
+  margin: 8px 0 0;
+  font-size: var(--hb-s-m, 17px);
+  font-weight: 300;
+  line-height: 1.35;
+  opacity: 0.92;
+}
+
+/* rating */
+.dtj-hb__rating {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.dtj-hb--rating-boxed .dtj-hb__rating {
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, currentcolor 28%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, currentcolor 8%, transparent);
+}
+
+.dtj-hb--rating-pill .dtj-hb__rating {
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, currentcolor 28%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, currentcolor 8%, transparent);
+}
+
+.dtj-hb__stars {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  line-height: 0;
+  white-space: nowrap;
+}
+
+.dtj-hb__stars-base,
+.dtj-hb__stars-fill {
+  display: inline-flex;
+}
+
+.dtj-hb__stars-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+}
+
+.dtj-hb__stars svg {
+  display: block;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  fill: var(--hb-star, var(--hb-accent, currentcolor));
+}
+
+.dtj-hb__stars-base svg { opacity: 0.3; }
+
+.dtj-hb__rating-text strong { font-weight: 700; }
+
+/* points */
+.dtj-hb__points {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 9px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dtj-hb__point {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.dtj-hb__tick {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--hb-pi, var(--hb-accent, currentcolor));
+}
+
+.dtj-hb__tick svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dtj-hb__shield {
+  fill: currentcolor;
+}
+
+.dtj-hb__shield-tick {
+  fill: none;
+  stroke: var(--dtj-background, CanvasText);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.dtj-hb__tick--check svg {
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
+.dtj-hb__tick--dot { align-items: center; justify-content: center; }
+
+.dtj-hb__tick--dot i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hb-pi, var(--hb-accent, currentcolor));
+}
+
+/* button */
+.dtj-hb__btn {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+  padding: 15px 36px;
+  border-radius: 10px;
+  background: var(--hb-btn-bg, var(--hb-accent, Canvas));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  color: var(--hb-btn-c, CanvasText);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dtj-hb--btn-pill .dtj-hb__btn { border-radius: 999px; }
+
+.dtj-hb--btn-square .dtj-hb__btn { border-radius: 3px; }
+
+a.dtj-hb__btn:hover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  transform: translateY(-1px);
+}
+
+.dtj-hb--btn-full .dtj-hb__btn {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dtj-hb__btn-arrow {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.dtj-hb__btn:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 3px;
+}
+
+.dtj-hb__note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-hb__btn { transition: none; }
+}
+
+/* phones, text on the picture: the picture fills the banner and the text rests on its lower edge */
+@media screen and (max-width: 749px) {
+  .dtj-hb--m-overlay .dtj-hb__slide {
+    display: grid;
+    aspect-ratio: var(--hb-rm, 4 / 5);
+    align-items: end;
+  }
+
+  .dtj-hb--m-overlay .dtj-hb__media {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+  }
+
+  .dtj-hb--m-overlay .dtj-hb__mfade { display: none; }
+
+  .dtj-hb--m-overlay .dtj-hb__fade {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: linear-gradient(to top, color-mix(in srgb, var(--hb-ov-c, var(--dtj-background, CanvasText)) var(--hb-ov-pct, 85%), transparent) 0%, transparent 85%);
+    pointer-events: none;
+  }
+
+  .dtj-hb--m-overlay.dtj-hb--ov-none .dtj-hb__fade { display: none; }
+
+  .dtj-hb--m-overlay .dtj-hb__content {
+    margin-top: 0;
+    padding-top: var(--hb-mps, 55vw);
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
+/* desktop: the picture fills the banner and the text sits on it */
+@media screen and (min-width: 750px) {
+  .dtj-hb__slide {
+    display: grid;
+    aspect-ratio: var(--hb-rd, 2 / 1);
+    align-items: var(--hb-ai, center);
+  }
+
+  .dtj-hb--v-top { --hb-ai: start; }
+
+  .dtj-hb--v-bottom { --hb-ai: end; }
+
+  .dtj-hb__media {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+  }
+
+  .dtj-hb__img { object-position: var(--hb-focus, center); }
+
+  .dtj-hb__mfade { display: none; }
+
+  .dtj-hb__fade {
+    position: absolute;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+  }
+
+  /* overlays: colour at the chosen strength, fading out across the chosen share of the banner */
+  .dtj-hb--ov-none .dtj-hb__fade { display: none; }
+
+  .dtj-hb--ov-solid .dtj-hb__fade { background: color-mix(in srgb, var(--hb-ov-c, var(--dtj-background, CanvasText)) var(--hb-ov-pct, 85%), transparent); }
+
+  .dtj-hb--ov-side .dtj-hb__fade {
+    background: linear-gradient(to right, color-mix(in srgb, var(--hb-ov-c, var(--dtj-background, CanvasText)) var(--hb-ov-pct, 85%), transparent) 0%, transparent var(--hb-ov-size, 65%));
+    -webkit-mask-image: linear-gradient(to right, black 0%, transparent var(--hb-ov-size, 65%));
+    mask-image: linear-gradient(to right, black 0%, transparent var(--hb-ov-size, 65%));
+    -webkit-backdrop-filter: blur(var(--hb-blur, 0px));
+    backdrop-filter: blur(var(--hb-blur, 0px));
+  }
+
+  .dtj-hb--ov-side.dtj-hb--pos-right .dtj-hb__fade {
+    background: linear-gradient(to left, color-mix(in srgb, var(--hb-ov-c, var(--dtj-background, CanvasText)) var(--hb-ov-pct, 85%), transparent) 0%, transparent var(--hb-ov-size, 65%));
+    -webkit-mask-image: linear-gradient(to left, black 0%, transparent var(--hb-ov-size, 65%));
+    mask-image: linear-gradient(to left, black 0%, transparent var(--hb-ov-size, 65%));
+  }
+
+  .dtj-hb--ov-side.dtj-hb--pos-center .dtj-hb__fade {
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--hb-ov-c, var(--dtj-background, CanvasText)) var(--hb-ov-pct, 85%), transparent) 0%, transparent var(--hb-ov-size, 65%));
+    -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent var(--hb-ov-size, 65%));
+    mask-image: radial-gradient(ellipse at center, black 0%, transparent var(--hb-ov-size, 65%));
+  }
+
+  .dtj-hb--ov-bottom .dtj-hb__fade {
+    background: linear-gradient(to top, color-mix(in srgb, var(--hb-ov-c, var(--dtj-background, CanvasText)) var(--hb-ov-pct, 85%), transparent) 0%, transparent var(--hb-ov-size, 65%));
+    -webkit-mask-image: linear-gradient(to top, black 0%, transparent var(--hb-ov-size, 65%));
+    mask-image: linear-gradient(to top, black 0%, transparent var(--hb-ov-size, 65%));
+    -webkit-backdrop-filter: blur(var(--hb-blur, 0px));
+    backdrop-filter: blur(var(--hb-blur, 0px));
+  }
+
+  .dtj-hb__content {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    align-self: stretch;
+    align-items: var(--hb-ai, center);
+    margin-top: 0;
+    padding: var(--hb-pad, 56px);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .dtj-hb__inner,
+  .dtj-hb--ma-center .dtj-hb__inner {
+    width: 100%;
+    margin-inline: 0;
+    align-items: flex-start;
+    text-align: start;
+  }
+
+  .dtj-hb--pos-right .dtj-hb__content { justify-content: flex-end; }
+
+  .dtj-hb--pos-center .dtj-hb__content { justify-content: center; }
+
+  .dtj-hb--pos-center .dtj-hb__inner {
+    align-items: center;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .dtj-hb__heading { font-size: var(--hb-h-d, 48px); }
+
+  .dtj-hb__sub {
+    margin-top: 10px;
+    font-size: var(--hb-s-d, 22px);
+  }
+
+  .dtj-hb__badge { margin-bottom: 16px; }
+
+  .dtj-hb__rating { margin-top: 18px; }
+
+  .dtj-hb__points {
+    align-items: inherit;
+    margin-top: 20px;
+  }
+
+  .dtj-hb--btn-full .dtj-hb__btn { width: auto; }
+
+  .dtj-hb__btn { margin-top: 24px; }
+}
+
+/* ---- V2 split: the picture on one side, a text panel on the other (home page "story" hero) ---- */
+.dtj-hb__split {
+  display: flex;
+  flex-direction: column;
+}
+
+.dtj-hb--split .dtj-hb__media {
+  aspect-ratio: var(--hb-rm, 4 / 5);
+}
+
+.dtj-hb--fit-contain .dtj-hb__img { object-fit: contain; }
+
+.dtj-hb__panel {
+  margin: var(--hb-gap, 12px);
+  padding: 28px 22px;
+  border-radius: var(--hb-prad, 16px);
+  background: var(--hb-panel-bg, color-mix(in srgb, currentcolor 7%, transparent));
+}
+
+.dtj-hb--split .dtj-hb__inner { margin-inline: 0; }
+
+.dtj-hb--split .dtj-hb__sub {
+  max-width: none;
+  margin-top: 16px;
+  font-size: var(--hb-body, 16px);
+  font-weight: 400;
+  line-height: 1.7;
+  opacity: 0.9;
+}
+
+.dtj-hb--split .dtj-hb__points { margin-top: 20px; }
+
+.dtj-hb__quote {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 24px 0 0;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, currentcolor 14%, transparent);
+  border-radius: 8px;
+  background: var(--hb-card-bg, var(--dtj-background, CanvasText));
+  text-align: start;
+}
+
+.dtj-hb__quote-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.dtj-hb__quote-by {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dtj-hb__stars--sm svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media screen and (min-width: 750px) {
+  .dtj-hb__split {
+    display: grid;
+    aspect-ratio: var(--hb-rd, 2 / 1);
+    grid-template-columns: var(--hb-cols, 1fr 1fr);
+  }
+
+  .dtj-hb--split .dtj-hb__media {
+    position: relative;
+    inset: auto;
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+
+  .dtj-hb--side-right .dtj-hb__media { order: 2; }
+
+  .dtj-hb__panel {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    padding: var(--hb-pad, 56px);
+  }
+
+  .dtj-hb--split .dtj-hb__inner { width: 100%; }
+
+  .dtj-hb--split .dtj-hb__sub { margin-top: 20px; }
+}
+
+/* ---- V3 cover: the whole picture with the text resting low on it (a paragraph, not a one-line subheading) ---- */
+.dtj-hb--cover .dtj-hb__sub {
+  max-width: 62ch;
+  margin-top: 16px;
+  font-size: var(--hb-body, 16px);
+  font-weight: 400;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.dtj-hb--cover .dtj-hb__points { margin-top: 16px; }
+
+.dtj-hb__rating-text { text-align: start; }

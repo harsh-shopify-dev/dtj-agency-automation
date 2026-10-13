@@ -1,0 +1,266 @@
+/* Category Slider: swipeable category tiles, slanted, softly rounded or plain, with optional titles, a background picture, a rounded card and faded ends.
+   The track is a native scroll-snap row (touch, trackpad and keys scroll it with no script); the arrows only call scrollBy. Tile width comes from "tiles in
+   view" (a half tile at the edge shows there is more). A slant is a skew on the tile with the picture skewed back, so the picture itself stays straight. */
+.dtj-cr {
+  position: relative;
+  display: block;
+  width: 100%;
+  isolation: isolate;
+  background: var(--dtj-background, transparent);
+  color: var(--dtj-text-color, inherit);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 560px;
+}
+
+.dtj-cr--panel { background: transparent; }
+
+.dtj-cr__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--dtj-background, transparent);
+}
+
+.dtj-cr__bg-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dtj-cr__bg::after {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / var(--cr-ov, 0));
+  content: "";
+}
+
+.dtj-cr__panel {
+  position: relative;
+  max-width: var(--cr-w, 1400px);
+  margin-inline: auto;
+}
+
+.dtj-cr--panel .dtj-cr__panel {
+  max-width: none;
+  padding-block: 28px 20px;
+  overflow: hidden;
+  border-radius: var(--cr-pr, 24px);
+  background: var(--dtj-background, Canvas);
+}
+
+.dtj-cr__intro {
+  max-width: var(--cr-w, 1400px);
+  margin: 0 auto 18px;
+  padding-inline: 4px;
+}
+
+.dtj-cr--panel .dtj-cr__intro { padding-inline: 16px; }
+
+.dtj-cr--head-center .dtj-cr__intro { text-align: center; }
+
+.dtj-cr--head-left .dtj-cr__intro { text-align: start; }
+
+.dtj-cr__heading {
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: var(--cr-h-m, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.dtj-cr--hf-serif .dtj-cr__heading {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}
+
+.dtj-cr--hf-sans .dtj-cr__heading { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+.dtj-cr__sub {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.dtj-cr--sub-center .dtj-cr__sub { text-align: center; }
+
+.dtj-cr--sub-left .dtj-cr__sub { text-align: start; }
+
+.dtj-cr__stage { position: relative; }
+
+.dtj-cr__track {
+  display: flex;
+  gap: var(--cr-gap, 12px);
+  margin: 0;
+  padding: 0 var(--cr-pad, 0%);
+  overflow-x: auto;
+  list-style: none;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: var(--cr-pad, 0%);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.dtj-cr__track::-webkit-scrollbar { display: none; }
+
+.dtj-cr__track:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: -2px;
+}
+
+.dtj-cr__tile {
+  position: relative;
+  flex: 0 0 calc((100% - (var(--cr-nm, 1.6) - 1) * var(--cr-gap, 12px)) / var(--cr-nm, 1.6));
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.dtj-cr__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dtj-cr__shape {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: var(--cr-ar, 1.05);
+  background: color-mix(in srgb, currentcolor 12%, transparent);
+  transform: skewX(calc(var(--cr-sk, 10deg) * -1));
+}
+
+.dtj-cr--shape-leaf .dtj-cr__shape { border-radius: var(--cr-r, 40px) calc(var(--cr-r, 40px) * 0.35) var(--cr-r, 40px) calc(var(--cr-r, 40px) * 0.35); }
+
+.dtj-cr--shape-round .dtj-cr__shape { border-radius: var(--cr-r, 40px); }
+
+.dtj-cr__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: skewX(var(--cr-sk, 10deg)) scale(var(--cr-sc, 1.2));
+}
+
+.dtj-cr__title {
+  display: block;
+  margin-top: 10px;
+  font-family: inherit;
+  font-size: var(--cr-ts, 18px);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.dtj-cr--tf-serif .dtj-cr__title { font-family: Georgia, "Times New Roman", serif; }
+
+.dtj-cr--cap-below-left .dtj-cr__title { text-align: start; }
+
+.dtj-cr--cap-below-center .dtj-cr__title { text-align: center; }
+
+.dtj-cr--cap-overlay .dtj-cr__title {
+  position: absolute;
+  inset: auto 0 16px;
+  margin: 0;
+  color: white;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
+}
+
+.dtj-cr__link:focus-visible { outline: 2px solid currentcolor; outline-offset: 3px; }
+
+/* faded ends */
+.dtj-cr--fade .dtj-cr__track {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 7%, black 93%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 7%, black 93%, transparent 100%);
+}
+
+/* arrows: over the tiles, at the middle of the picture row */
+.dtj-cr__arrow {
+  position: absolute;
+  top: 40%;
+  z-index: 3;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cr-ab, Canvas);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+  color: var(--cr-ac, CanvasText);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.dtj-cr--arrows-circle .dtj-cr__arrow { border-radius: 50%; }
+
+.dtj-cr__prev { left: 8px; }
+
+.dtj-cr__next { right: 8px; }
+
+.dtj-cr__arrow svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.dtj-cr__arrow:disabled {
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dtj-cr__arrow:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 3px;
+}
+
+.dtj-cr--single .dtj-cr__arrow { display: none; }
+
+@supports (width: 1cqw) {
+  .dtj-cr__stage { container-type: inline-size; }
+
+  .dtj-cr__arrow { top: calc(100cqw / var(--cr-nm, 1.6) / var(--cr-ar, 1.05) / 2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-cr__track { scroll-behavior: auto; }
+}
+
+@media screen and (min-width: 750px) {
+  .dtj-cr__intro { margin-bottom: 26px; }
+
+  .dtj-cr__heading { font-size: var(--cr-h-d, 40px); }
+
+  .dtj-cr__sub { font-size: 16px; }
+
+  .dtj-cr__tile { flex-basis: calc((100% - (var(--cr-n, 3.5) - 1) * var(--cr-gap, 12px)) / var(--cr-n, 3.5)); }
+
+  .dtj-cr__arrow {
+    width: 44px;
+    height: 44px;
+  }
+
+  .dtj-cr__prev { left: 18px; }
+
+  .dtj-cr__next { right: 18px; }
+}
+
+@supports (width: 1cqw) {
+  @media screen and (min-width: 750px) {
+    .dtj-cr__arrow { top: calc(100cqw / var(--cr-n, 3.5) / var(--cr-ar, 1.05) / 2); }
+  }
+}

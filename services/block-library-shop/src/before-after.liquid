@@ -1,0 +1,98 @@
+{%- liquid
+  assign ba_ver = bs.variation | default: 'card'
+  assign ba_before = bs.before_image
+  assign ba_after = bs.after_image
+  assign ba_pics = false
+  if ba_before != blank and ba_after != blank
+    assign ba_pics = true
+  endif
+  assign ba_head = bs.heading | strip
+  assign ba_acc = bs.heading_accent | strip
+  assign ba_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3'
+      assign ba_tag = bs.heading_tag
+  endcase
+  assign ba_eb = bs.eyebrow_bold | strip
+  assign ba_er = bs.eyebrow_rest | strip
+  assign ba_btn = bs.button_label | strip
+  assign ba_t_before = bs.before_label | default: 'Before' | escape
+  assign ba_t_after = bs.after_label | default: 'After' | escape
+  assign ba_pos = bs.start_position | default: 50
+  assign ba_has_text = false
+  if ba_head != blank or ba_acc != blank or bs.body != blank or ba_btn != blank or ba_eb != blank or ba_er != blank
+    assign ba_has_text = true
+  endif
+-%}
+{%- if ba_pics or ba_has_text -%}
+  <dtj-before-after class="dtj-b dtj-ba dtj-ba--{{ ba_ver }} dtj-ba--side-{{ bs.picture_side | default: 'auto' }} dtj-ba--tags-{{ bs.tag_place | default: 'auto' }}{% if bs.accent_color_2 != blank %} dtj-ba--grad{% endif %}{% unless ba_pics %} dtj-ba--text-only{% endunless %}{% unless ba_has_text %} dtj-ba--pic-only{% endunless %}" style="{{ dtj_std_style | strip_newlines }} --ba-w: {{ bs.container_width }}px; --ba-h-d: {{ bs.heading_size_desktop }}px; --ba-h-m: {{ bs.heading_size_mobile }}px;{% if bs.picture_shape != 'auto' and bs.picture_shape != blank %} --ba-ratio: {{ bs.picture_shape }};{% endif %}{% if bs.accent_color != blank %} --ba-accent: {{ bs.accent_color }};{% endif %}{% if bs.accent_color_2 != blank %} --ba-accent-2: {{ bs.accent_color_2 }};{% endif %}{% if bs.button_color != blank %} --ba-btn: {{ bs.button_color }};{% endif %}{% if bs.button_text != blank %} --ba-btn-text: {{ bs.button_text }};{% endif %}{% if bs.panel_color != blank %} --ba-tint: {{ bs.panel_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-ba__wrap">
+      {%- if ba_pics -%}
+        <div class="dtj-ba__pic" style="--ba-pos: {{ ba_pos }}%;">
+          <img class="dtj-ba__img dtj-ba__img--before" src="{{ ba_before | image_url: width: 1000 }}" srcset="{{ ba_before | image_url: width: 500 }} 500w, {{ ba_before | image_url: width: 800 }} 800w, {{ ba_before | image_url: width: 1000 }} 1000w, {{ ba_before | image_url: width: 1400 }} 1400w" sizes="(min-width: 750px) 50vw, 100vw" width="{{ ba_before.width | default: 800 }}" height="{{ ba_before.height | default: 800 }}" alt="{{ ba_before.alt | default: ba_t_before | escape }}" loading="lazy" decoding="async" draggable="false">
+          <img class="dtj-ba__img dtj-ba__img--after" src="{{ ba_after | image_url: width: 1000 }}" srcset="{{ ba_after | image_url: width: 500 }} 500w, {{ ba_after | image_url: width: 800 }} 800w, {{ ba_after | image_url: width: 1000 }} 1000w, {{ ba_after | image_url: width: 1400 }} 1400w" sizes="(min-width: 750px) 50vw, 100vw" width="{{ ba_after.width | default: 800 }}" height="{{ ba_after.height | default: 800 }}" alt="{{ ba_after.alt | default: ba_t_after | escape }}" loading="lazy" decoding="async" draggable="false">
+          {%- if bs.show_labels -%}
+            <span class="dtj-ba__tag dtj-ba__tag--before" aria-hidden="true">{{ ba_t_before }}</span>
+            <span class="dtj-ba__tag dtj-ba__tag--after" aria-hidden="true">{{ ba_t_after }}</span>
+          {%- endif -%}
+          <span class="dtj-ba__line" aria-hidden="true"></span>
+          <span class="dtj-ba__handle" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 7l-5 5 5 5M14 7l5 5-5 5"/></svg></span>
+          <input class="dtj-ba__range" type="range" min="0" max="100" step="1" value="{{ ba_pos }}" aria-label="{{ ba_t_before | append: ' / ' | append: ba_t_after }}">
+        </div>
+      {%- endif -%}
+      {%- if ba_has_text -%}
+        <div class="dtj-ba__text">
+          {%- if ba_eb != blank or ba_er != blank or bs.show_stars -%}
+            <p class="dtj-ba__eyebrow">
+              {%- if bs.show_stars -%}<span class="dtj-ba__stars" aria-hidden="true">{%- for i in (1..5) -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.500l2.900 6.100 6.600.9-4.800 4.600 1.200 6.600L12 17.500l-5.900 3.200 1.200-6.600-4.800-4.600 6.600-.9z"/></svg>{%- endfor -%}</span>{%- endif -%}
+              {%- if ba_eb != blank or ba_er != blank -%}<span class="dtj-ba__eyetext">{% if ba_eb != blank %}<strong>{{ ba_eb | escape }}</strong>{% endif %}{% if ba_er != blank %} {{ ba_er | escape }}{% endif %}</span>{%- endif -%}
+            </p>
+          {%- endif -%}
+          {%- if ba_head != blank or ba_acc != blank -%}
+            <{{ ba_tag }} class="dtj-ba__heading">{% if ba_head != blank %}<span class="dtj-ba__hl">{{ ba_head | escape }}</span>{% endif %}{% if ba_acc != blank %} <span class="dtj-ba__hl dtj-ba__accent">{{ ba_acc | escape }}</span>{% endif %}</{{ ba_tag }}>
+          {%- endif -%}
+          {%- if bs.body != blank -%}<div class="dtj-ba__body">{{ bs.body }}</div>{%- endif -%}
+          {%- capture ba_points -%}
+            {%- for n in (1..3) -%}
+              {%- liquid
+                assign bk = 'point_' | append: n | append: '_bold'
+                assign rk = 'point_' | append: n | append: '_rest'
+                assign ik = 'point_' | append: n | append: '_icon'
+                assign p_b = bs[bk] | strip
+                assign p_r = bs[rk] | strip
+                assign p_i = bs[ik] | default: 'auto'
+                if p_i == 'auto'
+                  case ba_ver
+                    when 'circle'
+                      case n
+                        when 1
+                          assign p_i = 'heart'
+                        when 2
+                          assign p_i = 'leaf'
+                        else
+                          assign p_i = 'smile'
+                      endcase
+                    when 'square'
+                      assign p_i = 'badge'
+                    else
+                      assign p_i = 'tick'
+                  endcase
+                endif
+              -%}
+              {%- if p_b != blank or p_r != blank -%}
+                <li class="dtj-ba__point"><span class="dtj-ba__icon">{%- render 'dtj-ba-icon', name: p_i -%}</span><span class="dtj-ba__ptext">{% if p_b != blank %}<strong>{{ p_b | escape }}</strong>{% endif %}{% if p_r != blank %} {{ p_r | escape }}{% endif %}</span></li>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endcapture -%}
+          {%- assign ba_points_trim = ba_points | strip -%}
+          {%- if ba_points_trim != blank -%}<ul class="dtj-ba__points" role="list">{{ ba_points_trim }}</ul>{%- endif -%}
+          {%- if ba_btn != blank -%}
+            <p class="dtj-ba__action"><a class="dtj-ba__button" href="{{ bs.button_link | default: '#' }}"><span>{{ ba_btn | escape }}</span>{% if bs.button_arrow %}<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>{% endif %}</a></p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </dtj-before-after>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Before After is empty. Add a before and an after picture, or some words (editor only: shoppers see nothing).</p>
+{%- endif -%}

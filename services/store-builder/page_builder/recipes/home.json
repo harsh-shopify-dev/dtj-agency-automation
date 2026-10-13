@@ -1,0 +1,97 @@
+{
+  "id": "home-v1",
+  "purpose": "The HOME page: a picture hero that says what the brand is, a trust strip, the reasons to choose it, the theme's own featured products, one brand story, real customer cards and last questions. The order and the hero layout follow the brand's NICHE (niches.py); blocks made for the niche come first, then blocks that suit every niche.",
+  "sections": [
+    {
+      "builder": "hero_home",
+      "why": "The first screen: what the brand is and one action. A picture hero, a short heading, one button."
+    },
+    {
+      "builder": "trust_marquee",
+      "why": "A scannable strip of things the brand can stand behind, right under the hero."
+    },
+    {
+      "builder": "value_props_home",
+      "why": "The reasons to choose this brand: soft cards around a picture, or compact icon tiles, whichever fits the niche."
+    },
+    {
+      "theme": "product_list",
+      "why": "The theme's own featured products: the shopper can buy from the home page."
+    },
+    {
+      "builder": "story_home",
+      "why": "One brand story: a picture, a short paragraph, a few ticks and (only with a real one) a review."
+    },
+    {
+      "builder": "video_reviews_home",
+      "why": "Real customer cards, each with a picture and optionally a video that loads only when pressed."
+    },
+    {
+      "builder": "faq",
+      "why": "Last objections, directly above the footer."
+    }
+  ],
+  "hero_layout": {
+    "beauty": "banner",
+    "wellness": "banner",
+    "home": "banner",
+    "general": "banner",
+    "fashion": "cover",
+    "food": "cover"
+  },
+  "overrides": {
+    "beauty": {
+      "order": [
+        "hero_home",
+        "trust_marquee",
+        "value_props_home",
+        "video_reviews_home",
+        "theme:product_list",
+        "story_home",
+        "faq"
+      ]
+    },
+    "wellness": {
+      "order": [
+        "hero_home",
+        "trust_marquee",
+        "value_props_home",
+        "story_home",
+        "theme:product_list",
+        "video_reviews_home",
+        "faq"
+      ]
+    },
+    "home": {
+      "order": [
+        "hero_home",
+        "trust_marquee",
+        "theme:product_list",
+        "value_props_home",
+        "story_home",
+        "video_reviews_home",
+        "faq"
+      ]
+    },
+    "fashion": {
+      "order": [
+        "hero_home",
+        "theme:product_list",
+        "value_props_home",
+        "video_reviews_home",
+        "story_home",
+        "faq"
+      ]
+    },
+    "food": {
+      "order": [
+        "hero_home",
+        "theme:product_list",
+        "story_home",
+        "video_reviews_home",
+        "value_props_home",
+        "faq"
+      ]
+    }
+  }
+}

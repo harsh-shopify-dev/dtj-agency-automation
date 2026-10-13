@@ -1,0 +1,525 @@
+{
+  "id": "circle-menu",
+  "title": "DTJ Circle Menu",
+  "block_file": "extensions/dtj-commerce/blocks/dtj-circle-menu.liquid",
+  "placements": [
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_1",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_2",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_3",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_4",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_5",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_6",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_7",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_8",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 32,
+    "padding_bottom": 32,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "heading_align",
+      "label": "Heading alignment",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Centred"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h2",
+          "label": "h2"
+        },
+        {
+          "value": "h1",
+          "label": "h1"
+        },
+        {
+          "value": "h3",
+          "label": "h3"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Tiles (up to 8)"
+    },
+    {
+      "type": "collection_list",
+      "id": "collections",
+      "label": "Collections (one per tile, in order)",
+      "limit": 8,
+      "info": "The first collection becomes tile 1, the second tile 2, and so on: each gives its tile a link, a name and a picture. The tiles below are optional and override it."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Tile 1: picture",
+      "info": "Empty = the collection's own picture."
+    },
+    {
+      "type": "text",
+      "id": "title_1",
+      "label": "Tile 1: name",
+      "info": "Empty = the collection name."
+    },
+    {
+      "type": "url",
+      "id": "link_1",
+      "label": "Tile 1: link",
+      "info": "Empty = the collection's page."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Tile 2: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_2",
+      "label": "Tile 2: name"
+    },
+    {
+      "type": "url",
+      "id": "link_2",
+      "label": "Tile 2: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Tile 3: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_3",
+      "label": "Tile 3: name"
+    },
+    {
+      "type": "url",
+      "id": "link_3",
+      "label": "Tile 3: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Tile 4: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_4",
+      "label": "Tile 4: name"
+    },
+    {
+      "type": "url",
+      "id": "link_4",
+      "label": "Tile 4: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Tile 5: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_5",
+      "label": "Tile 5: name"
+    },
+    {
+      "type": "url",
+      "id": "link_5",
+      "label": "Tile 5: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Tile 6: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_6",
+      "label": "Tile 6: name"
+    },
+    {
+      "type": "url",
+      "id": "link_6",
+      "label": "Tile 6: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_7",
+      "label": "Tile 7: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_7",
+      "label": "Tile 7: name"
+    },
+    {
+      "type": "url",
+      "id": "link_7",
+      "label": "Tile 7: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_8",
+      "label": "Tile 8: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_8",
+      "label": "Tile 8: name"
+    },
+    {
+      "type": "url",
+      "id": "link_8",
+      "label": "Tile 8: link"
+    },
+    {
+      "type": "header",
+      "content": "Version and layout"
+    },
+    {
+      "type": "select",
+      "id": "variation",
+      "label": "Version",
+      "default": "ring",
+      "options": [
+        {
+          "value": "ring",
+          "label": "Story rings: small circles with a colored ring, no names"
+        },
+        {
+          "value": "circle",
+          "label": "Large circles with names below"
+        },
+        {
+          "value": "square",
+          "label": "Framed squares with names below"
+        }
+      ],
+      "info": "Each version sets its own size, spacing, names and phone layout. Every number below can be changed."
+    },
+    {
+      "type": "range",
+      "id": "tile_size",
+      "label": "Tile size on desktop",
+      "min": 0,
+      "max": 260,
+      "step": 4,
+      "default": 0,
+      "unit": "px",
+      "info": "0 = the version's own size: 100 for rings, 184 for circles, 112 for squares."
+    },
+    {
+      "type": "range",
+      "id": "tile_size_mobile",
+      "label": "Tile size on phones",
+      "min": 0,
+      "max": 180,
+      "step": 4,
+      "default": 0,
+      "unit": "px",
+      "info": "0 = the version's own size: 72 for rings, 104 for circles, 84 for squares."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between tiles",
+      "min": 0,
+      "max": 80,
+      "step": 2,
+      "default": 0,
+      "unit": "px",
+      "info": "0 = the version's own space."
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "Phone layout",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Automatic (rings scroll, the others wrap)"
+        },
+        {
+          "value": "scroll",
+          "label": "One row that scrolls sideways"
+        },
+        {
+          "value": "wrap",
+          "label": "Wrap onto several rows"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "labels",
+      "label": "Names",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Automatic (rings none, the others below)"
+        },
+        {
+          "value": "show",
+          "label": "Show below the picture"
+        },
+        {
+          "value": "hide",
+          "label": "Hide"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Maximum width",
+      "min": 480,
+      "max": 1920,
+      "step": 20,
+      "default": 1200,
+      "unit": "px"
+    },
+    {
+      "type": "checkbox",
+      "id": "hover_zoom",
+      "label": "Picture grows a little on hover",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "priority",
+      "label": "This section is at the top of the page",
+      "default": false,
+      "info": "Loads the pictures first. Leave off for a section further down."
+    },
+    {
+      "type": "header",
+      "content": "Look"
+    },
+    {
+      "type": "color",
+      "id": "bg_color_2",
+      "label": "Background: second color",
+      "info": "With the background color above it makes a soft top-to-bottom gradient. Empty = flat."
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 20,
+      "max": 72,
+      "step": 1,
+      "default": 44,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phones",
+      "min": 18,
+      "max": 44,
+      "step": 1,
+      "default": 28,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "label_font",
+      "label": "Name font",
+      "default": "theme",
+      "options": [
+        {
+          "value": "theme",
+          "label": "Theme font"
+        },
+        {
+          "value": "mono",
+          "label": "Typewriter"
+        },
+        {
+          "value": "serif",
+          "label": "Serif"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "label_size",
+      "label": "Name size",
+      "min": 11,
+      "max": 22,
+      "step": 1,
+      "default": 14,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "ring_width",
+      "label": "Ring thickness (rings)",
+      "min": 1,
+      "max": 8,
+      "step": 1,
+      "default": 3,
+      "unit": "px"
+    },
+    {
+      "type": "color",
+      "id": "ring_color_1",
+      "label": "Ring color 1",
+      "info": "The ring is a gradient of up to three colors. Empty = orange."
+    },
+    {
+      "type": "color",
+      "id": "ring_color_2",
+      "label": "Ring color 2",
+      "info": "Empty = hot pink."
+    },
+    {
+      "type": "color",
+      "id": "ring_color_3",
+      "label": "Ring color 3",
+      "info": "Empty = purple."
+    },
+    {
+      "type": "color",
+      "id": "frame_color",
+      "label": "Frame color (squares)",
+      "info": "Empty = a soft shade of the text color."
+    },
+    {
+      "type": "range",
+      "id": "frame_width",
+      "label": "Frame thickness (squares)",
+      "min": 0,
+      "max": 8,
+      "step": 1,
+      "default": 2,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "label": "Corner radius (squares)",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "default": 0,
+      "unit": "px"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "'Circle menu' (Harsh, 13 Oct 2026): three versions of a collection menu: small story rings without names, large circles with names, framed squares with typewriter names",
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "variation": "circle",
+      "collections": [
+        {
+          "title": "Coll one",
+          "url": "/collections/c1",
+          "image": "cpic1"
+        },
+        {
+          "title": "Coll two",
+          "url": "/collections/c2",
+          "image": "cpic2"
+        }
+      ],
+      "title_3": "Tile three",
+      "image_3": "pic3",
+      "link_3": "/collections/c3"
+    },
+    "expect": [
+      "Heading sample",
+      "Coll one",
+      "Coll two",
+      "dtj-cm__tile",
+      "/collections/c1",
+      "dtj-cm__label"
+    ]
+  }
+}

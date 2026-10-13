@@ -1,0 +1,14 @@
+{%- comment -%} Bullet icons for the DTJ Before After block. Called as: render 'dtj-ba-icon', name: 'heart'. Filled icons take the current text color (the block sets it to the accent); "tick" is a stroke icon. An unknown name draws nothing. {%- endcomment -%}
+{%- capture ba_paths -%}
+{%- case name -%}
+{%- when 'tick' -%}<path d="M4 12.500l5 5L20 6.500" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/>
+{%- when 'badge' -%}<path fill="currentColor" d="M12 2.500l2.300 1.600 2.800-.3 1.100 2.600 2.500 1.300-.4 2.800 1.700 2.300-1.700 2.300.4 2.800-2.500 1.300-1.100 2.600-2.800-.3L12 21.500l-2.300-1.600-2.800.3-1.100-2.600-2.500-1.300.4-2.800L2.100 11.200l1.700-2.300-.4-2.800 2.500-1.300 1.100-2.600 2.800.3z"/><path d="M8 12l3 3 5-6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+{%- when 'heart' -%}<path fill="currentColor" d="M12 21l-1.400-1.300C5.400 15 2.500 12.300 2.500 8.900A4.900 4.900 0 0 1 7.400 4c1.700 0 3.300.8 4.600 2.100C13.300 4.800 14.900 4 16.600 4a4.900 4.900 0 0 1 4.900 4.900c0 3.400-2.900 6.100-8.100 10.800z"/>
+{%- when 'leaf' -%}<path fill="currentColor" d="M20.500 3.500C11 3.500 5 8 5 14.500c0 1.400.4 2.700 1.100 3.800L3.500 21l1.500.5 2.200-2.600c1 .6 2.200 1 3.500 1C17 19.900 20.500 12 20.500 3.500z"/>
+{%- when 'smile' -%}<circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M8 14c1 1.800 2.400 2.600 4 2.600s3-.8 4-2.600" fill="none" stroke="white" stroke-width="1.800" stroke-linecap="round"/><circle cx="8.800" cy="9.600" r="1.200" fill="white"/><circle cx="15.200" cy="9.600" r="1.200" fill="white"/>
+{%- when 'star' -%}<path fill="currentColor" d="M12 2.500l2.900 6.100 6.600.9-4.800 4.600 1.200 6.600L12 17.500l-5.900 3.200 1.200-6.600-4.800-4.600 6.600-.9z"/>
+{%- when 'bolt' -%}<path fill="currentColor" d="M13 2L4 14h7l-1 8 9-12h-7z"/>
+{%- when 'shield' -%}<path fill="currentColor" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M8.500 12l2.500 2.500 4.500-5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+{%- endcase -%}
+{%- endcapture -%}
+{%- if ba_paths != blank -%}<svg class="dtj-ba__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{{ ba_paths }}</svg>{%- endif -%}

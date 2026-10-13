@@ -1,0 +1,783 @@
+{
+  "id": "concern-slider",
+  "title": "DTJ Shop by Concern",
+  "block_file": "extensions/dtj-shop/blocks/dtj-concern-slider.liquid",
+  "placements": [
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "script": true,
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "heading_accent",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "subtext",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 40,
+    "padding_bottom": 40,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading (first line)",
+      "info": "Example: Shop by"
+    },
+    {
+      "type": "text",
+      "id": "heading_accent",
+      "label": "Heading (second line, in the accent color)",
+      "info": "Example: Concern"
+    },
+    {
+      "type": "text",
+      "id": "subtext",
+      "label": "Line under the heading"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h1",
+          "label": "h1"
+        },
+        {
+          "value": "h2",
+          "label": "h2"
+        },
+        {
+          "value": "h3",
+          "label": "h3"
+        }
+      ]
+    },
+    {
+      "type": "collection_list",
+      "id": "collections",
+      "label": "Collections",
+      "limit": 8,
+      "info": "Each collection is one choice in the dropdown. One collection = no dropdown."
+    },
+    {
+      "type": "text",
+      "id": "concern_1",
+      "label": "Dropdown words 1",
+      "info": "Empty = the collection's own title."
+    },
+    {
+      "type": "text",
+      "id": "concern_2",
+      "label": "Dropdown words 2"
+    },
+    {
+      "type": "text",
+      "id": "concern_3",
+      "label": "Dropdown words 3"
+    },
+    {
+      "type": "text",
+      "id": "concern_4",
+      "label": "Dropdown words 4"
+    },
+    {
+      "type": "text",
+      "id": "concern_5",
+      "label": "Dropdown words 5"
+    },
+    {
+      "type": "text",
+      "id": "concern_6",
+      "label": "Dropdown words 6"
+    },
+    {
+      "type": "range",
+      "id": "products_per_concern",
+      "label": "Products per concern",
+      "min": 4,
+      "max": 24,
+      "step": 1,
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "Product card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show the star rating",
+      "default": true,
+      "info": "Read from Judge.me or the store's review ratings. A product with no reviews shows no rating."
+    },
+    {
+      "type": "checkbox",
+      "id": "demo_ratings",
+      "label": "Sample ratings in the theme editor only",
+      "default": true,
+      "info": "Clearly marked, never shown to shoppers."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_blurb",
+      "label": "Show a short line under the title",
+      "default": true,
+      "info": "Uses the product's custom.subtitle field when it has one, else the start of its description."
+    },
+    {
+      "type": "range",
+      "id": "blurb_length",
+      "label": "Short line length",
+      "min": 30,
+      "max": 160,
+      "step": 5,
+      "default": 90
+    },
+    {
+      "type": "checkbox",
+      "id": "show_compare_price",
+      "label": "Show the crossed-out old price",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_discount",
+      "label": "Show the percent-off pill",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_variants",
+      "label": "Show the option dropdown",
+      "default": true,
+      "info": "A product with one option choice shows no dropdown."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Picture shape",
+      "default": "1",
+      "options": [
+        {
+          "value": "1",
+          "label": "Square"
+        },
+        {
+          "value": "0.8",
+          "label": "Portrait 4:5"
+        },
+        {
+          "value": "1.2",
+          "label": "Landscape 6:5"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "image_fit",
+      "label": "Picture fit",
+      "default": "cover",
+      "options": [
+        {
+          "value": "cover",
+          "label": "Fill the box (may crop)"
+        },
+        {
+          "value": "contain",
+          "label": "Show the whole picture"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "after_add",
+      "label": "After Add to Cart",
+      "default": "stay",
+      "options": [
+        {
+          "value": "stay",
+          "label": "Stay here and say Added"
+        },
+        {
+          "value": "cart",
+          "label": "Go to the cart"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Slider"
+    },
+    {
+      "type": "range",
+      "id": "visible_desktop",
+      "label": "Cards in view on desktop",
+      "min": 2,
+      "max": 5,
+      "step": 0.5,
+      "default": 3.5,
+      "info": "A half card at the edge shows there is more."
+    },
+    {
+      "type": "range",
+      "id": "visible_mobile",
+      "label": "Cards in view on phones",
+      "min": 1,
+      "max": 2.5,
+      "step": 0.5,
+      "default": 1.5
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between cards",
+      "min": 8,
+      "max": 40,
+      "step": 2,
+      "default": 16,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Card corner roundness",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "default": 12,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "text_column",
+      "label": "Width of the left column on desktop",
+      "min": 20,
+      "max": 40,
+      "step": 2,
+      "default": 28,
+      "unit": "%"
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Content width",
+      "min": 800,
+      "max": 1800,
+      "step": 20,
+      "default": 1400,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "arrows",
+      "label": "Arrows",
+      "default": "round",
+      "options": [
+        {
+          "value": "round",
+          "label": "Round"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "fade_edge",
+      "label": "Fade the last card out",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "progress",
+      "label": "Show the counter and the progress line",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "button_shape",
+      "label": "Button shape",
+      "default": "pill",
+      "options": [
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "rounded",
+          "label": "Rounded"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Colors and type"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "Second heading line, progress line, dropdown text. Empty = a soft purple."
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card color",
+      "info": "Empty = a pale tint of the accent."
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button color",
+      "info": "Empty = very dark."
+    },
+    {
+      "type": "color",
+      "id": "button_text",
+      "label": "Button text color",
+      "info": "Empty = white."
+    },
+    {
+      "type": "color",
+      "id": "pill_color",
+      "label": "Percent-off pill color",
+      "info": "Empty = a pale green."
+    },
+    {
+      "type": "color",
+      "id": "pill_text",
+      "label": "Percent-off pill text color",
+      "info": "Empty = dark green."
+    },
+    {
+      "type": "select",
+      "id": "heading_font",
+      "label": "Heading font",
+      "default": "serif",
+      "options": [
+        {
+          "value": "theme",
+          "label": "Theme heading font"
+        },
+        {
+          "value": "serif",
+          "label": "Serif"
+        },
+        {
+          "value": "sans",
+          "label": "Sans"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size on desktop",
+      "min": 24,
+      "max": 72,
+      "step": 1,
+      "default": 48,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size on phones",
+      "min": 20,
+      "max": 48,
+      "step": 1,
+      "default": 32,
+      "unit": "px"
+    },
+    {
+      "type": "text",
+      "id": "add_label",
+      "label": "Add to cart",
+      "info": "Shows Add to Cart when empty."
+    },
+    {
+      "type": "text",
+      "id": "added_label",
+      "label": "After adding",
+      "info": "Shows Added when empty."
+    },
+    {
+      "type": "text",
+      "id": "sold_out_label",
+      "label": "Sold out",
+      "info": "Shows Sold out when empty."
+    },
+    {
+      "type": "text",
+      "id": "view_label",
+      "label": "View collection button",
+      "info": "Shows View Collection when empty."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_view",
+      "label": "Show the View Collection button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "off_label",
+      "label": "Word after the percent",
+      "info": "Shows OFF when empty."
+    },
+    {
+      "type": "text",
+      "id": "reviews_label",
+      "label": "Word after the review count",
+      "info": "Shows reviews when empty."
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "'Shop by Concern' screenshot (Harsh, 13 Oct 2026): a left column with a two-line heading, a line of words and a concern dropdown; a row of product cards (picture, star rating and count, title, short line, price + old price + percent-off pill, option dropdown, Add to Cart pill); a View Collection pill; a 01 / 22 counter with a progress line",
+  "test": {
+    "sample": {
+      "heading": "Shop by",
+      "heading_accent": "Concern",
+      "subtext": "Find what works for you",
+      "collections": [
+        {
+          "title": "Coll one",
+          "url": "/collections/one",
+          "products": [
+            {
+              "id": 1,
+              "handle": "alpha-tee",
+              "title": "Alpha tee",
+              "url": "/products/alpha-tee",
+              "price": 2500,
+              "compare_at_price": 0,
+              "featured_image": {
+                "src": "pa",
+                "width": 600,
+                "height": 750,
+                "alt": "Alpha tee"
+              },
+              "images": [
+                {
+                  "src": "pa",
+                  "width": 600,
+                  "height": 750
+                }
+              ],
+              "tags": [
+                "Bestseller"
+              ],
+              "available": true,
+              "has_only_default_variant": true,
+              "variants": [
+                {
+                  "id": 10,
+                  "price": 2500,
+                  "compare_at_price": 0,
+                  "available": true,
+                  "option1": "Default Title",
+                  "featured_image": null
+                }
+              ],
+              "options": [
+                "Title"
+              ],
+              "selected_or_first_available_variant": {
+                "id": 10,
+                "price": 2500,
+                "compare_at_price": 0,
+                "available": true,
+                "option1": "Default Title",
+                "featured_image": null
+              },
+              "metafields": {
+                "judgeme": {
+                  "badge": ""
+                }
+              },
+              "description": "<p>A <b>gentle</b> daily routine in a short line of text for the card, long enough to be cut somewhere in the middle of a sentence.</p>"
+            },
+            {
+              "id": 2,
+              "handle": "beta-tee",
+              "title": "Beta tee",
+              "url": "/products/beta-tee",
+              "price": 1500,
+              "compare_at_price": 2000,
+              "featured_image": {
+                "src": "pb",
+                "width": 600,
+                "height": 750,
+                "alt": "Beta tee"
+              },
+              "images": [
+                {
+                  "src": "pb",
+                  "width": 600,
+                  "height": 750
+                }
+              ],
+              "tags": [],
+              "available": true,
+              "has_only_default_variant": true,
+              "variants": [
+                {
+                  "id": 20,
+                  "price": 1500,
+                  "compare_at_price": 2000,
+                  "available": true,
+                  "option1": "Default Title",
+                  "featured_image": null
+                }
+              ],
+              "options": [
+                "Title"
+              ],
+              "selected_or_first_available_variant": {
+                "id": 20,
+                "price": 1500,
+                "compare_at_price": 2000,
+                "available": true,
+                "option1": "Default Title",
+                "featured_image": null
+              },
+              "metafields": {
+                "judgeme": {
+                  "badge": ""
+                }
+              },
+              "description": "<p>A <b>gentle</b> daily routine in a short line of text for the card, long enough to be cut somewhere in the middle of a sentence.</p>"
+            },
+            {
+              "id": 3,
+              "handle": "gamma-tee",
+              "title": "Gamma tee",
+              "url": "/products/gamma-tee",
+              "price": 1800,
+              "compare_at_price": 0,
+              "featured_image": {
+                "src": "pc",
+                "width": 600,
+                "height": 750,
+                "alt": "Gamma tee"
+              },
+              "images": [
+                {
+                  "src": "pc",
+                  "width": 600,
+                  "height": 750
+                }
+              ],
+              "tags": [],
+              "available": true,
+              "has_only_default_variant": false,
+              "variants": [
+                {
+                  "id": 31,
+                  "price": 1800,
+                  "compare_at_price": 0,
+                  "available": true,
+                  "option1": "Red",
+                  "featured_image": {
+                    "src": "pc-red",
+                    "width": 600,
+                    "height": 750
+                  }
+                },
+                {
+                  "id": 32,
+                  "price": 1900,
+                  "compare_at_price": 0,
+                  "available": true,
+                  "option1": "Blue",
+                  "featured_image": {
+                    "src": "pc-blue",
+                    "width": 600,
+                    "height": 750
+                  }
+                }
+              ],
+              "options": [
+                "Color"
+              ],
+              "selected_or_first_available_variant": {
+                "id": 31,
+                "price": 1800,
+                "compare_at_price": 0,
+                "available": true,
+                "option1": "Red",
+                "featured_image": {
+                  "src": "pc-red",
+                  "width": 600,
+                  "height": 750
+                }
+              },
+              "metafields": {
+                "judgeme": {
+                  "badge": ""
+                }
+              },
+              "description": "<p>A <b>gentle</b> daily routine in a short line of text for the card, long enough to be cut somewhere in the middle of a sentence.</p>"
+            },
+            {
+              "id": 4,
+              "handle": "delta-tee",
+              "title": "Delta tee",
+              "url": "/products/delta-tee",
+              "price": 2500,
+              "compare_at_price": 0,
+              "featured_image": {
+                "src": "pd",
+                "width": 600,
+                "height": 750,
+                "alt": "Delta tee"
+              },
+              "images": [
+                {
+                  "src": "pd",
+                  "width": 600,
+                  "height": 750
+                }
+              ],
+              "tags": [],
+              "available": false,
+              "has_only_default_variant": true,
+              "variants": [
+                {
+                  "id": 40,
+                  "price": 2500,
+                  "compare_at_price": 0,
+                  "available": false,
+                  "option1": "Default Title",
+                  "featured_image": null
+                }
+              ],
+              "options": [
+                "Title"
+              ],
+              "selected_or_first_available_variant": {
+                "id": 40,
+                "price": 2500,
+                "compare_at_price": 0,
+                "available": false,
+                "option1": "Default Title",
+                "featured_image": null
+              },
+              "metafields": {
+                "judgeme": {
+                  "badge": ""
+                }
+              },
+              "description": "<p>A <b>gentle</b> daily routine in a short line of text for the card, long enough to be cut somewhere in the middle of a sentence.</p>"
+            }
+          ]
+        },
+        {
+          "title": "Coll two",
+          "url": "/collections/two",
+          "products": [
+            {
+              "id": 5,
+              "handle": "epsilon-hoodie",
+              "title": "Epsilon hoodie",
+              "url": "/products/epsilon-hoodie",
+              "price": 4500,
+              "compare_at_price": 0,
+              "featured_image": {
+                "src": "pe",
+                "width": 600,
+                "height": 750,
+                "alt": "Epsilon hoodie"
+              },
+              "images": [
+                {
+                  "src": "pe",
+                  "width": 600,
+                  "height": 750
+                }
+              ],
+              "tags": [],
+              "available": true,
+              "has_only_default_variant": true,
+              "variants": [
+                {
+                  "id": 50,
+                  "price": 4500,
+                  "compare_at_price": 0,
+                  "available": true,
+                  "option1": "Default Title",
+                  "featured_image": null
+                }
+              ],
+              "options": [
+                "Title"
+              ],
+              "selected_or_first_available_variant": {
+                "id": 50,
+                "price": 4500,
+                "compare_at_price": 0,
+                "available": true,
+                "option1": "Default Title",
+                "featured_image": null
+              },
+              "metafields": {
+                "judgeme": {
+                  "badge": ""
+                }
+              },
+              "description": "<p>A <b>gentle</b> daily routine in a short line of text for the card, long enough to be cut somewhere in the middle of a sentence.</p>"
+            }
+          ]
+        }
+      ],
+      "concern_1": "Yellow Teeth"
+    },
+    "expect": [
+      "Shop by",
+      "Concern",
+      "Find what works for you",
+      "Yellow Teeth",
+      "Coll two",
+      "Alpha tee",
+      "Epsilon hoodie",
+      "dtj-cs__card",
+      "Add to Cart",
+      "Sold out"
+    ]
+  }
+}

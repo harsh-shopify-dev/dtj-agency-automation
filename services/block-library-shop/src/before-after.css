@@ -1,0 +1,306 @@
+/* Before / After: a picture you drag to compare two states beside a block of words (a small line, a heading with an accent part, a paragraph, three points
+   and a button). Three versions: a rounded picture in a soft card, a round picture with tags at the sides, and a square picture with tags at the bottom.
+   The comparison is a full-size range input laid invisibly over the picture (so touch, mouse and arrow keys all work and a screen reader hears a slider);
+   the script only copies the input's value into --ba-pos. Without it the picture shows the start position. Every color is a setting or a named color
+   mixed from the version's own, so an empty setting keeps that version's look. */
+.dtj-ba {
+  --ba-ink-d: color-mix(in srgb, teal 40%, black);
+  --ba-accent-d: teal;
+  --ba-btn-d: color-mix(in srgb, teal 40%, black);
+  --ba-btn-text-d: white;
+  --ba-bg-d: linear-gradient(135deg, white 0%, color-mix(in srgb, teal 9%, white) 100%);
+  --ba-ratio-d: 1.333;
+  --ba-pad-d: 48px;
+  --ba-radius-d: 0;
+  --ba-pic-radius-d: 28px;
+  --ba-acc: var(--ba-accent, var(--ba-accent-d));
+  --ba-acc2: var(--ba-accent-2, var(--ba-acc));
+  --ba-btn-c: var(--ba-btn, var(--ba-btn-d));
+  display: block;
+  width: 100%;
+  background: var(--dtj-background, var(--ba-tint, var(--ba-bg-d)));
+  color: var(--dtj-text-color, var(--ba-ink-d));
+  border-radius: var(--ba-radius-d);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 560px;
+}
+
+.dtj-ba--card { --ba-radius-d: 32px; border: 1px solid color-mix(in srgb, var(--ba-acc) 25%, transparent); }
+
+.dtj-ba--circle {
+  --ba-ink-d: color-mix(in srgb, maroon 45%, black);
+  --ba-accent-d: indianred;
+  --ba-btn-d: color-mix(in srgb, maroon 45%, black);
+  --ba-bg-d: color-mix(in srgb, lightsalmon 16%, white);
+  --ba-ratio-d: 1;
+  --ba-pic-radius-d: 50%;
+  --ba-acc2: var(--ba-accent-2, sandybrown);
+}
+
+.dtj-ba--square {
+  --ba-ink-d: color-mix(in srgb, saddlebrown 30%, black);
+  --ba-accent-d: sienna;
+  --ba-btn-d: color-mix(in srgb, saddlebrown 30%, black);
+  --ba-bg-d: linear-gradient(to bottom, white 0%, color-mix(in srgb, tan 22%, white) 100%);
+  --ba-ratio-d: 1;
+  --ba-pic-radius-d: 0;
+}
+
+.dtj-ba__wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  max-width: var(--ba-w, 1200px);
+  margin-inline: auto;
+}
+
+/* ---- the picture ---- */
+.dtj-ba__pic {
+  position: relative;
+  order: 1;
+  width: 100%;
+  aspect-ratio: var(--ba-ratio, var(--ba-ratio-d));
+  overflow: hidden;
+  border-radius: var(--ba-pic-radius-d);
+  background: color-mix(in srgb, currentcolor 8%, transparent);
+  isolation: isolate;
+}
+
+.dtj-ba--card .dtj-ba__pic { border: 1px solid color-mix(in srgb, var(--ba-acc) 25%, transparent); }
+
+.dtj-ba--circle .dtj-ba__pic {
+  border: 5px solid color-mix(in srgb, var(--ba-acc) 40%, white);
+  box-sizing: border-box;
+}
+
+.dtj-ba__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.dtj-ba__img--after { clip-path: inset(0 0 0 var(--ba-pos, 50%)); }
+
+.dtj-ba__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--ba-pos, 50%);
+  z-index: 2;
+  width: 2px;
+  background: white;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.dtj-ba__handle {
+  position: absolute;
+  top: 50%;
+  left: var(--ba-pos, 50%);
+  z-index: 3;
+  display: flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: color-mix(in srgb, white 28%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px color-mix(in srgb, black 25%, transparent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.dtj-ba__handle svg { width: 20px; height: 20px; fill: none; stroke: white; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.dtj-ba__range {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+  touch-action: pan-y;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dtj-ba__pic:has(.dtj-ba__range:focus-visible) .dtj-ba__handle { outline: 3px solid var(--ba-acc); outline-offset: 3px; }
+
+.dtj-ba__tag {
+  position: absolute;
+  z-index: 2;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 55%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--ba-ink-d);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.dtj-ba__tag--before { left: 14px; }
+
+.dtj-ba__tag--after { right: 14px; }
+
+/* tag places: the version's own, or chosen */
+.dtj-ba--card.dtj-ba--tags-auto .dtj-ba__tag, .dtj-ba--tags-top .dtj-ba__tag { top: 14px; }
+
+.dtj-ba--square.dtj-ba--tags-auto .dtj-ba__tag, .dtj-ba--tags-bottom .dtj-ba__tag { bottom: 14px; }
+
+.dtj-ba--circle.dtj-ba--tags-auto .dtj-ba__tag, .dtj-ba--tags-middle .dtj-ba__tag { top: 50%; transform: translateY(-50%); }
+
+.dtj-ba--circle.dtj-ba--tags-auto .dtj-ba__tag--before, .dtj-ba--circle.dtj-ba--tags-middle .dtj-ba__tag--before { left: 6%; }
+
+.dtj-ba--circle.dtj-ba--tags-auto .dtj-ba__tag--after, .dtj-ba--circle.dtj-ba--tags-middle .dtj-ba__tag--after { right: 6%; }
+
+.dtj-ba--square .dtj-ba__tag { background: color-mix(in srgb, saddlebrown 45%, transparent); color: white; }
+
+/* ---- the words ---- */
+.dtj-ba__text { order: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 18px; min-width: 0; }
+
+.dtj-ba__eyebrow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; font-size: 13px; line-height: 1.3; }
+
+.dtj-ba__eyebrow strong { font-weight: 700; }
+
+.dtj-ba__stars { display: inline-flex; gap: 2px; }
+
+.dtj-ba__stars svg { display: block; width: 12px; height: 12px; fill: currentcolor; }
+
+.dtj-ba--card .dtj-ba__eyebrow {
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, currentcolor 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, white 70%, transparent);
+}
+
+.dtj-ba--circle .dtj-ba__stars svg, .dtj-ba--square .dtj-ba__stars svg {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+  background: var(--ba-star-bg, var(--ba-acc));
+  fill: white;
+}
+
+.dtj-ba--square .dtj-ba__stars svg { --ba-star-bg: var(--ba-ink-d); }
+
+.dtj-ba__heading {
+  margin: 0;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: var(--ba-h-m, 30px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: inherit;
+}
+
+.dtj-ba__hl { display: block; }
+
+.dtj-ba--square .dtj-ba__hl { display: inline; }
+
+.dtj-ba__accent { color: var(--ba-acc); }
+
+.dtj-ba--circle .dtj-ba__accent, .dtj-ba--grad .dtj-ba__accent {
+  background: linear-gradient(90deg, var(--ba-acc), var(--ba-acc2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.dtj-ba__body { font-size: 16px; line-height: 1.65; opacity: 0.88; }
+
+.dtj-ba__body p { margin: 0; }
+
+.dtj-ba__body p + p { margin-top: 0.7em; }
+
+.dtj-ba__body strong { font-weight: 700; opacity: 1; }
+
+.dtj-ba__points { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+.dtj-ba__point { display: flex; align-items: center; gap: 12px; font-size: 16px; line-height: 1.4; }
+
+.dtj-ba__point strong { font-weight: 700; }
+
+.dtj-ba__icon { display: inline-flex; flex: none; color: var(--ba-acc); }
+
+.dtj-ba__ico { display: block; width: 22px; height: 22px; }
+
+.dtj-ba__action { margin: 8px 0 0; }
+
+.dtj-ba__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border: 1.5px solid var(--ba-btn-c);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ba-btn-c);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.dtj-ba__button svg { width: 16px; height: 16px; fill: none; stroke: currentcolor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.dtj-ba__button:focus-visible { outline: 3px solid var(--ba-acc); outline-offset: 3px; }
+
+/* the dark filled buttons of the round and square versions: a soft shadow, a rounded or square corner */
+.dtj-ba--circle .dtj-ba__button, .dtj-ba--square .dtj-ba__button {
+  background: var(--ba-btn-c);
+  color: var(--ba-btn-text, var(--ba-btn-text-d));
+  box-shadow: 0 16px 26px -12px color-mix(in srgb, var(--ba-btn-c) 70%, transparent);
+}
+
+.dtj-ba--circle .dtj-ba__button { border-radius: 14px; }
+
+.dtj-ba--square .dtj-ba__button { border-radius: 0; }
+
+.dtj-ba--card .dtj-ba__button { color: var(--ba-btn-c); }
+
+.dtj-ba--text-only .dtj-ba__wrap, .dtj-ba--pic-only .dtj-ba__wrap { grid-template-columns: minmax(0, 1fr); }
+
+.dtj-ba--pic-only .dtj-ba__pic { max-width: 720px; margin-inline: auto; }
+
+@media screen and (min-width: 750px) {
+  .dtj-ba__wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; }
+
+  .dtj-ba--text-only .dtj-ba__wrap, .dtj-ba--pic-only .dtj-ba__wrap { grid-template-columns: minmax(0, 1fr); }
+
+  .dtj-ba__heading { font-size: var(--ba-h-d, 44px); }
+
+  .dtj-ba__text { gap: 22px; }
+
+  .dtj-ba--square.dtj-ba--side-auto .dtj-ba__pic, .dtj-ba--side-right .dtj-ba__pic { order: 2; }
+
+  .dtj-ba--square.dtj-ba--side-auto .dtj-ba__text, .dtj-ba--side-right .dtj-ba__text { order: 1; }
+
+  .dtj-ba--side-left .dtj-ba__pic { order: 1; }
+
+  .dtj-ba--side-left .dtj-ba__text { order: 2; }
+
+  .dtj-ba--circle .dtj-ba__pic { max-width: 560px; justify-self: center; }
+}
+
+@media screen and (max-width: 749px) {
+  .dtj-ba--card { border-radius: 24px; }
+
+  .dtj-ba--circle .dtj-ba__pic { max-width: 420px; justify-self: center; }
+
+  .dtj-ba--card .dtj-ba__wrap { padding-inline: 8px; }
+}

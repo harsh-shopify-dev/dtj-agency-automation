@@ -1,0 +1,20 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+#
+# PLACEHOLDER: this app does not exist in the Dev Dashboard yet. Harsh creates it (Custom distribution) and runs
+# `shopify app config link` in this folder, which rewrites this file with the real client_id. Until then nothing can be deployed from here.
+
+client_id = ""
+application_url = "https://example.com"
+embedded = true
+name = "DTJ Commerce"
+
+[access_scopes]
+scopes = ""
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ ]
+
+[webhooks]
+api_version = "2026-10"

@@ -1,0 +1,108 @@
+{%- liquid
+  assign cr_n = 0
+  assign cr_colls = 0
+  for c in bs.collections
+    assign cr_colls = cr_colls | plus: 1
+  endfor
+  for i in (1..8)
+    assign ik = 'image_' | append: i
+    assign tk = 'title_' | append: i
+    if cr_colls > i or cr_colls == i or bs[ik] != blank or bs[tk] != blank
+      assign cr_n = cr_n | plus: 1
+    endif
+  endfor
+  assign cr_head = bs.heading | strip
+  assign cr_sub = bs.subheading | strip
+  assign cr_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3'
+      assign cr_tag = bs.heading_tag
+  endcase
+  assign cr_align = bs.heading_align | default: 'center'
+  assign cr_salign = bs.sub_align | default: 'auto'
+  if cr_salign == 'auto'
+    assign cr_salign = cr_align
+  endif
+  assign cr_ar = bs.tile_ratio | default: '1.05' | plus: 0.0
+  assign cr_vis = bs.visible_desktop | default: 3.5 | plus: 0.0
+  assign cr_tan = bs.skew_angle | default: 0 | times: 0.0175
+  assign cr_scale = cr_tan | divided_by: cr_ar | plus: 1.04
+  assign cr_pad = cr_tan | divided_by: cr_ar | divided_by: 2 | divided_by: cr_vis | times: 100
+  assign cr_vw = 100.0 | divided_by: cr_vis | round
+  assign cr_shape = bs.shape | default: 'slant'
+  assign cr_bg = bs.bg_image
+-%}
+{%- if cr_n > 0 or cr_head != blank or cr_sub != blank -%}
+  <dtj-category-slider class="dtj-b dtj-cr dtj-cr--shape-{{ cr_shape }} dtj-cr--cap-{{ bs.caption | default: 'below_left' | replace: '_', '-' }} dtj-cr--arrows-{{ bs.arrows | default: 'square' }} dtj-cr--head-{{ cr_align }} dtj-cr--sub-{{ cr_salign }} dtj-cr--hf-{{ bs.heading_font | default: 'theme' }} dtj-cr--tf-{{ bs.title_font | default: 'theme' }}{% if bs.panel %} dtj-cr--panel{% endif %}{% if bs.edge_fade %} dtj-cr--fade{% endif %}{% if cr_bg != blank %} dtj-cr--bgimg{% endif %}{% if cr_n < 2 %} dtj-cr--single{% endif %}" style="{{ dtj_std_style | strip_newlines }} --cr-w: {{ bs.container_width }}px; --cr-n: {{ cr_vis }}; --cr-nm: {{ bs.visible_mobile }}; --cr-gap: {{ bs.gap }}px; --cr-ar: {{ cr_ar }}; --cr-sk: {{ bs.skew_angle }}deg; --cr-sc: {{ cr_scale | round: 3 }}; --cr-pad: {{ cr_pad | round: 2 }}%; --cr-r: {{ bs.corner_radius }}px; --cr-pr: {{ bs.panel_radius }}px; --cr-ov: {{ bs.bg_overlay | divided_by: 100.0 }}; --cr-h-d: {{ bs.heading_size_desktop }}px; --cr-h-m: {{ bs.heading_size_mobile }}px; --cr-ts: {{ bs.title_size }}px;{% if bs.arrow_bg != blank %} --cr-ab: {{ bs.arrow_bg }};{% endif %}{% if bs.arrow_color != blank %} --cr-ac: {{ bs.arrow_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if cr_bg != blank -%}
+      <div class="dtj-cr__bg" aria-hidden="true"><img class="dtj-cr__bg-img" src="{{ cr_bg | image_url: width: 1600 }}" srcset="{{ cr_bg | image_url: width: 800 }} 800w, {{ cr_bg | image_url: width: 1200 }} 1200w, {{ cr_bg | image_url: width: 1600 }} 1600w, {{ cr_bg | image_url: width: 2200 }} 2200w" sizes="100vw" width="{{ cr_bg.width | default: 1600 }}" height="{{ cr_bg.height | default: 600 }}" alt="" decoding="async" loading="lazy"></div>
+    {%- endif -%}
+    <div class="dtj-cr__panel">
+      {%- if cr_head != blank or cr_sub != blank -%}
+        <div class="dtj-cr__intro">
+          {%- if cr_head != blank -%}<{{ cr_tag }} class="dtj-cr__heading">{{ cr_head | escape }}</{{ cr_tag }}>{%- endif -%}
+          {%- if cr_sub != blank -%}<p class="dtj-cr__sub">{{ cr_sub | escape }}</p>{%- endif -%}
+        </div>
+      {%- endif -%}
+      {%- if cr_n > 0 -%}
+        <div class="dtj-cr__stage">
+          <ul class="dtj-cr__track" role="list" tabindex="0" aria-label="{{ cr_head | default: 'Categories' | escape }}">
+            {%- assign cr_k = 0 -%}
+            {%- for i in (1..8) -%}
+              {%- liquid
+                assign ik = 'image_' | append: i
+                assign tk = 'title_' | append: i
+                assign lk = 'link_' | append: i
+                assign t_coll = nil
+                assign t_has_coll = false
+                for c in bs.collections
+                  if forloop.index == i
+                    assign t_coll = c
+                    assign t_has_coll = true
+                  endif
+                endfor
+                assign t_pic = bs[ik]
+                assign t_title = bs[tk] | strip
+                assign t_link = bs[lk]
+                if t_has_coll
+                  if t_pic == blank
+                    assign t_pic = t_coll.image
+                  endif
+                  if t_title == blank
+                    assign t_title = t_coll.title | strip
+                  endif
+                  if t_link == blank
+                    assign t_link = t_coll.url
+                  endif
+                endif
+                assign has = false
+                if t_has_coll or bs[ik] != blank or bs[tk] != blank
+                  assign has = true
+                endif
+              -%}
+              {%- if has -%}
+                {%- assign cr_k = cr_k | plus: 1 -%}
+                <li class="dtj-cr__tile">
+                  {%- if t_link != blank -%}<a class="dtj-cr__link" href="{{ t_link }}">{%- else -%}<div class="dtj-cr__link">{%- endif -%}
+                    <span class="dtj-cr__shape">
+                      {%- if t_pic != blank -%}
+                        <img class="dtj-cr__img" src="{{ t_pic | image_url: width: 700 }}" srcset="{{ t_pic | image_url: width: 400 }} 400w, {{ t_pic | image_url: width: 600 }} 600w, {{ t_pic | image_url: width: 800 }} 800w, {{ t_pic | image_url: width: 1100 }} 1100w" sizes="(min-width: 750px) {{ cr_vw }}vw, 70vw" width="{{ t_pic.width | default: 700 }}" height="{{ t_pic.height | default: 700 }}" style="object-position: {{ t_pic.presentation.focal_point | default: '50% 50%' }}" alt="{{ t_pic.alt | default: t_title | escape }}" decoding="async"{% if bs.priority and cr_k < 3 %} loading="eager"{% if cr_k == 1 %} fetchpriority="high"{% endif %}{% else %} loading="lazy"{% endif %}>
+                      {%- endif -%}
+                    </span>
+                    {%- if t_title != blank and bs.caption != 'none' -%}<span class="dtj-cr__title">{{ t_title | escape }}</span>{%- endif -%}
+                  {%- if t_link != blank -%}</a>{%- else -%}</div>{%- endif -%}
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+          {%- if cr_n > 1 and bs.arrows != 'none' -%}
+            <button type="button" class="dtj-cr__arrow dtj-cr__prev" data-dir="-1" aria-label="Previous"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <button type="button" class="dtj-cr__arrow dtj-cr__next" data-dir="1" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7"/></svg></button>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </dtj-category-slider>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Category Slider is empty. Pick collections or add a picture to "Tile 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -103,3 +103,5 @@ very long… verify the page is not long for stupid reasons"):
     headlines get a plain one ("Ads That Make Profit, Not Just Clicks."), CTA bands lose their body line, process steps are
     titles only, each line is said once ("clear opportunity" only in the FAQ, "208+" only in the top strip). v2 went from
     678 to 244 words outside reviews/form/FAQ. **The original page `/` keeps its full text** (Harsh: "leave that one").
+18. **Premium = photography, bold type, big buttons, proof cards — not code.** Main buttons ≥ 48 px tall (`FormLink`);
+    no page-builder tricks, sliders or animation libraries (competitors that use them load in 2.5–9.6 s on a phone).

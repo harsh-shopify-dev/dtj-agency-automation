@@ -1,0 +1,210 @@
+{
+  "id": "hero-banner",
+  "title": "DTJ Hero Banner",
+  "block_file": "extensions/dtj-heroes/blocks/dtj-hero-banner.liquid",
+  "placements": ["home", "product"],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {"id": "badge_text", "type": "text", "required": false, "max_length": 60},
+    {"id": "heading", "type": "text", "required": false, "max_length": 120},
+    {"id": "subheading", "type": "textarea", "required": false, "max_length": 600},
+    {"id": "rating_text", "type": "text", "required": false, "max_length": 120},
+    {"id": "points", "type": "textarea", "required": false, "max_length": 400},
+    {"id": "button_label", "type": "text", "required": false, "max_length": 60},
+    {"id": "note", "type": "text", "required": false, "max_length": 120},
+    {"id": "review_quote", "type": "textarea", "required": false, "max_length": 400},
+    {"id": "review_name", "type": "text", "required": false, "max_length": 60}
+  ],
+  "standard_controls": ["spacing_v", "gutter", "colors"],
+  "standard_defaults": {"padding_top": 0, "padding_bottom": 0, "side_padding": 0},
+  "settings": [
+    {"type": "header", "content": "Words"},
+    {"type": "select", "id": "layout", "label": "Layout", "default": "banner", "options": [
+      {"value": "banner", "label": "V1 Banner: text on the picture"},
+      {"value": "split", "label": "V2 Split: picture one side, text panel the other"},
+      {"value": "cover", "label": "V3 Cover: full picture, text low on it"}
+    ], "info": "V1 is the full-width hero for the top of a page. V2 is the two-column story hero for the home page. V3 is a big photo with the text at the bottom."},
+    {"type": "text", "id": "badge_text", "label": "Badge", "info": "A small label above the heading, e.g. a sale tag. Empty = hidden."},
+    {"type": "text", "id": "heading", "label": "Heading", "info": "Accent words between *asterisks*; | starts a new line. Empty = hidden."},
+    {"type": "textarea", "id": "subheading", "label": "Subheading / paragraph", "info": "V1: one short line. V2 and V3: a paragraph. Empty = hidden."},
+    {"type": "range", "id": "rating_value", "label": "Rating", "min": 0, "max": 5, "step": 0.1, "default": 0, "info": "Your real average. 0 = no stars."},
+    {"type": "text", "id": "rating_text", "label": "Rating text", "info": "Bold part between *asterisks*, e.g. 4.8/5 based on *10,000+* reviews. Empty = no text."},
+    {"type": "textarea", "id": "points", "label": "Points (one per line, up to 4)", "info": "Short proof points with a tick. Empty = hidden."},
+    {"type": "text", "id": "button_label", "label": "Button label", "info": "Empty = no button."},
+    {"type": "url", "id": "button_url", "label": "Button link"},
+    {"type": "text", "id": "note", "label": "Line under the button"},
+    {"type": "textarea", "id": "review_quote", "label": "V2: review quote", "info": "V2 only: a quote card under the points. Empty = no card."},
+    {"type": "text", "id": "review_name", "label": "V2: reviewer name"},
+    {"type": "range", "id": "review_stars", "label": "V2: review stars", "min": 0, "max": 5, "step": 0.1, "default": 0, "info": "0 = no stars on the card."},
+    {"type": "header", "content": "Picture and layout"},
+    {"type": "image_picker", "id": "image", "label": "Picture"},
+    {"type": "image_picker", "id": "image_mobile", "label": "Phone picture", "info": "Optional. A portrait crop gives the best phone result; empty = the main picture is cropped."},
+    {"type": "checkbox", "id": "priority", "label": "This hero is the first thing on the page", "default": true, "info": "Loads the picture first so the page feels fast. Turn off for a hero further down."},
+    {"type": "select", "id": "ratio_desktop", "label": "Shape on desktop", "default": "2 / 1", "options": [
+      {"value": "adapt", "label": "Adapt to the picture"},
+      {"value": "21 / 9", "label": "Ultra wide 21:9"},
+      {"value": "2 / 1", "label": "Wide 2:1"},
+      {"value": "16 / 9", "label": "Wide 16:9"},
+      {"value": "3 / 2", "label": "Landscape 3:2"},
+      {"value": "4 / 3", "label": "Landscape 4:3"},
+      {"value": "1 / 1", "label": "Square"}
+    ], "info": "The minimum height. Longer text makes the hero taller, never cut off."},
+    {"type": "select", "id": "ratio_mobile", "label": "Picture shape on phones", "default": "4 / 5", "options": [
+      {"value": "adapt", "label": "Adapt to the picture"},
+      {"value": "1 / 1", "label": "Square"},
+      {"value": "4 / 5", "label": "Portrait 4:5"},
+      {"value": "3 / 4", "label": "Portrait 3:4"},
+      {"value": "4 / 3", "label": "Landscape 4:3"},
+      {"value": "16 / 9", "label": "Wide 16:9"}
+    ]},
+    {"type": "select", "id": "image_focus", "label": "Picture focus on desktop", "default": "center", "options": [
+      {"value": "center", "label": "Centre"},
+      {"value": "top", "label": "Top"},
+      {"value": "bottom", "label": "Bottom"},
+      {"value": "left", "label": "Left"},
+      {"value": "right", "label": "Right"},
+      {"value": "left top", "label": "Top left"},
+      {"value": "right top", "label": "Top right"},
+      {"value": "left bottom", "label": "Bottom left"},
+      {"value": "right bottom", "label": "Bottom right"}
+    ], "info": "Which part of the picture stays in view when it is cropped."},
+    {"type": "select", "id": "image_focus_mobile", "label": "Picture focus on phones", "default": "center", "options": [
+      {"value": "center", "label": "Centre"},
+      {"value": "top", "label": "Top"},
+      {"value": "bottom", "label": "Bottom"},
+      {"value": "left", "label": "Left"},
+      {"value": "right", "label": "Right"},
+      {"value": "left top", "label": "Top left"},
+      {"value": "right top", "label": "Top right"},
+      {"value": "left bottom", "label": "Bottom left"},
+      {"value": "right bottom", "label": "Bottom right"}
+    ]},
+    {"type": "range", "id": "container_width", "label": "Maximum width", "min": 800, "max": 1920, "step": 20, "unit": "px", "default": 1920},
+    {"type": "range", "id": "corner_radius", "label": "Corner radius", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 0},
+    {"type": "select", "id": "content_position", "label": "V1/V3: text side on desktop", "default": "left", "options": [
+      {"value": "left", "label": "Left"},
+      {"value": "center", "label": "Centre"},
+      {"value": "right", "label": "Right"}
+    ]},
+    {"type": "select", "id": "content_align", "label": "Text height on desktop", "default": "auto", "options": [
+      {"value": "auto", "label": "Automatic (V1 middle, V3 bottom)"},
+      {"value": "top", "label": "Top"},
+      {"value": "center", "label": "Middle"},
+      {"value": "bottom", "label": "Bottom"}
+    ]},
+    {"type": "range", "id": "content_width", "label": "Text width", "min": 360, "max": 800, "step": 10, "unit": "px", "default": 560},
+    {"type": "range", "id": "content_padding", "label": "Space around the text, desktop", "min": 16, "max": 120, "step": 4, "unit": "px", "default": 56},
+    {"type": "select", "id": "mobile_layout", "label": "V1/V3: phone layout", "default": "auto", "options": [
+      {"value": "auto", "label": "Automatic (V1 stacked, V3 on the picture)"},
+      {"value": "stack", "label": "Picture on top, text below"},
+      {"value": "overlay", "label": "Text on the picture's lower edge"}
+    ]},
+    {"type": "select", "id": "mobile_align", "label": "Text alignment on phones", "default": "auto", "options": [
+      {"value": "auto", "label": "Automatic (V1 centred, V2 and V3 left)"},
+      {"value": "left", "label": "Left"},
+      {"value": "center", "label": "Centred"}
+    ]},
+    {"type": "range", "id": "mobile_fade", "label": "V1 stacked: picture fades into the text", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 40},
+    {"type": "range", "id": "mobile_pic_space", "label": "V1/V3 on the picture: picture space above the text on phones", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 55, "info": "Keeps the subject of the picture visible above the words. Percent of the screen width."},
+    {"type": "range", "id": "mobile_curve", "label": "V1 stacked: curve where text meets the picture", "min": 0, "max": 48, "step": 4, "unit": "px", "default": 0},
+    {"type": "select", "id": "overlay_style", "label": "V1/V3: picture overlay", "default": "auto", "options": [
+      {"value": "auto", "label": "Automatic (V1 side fade, V3 bottom fade)"},
+      {"value": "side", "label": "Fade from the text side"},
+      {"value": "solid", "label": "Even tint"},
+      {"value": "bottom", "label": "Fade from the bottom"},
+      {"value": "none", "label": "None"}
+    ], "info": "Keeps the text readable on a busy picture."},
+    {"type": "color", "id": "overlay_color", "label": "Overlay color", "info": "Empty = the background color."},
+    {"type": "range", "id": "overlay_opacity", "label": "Overlay strength", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 85},
+    {"type": "range", "id": "overlay_size", "label": "How far the overlay reaches", "min": 20, "max": 100, "step": 5, "unit": "%", "default": 65},
+    {"type": "range", "id": "overlay_blur", "label": "Blur behind the overlay", "min": 0, "max": 24, "step": 2, "unit": "px", "default": 0},
+    {"type": "header", "content": "V2 split layout"},
+    {"type": "select", "id": "image_side", "label": "Picture side", "default": "left", "options": [
+      {"value": "left", "label": "Left"},
+      {"value": "right", "label": "Right"}
+    ]},
+    {"type": "select", "id": "split_columns", "label": "Column widths (picture : text)", "default": "1fr 1fr", "options": [
+      {"value": "1fr 1fr", "label": "Equal"},
+      {"value": "5fr 6fr", "label": "Slightly more text"},
+      {"value": "6fr 5fr", "label": "Slightly more picture"},
+      {"value": "2fr 3fr", "label": "Much more text"}
+    ]},
+    {"type": "select", "id": "image_fit", "label": "Picture fit", "default": "cover", "options": [
+      {"value": "cover", "label": "Fill the column (crops)"},
+      {"value": "contain", "label": "Show the whole picture"}
+    ], "info": "Use 'whole picture' for a product shot on a plain background."},
+    {"type": "color", "id": "panel_bg", "label": "Panel color", "info": "Empty = a soft tint of the text color."},
+    {"type": "range", "id": "panel_radius", "label": "Panel corner radius", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 16},
+    {"type": "range", "id": "panel_gap", "label": "Space around the panel", "min": 0, "max": 48, "step": 4, "unit": "px", "default": 12},
+    {"type": "range", "id": "split_text_size", "label": "V2/V3 paragraph size", "min": 14, "max": 22, "step": 1, "unit": "px", "default": 16},
+    {"type": "color", "id": "card_bg", "label": "Review card color", "info": "Empty = the background color."},
+    {"type": "header", "content": "Type and colors"},
+    {"type": "select", "id": "heading_font", "label": "Heading font", "default": "theme", "options": [
+      {"value": "theme", "label": "Theme heading font"},
+      {"value": "sans", "label": "Clean sans"},
+      {"value": "serif", "label": "Serif"}
+    ]},
+    {"type": "range", "id": "heading_size_desktop", "label": "Heading size, desktop", "min": 28, "max": 80, "step": 1, "unit": "px", "default": 48},
+    {"type": "range", "id": "heading_size_mobile", "label": "Heading size, phones", "min": 24, "max": 48, "step": 1, "unit": "px", "default": 32},
+    {"type": "range", "id": "subheading_size_desktop", "label": "V1 subheading size, desktop", "min": 14, "max": 32, "step": 1, "unit": "px", "default": 22},
+    {"type": "range", "id": "subheading_size_mobile", "label": "V1 subheading size, phones", "min": 14, "max": 24, "step": 1, "unit": "px", "default": 17},
+    {"type": "color", "id": "accent_color", "label": "Accent color", "info": "The accent words, and the default for the stars, ticks and button. Empty = a softer shade of the text."},
+    {"type": "select", "id": "accent_font", "label": "Accent word style", "default": "auto", "options": [
+      {"value": "auto", "label": "Automatic (V1 italic, V2 and V3 colour only)"},
+      {"value": "italic", "label": "Italic"},
+      {"value": "serif", "label": "Serif italic"},
+      {"value": "bold", "label": "Bold"},
+      {"value": "plain", "label": "Colour only"}
+    ]},
+    {"type": "select", "id": "badge_style", "label": "Badge style", "default": "soft", "options": [
+      {"value": "soft", "label": "Soft glass"},
+      {"value": "pill", "label": "Soft pill"},
+      {"value": "outline", "label": "Outline"},
+      {"value": "solid", "label": "Solid"}
+    ]},
+    {"type": "color", "id": "badge_bg", "label": "Badge color"},
+    {"type": "color", "id": "badge_color", "label": "Badge text color"},
+    {"type": "select", "id": "rating_style", "label": "Rating style", "default": "boxed", "options": [
+      {"value": "boxed", "label": "Boxed"},
+      {"value": "pill", "label": "Pill"},
+      {"value": "plain", "label": "Plain"}
+    ]},
+    {"type": "color", "id": "star_color", "label": "Star color", "info": "Empty = the accent color."},
+    {"type": "select", "id": "point_icon", "label": "Point icon", "default": "auto", "options": [
+      {"value": "auto", "label": "Automatic (V1 shield, V2 and V3 circle)"},
+      {"value": "shield", "label": "Shield tick"},
+      {"value": "circle", "label": "Circle tick"},
+      {"value": "check", "label": "Plain tick"},
+      {"value": "dot", "label": "Dot"}
+    ]},
+    {"type": "color", "id": "point_icon_color", "label": "Point icon color", "info": "Empty = the accent color."},
+    {"type": "header", "content": "Button"},
+    {"type": "select", "id": "button_style", "label": "Button shape", "default": "rounded", "options": [
+      {"value": "rounded", "label": "Rounded"},
+      {"value": "pill", "label": "Pill"},
+      {"value": "square", "label": "Square"}
+    ]},
+    {"type": "color", "id": "button_bg", "label": "Button color", "info": "Empty = the accent color."},
+    {"type": "color", "id": "button_color", "label": "Button text color"},
+    {"type": "checkbox", "id": "button_arrow", "label": "Arrow on the button", "default": false},
+    {"type": "checkbox", "id": "button_full_mobile", "label": "Full-width button on phones", "default": true}
+  ],
+  "data_needs": [],
+  "reference_image": "Supersenior promo hero (dtj-hero-promo) and a dark 'Perfect Skin, Every Day.' hero (V1); the Sternify 'The Art of Perfect Sleep' two-column story section (V2); an athletic-gear cover hero with the text at the bottom (V3)",
+  "test": {
+    "sample": {
+      "badge_text": "Badge sample",
+      "heading": "Head *accent* tail",
+      "subheading": "Paragraph sample",
+      "rating_value": 4.8,
+      "rating_text": "4.8/5 based on *10,000+* reviews",
+      "points": "Point one\nPoint two",
+      "button_label": "Button sample",
+      "button_url": "/shop",
+      "note": "Note sample"
+    },
+    "expect": ["Badge sample", "Head", "accent", "tail", "Paragraph sample", "10,000+", "Point one", "Point two", "Button sample", "Note sample", "dtj-hb__stars-fill", "dtj-hb__btn"]
+  }
+}

@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import direction as direction_mod
-from . import sections
+from . import niches, sections
 from .catalog import Catalog
 from .copy_step import EFFORT, FALLBACK_BETA, MAX_TOKENS, MODEL, _cost, _usage
 
@@ -97,7 +97,8 @@ def menu(brand: dict, facts: dict, catalog: Catalog | None = None) -> list[dict]
     items = []
     for name, build in ((n, b) for n, b in sections.BUILDERS.items() if n in BLOCKS):  # the plan step's menu: the pdp recipe's sections
         res = build(sections.Ctx(brand, facts, d, cat))
-        item = {"section": name, "what_it_is_for": purpose.get(name, ""), "blocks": BLOCKS[name], "available": not isinstance(res, sections.Omit)}
+        item = {"section": name, "what_it_is_for": purpose.get(name, ""), "blocks": niches.order_blocks(BLOCKS[name], brand["category"]),  # best fit for the niche first
+                "available": not isinstance(res, sections.Omit)}
         if isinstance(res, sections.Omit):
             item["why_not"] = res.reason
         items.append(item)
@@ -151,6 +152,7 @@ def build_request(brand: dict, facts: dict, *, store_product: dict | None = None
         "brand": {**brand, "not_set": not_set(brand)},
         "facts": facts,
         "store_product": store_product,
+        "niche": niches.niche_of(brand["category"]),
         "menu": menu(brand, facts, catalog),
         "house_default": house_order(brand["category"]),
         "agency_references": reference_notes(),

@@ -1,0 +1,68 @@
+{%- liquid
+  assign ft_n = 0
+  for i in (1..6)
+    assign lk = 't' | append: i | append: '_label'
+    if bs[lk] != blank
+      assign ft_n = ft_n | plus: 1
+    endif
+  endfor
+  assign ft_head = bs.heading | strip
+  assign ft_text = bs.text | strip
+  assign ft_btn = bs.button_label | strip
+  assign ft_img = bs.image
+  assign ft_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3'
+      assign ft_tag = bs.heading_tag
+  endcase
+  assign ft_has = false
+  if ft_n > 0 or ft_head != blank or ft_text != blank or ft_btn != blank or ft_img != blank
+    assign ft_has = true
+  endif
+  assign ft_cols = bs.split | default: '1fr 1fr'
+  if bs.image_side != 'left'
+    assign ft_side = 'right'
+  else
+    assign ft_side = 'left'
+    assign ft_cc = ft_cols | split: ' '
+    assign ft_cols = ft_cc[1] | append: ' ' | append: ft_cc[0]
+  endif
+-%}
+{%- if ft_has -%}
+  <div class="dtj-b dtj-ft dtj-ft--side-{{ ft_side }} dtj-ft--tile-{{ bs.tile_style | default: 'soft' }} dtj-ft--btn-{{ bs.button_style | default: 'outline' }} dtj-ft--corner-{{ bs.button_shape | default: 'rounded' }} dtj-ft--img-{{ bs.mobile_image | default: 'top' }} dtj-ft--d{{ bs.tile_columns | default: '3' }} dtj-ft--m{{ bs.tile_columns_mobile | default: '2' }}{% if ft_img == blank %} dtj-ft--noimg{% endif %}" style="{{ dtj_std_style | strip_newlines }} --ft-w: {{ bs.container_width }}px; --ft-cols: {{ ft_cols }}; --ft-gap: {{ bs.column_gap }}px; --ft-ratio: {{ bs.image_ratio | default: '1.25' }}; --ft-ir: {{ bs.image_radius }}px; --ft-focus: {{ bs.image_focus | default: 'center' }}; --ft-tr: {{ bs.tile_radius }}px; --ft-h-d: {{ bs.heading_size_desktop }}px; --ft-h-m: {{ bs.heading_size_mobile }}px;{% if bs.accent_color != blank %} --ft-accent: {{ bs.accent_color }};{% endif %}{% if bs.heading_color != blank %} --ft-hc: {{ bs.heading_color }};{% endif %}{% if bs.tile_bg != blank %} --ft-tb: {{ bs.tile_bg }};{% endif %}{% if bs.icon_bg != blank %} --ft-ib: {{ bs.icon_bg }};{% endif %}{% if bs.icon_color != blank %} --ft-ic: {{ bs.icon_color }};{% endif %}{% if bs.label_color != blank %} --ft-lc: {{ bs.label_color }};{% endif %}{% if bs.button_bg != blank %} --ft-btn: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --ft-btnc: {{ bs.button_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-ft__wrap">
+      {%- if ft_img != blank -%}
+        <div class="dtj-ft__media"><img class="dtj-ft__img" src="{{ ft_img | image_url: width: 900 }}" srcset="{{ ft_img | image_url: width: 480 }} 480w, {{ ft_img | image_url: width: 720 }} 720w, {{ ft_img | image_url: width: 960 }} 960w, {{ ft_img | image_url: width: 1280 }} 1280w" sizes="(min-width: 750px) 48vw, 100vw" width="{{ ft_img.width | default: 960 }}" height="{{ ft_img.height | default: 768 }}" style="object-position: {{ ft_img.presentation.focal_point | default: bs.image_focus | default: 'center' }}" alt="{{ ft_img.alt | default: ft_head | escape }}" decoding="async"{% if bs.priority %} loading="eager" fetchpriority="high"{% else %} loading="lazy"{% endif %}></div>
+      {%- endif -%}
+      <div class="dtj-ft__body">
+        {%- if ft_head != blank -%}<{{ ft_tag }} class="dtj-ft__heading">{{ ft_head | escape }}</{{ ft_tag }}>{%- endif -%}
+        {%- if ft_text != blank -%}<p class="dtj-ft__text">{{ ft_text | escape | newline_to_br }}</p>{%- endif -%}
+        {%- if ft_btn != blank -%}
+          <div class="dtj-ft__cta">
+            {%- if bs.button_url != blank -%}<a class="dtj-ft__btn" href="{{ bs.button_url }}">{{ ft_btn | escape }}</a>{%- else -%}<span class="dtj-ft__btn">{{ ft_btn | escape }}</span>{%- endif -%}
+          </div>
+        {%- endif -%}
+        {%- if ft_n > 0 -%}
+          <ul class="dtj-ft__tiles">
+            {%- for i in (1..6) -%}
+              {%- liquid
+                assign lk = 't' | append: i | append: '_label'
+                assign ik = 't' | append: i | append: '_icon'
+                assign t_label = bs[lk] | strip
+                assign t_icon = bs[ik] | default: 'none'
+              -%}
+              {%- if t_label != blank -%}
+                <li class="dtj-ft__tile">
+                  {%- if t_icon != 'none' -%}<span class="dtj-ft__icon" aria-hidden="true">{% render 'dtj-card-icon', name: t_icon %}</span>{%- endif -%}
+                  <span class="dtj-ft__label">{{ t_label | escape }}</span>
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Feature Tiles is empty. Add a heading, a picture or a tile label (editor only: shoppers see nothing).</p>
+{%- endif -%}

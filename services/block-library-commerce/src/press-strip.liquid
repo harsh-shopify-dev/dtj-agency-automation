@@ -1,0 +1,63 @@
+{%- liquid
+  assign ps_n = 0
+  for i in (1..8)
+    assign lk = 'logo_' | append: i
+    assign nk = 'name_' | append: i
+    if bs[lk] != blank or bs[nk] != blank
+      assign ps_n = ps_n | plus: 1
+    endif
+  endfor
+  assign ps_head = bs.heading | strip
+  assign ps_tag = 'p'
+  case bs.heading_tag
+    when 'h2' or 'h3'
+      assign ps_tag = bs.heading_tag
+  endcase
+  assign ps_layout = bs.layout | default: 'row'
+  assign ps_tone = bs.logo_tone | default: 'gray'
+  assign ps_op = bs.logo_opacity | default: 75 | divided_by: 100.0
+-%}
+{%- if ps_n > 0 or ps_head != blank -%}
+  <div class="dtj-b dtj-ps dtj-ps--{{ ps_layout }} dtj-ps--tone-{{ ps_tone }} dtj-ps--head-{{ bs.heading_align | default: 'center' }}{% if bs.color_on_hover %} dtj-ps--hover{% endif %}{% if bs.bordered %} dtj-ps--lines{% endif %}" style="{{ dtj_std_style | strip_newlines }} --ps-w: {{ bs.container_width }}px; --ps-h: {{ bs.logo_height }}px; --ps-gap: {{ bs.gap }}px; --ps-cols: {{ bs.columns }}; --ps-op: {{ ps_op }}; --ps-speed: {{ bs.speed }}s; --ps-hs: {{ bs.heading_size }}px;" {{ block.shopify_attributes }}>
+    <div class="dtj-ps__wrap">
+      {%- if ps_head != blank -%}<{{ ps_tag }} class="dtj-ps__heading">{{ ps_head | escape }}</{{ ps_tag }}>{%- endif -%}
+      {%- if ps_n > 0 -%}
+        {%- capture ps_group -%}
+          {%- for i in (1..8) -%}
+            {%- liquid
+              assign lk = 'logo_' | append: i
+              assign nk = 'name_' | append: i
+              assign uk = 'link_' | append: i
+              assign p_logo = bs[lk]
+              assign p_name = bs[nk] | strip
+              assign p_link = bs[uk]
+            -%}
+            {%- if p_logo != blank or p_name != blank -%}
+              <li class="dtj-ps__item">
+                {%- if p_link != blank -%}<a class="dtj-ps__link" href="{{ p_link }}"{% if p_name != blank %} aria-label="{{ p_name | escape }}"{% endif %}>{%- endif -%}
+                  {%- if p_logo != blank -%}
+                    <img class="dtj-ps__logo" src="{{ p_logo | image_url: width: 400 }}" srcset="{{ p_logo | image_url: width: 200 }} 200w, {{ p_logo | image_url: width: 400 }} 400w, {{ p_logo | image_url: width: 600 }} 600w" sizes="160px" width="{{ p_logo.width | default: 200 }}" height="{{ p_logo.height | default: 60 }}" alt="{{ p_name | default: p_logo.alt | escape }}" loading="lazy" decoding="async">
+                  {%- else -%}
+                    <span class="dtj-ps__word">{{ p_name | escape }}</span>
+                  {%- endif -%}
+                {%- if p_link != blank -%}</a>{%- endif -%}
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endcapture -%}
+        {%- if ps_layout == 'marquee' -%}
+          <div class="dtj-ps__band" role="group" aria-label="{{ ps_head | default: 'Press' | escape }}">
+            <div class="dtj-ps__track">
+              <ul class="dtj-ps__list" role="list">{{ ps_group }}</ul>
+              <ul class="dtj-ps__list" role="list" aria-hidden="true">{{ ps_group | replace: '<a class="dtj-ps__link"', '<span class="dtj-ps__link"' | replace: '</a>', '</span>' | replace: ' href=', ' data-href=' }}</ul>
+            </div>
+          </div>
+        {%- else -%}
+          <ul class="dtj-ps__list" role="list">{{ ps_group }}</ul>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Press Strip is empty. Add a logo or a publication name (editor only: shoppers see nothing).</p>
+{%- endif -%}

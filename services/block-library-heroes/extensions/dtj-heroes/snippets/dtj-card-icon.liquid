@@ -1,0 +1,31 @@
+{%- comment -%} Small stroke icons (24 grid) for the DTJ Feature Cards. Called as: render 'dtj-card-icon', name: 'leaf'. An unknown name draws nothing. {%- endcomment -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{%- case name -%}
+{%- when 'leaf' -%}<path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25"/><path d="M7 14c3.22-2.78 6-3.5 9-4.5"/>
+{%- when 'shield' -%}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
+{%- when 'check' -%}<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>
+{%- when 'globe' -%}<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/>
+{%- when 'heart' -%}<path d="M19.5 12.6L12 20l-7.5-7.4A5 5 0 1 1 12 6a5 5 0 1 1 7.5 6.6z"/>
+{%- when 'bolt' -%}<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+{%- when 'snowflake' -%}<path d="M12 2v20M4.2 7l15.6 10M4.2 17L19.8 7"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5"/>
+{%- when 'bulb' -%}<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>
+{%- when 'brain' -%}<path d="M12 2a5 5 0 0 1 4.8 3.6A4 4 0 0 1 20 9.5a4 4 0 0 1-1 7.2A5 5 0 0 1 12 22a5 5 0 0 1-7-5.3A4 4 0 0 1 4 9.5a4 4 0 0 1 3.2-3.9A5 5 0 0 1 12 2z"/><path d="M12 2v20"/>
+{%- when 'drop' -%}<path d="M12 3s6 6.2 6 10.5A6 6 0 0 1 6 13.5C6 9.2 12 3 12 3z"/>
+{%- when 'sparkle' -%}<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16z"/>
+{%- when 'star' -%}<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/>
+{%- when 'truck' -%}<path d="M2 6h11v10H2zM13 9h4l4 3v4h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>
+{%- when 'clock' -%}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{%- when 'award' -%}<circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/>
+{%- when 'atom' -%}<circle cx="12" cy="12" r="1.6"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4"/>
+{%- when 'wave' -%}<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>
+{%- when 'brush' -%}<path d="M4 20l1-4L16 5a2.1 2.1 0 0 1 3 3L8 19l-4 1z"/><path d="M14 7l3 3"/>
+{%- when 'battery' -%}<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 11v2"/><path d="M7 10v4M11 10v4"/>
+{%- when 'sun' -%}<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+{%- when 'smile' -%}<circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/>
+{%- when 'box' -%}<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.5L12 12l8.7-4.5M12 12v9"/>
+{%- when 'tooth' -%}<path d="M7 3.5c-2 0-3.5 1.7-3.5 4 0 2 .8 3 1.3 5 .4 1.7.6 7 2.4 7 1.4 0 1.4-4.5 3.3-4.5s1.9 4.5 3.3 4.5c1.8 0 2-5.3 2.4-7 .5-2 1.3-3 1.3-5 0-2.3-1.5-4-3.5-4-1.7 0-2.4.9-3.5.9S8.7 3.5 7 3.5z"/>
+{%- when 'sliders' -%}<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>
+{%- when 'hourglass' -%}<path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/>
+{%- when 'signal' -%}<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>
+{%- when 'battery-bolt' -%}<rect x="2.5" y="7" width="17" height="10" rx="2.5"/><path d="M21.5 11v2M11.5 9.5l-2 3h3l-2 3"/>
+{%- when 'shield-drop' -%}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8.5s2.6 2.7 2.6 4.6a2.6 2.6 0 0 1-5.2 0c0-1.9 2.6-4.6 2.6-4.6z"/>
+{%- endcase -%}</svg>

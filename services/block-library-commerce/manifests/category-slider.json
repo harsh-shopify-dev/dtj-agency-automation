@@ -1,0 +1,606 @@
+{
+  "id": "category-slider",
+  "title": "DTJ Category Slider",
+  "block_file": "extensions/dtj-commerce/blocks/dtj-category-slider.liquid",
+  "placements": [
+    "home"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "script": true,
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "subheading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "title_1",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_2",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_3",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_4",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_5",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_6",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_7",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "title_8",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 32,
+    "padding_bottom": 32,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "heading_align",
+      "label": "Heading alignment",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Centred"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "sub_align",
+      "label": "Subheading alignment",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Same as the heading"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Centred"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h2",
+          "label": "h2"
+        },
+        {
+          "value": "h1",
+          "label": "h1"
+        },
+        {
+          "value": "h3",
+          "label": "h3"
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Tiles (up to 8)"
+    },
+    {
+      "type": "collection_list",
+      "id": "collections",
+      "label": "Collections (one per tile, in order)",
+      "limit": 8,
+      "info": "The first collection becomes tile 1, the second tile 2, and so on: each gives its tile a link, a name and a picture. The tiles below are optional and override it."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Tile 1: picture",
+      "info": "Empty = the collection's own picture."
+    },
+    {
+      "type": "text",
+      "id": "title_1",
+      "label": "Tile 1: title",
+      "info": "Empty = the collection name."
+    },
+    {
+      "type": "url",
+      "id": "link_1",
+      "label": "Tile 1: link",
+      "info": "Empty = the collection's page."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Tile 2: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_2",
+      "label": "Tile 2: title"
+    },
+    {
+      "type": "url",
+      "id": "link_2",
+      "label": "Tile 2: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Tile 3: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_3",
+      "label": "Tile 3: title"
+    },
+    {
+      "type": "url",
+      "id": "link_3",
+      "label": "Tile 3: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Tile 4: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_4",
+      "label": "Tile 4: title"
+    },
+    {
+      "type": "url",
+      "id": "link_4",
+      "label": "Tile 4: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Tile 5: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_5",
+      "label": "Tile 5: title"
+    },
+    {
+      "type": "url",
+      "id": "link_5",
+      "label": "Tile 5: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Tile 6: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_6",
+      "label": "Tile 6: title"
+    },
+    {
+      "type": "url",
+      "id": "link_6",
+      "label": "Tile 6: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_7",
+      "label": "Tile 7: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_7",
+      "label": "Tile 7: title"
+    },
+    {
+      "type": "url",
+      "id": "link_7",
+      "label": "Tile 7: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_8",
+      "label": "Tile 8: picture"
+    },
+    {
+      "type": "text",
+      "id": "title_8",
+      "label": "Tile 8: title"
+    },
+    {
+      "type": "url",
+      "id": "link_8",
+      "label": "Tile 8: link"
+    },
+    {
+      "type": "header",
+      "content": "Shape and layout"
+    },
+    {
+      "type": "select",
+      "id": "shape",
+      "label": "Tile shape",
+      "default": "slant",
+      "options": [
+        {
+          "value": "slant",
+          "label": "Slanted (parallelogram)"
+        },
+        {
+          "value": "leaf",
+          "label": "Soft leaf (slanted, two big round corners)"
+        },
+        {
+          "value": "round",
+          "label": "Rounded rectangle"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "skew_angle",
+      "label": "Slant",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 10,
+      "unit": "°",
+      "info": "0 = straight edges."
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "label": "Corner radius",
+      "min": 0,
+      "max": 80,
+      "step": 2,
+      "default": 40,
+      "unit": "px",
+      "info": "For the Leaf and Rounded shapes."
+    },
+    {
+      "type": "select",
+      "id": "tile_ratio",
+      "label": "Tile shape (width : height)",
+      "default": "1.05",
+      "options": [
+        {
+          "value": "1.6",
+          "label": "Wide 3:2"
+        },
+        {
+          "value": "1.3",
+          "label": "Landscape 4:3"
+        },
+        {
+          "value": "1.05",
+          "label": "Almost square"
+        },
+        {
+          "value": "0.75",
+          "label": "Portrait 3:4"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "visible_desktop",
+      "label": "Tiles in view on desktop",
+      "min": 1.5,
+      "max": 6,
+      "step": 0.5,
+      "default": 3.5,
+      "info": "A half tile at the edge shows there is more to swipe."
+    },
+    {
+      "type": "range",
+      "id": "visible_mobile",
+      "label": "Tiles in view on phones",
+      "min": 1.5,
+      "max": 3,
+      "step": 0.5,
+      "default": 1.5
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between tiles",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "default": 12,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Maximum width",
+      "min": 600,
+      "max": 1920,
+      "step": 20,
+      "default": 1400,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "caption",
+      "label": "Titles",
+      "default": "below_left",
+      "options": [
+        {
+          "value": "none",
+          "label": "No titles"
+        },
+        {
+          "value": "below_left",
+          "label": "Below, left"
+        },
+        {
+          "value": "below_center",
+          "label": "Below, centred"
+        },
+        {
+          "value": "overlay",
+          "label": "On the picture"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "edge_fade",
+      "label": "Fade the tiles at both ends",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "priority",
+      "label": "This section is at the top of the page",
+      "default": false,
+      "info": "Loads the first pictures first. Leave off for a section further down."
+    },
+    {
+      "type": "header",
+      "content": "Look"
+    },
+    {
+      "type": "checkbox",
+      "id": "panel",
+      "label": "Show on a rounded card",
+      "default": false,
+      "info": "Uses the background color above."
+    },
+    {
+      "type": "range",
+      "id": "panel_radius",
+      "label": "Card corner radius",
+      "min": 0,
+      "max": 48,
+      "step": 2,
+      "default": 24,
+      "unit": "px"
+    },
+    {
+      "type": "image_picker",
+      "id": "bg_image",
+      "label": "Background picture",
+      "info": "A texture behind the heading and tiles. Empty = the plain background color."
+    },
+    {
+      "type": "range",
+      "id": "bg_overlay",
+      "label": "Tint over the background picture",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "default": 0,
+      "unit": "%"
+    },
+    {
+      "type": "select",
+      "id": "heading_font",
+      "label": "Heading font",
+      "default": "theme",
+      "options": [
+        {
+          "value": "theme",
+          "label": "Theme heading font"
+        },
+        {
+          "value": "serif",
+          "label": "Serif"
+        },
+        {
+          "value": "sans",
+          "label": "Clean sans"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 20,
+      "max": 72,
+      "step": 1,
+      "default": 40,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phones",
+      "min": 18,
+      "max": 44,
+      "step": 1,
+      "default": 28,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "title_font",
+      "label": "Title font",
+      "default": "theme",
+      "options": [
+        {
+          "value": "theme",
+          "label": "Theme font"
+        },
+        {
+          "value": "serif",
+          "label": "Serif"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "Title size",
+      "min": 12,
+      "max": 28,
+      "step": 1,
+      "default": 18,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "arrows",
+      "label": "Arrows",
+      "default": "square",
+      "options": [
+        {
+          "value": "square",
+          "label": "Rounded squares"
+        },
+        {
+          "value": "circle",
+          "label": "Circles"
+        },
+        {
+          "value": "none",
+          "label": "No arrows (swipe only)"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "arrow_bg",
+      "label": "Arrow color",
+      "info": "Empty = the page background color."
+    },
+    {
+      "type": "color",
+      "id": "arrow_color",
+      "label": "Arrow icon color",
+      "info": "Empty = the page text color."
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "'Discover our collection', 'Slider #15' and 'Popular categories' (Harsh, 13 Oct 2026): swipeable category tiles that are slanted or softly rounded, titles below or none, optional background texture, rounded card and faded ends",
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "subheading": "Sub sample",
+      "collections": [
+        {
+          "title": "Coll one",
+          "url": "/collections/c1",
+          "image": "cpic1"
+        },
+        {
+          "title": "Coll two",
+          "url": "/collections/c2",
+          "image": "cpic2"
+        }
+      ],
+      "title_3": "Tile three",
+      "image_3": "pic3",
+      "link_3": "/collections/c3"
+    },
+    "expect": [
+      "Heading sample",
+      "Sub sample",
+      "Coll one",
+      "Coll two",
+      "Tile three",
+      "dtj-cr__tile",
+      "/collections/c1",
+      "dtj-cr__prev"
+    ]
+  }
+}

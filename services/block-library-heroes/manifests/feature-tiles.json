@@ -1,0 +1,1251 @@
+{
+  "id": "feature-tiles",
+  "title": "DTJ Feature Tiles",
+  "block_file": "extensions/dtj-heroes/blocks/dtj-feature-tiles.liquid",
+  "placements": [
+    "home",
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "button_label",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 600
+    },
+    {
+      "id": "t1_label",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    },
+    {
+      "id": "t2_label",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    },
+    {
+      "id": "t3_label",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    },
+    {
+      "id": "t4_label",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    },
+    {
+      "id": "t5_label",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    },
+    {
+      "id": "t6_label",
+      "type": "text",
+      "required": false,
+      "max_length": 40
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 32,
+    "padding_bottom": 32,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Paragraph",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "info": "Empty = no button."
+    },
+    {
+      "type": "url",
+      "id": "button_url",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Tiles (up to 6)"
+    },
+    {
+      "type": "select",
+      "id": "t1_icon",
+      "label": "Tile 1: icon",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "tooth",
+          "label": "Tooth"
+        },
+        {
+          "value": "sliders",
+          "label": "Sliders"
+        },
+        {
+          "value": "hourglass",
+          "label": "Hourglass"
+        },
+        {
+          "value": "signal",
+          "label": "Signal"
+        },
+        {
+          "value": "battery-bolt",
+          "label": "Battery with bolt"
+        },
+        {
+          "value": "shield-drop",
+          "label": "Shield with drop"
+        },
+        {
+          "value": "wave",
+          "label": "Sound wave"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "brush",
+          "label": "Pen / brush"
+        },
+        {
+          "value": "shield",
+          "label": "Shield tick"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        },
+        {
+          "value": "bolt",
+          "label": "Bolt"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "battery",
+          "label": "Battery"
+        },
+        {
+          "value": "sun",
+          "label": "Sun"
+        },
+        {
+          "value": "smile",
+          "label": "Smile"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "check",
+          "label": "Tick"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "snowflake",
+          "label": "Snowflake"
+        },
+        {
+          "value": "bulb",
+          "label": "Bulb"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "atom",
+          "label": "Atom"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1_label",
+      "label": "Tile 1: label"
+    },
+    {
+      "type": "select",
+      "id": "t2_icon",
+      "label": "Tile 2: icon",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "tooth",
+          "label": "Tooth"
+        },
+        {
+          "value": "sliders",
+          "label": "Sliders"
+        },
+        {
+          "value": "hourglass",
+          "label": "Hourglass"
+        },
+        {
+          "value": "signal",
+          "label": "Signal"
+        },
+        {
+          "value": "battery-bolt",
+          "label": "Battery with bolt"
+        },
+        {
+          "value": "shield-drop",
+          "label": "Shield with drop"
+        },
+        {
+          "value": "wave",
+          "label": "Sound wave"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "brush",
+          "label": "Pen / brush"
+        },
+        {
+          "value": "shield",
+          "label": "Shield tick"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        },
+        {
+          "value": "bolt",
+          "label": "Bolt"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "battery",
+          "label": "Battery"
+        },
+        {
+          "value": "sun",
+          "label": "Sun"
+        },
+        {
+          "value": "smile",
+          "label": "Smile"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "check",
+          "label": "Tick"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "snowflake",
+          "label": "Snowflake"
+        },
+        {
+          "value": "bulb",
+          "label": "Bulb"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "atom",
+          "label": "Atom"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t2_label",
+      "label": "Tile 2: label"
+    },
+    {
+      "type": "select",
+      "id": "t3_icon",
+      "label": "Tile 3: icon",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "tooth",
+          "label": "Tooth"
+        },
+        {
+          "value": "sliders",
+          "label": "Sliders"
+        },
+        {
+          "value": "hourglass",
+          "label": "Hourglass"
+        },
+        {
+          "value": "signal",
+          "label": "Signal"
+        },
+        {
+          "value": "battery-bolt",
+          "label": "Battery with bolt"
+        },
+        {
+          "value": "shield-drop",
+          "label": "Shield with drop"
+        },
+        {
+          "value": "wave",
+          "label": "Sound wave"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "brush",
+          "label": "Pen / brush"
+        },
+        {
+          "value": "shield",
+          "label": "Shield tick"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        },
+        {
+          "value": "bolt",
+          "label": "Bolt"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "battery",
+          "label": "Battery"
+        },
+        {
+          "value": "sun",
+          "label": "Sun"
+        },
+        {
+          "value": "smile",
+          "label": "Smile"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "check",
+          "label": "Tick"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "snowflake",
+          "label": "Snowflake"
+        },
+        {
+          "value": "bulb",
+          "label": "Bulb"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "atom",
+          "label": "Atom"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t3_label",
+      "label": "Tile 3: label"
+    },
+    {
+      "type": "select",
+      "id": "t4_icon",
+      "label": "Tile 4: icon",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "tooth",
+          "label": "Tooth"
+        },
+        {
+          "value": "sliders",
+          "label": "Sliders"
+        },
+        {
+          "value": "hourglass",
+          "label": "Hourglass"
+        },
+        {
+          "value": "signal",
+          "label": "Signal"
+        },
+        {
+          "value": "battery-bolt",
+          "label": "Battery with bolt"
+        },
+        {
+          "value": "shield-drop",
+          "label": "Shield with drop"
+        },
+        {
+          "value": "wave",
+          "label": "Sound wave"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "brush",
+          "label": "Pen / brush"
+        },
+        {
+          "value": "shield",
+          "label": "Shield tick"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        },
+        {
+          "value": "bolt",
+          "label": "Bolt"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "battery",
+          "label": "Battery"
+        },
+        {
+          "value": "sun",
+          "label": "Sun"
+        },
+        {
+          "value": "smile",
+          "label": "Smile"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "check",
+          "label": "Tick"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "snowflake",
+          "label": "Snowflake"
+        },
+        {
+          "value": "bulb",
+          "label": "Bulb"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "atom",
+          "label": "Atom"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t4_label",
+      "label": "Tile 4: label"
+    },
+    {
+      "type": "select",
+      "id": "t5_icon",
+      "label": "Tile 5: icon",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "tooth",
+          "label": "Tooth"
+        },
+        {
+          "value": "sliders",
+          "label": "Sliders"
+        },
+        {
+          "value": "hourglass",
+          "label": "Hourglass"
+        },
+        {
+          "value": "signal",
+          "label": "Signal"
+        },
+        {
+          "value": "battery-bolt",
+          "label": "Battery with bolt"
+        },
+        {
+          "value": "shield-drop",
+          "label": "Shield with drop"
+        },
+        {
+          "value": "wave",
+          "label": "Sound wave"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "brush",
+          "label": "Pen / brush"
+        },
+        {
+          "value": "shield",
+          "label": "Shield tick"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        },
+        {
+          "value": "bolt",
+          "label": "Bolt"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "battery",
+          "label": "Battery"
+        },
+        {
+          "value": "sun",
+          "label": "Sun"
+        },
+        {
+          "value": "smile",
+          "label": "Smile"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "check",
+          "label": "Tick"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "snowflake",
+          "label": "Snowflake"
+        },
+        {
+          "value": "bulb",
+          "label": "Bulb"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "atom",
+          "label": "Atom"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t5_label",
+      "label": "Tile 5: label"
+    },
+    {
+      "type": "select",
+      "id": "t6_icon",
+      "label": "Tile 6: icon",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "No icon"
+        },
+        {
+          "value": "tooth",
+          "label": "Tooth"
+        },
+        {
+          "value": "sliders",
+          "label": "Sliders"
+        },
+        {
+          "value": "hourglass",
+          "label": "Hourglass"
+        },
+        {
+          "value": "signal",
+          "label": "Signal"
+        },
+        {
+          "value": "battery-bolt",
+          "label": "Battery with bolt"
+        },
+        {
+          "value": "shield-drop",
+          "label": "Shield with drop"
+        },
+        {
+          "value": "wave",
+          "label": "Sound wave"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "brush",
+          "label": "Pen / brush"
+        },
+        {
+          "value": "shield",
+          "label": "Shield tick"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        },
+        {
+          "value": "bolt",
+          "label": "Bolt"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "battery",
+          "label": "Battery"
+        },
+        {
+          "value": "sun",
+          "label": "Sun"
+        },
+        {
+          "value": "smile",
+          "label": "Smile"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "check",
+          "label": "Tick"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "snowflake",
+          "label": "Snowflake"
+        },
+        {
+          "value": "bulb",
+          "label": "Bulb"
+        },
+        {
+          "value": "brain",
+          "label": "Brain"
+        },
+        {
+          "value": "atom",
+          "label": "Atom"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t6_label",
+      "label": "Tile 6: label"
+    },
+    {
+      "type": "header",
+      "content": "Picture and layout"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Picture"
+    },
+    {
+      "type": "select",
+      "id": "image_side",
+      "label": "Picture side on desktop",
+      "default": "right",
+      "options": [
+        {
+          "value": "right",
+          "label": "Right"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "split",
+      "label": "Column widths (text : picture)",
+      "default": "1fr 1fr",
+      "options": [
+        {
+          "value": "1fr 1fr",
+          "label": "Equal"
+        },
+        {
+          "value": "6fr 5fr",
+          "label": "More text"
+        },
+        {
+          "value": "5fr 6fr",
+          "label": "More picture"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Picture shape on phones",
+      "default": "1.25",
+      "options": [
+        {
+          "value": "1.25",
+          "label": "Landscape 5:4"
+        },
+        {
+          "value": "1",
+          "label": "Square"
+        },
+        {
+          "value": "0.8",
+          "label": "Portrait 4:5"
+        },
+        {
+          "value": "1.7778",
+          "label": "Wide 16:9"
+        }
+      ],
+      "info": "Width divided by height. On desktop the picture fills the height of the text column."
+    },
+    {
+      "type": "select",
+      "id": "image_focus",
+      "label": "Picture focus",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Centre"
+        },
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "info": "Which part stays in view when the picture is cropped."
+    },
+    {
+      "type": "range",
+      "id": "image_radius",
+      "label": "Picture corner radius",
+      "min": 0,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Maximum width",
+      "min": 800,
+      "max": 1600,
+      "step": 20,
+      "unit": "px",
+      "default": 1300
+    },
+    {
+      "type": "range",
+      "id": "column_gap",
+      "label": "Space between the columns",
+      "min": 16,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "select",
+      "id": "tile_columns",
+      "label": "Tiles per row on desktop",
+      "default": "3",
+      "options": [
+        {
+          "value": "3",
+          "label": "Three"
+        },
+        {
+          "value": "2",
+          "label": "Two"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "tile_columns_mobile",
+      "label": "Tiles per row on phones",
+      "default": "2",
+      "options": [
+        {
+          "value": "2",
+          "label": "Two"
+        },
+        {
+          "value": "3",
+          "label": "Three"
+        },
+        {
+          "value": "1",
+          "label": "One"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "mobile_image",
+      "label": "Picture on phones",
+      "default": "top",
+      "options": [
+        {
+          "value": "top",
+          "label": "Above the text"
+        },
+        {
+          "value": "bottom",
+          "label": "Below the text"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "priority",
+      "label": "This section is at the top of the page",
+      "default": false,
+      "info": "Loads the picture first. Leave off for a section further down."
+    },
+    {
+      "type": "header",
+      "content": "Look"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "The default for the icon circles and the tile tint. Empty = the text color."
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 24,
+      "max": 72,
+      "step": 1,
+      "unit": "px",
+      "default": 44
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phones",
+      "min": 20,
+      "max": 44,
+      "step": 1,
+      "unit": "px",
+      "default": 30
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h2",
+          "label": "h2"
+        },
+        {
+          "value": "h1",
+          "label": "h1"
+        },
+        {
+          "value": "h3",
+          "label": "h3"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color"
+    },
+    {
+      "type": "color",
+      "id": "tile_bg",
+      "label": "Tile color",
+      "info": "Empty = a light tint of the accent color."
+    },
+    {
+      "type": "range",
+      "id": "tile_radius",
+      "label": "Tile corner radius",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 18
+    },
+    {
+      "type": "select",
+      "id": "tile_style",
+      "label": "Tile style",
+      "default": "soft",
+      "options": [
+        {
+          "value": "soft",
+          "label": "Soft tint"
+        },
+        {
+          "value": "outline",
+          "label": "Outline"
+        },
+        {
+          "value": "plain",
+          "label": "No box"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "icon_bg",
+      "label": "Icon circle color",
+      "info": "Empty = the accent color."
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon color",
+      "info": "Empty = white."
+    },
+    {
+      "type": "color",
+      "id": "label_color",
+      "label": "Tile label color"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "default": "outline",
+      "options": [
+        {
+          "value": "outline",
+          "label": "Outline"
+        },
+        {
+          "value": "solid",
+          "label": "Solid"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "button_shape",
+      "label": "Button corners",
+      "default": "rounded",
+      "options": [
+        {
+          "value": "rounded",
+          "label": "Rounded"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ],
+      "info": "Both are regular rectangles, never an oval."
+    },
+    {
+      "type": "color",
+      "id": "button_bg",
+      "label": "Button color",
+      "info": "Empty = the text color."
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button text color"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "SONA 'Precision Quiet Design' section (Harsh, 12 Oct 2026): heading, paragraph, button and six small icon tiles on the left, a rounded picture on the right",
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "text": "Paragraph sample",
+      "button_label": "Button sample",
+      "button_url": "/shop",
+      "image": "pic",
+      "t1_icon": "tooth",
+      "t1_label": "Tile one",
+      "t2_label": "Tile two",
+      "t3_icon": "hourglass",
+      "t3_label": "Tile three"
+    },
+    "expect": [
+      "Heading sample",
+      "Paragraph sample",
+      "Button sample",
+      "Tile one",
+      "Tile two",
+      "Tile three",
+      "dtj-ft__tile",
+      "dtj-ft__btn"
+    ]
+  }
+}

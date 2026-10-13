@@ -1,0 +1,94 @@
+{%- liquid
+  assign fc_left = 0
+  assign fc_right = 0
+  for i in (1..6)
+    assign tk = 'f' | append: i | append: '_title'
+    assign xk = 'f' | append: i | append: '_text'
+    if bs[tk] != blank or bs[xk] != blank
+      if i < 4
+        assign fc_left = fc_left | plus: 1
+      else
+        assign fc_right = fc_right | plus: 1
+      endif
+    endif
+  endfor
+  assign fc_total = fc_left | plus: fc_right
+  assign fc_badge = bs.badge_text | strip
+  assign fc_head = bs.heading | strip
+  assign fc_sub = bs.subheading | strip
+  assign fc_btn = bs.button_label | strip
+  assign fc_img = bs.image
+  assign fc_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3'
+      assign fc_tag = bs.heading_tag
+  endcase
+  assign fc_title_tag = 'p'
+  if fc_tag != 'h3'
+    assign fc_title_tag = 'h3'
+  endif
+  assign fc_has = false
+  if fc_total > 0 or fc_badge != blank or fc_head != blank or fc_sub != blank or fc_btn != blank or fc_img != blank
+    assign fc_has = true
+  endif
+-%}
+{%- if fc_has -%}
+  <div class="dtj-b dtj-fc dtj-fc--card-{{ bs.card_style | default: 'soft' }} dtj-fc--text-{{ bs.text_align | default: 'center' }} dtj-fc--img-{{ bs.mobile_image | default: 'top' }} dtj-fc--btn-{{ bs.button_style | default: 'outline' }} dtj-fc--corner-{{ bs.button_shape | default: 'rounded' }}{% if bs.title_caps %} dtj-fc--caps{% endif %}{% if bs.mobile_columns == '2' %} dtj-fc--two{% endif %}{% if fc_img == blank %} dtj-fc--noimg{% endif %}" style="{{ dtj_std_style | strip_newlines }} --fc-w: {{ bs.container_width }}px; --fc-iw: {{ bs.image_width }}px; --fc-ir: {{ bs.image_radius }}px; --fc-ratio: {{ bs.image_ratio | default: '0.75' }}; --fc-cg: {{ bs.column_gap }}px; --fc-gap: {{ bs.card_gap }}px; --fc-cr: {{ bs.card_radius }}px; --fc-h-d: {{ bs.heading_size_desktop }}px; --fc-h-m: {{ bs.heading_size_mobile }}px;{% if bs.accent_color != blank %} --fc-accent: {{ bs.accent_color }};{% endif %}{% if bs.heading_color != blank %} --fc-hc: {{ bs.heading_color }};{% endif %}{% if bs.badge_bg != blank %} --fc-bb: {{ bs.badge_bg }};{% endif %}{% if bs.badge_color != blank %} --fc-bc: {{ bs.badge_color }};{% endif %}{% if bs.card_bg != blank %} --fc-cb: {{ bs.card_bg }};{% endif %}{% if bs.icon_bg != blank %} --fc-ib: {{ bs.icon_bg }};{% endif %}{% if bs.icon_color != blank %} --fc-ic: {{ bs.icon_color }};{% endif %}{% if bs.title_color != blank %} --fc-tc: {{ bs.title_color }};{% endif %}{% if bs.desc_color != blank %} --fc-xc: {{ bs.desc_color }};{% endif %}{% if bs.button_bg != blank %} --fc-btn: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --fc-btnc: {{ bs.button_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-fc__wrap">
+      {%- if fc_badge != blank or fc_head != blank or fc_sub != blank -%}
+        <div class="dtj-fc__intro">
+          {%- if fc_badge != blank -%}<p class="dtj-fc__badge">{{ fc_badge | escape }}</p>{%- endif -%}
+          {%- if fc_head != blank -%}<{{ fc_tag }} class="dtj-fc__heading">{{ fc_head | escape }}</{{ fc_tag }}>{%- endif -%}
+          {%- if fc_sub != blank -%}<p class="dtj-fc__sub">{{ fc_sub | escape }}</p>{%- endif -%}
+        </div>
+      {%- endif -%}
+      <div class="dtj-fc__grid">
+        {%- if fc_img != blank -%}
+          <div class="dtj-fc__media"><img class="dtj-fc__img" src="{{ fc_img | image_url: width: 800 }}" srcset="{{ fc_img | image_url: width: 480 }} 480w, {{ fc_img | image_url: width: 640 }} 640w, {{ fc_img | image_url: width: 800 }} 800w, {{ fc_img | image_url: width: 1100 }} 1100w" sizes="(min-width: 750px) {{ bs.image_width }}px, 100vw" width="{{ fc_img.width | default: 800 }}" height="{{ fc_img.height | default: 1067 }}" style="object-position: {{ fc_img.presentation.focal_point | default: '50% 50%' }}" alt="{{ fc_img.alt | default: fc_head | escape }}" decoding="async"{% if bs.priority %} loading="eager" fetchpriority="high"{% else %} loading="lazy"{% endif %}></div>
+        {%- endif -%}
+        {%- for side in (1..2) -%}
+          {%- liquid
+            assign fc_start = 1
+            assign fc_end = 3
+            if side == 2
+              assign fc_start = 4
+              assign fc_end = 6
+            endif
+            assign fc_count = fc_left
+            if side == 2
+              assign fc_count = fc_right
+            endif
+          -%}
+          {%- if fc_count > 0 -%}
+            <div class="dtj-fc__col dtj-fc__col--{% if side == 1 %}left{% else %}right{% endif %}">
+              {%- for i in (fc_start..fc_end) -%}
+                {%- liquid
+                  assign tk = 'f' | append: i | append: '_title'
+                  assign xk = 'f' | append: i | append: '_text'
+                  assign ik = 'f' | append: i | append: '_icon'
+                  assign c_t = bs[tk] | strip
+                  assign c_x = bs[xk] | strip
+                  assign c_i = bs[ik] | default: 'none'
+                -%}
+                {%- if c_t != blank or c_x != blank -%}
+                  <div class="dtj-fc__card">
+                    {%- if c_i != 'none' -%}<span class="dtj-fc__icon" aria-hidden="true">{% render 'dtj-card-icon', name: c_i %}</span>{%- endif -%}
+                    {%- if c_t != blank -%}<{{ fc_title_tag }} class="dtj-fc__title">{{ c_t | escape }}</{{ fc_title_tag }}>{%- endif -%}
+                    {%- if c_x != blank -%}<p class="dtj-fc__text">{{ c_x | escape }}</p>{%- endif -%}
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+        {%- if fc_btn != blank -%}
+          <div class="dtj-fc__cta">
+            {%- if bs.button_url != blank -%}<a class="dtj-fc__btn" href="{{ bs.button_url }}">{{ fc_btn | escape }}</a>{%- else -%}<span class="dtj-fc__btn">{{ fc_btn | escape }}</span>{%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Feature Cards is empty. Add a heading, a picture or a card title (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -6,7 +6,7 @@ Where each one goes, what it replaces, and the exact spec. Send them in any form
 
 | # | What | Where it goes | Spec |
 |---|---|---|---|
-| 1 | **Tushar's portrait** (edited, see prompt A below) | "Meet Tushar Joshi" section on every variant (`public/images/founder/tushar-joshi.webp`; today a frame from a video, mouth open, busy shelf behind) | Vertical 4:5, at least 2000 × 2500 px, waist-up, looking at the camera, mouth closed, dark plain background |
+| 1 | ~~Tushar's portrait~~ **Done 12 Oct**: studio portrait received, live in the founder section (`public/images/founder/tushar-joshi-founder.webp`) | "Meet Tushar Joshi" on every variant | — |
 | 2 | **A real sample audit** (1–3 pages or screenshots; brand name blurred) | "What your free audit shows you" on `/audit` (today a drawing with grey lines) | PNG/PDF, as it really looks when DTJ sends it |
 | 3 | **Category of each brand** (text) | Labels on results and case studies ("Fashion", "Food", "Beauty", "Baby care"…), later a filter | Pro Effex, The Royal Dosa Paper, Zebein, Sindhoi Patola Arts, Little Rituals, Saatvi |
 

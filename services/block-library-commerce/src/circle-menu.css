@@ -1,0 +1,199 @@
+/* Circle Menu: a row of collection tiles in three versions. Story rings (small circles with a gradient ring, no names), large circles with names below,
+   and framed squares with typewriter names. Every version has its own size, spacing, names and phone layout (the settings change any number).
+   Phones: rings scroll sideways in one row (they centre when they fit), the others wrap. Plain flex, no script. */
+.dtj-cm {
+  --cm-d: 100px;
+  --cm-m: 72px;
+  --cm-gd: 16px;
+  --cm-gm: 12px;
+
+  display: block;
+  width: 100%;
+  background: var(--dtj-background, transparent);
+  color: var(--dtj-text-color, inherit);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+
+.dtj-cm--circle {
+  --cm-d: 184px;
+  --cm-m: 104px;
+  --cm-gd: 24px;
+  --cm-gm: 14px;
+}
+
+.dtj-cm--square {
+  --cm-d: 112px;
+  --cm-m: 84px;
+  --cm-gd: 16px;
+  --cm-gm: 12px;
+}
+
+.dtj-cm--grad { background: linear-gradient(to bottom, var(--dtj-background, transparent), var(--cm-bg2)); }
+
+.dtj-cm__wrap {
+  max-width: var(--cm-w, 1200px);
+  margin-inline: auto;
+}
+
+.dtj-cm__heading {
+  margin: 0 0 20px;
+  color: inherit;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: var(--cm-h-m, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.dtj-cm--head-center .dtj-cm__heading { text-align: center; }
+
+.dtj-cm--head-left .dtj-cm__heading { text-align: start; }
+
+.dtj-cm__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px var(--cm-gap, var(--cm-gm));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dtj-cm--m-scroll .dtj-cm__list {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  padding: 2px 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.dtj-cm--m-scroll .dtj-cm__list::-webkit-scrollbar { display: none; }
+
+/* a row that fits stays centred; one that does not scrolls from its left edge */
+.dtj-cm--m-scroll .dtj-cm__tile:first-child { margin-inline-start: auto; }
+
+.dtj-cm--m-scroll .dtj-cm__tile:last-child { margin-inline-end: auto; }
+
+.dtj-cm__tile {
+  flex: none;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.dtj-cm__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dtj-cm__link:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 4px;
+}
+
+.dtj-cm__ring {
+  display: block;
+  width: var(--cm-size-m, var(--cm-m));
+  height: var(--cm-size-m, var(--cm-m));
+  box-sizing: border-box;
+}
+
+.dtj-cm__pic {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+}
+
+.dtj-cm__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.dtj-cm--zoom .dtj-cm__link:hover .dtj-cm__img { transform: scale(1.06); }
+
+/* versions */
+.dtj-cm--ring .dtj-cm__ring {
+  padding: var(--cm-ring, 3px);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cm-r1, orange), var(--cm-r2, deeppink), var(--cm-r3, purple));
+}
+
+.dtj-cm--ring .dtj-cm__pic {
+  border: var(--cm-ring, 3px) solid var(--dtj-background, Canvas);
+  border-radius: 50%;
+}
+
+.dtj-cm--circle .dtj-cm__pic { border-radius: 50%; }
+
+.dtj-cm--square .dtj-cm__pic {
+  border: var(--cm-frame, 2px) solid var(--cm-fc, color-mix(in srgb, currentcolor 22%, transparent));
+  border-radius: var(--cm-r, 0);
+}
+
+.dtj-cm__label {
+  display: block;
+  max-width: calc(var(--cm-size-m, var(--cm-m)) * 1.25);
+  margin-top: 10px;
+  font-size: var(--cm-ls, 14px);
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.dtj-cm--lf-mono .dtj-cm__label { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Courier New", monospace; }
+
+.dtj-cm--lf-serif .dtj-cm__label { font-family: Georgia, "Times New Roman", serif; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-cm__img { transition: none; }
+}
+
+@media screen and (min-width: 750px) {
+  .dtj-cm__heading {
+    margin-bottom: 36px;
+    font-size: var(--cm-h-d, 44px);
+  }
+
+  .dtj-cm__list {
+    flex-wrap: wrap;
+    gap: 28px var(--cm-gap, var(--cm-gd));
+  }
+
+  .dtj-cm--m-scroll .dtj-cm__list {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .dtj-cm--m-scroll .dtj-cm__tile:first-child,
+  .dtj-cm--m-scroll .dtj-cm__tile:last-child { margin-inline: 0; }
+
+  .dtj-cm__ring {
+    width: var(--cm-size, var(--cm-d));
+    height: var(--cm-size, var(--cm-d));
+  }
+
+  .dtj-cm__label {
+    max-width: calc(var(--cm-size, var(--cm-d)) * 1.25);
+    margin-top: 12px;
+  }
+}

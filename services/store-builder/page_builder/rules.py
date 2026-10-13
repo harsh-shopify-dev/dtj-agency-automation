@@ -113,7 +113,8 @@ def lint(model) -> list[Finding]:
     # L02 side space, L03 rhythm
     pads = []
     for sec in model.sections:
-        if cat.has(sec.app, sec.block, "side_padding"):
+        full_bleed = sec.block == "hero-banner" and sec.settings.get("layout", "banner") in ("banner", "cover")  # the picture runs edge to edge; its text has its own inner space
+        if cat.has(sec.app, sec.block, "side_padding") and not full_bleed:
             side = sec.settings.get("side_padding", cat.default(sec.app, sec.block, "side_padding"))
             if side is None or side < MIN_SIDE:
                 add("L02", f"{sec.id}: side space {side} px is below {MIN_SIDE} px")
@@ -142,22 +143,23 @@ def lint(model) -> list[Finding]:
             break
 
     # L06 / L12 buy box
-    from .assemble import BUY_BUTTON_TYPES, product_column  # the buy box's column, whatever the theme (Horizon or Dawn)
-    details = product_column(model.template)
-    order = details["block_order"]
-    btn = next((k for k in order if details["blocks"][k]["type"] in BUY_BUTTON_TYPES), None)
-    for key in order:
-        blk = details["blocks"][key]
-        if "/dtj-testimonials/" in blk["type"]:
-            if btn is None or order.index(key) != order.index(btn) + 1:
-                add("L06", "the DTJ reviews block is not directly under the buy buttons")
-    if not any("/dtj-price/" in details["blocks"][k]["type"] for k in order):
-        add("L12", "the DTJ price block is missing from the buy box")
-    theme_prices = [k for k in order if details["blocks"][k].get("type") == "price"]
-    for k in order:
-        theme_prices += [s for s, b in (details["blocks"][k].get("blocks") or {}).items() if b.get("type") == "price"]
-    if theme_prices:
-        add("L12", f"the theme's own price line is still in the buy box next to the DTJ price ({', '.join(theme_prices)})")
+    if "main" in model.template.get("sections", {}):  # a product page: the buy box rules (a home page has no buy box)
+        from .assemble import BUY_BUTTON_TYPES, product_column  # the buy box's column, whatever the theme (Horizon or Dawn)
+        details = product_column(model.template)
+        order = details["block_order"]
+        btn = next((k for k in order if details["blocks"][k]["type"] in BUY_BUTTON_TYPES), None)
+        for key in order:
+            blk = details["blocks"][key]
+            if "/dtj-testimonials/" in blk["type"]:
+                if btn is None or order.index(key) != order.index(btn) + 1:
+                    add("L06", "the DTJ reviews block is not directly under the buy buttons")
+        if not any("/dtj-price/" in details["blocks"][k]["type"] for k in order):
+            add("L12", "the DTJ price block is missing from the buy box")
+        theme_prices = [k for k in order if details["blocks"][k].get("type") == "price"]
+        for k in order:
+            theme_prices += [s for s, b in (details["blocks"][k].get("blocks") or {}).items() if b.get("type") == "price"]
+        if theme_prices:
+            add("L12", f"the theme's own price line is still in the buy box next to the DTJ price ({', '.join(theme_prices)})")
 
     # L13 exactly four ticks wherever a tick list is shown
     for sec in model.sections + model.buybox_sections:

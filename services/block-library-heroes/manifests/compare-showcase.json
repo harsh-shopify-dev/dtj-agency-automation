@@ -1,0 +1,672 @@
+{
+  "id": "compare-showcase",
+  "title": "DTJ Compare Showcase",
+  "block_file": "extensions/dtj-heroes/blocks/dtj-compare-showcase.liquid",
+  "placements": [
+    "home",
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "eyebrow",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "button_label",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "us_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "us_sub",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "them_title",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "text",
+      "type": "textarea",
+      "required": false,
+      "max_length": 500
+    },
+    {
+      "id": "points",
+      "type": "textarea",
+      "required": false,
+      "max_length": 400
+    },
+    {
+      "id": "r1_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r1_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r1_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r2_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r2_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r2_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r3_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r3_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r3_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r4_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r4_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r4_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r5_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r5_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r5_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r6_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r6_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r6_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r7_label",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "r7_us",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    },
+    {
+      "id": "r7_them",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 56,
+    "padding_bottom": 0,
+    "side_padding": 10
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "select",
+      "id": "variation",
+      "label": "Variation",
+      "default": "spotlight",
+      "options": [
+        {
+          "value": "spotlight",
+          "label": "Spotlight: serif heading, ticks and a button"
+        },
+        {
+          "value": "gradient",
+          "label": "Gradient: bold heading with an italic accent"
+        }
+      ],
+      "info": "Sets the type style and what shows on phones. Colors are yours to set below."
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Small line above the heading",
+      "info": "e.g. the brand name. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Accent words between *asterisks*. Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Paragraph",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "textarea",
+      "id": "points",
+      "label": "Points (one per line, up to 4)",
+      "info": "Ticked lines under the paragraph. Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "info": "Empty = no button."
+    },
+    {
+      "type": "url",
+      "id": "button_url",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Comparison table (up to 7 rows)"
+    },
+    {
+      "type": "text",
+      "id": "us_title",
+      "label": "Our column: name",
+      "info": "e.g. the brand name."
+    },
+    {
+      "type": "text",
+      "id": "us_sub",
+      "label": "Our column: line under the name",
+      "info": "e.g. the product name. Empty = hidden."
+    },
+    {
+      "type": "image_picker",
+      "id": "us_logo",
+      "label": "Our column: logo",
+      "info": "Optional. Replaces the name when set."
+    },
+    {
+      "type": "text",
+      "id": "them_title",
+      "label": "Other column: name",
+      "info": "e.g. Other Brands."
+    },
+    {
+      "type": "text",
+      "id": "r1_label",
+      "label": "Row 1: what is compared",
+      "info": "Empty = no row."
+    },
+    {
+      "type": "text",
+      "id": "r1_us",
+      "label": "Row 1: our column",
+      "info": "Empty = a tick. Type words (e.g. One Scoop) to show them instead."
+    },
+    {
+      "type": "text",
+      "id": "r1_them",
+      "label": "Row 1: other column",
+      "info": "Empty = a cross. Type words to show them instead."
+    },
+    {
+      "type": "text",
+      "id": "r2_label",
+      "label": "Row 2: what is compared"
+    },
+    {
+      "type": "text",
+      "id": "r2_us",
+      "label": "Row 2: our column"
+    },
+    {
+      "type": "text",
+      "id": "r2_them",
+      "label": "Row 2: other column"
+    },
+    {
+      "type": "text",
+      "id": "r3_label",
+      "label": "Row 3: what is compared"
+    },
+    {
+      "type": "text",
+      "id": "r3_us",
+      "label": "Row 3: our column"
+    },
+    {
+      "type": "text",
+      "id": "r3_them",
+      "label": "Row 3: other column"
+    },
+    {
+      "type": "text",
+      "id": "r4_label",
+      "label": "Row 4: what is compared"
+    },
+    {
+      "type": "text",
+      "id": "r4_us",
+      "label": "Row 4: our column"
+    },
+    {
+      "type": "text",
+      "id": "r4_them",
+      "label": "Row 4: other column"
+    },
+    {
+      "type": "text",
+      "id": "r5_label",
+      "label": "Row 5: what is compared"
+    },
+    {
+      "type": "text",
+      "id": "r5_us",
+      "label": "Row 5: our column"
+    },
+    {
+      "type": "text",
+      "id": "r5_them",
+      "label": "Row 5: other column"
+    },
+    {
+      "type": "text",
+      "id": "r6_label",
+      "label": "Row 6: what is compared"
+    },
+    {
+      "type": "text",
+      "id": "r6_us",
+      "label": "Row 6: our column"
+    },
+    {
+      "type": "text",
+      "id": "r6_them",
+      "label": "Row 6: other column"
+    },
+    {
+      "type": "text",
+      "id": "r7_label",
+      "label": "Row 7: what is compared"
+    },
+    {
+      "type": "text",
+      "id": "r7_us",
+      "label": "Row 7: our column"
+    },
+    {
+      "type": "text",
+      "id": "r7_them",
+      "label": "Row 7: other column"
+    },
+    {
+      "type": "header",
+      "content": "Picture and size"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Centre picture",
+      "info": "A product shot on a clear background works best."
+    },
+    {
+      "type": "select",
+      "id": "mobile_image",
+      "label": "Picture on phones",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Automatic (Spotlight hidden, Gradient shown)"
+        },
+        {
+          "value": "show",
+          "label": "Show"
+        },
+        {
+          "value": "hide",
+          "label": "Hide"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "image_align",
+      "label": "Picture position on desktop",
+      "default": "bottom",
+      "options": [
+        {
+          "value": "bottom",
+          "label": "Sits on the bottom edge"
+        },
+        {
+          "value": "center",
+          "label": "Centred"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "image_width",
+      "label": "Picture width on desktop",
+      "min": 240,
+      "max": 560,
+      "step": 10,
+      "unit": "px",
+      "default": 360
+    },
+    {
+      "type": "range",
+      "id": "table_width",
+      "label": "Table width on desktop",
+      "min": 360,
+      "max": 600,
+      "step": 5,
+      "unit": "px",
+      "default": 535
+    },
+    {
+      "type": "range",
+      "id": "row_height",
+      "label": "Row height on desktop",
+      "min": 40,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "default": 58
+    },
+    {
+      "type": "range",
+      "id": "row_height_mobile",
+      "label": "Row height on phones",
+      "min": 36,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 46
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Maximum width",
+      "min": 900,
+      "max": 1600,
+      "step": 20,
+      "unit": "px",
+      "default": 1400
+    },
+    {
+      "type": "checkbox",
+      "id": "priority",
+      "label": "This section is at the top of the page",
+      "default": false,
+      "info": "Loads the picture first. Leave off for a section further down."
+    },
+    {
+      "type": "header",
+      "content": "Look"
+    },
+    {
+      "type": "color",
+      "id": "bg_color_2",
+      "label": "Background: second color",
+      "info": "With the background color above it makes a soft gradient. Empty = a flat background."
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "info": "The accent words, the small line, the tick icons and the button. Empty = the text color."
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 28,
+      "max": 96,
+      "step": 1,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phones",
+      "min": 24,
+      "max": 56,
+      "step": 1,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "select",
+      "id": "heading_font",
+      "label": "Heading font",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Automatic (Spotlight serif, Gradient theme font)"
+        },
+        {
+          "value": "theme",
+          "label": "Theme heading font"
+        },
+        {
+          "value": "serif",
+          "label": "Serif"
+        },
+        {
+          "value": "sans",
+          "label": "Clean sans"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "button_shape",
+      "label": "Button corners",
+      "default": "rounded",
+      "options": [
+        {
+          "value": "rounded",
+          "label": "Rounded"
+        },
+        {
+          "value": "pill",
+          "label": "Pill"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "id": "button_bg",
+      "label": "Button color",
+      "info": "Empty = the accent color."
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button text color"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Table card color",
+      "info": "Empty = a soft white."
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Table corner radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "color",
+      "id": "col_from",
+      "label": "Our column: top color"
+    },
+    {
+      "type": "color",
+      "id": "col_to",
+      "label": "Our column: bottom color",
+      "info": "Empty = the top color, flat."
+    },
+    {
+      "type": "color",
+      "id": "col_text",
+      "label": "Our column: text color",
+      "info": "Empty = white."
+    },
+    {
+      "type": "color",
+      "id": "check_color",
+      "label": "Tick color in our column",
+      "info": "Empty = white."
+    },
+    {
+      "type": "color",
+      "id": "cross_color",
+      "label": "Cross color in the other column",
+      "info": "Empty = a soft shade of the text color."
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "Happy Place 'Daily Focus' and Bris 'See the Difference for Yourself' sections (Harsh, 13 Oct 2026): text, centre product picture and a comparison table card with a highlighted column",
+  "test": {
+    "sample": {
+      "variation": "spotlight",
+      "eyebrow": "Eyebrow sample",
+      "heading": "Head *accent* tail",
+      "text": "Paragraph sample",
+      "points": "Point one\nPoint two",
+      "button_label": "Button sample",
+      "button_url": "/shop",
+      "us_title": "Us sample",
+      "us_sub": "Sub sample",
+      "them_title": "Them sample",
+      "image": "pic",
+      "r1_label": "Row one",
+      "r2_label": "Row two",
+      "r2_us": "One Scoop",
+      "r2_them": "Multi-Supp.",
+      "r3_label": "Row three"
+    },
+    "expect": [
+      "Eyebrow sample",
+      "Head",
+      "accent",
+      "tail",
+      "Paragraph sample",
+      "Point one",
+      "Button sample",
+      "Us sample",
+      "Sub sample",
+      "Them sample",
+      "Row one",
+      "Row two",
+      "One Scoop",
+      "Multi-Supp.",
+      "Row three",
+      "dtj-cs__row",
+      "dtj-cs__btn"
+    ]
+  }
+}

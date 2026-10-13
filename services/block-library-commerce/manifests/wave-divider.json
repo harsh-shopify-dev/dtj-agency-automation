@@ -1,0 +1,150 @@
+{
+  "id": "wave-divider",
+  "title": "DTJ Wave Divider",
+  "block_file": "extensions/dtj-commerce/blocks/dtj-wave-divider.liquid",
+  "placements": [
+    "home",
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [],
+  "standard_controls": [
+    "colors"
+  ],
+  "standard_defaults": {},
+  "settings": [
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "wave_color",
+      "label": "Wave color",
+      "info": "The color BELOW the wave: use the color of the section that follows. Nothing shows until you pick one. The color above the wave is the background color below."
+    },
+    {
+      "type": "header",
+      "content": "Wave"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "default": "single",
+      "options": [
+        {
+          "value": "single",
+          "label": "Single wave"
+        },
+        {
+          "value": "layered",
+          "label": "Layered waves (see-through copies that drift past each other)"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "waves",
+      "label": "Waves across the screen",
+      "min": 2,
+      "max": 16,
+      "step": 1,
+      "default": 6,
+      "info": "More waves = a tighter ripple. Layered copies use a slightly different count each, which makes them cross."
+    },
+    {
+      "type": "range",
+      "id": "wave_depth",
+      "label": "How deep the wave is",
+      "min": 10,
+      "max": 60,
+      "step": 5,
+      "default": 40,
+      "unit": "%",
+      "info": "The height of the crests and troughs as a share of the band."
+    },
+    {
+      "type": "range",
+      "id": "layers",
+      "label": "Layers (layered style)",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "wave_height",
+      "label": "Band height on desktop",
+      "min": 40,
+      "max": 400,
+      "step": 10,
+      "default": 120,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "wave_height_mobile",
+      "label": "Band height on phones",
+      "min": 30,
+      "max": 240,
+      "step": 10,
+      "default": 80,
+      "unit": "px"
+    },
+    {
+      "type": "checkbox",
+      "id": "flip",
+      "label": "Turn upside down",
+      "default": false,
+      "info": "Puts the wave color above and the background color below."
+    },
+    {
+      "type": "range",
+      "id": "pull",
+      "label": "Pull up over the section above",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "default": 0,
+      "unit": "px",
+      "info": "Tucks the band under the section above so no thin line shows between them."
+    },
+    {
+      "type": "header",
+      "content": "Motion"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate",
+      "label": "Waves drift sideways",
+      "default": true,
+      "info": "Stands still for visitors who ask their device for less motion."
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Seconds for one pass",
+      "min": 4,
+      "max": 40,
+      "step": 1,
+      "default": 14,
+      "unit": "s"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "Theme 153424101549 'SS - Wave' (one wave band, normal/less/more waves, drift) and 'SS - Wave #2' (four see-through waves that drift past each other), analysed by Harsh's request 13 Oct 2026; rebuilt from the behaviour with our own code",
+  "test": {
+    "sample": {
+      "wave_color": "#b0daeb",
+      "style": "single"
+    },
+    "expect": [
+      "dtj-wv__svg",
+      "<path"
+    ]
+  }
+}

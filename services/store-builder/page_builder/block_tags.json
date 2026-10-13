@@ -1,0 +1,155 @@
+{
+  "_comment": "One entry per DTJ block (app/block). `niches` = the niches the block is especially suited to (empty = suits every niche). `cross_niche` = may the page builder still use it for a brand OUTSIDE those niches when nothing better exists (default true; false for a block that makes no sense there, e.g. a shade picker for a cleaning product). `wired` = a page-builder section already builds with it today. These tags are Harsh's idea (13 Oct 2026) filled in by judgment, NOT from sales data: change them when results say otherwise. A test fails when a block exists without a tag.",
+  "niche_of_category": {
+    "beauty": "beauty",
+    "supplements": "wellness",
+    "home-care": "home",
+    "food": "food",
+    "apparel": "fashion",
+    "other": "general"
+  },
+  "blocks": {
+    "dtj-blocks/addons": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-blocks/hero-points": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-blocks/price": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-blocks/rotating-text": {
+      "niches": [],
+      "wired": false
+    },
+    "dtj-blocks/shade-picker": {
+      "niches": [
+        "beauty",
+        "fashion"
+      ],
+      "cross_niche": false,
+      "wired": true
+    },
+    "dtj-blocks/shoppable-reels": {
+      "niches": [
+        "beauty",
+        "fashion"
+      ],
+      "wired": true
+    },
+    "dtj-blocks/social-proof": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-blocks/testimonials": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections/comparison-table": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections/faq": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections/marquee": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections/science-stats": {
+      "niches": [
+        "wellness",
+        "beauty"
+      ],
+      "wired": true
+    },
+    "dtj-sections/stories": {
+      "niches": [
+        "beauty",
+        "fashion",
+        "food"
+      ],
+      "wired": true
+    },
+    "dtj-sections/testimonials-slider": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections/whats-inside": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections/whats-not-inside": {
+      "niches": [
+        "wellness",
+        "beauty",
+        "home",
+        "food"
+      ],
+      "wired": true
+    },
+    "dtj-sections-2/cta": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections-2/feature-showcase": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections-2/measured-results": {
+      "niches": [
+        "wellness",
+        "beauty",
+        "home"
+      ],
+      "wired": true
+    },
+    "dtj-sections-2/slideshow-pro": {
+      "niches": [
+        "fashion",
+        "beauty",
+        "food"
+      ],
+      "wired": true
+    },
+    "dtj-sections-2/split-story": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-sections-2/stat-cards": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-heroes/feature-cards": {
+      "niches": [
+        "beauty",
+        "wellness",
+        "food"
+      ],
+      "wired": true
+    },
+    "dtj-heroes/feature-tiles": {
+      "niches": [
+        "home",
+        "fashion"
+      ],
+      "wired": true
+    },
+    "dtj-heroes/hero-banner": {
+      "niches": [],
+      "wired": true
+    },
+    "dtj-heroes/video-reviews": {
+      "niches": [
+        "beauty",
+        "fashion",
+        "wellness"
+      ],
+      "wired": true
+    }
+  }
+}

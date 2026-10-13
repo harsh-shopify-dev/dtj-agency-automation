@@ -1,0 +1,3 @@
+name = "DTJ Shop"
+type = "theme"
+# `uid` is added by the Shopify CLI the first time this extension is deployed from the linked app. Do not copy one from another app.
