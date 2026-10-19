@@ -1,0 +1,85 @@
+{
+ "about": "DTJ's default photos for the human picture slots of a page (sample reviews, sample stories, the five round photos on the rating line) on any store DTJ builds, until the client sends real ones (Harsh, 19 Oct 2026). 1000x1000 webp, from Harsh. 'person' is f or m, matched to a sample's 'person'. Never put on a REAL customer's review or story.",
+ "people": [
+  {
+   "file": "dtj-sample-person-01.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-02.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-03.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-04.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-05.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-06.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-07.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-08.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-09.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-10.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-11.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-12.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-13.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-14.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-15.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-16.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-17.webp",
+   "person": "m"
+  },
+  {
+   "file": "dtj-sample-person-18.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-19.webp",
+   "person": "f"
+  },
+  {
+   "file": "dtj-sample-person-20.webp",
+   "person": "m"
+  }
+ ]
+}

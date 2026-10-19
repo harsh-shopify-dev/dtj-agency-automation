@@ -25,6 +25,16 @@ BUY_BUTTONS = "buy_buttons_eYQEYi"
 TITLE_GROUP = "group_icgrde"
 DIVIDER = "divider_VJhene"
 THEME_PRICE = "price_tVjtKg"
+# DTJ's sample people photos (Harsh, 19 Oct 2026: "make this images as default any store we build the images in reviews sections and
+# other human image needed section ... once the design is ready we will update the assets which we get from the client"): the human
+# picture slots of SAMPLE reviews and stories and the rating line's five round photos. Never on a real customer's review or story.
+PEOPLE_DIR = HERE / "assets" / "sample-people"
+PEOPLE_SLOTS = {"testimonials-slider": ("image_", "reviews"), "stories": ("photo_", "stories"), "social-proof": ("avatar_", None)}
+
+
+def load_people() -> list[dict]:
+    path = PEOPLE_DIR / "people.json"
+    return json.loads(path.read_text(encoding="utf-8"))["people"] if path.is_file() else []
 
 WRAP = {  # the theme's section wrapper: full width so a band reaches both screen edges
     "content_direction": "column", "vertical_on_mobile": True, "horizontal_alignment": "flex-start", "vertical_alignment": "center",
@@ -61,6 +71,7 @@ class PageModel:
     demo: bool = False
     demo_items: list = field(default_factory=list)
     demo_pictures: list = field(default_factory=list)
+    people_photos: list = field(default_factory=list)  # the sample people photos the page uses: they must be in the store's Files
     extras: dict = field(default_factory=dict)  # section id -> the CTA button block that follows it inside the same section
 
 
@@ -187,7 +198,8 @@ def _load_recipe(name: str = "pdp") -> dict:
 
 
 def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalog: Catalog | None = None, copy_overrides: dict | None = None,
-              plan: dict | None = None, theme: str = "horizon", base_template: dict | None = None, recipe: str = "pdp") -> Result:
+              plan: dict | None = None, theme: str = "horizon", base_template: dict | None = None, recipe: str = "pdp",
+              people: bool = True) -> Result:
     """`plan` (from ai_plan.check_plan) replaces the recipe's section choice and order and may set the signature; without it the
     house rules in recipes/pdp.json decide. Either way every section is still built (or refused) by the same builders.
     `theme`: "horizon" (our base template) or "dawn" (then `base_template` is the Dawn theme's own templates/product.json, so its
@@ -235,11 +247,20 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
             res.cta = bool(entry.get("cta"))
             built.append(res)
 
+    # ---- the customer-photo strip (W03) sits in the buy box column, under the buy buttons (Harsh, 19 Oct 2026: "the video section
+    # shows left aligned if possible keep them aligned to right below the buy button"): on a wide screen it fills the column's empty
+    # space under the buttons, on a phone it comes right after them. No button of its own: the buy buttons are just above it.
+    ugc_block = next((s for s in built if s.kind == "ugc_strip"), None) if fixed else None
+    if ugc_block:
+        built.remove(ugc_block)
+        ugc_block.cta = False
+
     # ---- bands: alternate plain / band, a dark band only for the brand's signature section, story + how share one band
     roles, prev, prev_kind = {}, "band", ""
     role_map = None
     if fixed:
         role_map = recipe["roles"]["bold" if direction.vibe in direction_mod.BOLD_VIBES and not direction.dark_mode else "calm"]
+        prev = "plain"  # the buy box above is white: the first band (the trust strip, now that the photos sit in the buy box) stays a band
     for sec in built:
         if role_map is not None:
             role = role_map.get(sec.kind, "plain")
@@ -293,6 +314,9 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
     bb = sections.buybox_blocks(ctx)
     if fixed:  # the wireframe's buy box has no reviews box: the reviews have their own section (W07), never shown twice
         bb["after_buttons"] = [x for x in bb["after_buttons"] if x.kind != "reviews_buybox"]
+    if ugc_block:
+        ugc_block.settings["card_width"] = 170  # three cards across the buy box column
+        bb["after_buttons"].append(ugc_block)
     flat = [s for group in bb.values() for s in group]
     for sec in flat:
         styling.apply(sec, "plain", direction, cat)
@@ -304,18 +328,46 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
     # Icon slots keep the block's own icons (a photo in a 26 px icon slot only looks broken).
     demo_pictures = []
     pool = [f"{IMAGE_PREFIX}{m['file']}" for m in facts.get("media", [])] if ctx.demo else []
+    crowd = load_people() if ctx.demo and people else []
+    people_used: list[str] = []
+
+    def person_photo(sec, key: str) -> str | None:
+        # a sample person's photo for a human slot ("real" = a real customer's item: no stranger's face; None = not a human slot)
+        slot = PEOPLE_SLOTS.get(sec.block)
+        if not crowd or not slot or not key.startswith(slot[0]):
+            return None
+        n = int(re.findall(r"\d+", key)[0])
+        want = "f" if n % 2 else "m"
+        if slot[1]:
+            items = facts.get(slot[1], [])
+            if n > len(items) or not str(items[n - 1].get("source", "")).upper().startswith("SAMPLE"):
+                return "real"
+            want = items[n - 1].get("person") or want
+        free = [p for p in crowd if p["file"] not in people_used]
+        pick = next((p for p in free if p["person"] == want), None) or (free[0] if free else None)
+        if not pick:
+            return None
+        people_used.append(pick["file"])
+        return pick["file"]
+
     for sec in built + flat if pool else []:
         specs = cat.settings(sec.app, sec.block)
         pictures = {k for k, spec in specs.items() if spec.get("type") == "image_picker"}
         for key in sorted(pictures, key=lambda k: [int(n) for n in re.findall(r"\d+", k)] or [0]):
-            if sec.settings.get(key) or "icon" in key or "icon" in str(specs[key].get("label", "")).lower():
+            # a SAMPLE review's or story's picture is never a real customer's photo: a person replaces a product picture there
+            # (the rating line's photos need a consent note, so one already set there is a real customer and stays)
+            person_slot = bool(crowd) and sec.block in PEOPLE_SLOTS and sec.block != "social-proof" and key.startswith(PEOPLE_SLOTS[sec.block][0])
+            if (sec.settings.get(key) and not person_slot) or "icon" in key or "icon" in str(specs[key].get("label", "")).lower():
                 continue
             if sec.block == "social-proof":  # always five round photos after the rating (rule L14)
                 if not key.startswith("avatar_") or int(key.split("_")[1]) > sections.AVATARS:
                     continue
             elif not picture_in_use(key, sec.settings, pictures):
                 continue
-            sec.settings[key] = pool[len(demo_pictures) % len(pool)]
+            who = person_photo(sec, key)
+            if who == "real" or (not who and sec.settings.get(key)):
+                continue  # a real customer's own picture (or none) stays; no free photo left keeps what is there
+            sec.settings[key] = f"{IMAGE_PREFIX}{who}" if who else pool[len(demo_pictures) % len(pool)]
             demo_pictures.append(f"{sec.id}.{key}")
 
     # ---- the template, in the theme's own layout
@@ -324,7 +376,8 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
     else:
         template = _horizon_template(built, flat, bb, cat, extras)
 
-    model = PageModel(brand, facts, direction, cat, built, flat, roles, ctx.prov, template, ctx.demo, demo_pictures=demo_pictures, extras=extras)
+    model = PageModel(brand, facts, direction, cat, built, flat, roles, ctx.prov, template, ctx.demo, demo_pictures=demo_pictures, extras=extras,
+                      people_photos=people_used)
     problems = []
     for sec in built + flat + list(extras.values()):
         problems += cat.validate(sec.app, sec.block, sec.settings)
@@ -342,6 +395,7 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
         "sections_omitted": omitted,
         "needs_replacement": samples + model.demo_items + model.demo_pictures,
         "demo_pictures": model.demo_pictures,
+        "people_photos": model.people_photos,  # ship_draft puts these in the store's Files before the draft is written
         "provenance": {f"{sid}.{key}": {"kind": v["kind"], "source": v["source"]} for (sid, key), v in ctx.prov.items()},
         "problems": problems,
         "lint": [{"rule": f.rule, "severity": f.severity, "message": f.message} for f in findings],

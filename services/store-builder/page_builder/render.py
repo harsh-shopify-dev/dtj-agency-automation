@@ -62,8 +62,9 @@ def placeholder(label: str, n: int = 0, ratio: float = 1.0) -> dict:
 
 def _picture(value: str, media_dir: Path | None, n: int) -> dict:
     name = value[len(IMAGE_PREFIX):]
-    if media_dir and (media_dir / name).is_file():
-        path = media_dir / name
+    people = Path(__file__).resolve().parent / "assets" / "sample-people" / name  # DTJ's sample people photos
+    path = media_dir / name if media_dir and (media_dir / name).is_file() else (people if people.is_file() else None)
+    if path:
         w, h = 1000, 1000
         try:  # real proportions when Pillow is installed; a square otherwise
             from PIL import Image
