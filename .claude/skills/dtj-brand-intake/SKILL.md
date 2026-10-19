@@ -26,7 +26,9 @@ designing", then "uploads to the google drive", "no workspace, go with a dedicat
 ## Page design asks first
 When a page starts, the person is asked whether to collect the brand's data first (Harsh, 19 Oct 2026):
 - **Telegram:** after a product link, the bot's "Got it" is followed by "collect the brand's data first?" with **Yes, collect it
-  first** / **No, design now**. The tap is saved on the brief (`dtj_client_intake.brand_intake`).
+  first** / **No, design now**. The tap is saved on the brief (`dtj_client_intake.brand_intake`). After a Yes the bot asks "Which
+  website is the brand's own?" (a reply box): the person replies with the address, or `same` when the shop is the brand's site.
+  The address is saved as `dtj_client_intake.brand_website` (a demo shop like Elevate with Harsh carries other brands' products).
 - **Claude Code:** the designer reads that answer when it starts (step 2 of the Page Design request) or, with no answer, asks the
   person at the laptop; a page started straight in Claude Code (`dtj-pdp-factory` P2, `dtj-home-page`) asks too.
 - Yes runs the intake on the designer's laptop into `.work/clients/intake-<host>/intake` (one folder per website, every page of

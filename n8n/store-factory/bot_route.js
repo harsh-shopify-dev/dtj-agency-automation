@@ -7,6 +7,7 @@
 //   intake -> start a brand intake on GitHub ("Start Brand Intake")
 //   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs ("List Intakes"), then "Stop Plan"
 //   brief  -> the answer to "collect the brand's data first?" after a page was started: saved on the brief ("Note the Choice")
+//   site   -> the reply with the brand's own website for a brief: saved on the brief ("Note the Website")
 //   reply  -> just answer
 const msg = $('Read the Message').first().json;
 if (msg.kind === 'ignore') return [];
@@ -35,7 +36,7 @@ if (msg.kind === 'commands') {
     '',
     '<b>Pages</b>',
     'a product link: start a product page in the shop\'s draft theme (anything after the link is a note for the designer). '
-      + 'I then ask whether to collect the brand\'s data first.',
+      + 'I then ask whether to collect the brand\'s data first, and from which website.',
     '',
     '<b>Brand data</b>',
     '/intake shop.com: collect a shop\'s pictures, videos, colours and details into Google Drive, with a live progress bar',
@@ -76,6 +77,19 @@ if (msg.kind === 'intake') {
   }
   return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,
     body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];
+}
+// the brand's own website for a brief (19 Oct 2026, Harsh: "it didnt asked for the brand website link?"): the shop a product link
+// comes from is not always the brand's own site (DTJ's demo shop carries other brands), so after "Yes, collect it first" the bot asks.
+if (msg.kind === 'site') {
+  const arg = String(msg.arg || '').trim();
+  if (/^(same|yes|ok|okay)$/i.test(arg)) return reply('OK: for brief ' + esc(msg.row_id) + ' the designer will read the shop itself.');
+  const m = arg.match(/^(?:https?:\/\/)?((?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,})(?:[/?#]\S*)?$/);
+  if (!m) {
+    return reply('That does not look like a website address. Reply to my question again with the brand\'s own website, '
+      + 'for example senso.in, or reply: same');
+  }
+  const host = m[1].toLowerCase().replace(/^www\./, '');
+  return [{ json: { action: 'site', chat_id: msg.chat_id, row_id: msg.row_id, website: 'https://' + host, by: myName } }];
 }
 // "collect the brand's data first?" (19 Oct 2026, Harsh: "it should ask me if it should run the scraper or not and using the data
 // available it should start designing"): the Yes / No buttons under "Intake Question" carry the brief's row id. Anyone on the bot.

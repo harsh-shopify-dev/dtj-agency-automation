@@ -471,5 +471,71 @@ class Commands(unittest.TestCase):
         missing = [c for c in sorted(known) if "/" + c not in admin]
         self.assertEqual(missing, [], "a command the bot reads is missing from /commands")
 
+
+def reply_to(text, asked, user=111, asked_by_bot=True):
+    return {"update_id": 3, "message": {"message_id": 6, "text": text, "chat": {"id": user, "type": "private"},
+                                        "from": {"id": user, "first_name": "Riya", "is_bot": False},
+                                        "reply_to_message": {"message_id": 5, "text": asked, "from": {"id": 1, "is_bot": asked_by_bot}}}}
+
+
+ASKED = ("Noted: the designer will collect the brand's data first, then design the page from it.\n\n"
+         "Which website is the brand's own for brief 12? Reply to this message with its address, for example senso.in.")
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class Website(unittest.TestCase):
+    """The brand's own website after "Yes, collect it first" (19 Oct 2026, Harsh: "it didnt asked for the brand website link?")."""
+
+    def route(self, upd, users=(RIYA, DEV, HARSH, OLD)):
+        msg = run_node("bot_read.js", upd)["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": list(users)})
+        self.assertTrue(res["ok"], res)
+        return msg, [i["json"] for i in res["out"]]
+
+    def test_a_reply_to_the_question_is_the_website_for_that_brief(self):
+        msg, out = self.route(reply_to("https://www.Senso.in/pages/about", ASKED))
+        self.assertEqual((msg["kind"], msg["row_id"], msg["arg"]), ("site", 12, "https://www.Senso.in/pages/about"))
+        self.assertEqual(out[0], {"action": "site", "chat_id": "111", "row_id": 12, "website": "https://senso.in", "by": "Riya"})
+        self.assertIn("read the shop itself", self.route(reply_to("same", ASKED))[1][0]["text"])
+        self.assertIn("does not look like a website address", self.route(reply_to("the tea brand", ASKED))[1][0]["text"])
+        self.assertIn("only for the DTJ team", self.route(reply_to("senso.in", ASKED, user=999))[1][0]["text"])
+
+    def test_other_replies_and_commands_are_not_read_as_a_website(self):
+        self.assertEqual(self.route(reply_to("senso.in", "Got it: designing x (brief 12)."))[0]["kind"], "nolink")
+        self.assertNotEqual(self.route(reply_to("senso.in", ASKED, asked_by_bot=False))[0]["kind"], "site")
+        self.assertEqual(self.route(reply_to("/help", ASKED))[0]["kind"], "help")
+
+    def test_the_question_comes_only_after_a_yes(self):
+        row = {"id": 12, "brand_name": "", "page_status": "", "brand_website": "",
+               "product_url": "https://elevate-with-harsh.myshopify.com/products/senso-tea", "store_domain": "elevate-with-harsh.myshopify.com"}
+        yes = run_node("choice_noted.js", [row], {"Who Is It": {"chat_id": "111", "row_id": 12, "brand_intake": "yes"}})["out"][0]["json"]
+        self.assertTrue(yes["site_question"])
+        self.assertIn("Which website is the brand's own for brief 12? Reply to this message", yes["text"])
+        self.assertIn("If it is elevate-with-harsh.myshopify.com, reply: same", yes["text"])
+        no = run_node("choice_noted.js", [row], {"Who Is It": {"chat_id": "111", "row_id": 12, "brand_intake": "no"}})["out"][0]["json"]
+        self.assertNotIn("site_question", no)
+
+    def test_the_saved_website_is_confirmed(self):
+        who = {"chat_id": "111", "row_id": 12, "website": "https://senso.in"}
+        ok = run_node("website_noted.js", [{"id": 12, "page_status": ""}], {"Who Is It": who})["out"][0]["json"]["text"]
+        self.assertEqual(ok, "Got it: for brief 12 the designer will collect the brand's data from senso.in.")
+        self.assertIn("not on the list any more", run_node("website_noted.js", [{}], {"Who Is It": who})["out"][0]["json"]["text"])
+
+
+class SiteDeploy(unittest.TestCase):
+    def test_the_website_takes_the_sixth_output_and_the_question_follows_a_yes(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.site_ops("tg-key")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules], ["design", "switch", "intake", "stop", "brief", "site"])
+        links = {(o["source"], o.get("sourceIndex"), o["target"]) for o in ops if o["type"] == "addConnection"}
+        for link in (("What to Do", 5, "Note the Website"), ("What to Do", 6, "Send"), ("Choice Noted", None, "Need the Website?"),
+                     ("Need the Website?", 0, "Ask for the Website"), ("Need the Website?", 1, "Send")):
+            self.assertIn(link, links)
+        self.assertIn({"type": "removeConnection", "source": "Choice Noted", "target": "Send"}, ops)
+        nodes = {o["node"]["name"]: o["node"] for o in ops if o["type"] == "addNode"}
+        self.assertEqual(nodes["Ask for the Website"]["parameters"]["replyMarkup"], "forceReply")
+        self.assertEqual(nodes["Note the Website"]["parameters"]["columns"]["value"], {"brand_website": "={{ $json.website }}"})
+
 if __name__ == "__main__":
     unittest.main()

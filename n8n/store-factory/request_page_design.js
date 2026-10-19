@@ -47,6 +47,8 @@ const lines = [
   '1. Work in the repo D:\\CODE CONTAINERR\\WEB DEV\\dtj-agency-automation. Read CLAUDE.md. Load the skill dtj-pdp-factory (the runbook, phases P0-P9) and follow it; dtj-pdp-design-review is its review gate. Stay on the current git branch; do not commit or push unless Harsh asks.',
   '2. Brand data first? Read the brief\'s brand_intake NOW (n8n tool get_data_table_rows, table dtj_client_intake, row id ' + row.id + '): '
     + 'the requester answers in Telegram after this request was written.',
+  '   Read its brand_website too: after a Yes the requester sends the brand\'s OWN website (the shop is not always the brand\'s site). '
+    + 'When it is set and differs from ' + site + ', collect from it instead, into ../../.work/clients/intake-<its host>.',
   '   - "yes": collect it before anything else (public pages only, a few minutes):',
   '     cd services/store-builder',
   '     python -m page_builder.brand_intake ' + site + ' --client ' + INTAKE + '  (add --drive "DTJ Clients" when this laptop has the DTJ_GDRIVE_* keys, so the team gets a copy)',
