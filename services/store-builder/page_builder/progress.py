@@ -9,6 +9,9 @@ duration in the telegram bot?"). The GitHub run sends the message when the intak
 The percentage comes from real counts (products read, files uploaded), never from a guess of how long a store takes. It is switched on
 only when the run has the bot token and a chat (DTJ_TELEGRAM_BOT_TOKEN, DTJ_PROGRESS_CHAT); otherwise every call does nothing. It is
 best effort: a Telegram error never stops the intake, and an error message never contains the token (it is part of Telegram's URL).
+In a GitHub run (GITHUB_RUN_ID) the message carries a Stop button (callback stop:intake:<run id>; the bot cancels that run, Harsh,
+19 Oct 2026: "add a stop feature"). The last edit removes the button. With DTJ_PROGRESS_FILE set, the message id is kept in that file
+until the last edit, so the workflow's final step can close a message the intake could not close itself (a stopped or crashed run).
 """
 from __future__ import annotations
 
@@ -67,6 +70,9 @@ class Progress:
         self.last_edit = -1e9
         self.last_text = ""
         self.failures = 0
+        run = os.environ.get("GITHUB_RUN_ID", "")
+        self.buttons = {"inline_keyboard": [[{"text": "Stop", "callback_data": f"stop:intake:{run}"}]]} if run.isdigit() else None
+        self.id_file = os.environ.get("DTJ_PROGRESS_FILE", "")
 
     def _call(self, method: str, data: dict) -> dict:
         if not self.on or self.failures >= 3:  # three failed calls: stop trying, the intake goes on
@@ -83,18 +89,35 @@ class Progress:
 
     def start(self) -> None:
         text = self._text(0, "Starting...", "Time so far: 0 s")
-        sent = self._call("sendMessage", {"chat_id": self.chat, "text": text, "disable_notification": True})
+        data = {"chat_id": self.chat, "text": text, "disable_notification": True}
+        if self.buttons:
+            data["reply_markup"] = self.buttons
+        sent = self._call("sendMessage", data)
         self.message_id = sent.get("message_id")
+        if self.message_id and self.id_file:
+            try:
+                with open(self.id_file, "w", encoding="utf-8") as fh:
+                    fh.write(str(self.message_id))
+            except OSError:
+                pass
         self.last_text, self.last_edit = text, self.clock()
 
-    def _edit(self, text: str, force: bool) -> None:
+    def _edit(self, text: str, force: bool, last: bool = False) -> None:
         if not self.message_id or text == self.last_text:
             return
         now = self.clock()
         if not force and now - self.last_edit < self.every:
             return
-        self._call("editMessageText", {"chat_id": self.chat, "message_id": self.message_id, "text": text})
+        data = {"chat_id": self.chat, "message_id": self.message_id, "text": text}
+        if self.buttons and not last:  # an edit without reply_markup removes the button: only the last edit does that
+            data["reply_markup"] = self.buttons
+        self._call("editMessageText", data)
         self.last_text, self.last_edit = text, now
+        if last and self.id_file:  # closed here: the workflow's last step leaves the message alone
+            try:
+                os.remove(self.id_file)
+            except OSError:
+                pass
 
     def update(self, stage: str, done: int = 0, total: int = 0) -> None:
         """Where the intake is: a stage from STAGES and, when known, how many of how many (products, files)."""
@@ -115,5 +138,5 @@ class Progress:
                 text = self._text(100, f"Done in {spent}.", note or "The Drive link comes in the next message.")
             else:
                 text = f"Brand intake: {self.store}\nStopped after {spent}.\n{note or 'The next message says why.'}"
-            self._edit(text, force=True)
+            self._edit(text, force=True, last=True)
         return spent

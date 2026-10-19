@@ -32,6 +32,7 @@ import io
 import json
 import os
 import re
+import signal
 import sys
 import time
 import urllib.request
@@ -526,6 +527,28 @@ def main(argv: list[str] | None = None, *, get: Getter = _get, drive=None) -> in
     out = Path(args.client) / "intake"
     bar = Progress(args.url)  # the Telegram progress message: on only in a GitHub run started from the bot
     bar.start()
+    old = signal.signal(signal.SIGTERM, _stop_on_term) if _main_thread() else None  # a cancelled GitHub run: SIGINT, then SIGTERM
+    try:
+        return _run(args, out, bar, get, drive)
+    except KeyboardInterrupt:  # the bot's Stop button cancelled the GitHub run
+        spent = bar.finish(False, "Stopped on request. Files already in Google Drive stay there.")
+        print(f"stopped on request after {spent}", file=sys.stderr)
+        return 130
+    finally:
+        if old is not None:
+            signal.signal(signal.SIGTERM, old)
+
+
+def _stop_on_term(*_):
+    raise KeyboardInterrupt
+
+
+def _main_thread() -> bool:
+    import threading  # noqa: PLC0415
+    return threading.current_thread() is threading.main_thread()
+
+
+def _run(args, out: Path, bar: Progress, get: Getter, drive) -> int:
     try:
         r = intake(args.url, out, get=get, max_products=min(args.max_products, MAX_PRODUCTS), delay=POLITE_DELAY, progress=bar.update)
     except RuntimeError as exc:

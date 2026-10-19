@@ -29,6 +29,9 @@ designing", then "uploads to the google drive", "no workspace, go with a dedicat
 run sends the Drive link back to the same chat, within a few minutes. Nothing runs on anyone's laptop.
 While it runs, one message in the chat shows a live progress bar (stage, "product 14 of 20", "file 80 of 151", time so far) and
 ends with "Done in N"; the Drive-link message says how long it took (`page_builder/progress.py`). Bot-started runs only.
+**Stopping one:** the progress message has a **Stop** button, and `/stop` lists every intake running now with its own Stop
+button (anyone on the bot). The bot cancels only a run of the "Brand intake" workflow that is still going (`stop_plan.js`); files
+already in Drive stay there, and the chat says it was stopped.
 
 **2. From Claude Code, cloud run** (nothing kept on this laptop):
 ```

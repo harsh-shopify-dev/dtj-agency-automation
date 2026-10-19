@@ -294,5 +294,91 @@ class PickTheShop(unittest.TestCase):
         txt = run_node("licence_report.js", org, {"Pick the Shop": one, "Licence Calls": calls})["out"][0]["json"]["text"]
         self.assertIn("outside DTJ's Shopify organization", txt)
 
+
+def run(i, status, store="freesoul.com", minutes=2):
+    """One run in GitHub's list of the Brand intake workflow's runs."""
+    return {"id": i, "status": status, "display_title": f"Brand intake: {store}", "run_started_at": "2026-10-19T10:18:47Z"}
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class Stop(unittest.TestCase):
+    """/stop and the Stop button (19 Oct 2026, Harsh: "add a stop feature"; brand intakes only)."""
+
+    def route(self, upd, users=(RIYA, DEV, HARSH, OLD)):
+        msg = run_node("bot_read.js", upd)["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": list(users)})
+        self.assertTrue(res["ok"], res)
+        return msg, [i["json"] for i in res["out"]]
+
+    def plan(self, ask, status, runs=None):
+        body = {"total_count": len(runs or []), "workflow_runs": runs or []} if runs is not None else {"message": "Bad credentials"}
+        res = run_node("stop_plan.js", {"statusCode": status, "body": body}, {"Who Is It": ask})
+        self.assertTrue(res["ok"], res)
+        return [i["json"] for i in res["out"]]
+
+    def test_stop_and_a_stop_tap_are_read_and_anyone_on_the_bot_may_use_them(self):
+        msg, out = self.route(update("/stop"))  # Riya, a requester
+        self.assertEqual(msg["kind"], "stop")
+        self.assertEqual(out, [{"action": "stop", "mode": "list", "chat_id": "111", "run_id": "", "by": "Riya"}])
+        msg, out = self.route(button("stop:intake:39236551490", user=111))
+        self.assertEqual((msg["kind"], msg["data"]), ("button", "stop:intake:39236551490"))
+        self.assertEqual(out[0], {"action": "stop", "mode": "cancel", "chat_id": "111", "run_id": "39236551490", "by": "Riya"})
+
+    def test_a_bad_stop_button_or_someone_not_on_the_bot_stops_nothing(self):
+        for data in ("stop:intake:abc", "stop:page:12", "stop:intake:1;rm"):
+            _, out = self.route(button(data, user=111))
+            self.assertEqual(out[0]["action"], "reply", data)
+        _, out = self.route(button("stop:intake:42", user=999))
+        self.assertEqual(out[0]["action"], "reply")
+        self.assertIn("only for the DTJ team", out[0]["text"])
+        _, out = self.route(update("/stop", user=999))
+        self.assertIn("only for the DTJ team", out[0]["text"])
+
+    def test_the_list_shows_only_running_intakes_each_with_its_own_button(self):
+        ask = {"chat_id": "111", "mode": "list", "run_id": "", "by": "Riya"}
+        out = self.plan(ask, 200, [run(1, "in_progress"), run(2, "completed", "old.com"), run(3, "queued", "<b>x</b>.com")])
+        self.assertEqual([o["action"] for o in out], ["choose", "choose"])
+        self.assertEqual([o["stop_data"] for o in out], ["stop:intake:1", "stop:intake:3"])
+        self.assertIn("Running: brand intake for freesoul.com, started", out[0]["text"])
+        self.assertIn("&lt;b&gt;x&lt;/b&gt;.com", out[1]["text"])  # a store name is never read as HTML
+        self.assertEqual(self.plan(ask, 200, [run(2, "completed")])[0]["text"], "No brand intake is running right now.")
+
+    def test_only_a_brand_intake_that_is_still_going_is_cancelled(self):
+        ask = {"chat_id": "111", "mode": "cancel", "run_id": "7", "by": "Riya"}
+        out = self.plan(ask, 200, [run(7, "in_progress")])
+        self.assertEqual(out, [{"action": "cancel", "chat_id": "111", "run_id": "7", "store": "freesoul.com", "by": "Riya"}])
+        self.assertIn("already finished", self.plan(ask, 200, [run(7, "completed")])[0]["text"])
+        gone = self.plan(ask, 200, [run(8, "in_progress")])[0]  # not a run of the Brand intake workflow (or too old): never cancelled
+        self.assertEqual(gone["action"], "reply")
+        self.assertIn("Nothing was stopped", gone["text"])
+        self.assertIn("GitHub refused the bot's key", self.plan(ask, 401)[0]["text"])
+        self.assertIn("could not reach GitHub (500)", self.plan(ask, 500)[0]["text"])
+
+    def test_the_answer_after_the_cancel(self):
+        plan = {"chat_id": "111", "store": "freesoul.com", "by": "Riya", "run_id": "7"}
+        ok = run_node("stop_report.js", {"statusCode": 202}, {"Stop Plan": plan})["out"][0]["json"]
+        self.assertEqual(ok["chat_id"], "111")
+        self.assertIn("Stopping the brand intake for freesoul.com (asked by Riya)", ok["text"])
+        self.assertIn("already finished", run_node("stop_report.js", {"statusCode": 409}, {"Stop Plan": plan})["out"][0]["json"]["text"])
+        self.assertIn("Please tell Harsh", run_node("stop_report.js", {"statusCode": 403}, {"Stop Plan": plan})["out"][0]["json"]["text"])
+
+
+class StopDeploy(unittest.TestCase):
+    def test_the_stop_branch_takes_the_fourth_output_and_carries_the_keys(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.stop_ops("gh-key", "tg-key")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules], ["design", "switch", "intake", "stop"])
+        links = [(o.get("sourceIndex"), o["target"]) for o in ops if o["type"] == "addConnection" and o["source"] == "What to Do"]
+        self.assertEqual(sorted(links), [(3, "List Intakes"), (4, "Send")])
+        self.assertIn({"type": "removeConnection", "source": "What to Do", "sourceIndex": 3, "target": "Send"}, ops)
+        nodes = {o["node"]["name"]: o["node"] for o in ops if o["type"] == "addNode"}
+        self.assertTrue(nodes["List Intakes"]["parameters"]["url"].endswith("/actions/workflows/brand-intake.yml/runs?per_page=30"))
+        self.assertTrue(nodes["Cancel the Intake"]["parameters"]["url"].endswith("/actions/runs/{{ $json.run_id }}/cancel"))
+        self.assertEqual(nodes["Cancel the Intake"]["parameters"]["method"], "POST")
+        creds = {(o["nodeName"], o["credentialKey"], o["credentialId"]) for o in ops if o["type"] == "setNodeCredential"}
+        self.assertEqual(creds, {("List Intakes", "httpBearerAuth", "gh-key"), ("Cancel the Intake", "httpBearerAuth", "gh-key"),
+                                 ("Ask to Stop", "telegramApi", "tg-key")})
+
 if __name__ == "__main__":
     unittest.main()

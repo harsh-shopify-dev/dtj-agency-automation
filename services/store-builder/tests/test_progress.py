@@ -103,6 +103,58 @@ class ProgressTests(unittest.TestCase):
         self.assertEqual(tg.texts()[-1], "Brand intake: freesoul.com\nStopped after 12 s.\nThe next message says why.")
 
 
+class StopButtonTests(unittest.TestCase):
+    """The Stop button (Harsh, 19 Oct 2026: "add a stop feature"): on the message while the run goes, gone after the last edit."""
+
+    def test_a_github_run_gets_a_stop_button_for_its_own_run_and_the_last_edit_removes_it(self):
+        tg, clock = FakeTelegram(), Clock()
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        id_file = tmp / "progress-message-id"
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "39236551490", "DTJ_PROGRESS_FILE": str(id_file)}):
+            p = Progress("freesoul.com", token=TOKEN, chat="555", post=tg, clock=clock)
+        p.start()
+        self.assertEqual(id_file.read_text(encoding="utf-8"), "77")  # kept for the workflow's last step
+        clock.now += 5
+        p.update("drive", 3, 10)
+        clock.now += 5
+        p.finish(True)
+        stop = {"inline_keyboard": [[{"text": "Stop", "callback_data": "stop:intake:39236551490"}]]}
+        self.assertEqual(tg.calls[0][1]["reply_markup"], stop)
+        self.assertEqual(tg.calls[1][1]["reply_markup"], stop)
+        self.assertNotIn("reply_markup", tg.calls[2][1])  # done: no button any more
+        self.assertFalse(id_file.exists())  # closed here, so the workflow leaves it alone
+
+    def test_outside_github_there_is_no_button(self):
+        tg = FakeTelegram()
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": ""}):
+            p = Progress("freesoul.com", token=TOKEN, chat="555", post=tg, clock=Clock())
+        p.start()
+        self.assertNotIn("reply_markup", tg.calls[0][1])
+
+    def test_a_stopped_run_closes_its_message_and_exits_130(self):
+        from test_brand_intake import BASE, store  # noqa: PLC0415
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        get, _ = store(n_products=3)
+        tg = FakeTelegram()
+
+        def stopped(*a, **k):
+            raise KeyboardInterrupt  # what GitHub's cancel does to the running intake
+
+        env = {"DTJ_TELEGRAM_BOT_TOKEN": TOKEN, "DTJ_PROGRESS_CHAT": "555", "GITHUB_RUN_ID": "42"}
+        with mock.patch.dict(os.environ, env), mock.patch.object(progress, "_post", tg), \
+                mock.patch.object(Progress.__init__, "__defaults__", (None, None, tg, progress.time.monotonic, 0.0)), \
+                mock.patch.object(brand_intake, "intake", stopped), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = brand_intake.main([BASE, "--client", str(tmp / "c")], get=get)
+        self.assertEqual(code, 130)
+        self.assertIn("Stopped after", tg.texts()[-1])
+        self.assertIn("Files already in Google Drive stay there", tg.texts()[-1])
+        self.assertNotIn("reply_markup", tg.calls[-1][1])
+        self.assertIn("stopped on request", err.getvalue())
+
+
 class IntakeProgressTests(unittest.TestCase):
     def test_a_real_intake_moves_through_every_stage_in_order_and_github_gets_the_time(self):
         from test_brand_intake import BASE, store  # noqa: PLC0415

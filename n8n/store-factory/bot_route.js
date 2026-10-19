@@ -4,6 +4,8 @@
 // Output: one item with action
 //   design -> start a page (Store Factory: New Page)
 //   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list ("Pick the Shop")
+//   intake -> start a brand intake on GitHub ("Start Brand Intake")
+//   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs ("List Intakes"), then "Stop Plan"
 //   reply  -> just answer
 const msg = $('Read the Message').first().json;
 if (msg.kind === 'ignore') return [];
@@ -31,6 +33,7 @@ if (msg.kind === 'help') {
     + '- Anything after the link is a note for the designer.\n'
     + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'
     + '\n\nBefore a redesign: /intake shop.com collects the shop\'s pictures, videos, colours and details into Google Drive.'
+    + ' /stop shows the intakes running now, each with a Stop button.'
     + (isAdmin ? '\n\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '
       + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));
 }
@@ -45,6 +48,15 @@ if (msg.kind === 'intake') {
   }
   return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,
     body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];
+}
+// stopping a brand intake (19 Oct 2026, Harsh: "add a stop feature so it can stop any ongoing specific task"; he chose brand intakes
+// only): /stop lists the intakes running on GitHub, each with a Stop button; the Stop button under an intake's progress bar stops
+// that run. "Stop Plan" checks that the run is a brand intake that is still going before anything is cancelled. Anyone on the bot.
+if (msg.kind === 'stop') return [{ json: { action: 'stop', mode: 'list', chat_id: msg.chat_id, run_id: '', by: myName } }];
+if (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {
+  const s = String(msg.data).match(/^stop:intake:(\d{1,20})$/);
+  if (!s) return reply('That button is not valid any more.');
+  return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];
 }
 if (msg.kind === 'nolink') {
   return reply('Please send a product link from the shop\'s website (it has /products/ in it). You can add a note after the link.');
