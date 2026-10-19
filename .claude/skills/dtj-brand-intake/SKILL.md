@@ -23,6 +23,15 @@ designing", then "uploads to the google drive", "no workspace, go with a dedicat
 - **Nothing is invented.** Missing or template policy text is reported as such, never filled in.
 - The Drive app has the `drive.file` permission only. It sees and changes nothing in the Drive except the folders it made.
 
+## Page design asks first
+When a page starts, the person is asked whether to collect the brand's data first (Harsh, 19 Oct 2026):
+- **Telegram:** after a product link, the bot's "Got it" is followed by "collect the brand's data first?" with **Yes, collect it
+  first** / **No, design now**. The tap is saved on the brief (`dtj_client_intake.brand_intake`).
+- **Claude Code:** the designer reads that answer when it starts (step 2 of the Page Design request) or, with no answer, asks the
+  person at the laptop; a page started straight in Claude Code (`dtj-pdp-factory` P2, `dtj-home-page`) asks too.
+- Yes runs the intake on the designer's laptop into `.work/clients/intake-<host>/intake` (one folder per website, every page of
+  that brand uses it), with `--drive "DTJ Clients"` when the laptop has the Drive keys. The design starts from it.
+
 ## Three ways to run it (pick the first that fits)
 
 **1. From Telegram (anyone on the bot):** `/intake freesoul.com`. The bot asks GitHub to run the "Brand intake" workflow. The

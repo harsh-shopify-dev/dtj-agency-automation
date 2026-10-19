@@ -38,6 +38,17 @@ class Nodes(unittest.TestCase):
             self.assertIn(must, text)
         self.assertEqual(out["resume_url"], RESUME)
         self.assertEqual(out["request"]["client_folder"], ".work/clients/n8n-12-radiance-serum")
+        # the brand intake (19 Oct 2026): the choice is read when the designer starts; the data goes to one folder per website
+        for must in ("Read the brief's brand_intake NOW (n8n tool get_data_table_rows, table dtj_client_intake, row id 12)",
+                     "python -m page_builder.brand_intake https://hopenskin.com --client ../../.work/clients/intake-hopenskin.com",
+                     '"no": do not collect it again', 'empty: ask the person at this laptop',
+                     "../../.work/clients/intake-hopenskin.com/intake: start from BRAND.md"):
+            self.assertIn(must, text)
+        self.assertEqual(out["request"]["intake_folder"], ".work/clients/intake-hopenskin.com")
+        site = self.run_node("request_page_design.js", self.row(brand_website="", brand_intake="yes"))["out"][0]["json"]
+        self.assertIn("brand_intake https://test-store-harsh-dtj.myshopify.com --client ../../.work/clients/intake-test-store-harsh-dtj.myshopify.com",
+                      site["instructions"])  # no brand site: the product link's own address
+        self.assertIn("- Brand data first (brand_intake): yes", site["instructions"])
         self.assertNotIn("token", json.dumps(out["request"]).lower())
 
     def test_a_form_brief_uses_the_client_answers_and_its_handle(self):

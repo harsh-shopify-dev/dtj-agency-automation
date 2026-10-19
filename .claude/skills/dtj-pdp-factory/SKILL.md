@@ -59,7 +59,15 @@ Read `CLAUDE.md`, the latest entry of `docs/HANDOFF.md` and the client's folder 
 exists with no `pending` handle.
 
 ### P2. Facts, store checks, brand
-- **Redesign or new client: run the brand intake first** (`python -m page_builder.brand_intake <store> --client <dir>`, Harsh 19 Oct 2026): pictures of up to 20 products, logo, policies, fonts, theme colours and a palette proposal in `<client>/intake/` (BRAND.md first; the colours, category and price tier are guesses to confirm).
+- **Ask first: collect the brand's data?** (Harsh, 19 Oct 2026: "it should ask me if it should run the scraper or not and using
+  the data available it should start designing"). A brief from n8n carries the answer in `brand_intake` (read the row when you
+  start: the requester taps Yes / No in Telegram after the page is started); otherwise ask the person at the laptop.
+  - Yes: `python -m page_builder.brand_intake <brand site> --client ../../.work/clients/intake-<host>` (add `--drive "DTJ Clients"`
+    when the laptop has the DTJ_GDRIVE_* keys): pictures and videos of up to 20 products, logo, policies, fonts, theme colours and
+    a palette proposal in `.work/clients/intake-<host>/intake/`, one folder per website, shared by every page of that brand.
+  - No: do not collect it again; use an earlier `.work/clients/intake-<host>/intake/` when there is one.
+  - Start P2 from its BRAND.md, brand.json (draft) and brand-intake.json (every fact with its source); the colours, category and
+    price tier are guesses to confirm against the pack and the brand site.
 - Material in order: client facts, the brand's own public pages (product page, FAQ, policies, a public reviews widget) with URL
   and date as source, the pack and every product picture (read what they print). `references/facts-intake-checklist.md`.
 - Store checks (public product JSON and page): title (placeholder?), stock ("Sold out"?), pictures (how many, any with printed

@@ -86,7 +86,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Output: one item with action\n//   design -> start a page (Store Factory: New Page)\n//   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list (\"Pick the Shop\")\n//   intake -> start a brand intake on GitHub (\"Start Brand Intake\")\n//   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs (\"List Intakes\"), then \"Stop Plan\"\n//   reply  -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + '\\n\\nBefore a redesign: /intake shop.com collects the shop\\'s pictures, videos, colours and details into Google Drive.'\n    + ' /stop shows the intakes running now, each with a Stop button.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\n// a brand intake (19 Oct 2026, Harsh: \"scrapes everything and uploads to the google drive\"): GitHub Actions runs it (\"Brand intake\"\n// workflow on the repo's default branch) and answers in this chat with the Drive folder's link. Anyone on the bot may ask.\nif (msg.kind === 'intake') {\n  const store = /^(https?:\\/\\/)?([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(\\/\\S*)?$/.test(msg.arg) ? msg.arg : '';\n  if (!store) {\n    return reply('Send the shop\\'s address after /intake, for example:\\n/intake freesoul.com\\n\\n'\n      + 'I read the shop\\'s public pages (pictures and videos of up to 20 products, logo, colours, fonts, policies) and send you the '\n      + 'Google Drive folder here in a few minutes.');\n  }\n  return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,\n    body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];\n}\n// stopping a brand intake (19 Oct 2026, Harsh: \"add a stop feature so it can stop any ongoing specific task\"; he chose brand intakes\n// only): /stop lists the intakes running on GitHub, each with a Stop button; the Stop button under an intake's progress bar stops\n// that run. \"Stop Plan\" checks that the run is a brand intake that is still going before anything is cancelled. Anyone on the bot.\nif (msg.kind === 'stop') return [{ json: { action: 'stop', mode: 'list', chat_id: msg.chat_id, run_id: '', by: myName } }];\nif (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {\n  const s = String(msg.data).match(/^stop:intake:(\\d{1,20})$/);\n  if (!s) return reply('That button is not valid any more.');\n  return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only). Which shops exist is the install catcher's to say, so the shop is matched in \"Pick the Shop\".\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  const ask = { action: 'switch', chat_id: msg.chat_id, actor: myName, admins: otherAdmins, command: msg.command, arg: msg.arg || '',\n    state: '', client: '' };\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    return [{ json: { ...ask, command: 'tap', state: b[1] === 'on' ? 'active' : 'inactive', client: b[2] } }];\n  }\n  if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  return [{ json: ask }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
+    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Output: one item with action\n//   design -> start a page (Store Factory: New Page)\n//   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list (\"Pick the Shop\")\n//   intake -> start a brand intake on GitHub (\"Start Brand Intake\")\n//   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs (\"List Intakes\"), then \"Stop Plan\"\n//   brief  -> the answer to \"collect the brand's data first?\" after a page was started: saved on the brief (\"Note the Choice\")\n//   reply  -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + '\\n\\nBefore a redesign: /intake shop.com collects the shop\\'s pictures, videos, colours and details into Google Drive.'\n    + ' /stop shows the intakes running now, each with a Stop button.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\n// a brand intake (19 Oct 2026, Harsh: \"scrapes everything and uploads to the google drive\"): GitHub Actions runs it (\"Brand intake\"\n// workflow on the repo's default branch) and answers in this chat with the Drive folder's link. Anyone on the bot may ask.\nif (msg.kind === 'intake') {\n  const store = /^(https?:\\/\\/)?([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(\\/\\S*)?$/.test(msg.arg) ? msg.arg : '';\n  if (!store) {\n    return reply('Send the shop\\'s address after /intake, for example:\\n/intake freesoul.com\\n\\n'\n      + 'I read the shop\\'s public pages (pictures and videos of up to 20 products, logo, colours, fonts, policies) and send you the '\n      + 'Google Drive folder here in a few minutes.');\n  }\n  return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,\n    body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];\n}\n// \"collect the brand's data first?\" (19 Oct 2026, Harsh: \"it should ask me if it should run the scraper or not and using the data\n// available it should start designing\"): the Yes / No buttons under \"Intake Question\" carry the brief's row id. Anyone on the bot.\nif (msg.kind === 'button' && String(msg.data || '').startsWith('brief:')) {\n  const b = String(msg.data).match(/^brief:(intake|skip):(\\d{1,9})$/);\n  if (!b) return reply('That button is not valid any more.');\n  return [{ json: { action: 'brief', chat_id: msg.chat_id, row_id: Number(b[2]), brand_intake: b[1] === 'intake' ? 'yes' : 'no', by: myName } }];\n}\n// stopping a brand intake (19 Oct 2026, Harsh: \"add a stop feature so it can stop any ongoing specific task\"; he chose brand intakes\n// only): /stop lists the intakes running on GitHub, each with a Stop button; the Stop button under an intake's progress bar stops\n// that run. \"Stop Plan\" checks that the run is a brand intake that is still going before anything is cancelled. Anyone on the bot.\nif (msg.kind === 'stop') return [{ json: { action: 'stop', mode: 'list', chat_id: msg.chat_id, run_id: '', by: myName } }];\nif (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {\n  const s = String(msg.data).match(/^stop:intake:(\\d{1,20})$/);\n  if (!s) return reply('That button is not valid any more.');\n  return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only). Which shops exist is the install catcher's to say, so the shop is matched in \"Pick the Shop\".\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  const ask = { action: 'switch', chat_id: msg.chat_id, actor: myName, admins: otherAdmins, command: msg.command, arg: msg.arg || '',\n    state: '', client: '' };\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    return [{ json: { ...ask, command: 'tap', state: b[1] === 'on' ? 'active' : 'inactive', client: b[2] } }];\n  }\n  if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  return [{ json: ask }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
    }
   },
   {
@@ -352,6 +352,28 @@
        },
        "renameOutput": true,
        "outputKey": "stop"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "brief",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "brief"
       }
      ]
     },
@@ -971,6 +993,135 @@
      "name": "DTJ Page Bot"
     }
    }
+  },
+  {
+   "id": "8080e520-d236-4109-bce8-1603f04beff2",
+   "name": "Intake Question",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2280,
+    200
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Intake Question\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Store Factory: New Page\" started a page: ask the person who sent the link whether the designer should collect the brand's\n// data first (19 Oct 2026, Harsh: \"if i am starting the design of a product page or homepage it should ask me if it should run the\n// scraper or not and using the data available it should start designing\"). The tap is saved on the brief (column brand_intake) by\n// \"Note the Choice\"; the designer's Claude Code reads it before designing (request_page_design.js, step 2).\n// Output: one item for \"Ask About Intake\" (the question with a Yes and a No button), or nothing when no page was started.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nif (!res.ok || !res.row_id) return [];\nreturn [{ json: {\n  chat_id: ask.chat_id,\n  text: 'One question before the designer starts brief ' + res.row_id + ': collect the brand\\'s data first? That reads its website '\n    + '(product pictures and videos, logo, colours, fonts, policies; a few minutes) and the page is designed from it.',\n  yes_data: 'brief:intake:' + res.row_id,\n  no_data: 'brief:skip:' + res.row_id,\n} }];\n"
+   }
+  },
+  {
+   "id": "985d3396-ebd7-452b-a000-e5272e487672",
+   "name": "Ask About Intake",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2520,
+    200
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "replyMarkup": "inlineKeyboard",
+    "inlineKeyboard": {
+     "rows": [
+      {
+       "row": {
+        "buttons": [
+         {
+          "text": "Yes, collect it first",
+          "additionalFields": {
+           "callback_data": "={{ $json.yes_data }}"
+          }
+         },
+         {
+          "text": "No, design now",
+          "additionalFields": {
+           "callback_data": "={{ $json.no_data }}"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "52a6c712-f000-46d2-adf9-e4be2a075d75",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "a8713857-f89d-441e-930b-8064e4d86d65",
+   "name": "Note the Choice",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1320,
+    1040
+   ],
+   "parameters": {
+    "operation": "update",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "7FWesTH7eVyLNuOQ",
+     "cachedResultName": "dtj_client_intake"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyValue": "={{ $json.row_id }}"
+      }
+     ]
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "brand_intake": "={{ $json.brand_intake }}"
+     },
+     "schema": [
+      {
+       "id": "brand_intake",
+       "displayName": "brand_intake",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    },
+    "options": {}
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "id": "fab91381-d2fb-4392-ab04-3b8aba27e4f5",
+   "name": "Choice Noted",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1560,
+    1040
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Choice Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Choice\" saved the answer to \"collect the brand's data first?\" on the brief (dtj_client_intake.brand_intake):\n// tell the person what the designer will do. \"Note the Choice\" gives back the updated row, or nothing when the brief is gone.\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nconst brand = row.brand_name ? ' for ' + esc(row.brand_name) : '';\nlet text = ask.brand_intake === 'yes'\n  ? 'Noted: the designer will collect the brand\\'s data first' + brand + ' (pictures, colours, fonts, policies), then design the page from it.'\n  : 'Noted: the designer will design the page' + brand + ' with the data we already have, without collecting it again.';\nif (row.page_status) {\n  text += '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.';\n}\nreturn [{ json: { chat_id: ask.chat_id, text } }];\n"
+   }
   }
  ],
  "connections": {
@@ -1006,6 +1157,11 @@
     [
      {
       "node": "Write the Answers",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Intake Question",
       "type": "main",
       "index": 0
      }
@@ -1082,6 +1238,13 @@
     [
      {
       "node": "List Intakes",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Note the Choice",
       "type": "main",
       "index": 0
      }
@@ -1267,6 +1430,39 @@
    ]
   },
   "Stop Report": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Intake Question": {
+   "main": [
+    [
+     {
+      "node": "Ask About Intake",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Note the Choice": {
+   "main": [
+    [
+     {
+      "node": "Choice Noted",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Choice Noted": {
    "main": [
     [
      {

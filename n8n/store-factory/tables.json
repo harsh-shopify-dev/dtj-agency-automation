@@ -32,7 +32,8 @@
   {"name": "design_checks", "type": "string"},
   {"name": "samples", "type": "number"},
   {"name": "requested_by", "type": "string"},
-  {"name": "telegram_chat_id", "type": "string"}
+  {"name": "telegram_chat_id", "type": "string"},
+  {"name": "brand_intake", "type": "string"}
  ]},
  "dtj_stores": {"columns": [
   {"name": "store_name", "type": "string"},

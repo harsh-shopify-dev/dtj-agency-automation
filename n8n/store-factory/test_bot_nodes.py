@@ -380,5 +380,58 @@ class StopDeploy(unittest.TestCase):
         self.assertEqual(creds, {("List Intakes", "httpBearerAuth", "gh-key"), ("Cancel the Intake", "httpBearerAuth", "gh-key"),
                                  ("Ask to Stop", "telegramApi", "tg-key")})
 
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class IntakeChoice(unittest.TestCase):
+    """"Collect the brand's data first?" after a page starts (19 Oct 2026, Harsh: "it should ask me if it should run the scraper")."""
+
+    def test_the_question_follows_a_started_page_with_its_brief_on_both_buttons(self):
+        ask = {"chat_id": "111", "requester_name": "Riya", "requester_id": "111", "designers": ["333"]}
+        ok = {"ok": True, "row_id": 12, "handle": "radiance-serum", "store_name": "Hope N Skin"}
+        out = [i["json"] for i in run_node("intake_question.js", ok, {"Who Is It": ask})["out"]]
+        self.assertEqual(len(out), 1)
+        self.assertEqual((out[0]["chat_id"], out[0]["yes_data"], out[0]["no_data"]), ("111", "brief:intake:12", "brief:skip:12"))
+        self.assertIn("collect the brand's data first?", out[0]["text"])
+        self.assertEqual(run_node("intake_question.js", {"ok": False, "message": "no"}, {"Who Is It": ask})["out"], [])
+
+    def test_a_tap_is_read_and_becomes_a_choice_for_the_brief(self):
+        def route(data, user=111):
+            msg = run_node("bot_read.js", button(data, user=user))["out"][0]["json"]
+            res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD]})
+            return [i["json"] for i in res["out"]]
+        self.assertEqual(route("brief:intake:12")[0], {"action": "brief", "chat_id": "111", "row_id": 12, "brand_intake": "yes", "by": "Riya"})
+        self.assertEqual(route("brief:skip:12")[0]["brand_intake"], "no")
+        for bad in ("brief:intake:x", "brief:maybe:12", "brief:intake:12;1"):
+            self.assertEqual(route(bad)[0]["action"], "reply", bad)
+        self.assertIn("only for the DTJ team", route("brief:intake:12", user=999)[0]["text"])
+
+    def test_the_answer_after_saving_says_what_the_designer_will_do(self):
+        def noted(choice, rows):
+            who = {"chat_id": "111", "row_id": 12, "brand_intake": choice}
+            return run_node("choice_noted.js", rows or [{}], {"Who Is It": who})["out"][0]["json"]["text"]
+        self.assertIn("collect the brand's data first for Hope N Skin", noted("yes", [{"id": 12, "brand_name": "Hope N Skin", "page_status": ""}]))
+        self.assertIn("with the data we already have", noted("no", [{"id": 12, "brand_name": "", "page_status": ""}]))
+        self.assertIn('already marked "written to draft"', noted("yes", [{"id": 12, "page_status": "written to draft"}]))
+        self.assertIn("not on the list any more", noted("yes", []))
+
+
+class ChoiceDeploy(unittest.TestCase):
+    def test_the_choice_takes_the_fifth_output_saves_on_the_brief_and_asks_after_a_new_page(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.choice_ops("tg-key")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules], ["design", "switch", "intake", "stop", "brief"])
+        links = sorted((o["source"], o.get("sourceIndex"), o["target"]) for o in ops if o["type"] == "addConnection")
+        self.assertIn(("What to Do", 4, "Note the Choice"), links)
+        self.assertIn(("What to Do", 5, "Send"), links)
+        self.assertIn(("Ask New Page", None, "Intake Question"), links)
+        self.assertIn({"type": "removeConnection", "source": "What to Do", "sourceIndex": 4, "target": "Send"}, ops)
+        note = next(o["node"] for o in ops if o["type"] == "addNode" and o["node"]["name"] == "Note the Choice")
+        self.assertEqual(note["parameters"]["operation"], "update")
+        self.assertEqual(note["parameters"]["dataTableId"]["value"], d.INTAKE)
+        self.assertEqual(note["parameters"]["columns"]["value"], {"brand_intake": "={{ $json.brand_intake }}"})
+        self.assertIn({"type": "setNodeCredential", "nodeName": "Ask About Intake", "credentialKey": "telegramApi", "credentialId": "tg-key",
+                       "credentialName": "DTJ Page Bot"}, ops)
+
 if __name__ == "__main__":
     unittest.main()
