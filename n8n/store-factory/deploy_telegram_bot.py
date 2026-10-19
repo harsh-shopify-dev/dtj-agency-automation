@@ -10,6 +10,7 @@
 
 Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is It -> What to Do
     design  -> Ask New Page (Store Factory: New Page, waits for its answer) -> Write the Answers -> Send
+                                                                          -> Intake Question -> Ask About Intake (Yes / No buttons)
     switch  -> Ask for the Shop List (install catcher /licence state "list", bot key) -> Pick the Shop -> What Next
                    licence -> Licence Calls -> Ask the Switch (install catcher /licence, bot key) -> Licence Report -> Send
                    confirm -> Ask to Confirm (the "Yes, switch ..." / "Cancel" buttons)
@@ -20,6 +21,7 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
                    cancel -> Cancel the Intake (GitHub: cancel that run) -> Stop Report -> Send
                    choose -> Ask to Stop (one message per running intake, each with a Stop button)
                    reply  -> Send
+    brief   -> Note the Choice (dtj_client_intake.brand_intake = yes | no) -> Choice Noted -> Send
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -42,6 +44,7 @@ NAME = "Store Factory: Telegram Bot"
 NEW_PAGE = "Z3s9hqny1d2shvXT"
 BOT_USERS = "xJ9O19tBBmCJc1Hc"
 STORES = "QaOZ6MuvFLyft2y9"
+INTAKE = "7FWesTH7eVyLNuOQ"          # data table dtj_client_intake (the briefs)
 CREDENTIAL = "DTJ Page Bot"                 # n8n Telegram API credential (the bot token)
 SWITCH_CREDENTIAL = "DTJ Catcher Bot Key"   # n8n Header Auth credential: name X-DTJ-Bot-Key, value = the catcher's BOT_KEY
 CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence"
@@ -55,7 +58,8 @@ GITHUB_HEADERS = {"parameters": [{"name": "Accept", "value": "application/vnd.gi
                                  {"name": "User-Agent", "value": "dtj-n8n-bot/1"}]}
 CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
               "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js",
-              "Intake Started": "intake_started.js", "Stop Plan": "stop_plan.js", "Stop Report": "stop_report.js"}
+              "Intake Started": "intake_started.js", "Stop Plan": "stop_plan.js", "Stop Report": "stop_report.js",
+              "Intake Question": "intake_question.js", "Choice Noted": "choice_noted.js"}
 SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
@@ -319,6 +323,50 @@ def stop_ops(github_id: str | None, telegram_id: str | None) -> list[dict]:
     return ops
 
 
+def choice_ops(telegram_id: str | None) -> list[dict]:
+    """"Collect the brand's data first?" after a page starts (19 Oct 2026, Harsh: "it should ask me if it should run the scraper or not
+    and using the data available it should start designing"): the question with Yes / No buttons, and a fifth rule on "What to Do"
+    that saves the tap on the brief; the reply branch moves to the fallback output after it."""
+    intake_table = {"__rl": True, "mode": "list", "value": INTAKE, "cachedResultName": "dtj_client_intake"}
+    ops: list[dict] = [
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        _add("Intake Question", "n8n-nodes-base.code", 2, [2280, 200], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                        "jsCode": code("intake_question.js")}),
+        _add("Ask About Intake", "n8n-nodes-base.telegram", 1.2, [2520, 200], {
+            "resource": "message", "operation": "sendMessage", "chatId": "={{ $json.chat_id }}", "text": "={{ $json.text }}",
+            "replyMarkup": "inlineKeyboard",
+            "inlineKeyboard": {"rows": [{"row": {"buttons": [
+                {"text": "Yes, collect it first", "additionalFields": {"callback_data": "={{ $json.yes_data }}"}},
+                {"text": "No, design now", "additionalFields": {"callback_data": "={{ $json.no_data }}"}}]}}]},
+            "additionalFields": SEND_FIELDS}),
+        {"type": "setNodeSettings", "nodeName": "Ask About Intake", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
+                   for v in ("design", "switch", "intake", "stop", "brief")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 4, "target": "Send"},
+        _add("Note the Choice", "n8n-nodes-base.dataTable", 1.1, [1320, 1040], {
+            "operation": "update", "dataTableId": intake_table, "matchType": "allConditions",
+            "filters": {"conditions": [{"keyValue": "={{ $json.row_id }}"}]},
+            "columns": {"mappingMode": "defineBelow", "value": {"brand_intake": "={{ $json.brand_intake }}"},
+                        "schema": [{"id": "brand_intake", "displayName": "brand_intake", "required": False, "defaultMatch": False,
+                                    "display": True, "type": "string", "canBeUsedToMatch": True}]},
+            "options": {}}),
+        {"type": "setNodeSettings", "nodeName": "Note the Choice", "settings": {"alwaysOutputData": True, "onError": "continueRegularOutput"}},
+        _add("Choice Noted", "n8n-nodes-base.code", 2, [1560, 1040], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                     "jsCode": code("choice_noted.js")}),
+        {"type": "addConnection", "source": "Ask New Page", "target": "Intake Question"},
+        {"type": "addConnection", "source": "Intake Question", "target": "Ask About Intake"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 4, "target": "Note the Choice"},
+        {"type": "addConnection", "source": "Note the Choice", "target": "Choice Noted"},
+        {"type": "addConnection", "source": "Choice Noted", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 5, "target": "Send"},
+    ]
+    if telegram_id:
+        ops.append({"type": "setNodeCredential", "nodeName": "Ask About Intake", "credentialKey": "telegramApi",
+                    "credentialId": telegram_id, "credentialName": CREDENTIAL})
+    return ops
+
+
 def page_design_ops(live: dict) -> list[dict]:
     notify = code(NOTIFY_JS)
     if "Tell the Requester" in live:
@@ -349,7 +397,7 @@ def attach_credential() -> int:
         print("the bot workflow does not exist yet: run this script without --attach-credential first")
         return 1
     live = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
-    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop") if n in live]
+    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop", "Ask About Intake") if n in live]
     for wf, nodes in ((bot, tg_nodes), (PAGE_DESIGN, ["Send Result"])):
         ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": cid, "credentialName": CREDENTIAL}
                for n in nodes]
@@ -382,7 +430,8 @@ def main(argv=None) -> int:
     if args.dry_run:
         print(sdk_code())
         for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
-                           ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id"))):
+                           ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id")),
+                           ("choice", choice_ops("telegram-credential-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -409,6 +458,10 @@ def main(argv=None) -> int:
                 ops = stop_ops(credential_id(GITHUB_CREDENTIAL, "httpBearerAuth"), credential_id(CREDENTIAL, "telegramApi"))
                 print("adding /stop:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Brand intake: /stop and the Stop button"}).get("appliedOperations"), "operation(s)")
+            elif "Intake Question" not in live_bot:
+                ops = choice_ops(credential_id(CREDENTIAL, "telegramApi"))
+                print("adding the brand data question:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Ask: collect the brand data first?"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))

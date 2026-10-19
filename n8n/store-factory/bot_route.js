@@ -6,6 +6,7 @@
 //   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list ("Pick the Shop")
 //   intake -> start a brand intake on GitHub ("Start Brand Intake")
 //   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs ("List Intakes"), then "Stop Plan"
+//   brief  -> the answer to "collect the brand's data first?" after a page was started: saved on the brief ("Note the Choice")
 //   reply  -> just answer
 const msg = $('Read the Message').first().json;
 if (msg.kind === 'ignore') return [];
@@ -48,6 +49,13 @@ if (msg.kind === 'intake') {
   }
   return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,
     body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];
+}
+// "collect the brand's data first?" (19 Oct 2026, Harsh: "it should ask me if it should run the scraper or not and using the data
+// available it should start designing"): the Yes / No buttons under "Intake Question" carry the brief's row id. Anyone on the bot.
+if (msg.kind === 'button' && String(msg.data || '').startsWith('brief:')) {
+  const b = String(msg.data).match(/^brief:(intake|skip):(\d{1,9})$/);
+  if (!b) return reply('That button is not valid any more.');
+  return [{ json: { action: 'brief', chat_id: msg.chat_id, row_id: Number(b[2]), brand_intake: b[1] === 'intake' ? 'yes' : 'no', by: myName } }];
 }
 // stopping a brand intake (19 Oct 2026, Harsh: "add a stop feature so it can stop any ongoing specific task"; he chose brand intakes
 // only): /stop lists the intakes running on GitHub, each with a Stop button; the Stop button under an intake's progress bar stops
