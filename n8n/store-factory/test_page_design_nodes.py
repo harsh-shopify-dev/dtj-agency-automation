@@ -49,6 +49,7 @@ class Nodes(unittest.TestCase):
         self.assertIn("brand_intake https://test-store-harsh-dtj.myshopify.com --client ../../.work/clients/intake-test-store-harsh-dtj.myshopify.com",
                       site["instructions"])  # no brand site: the product link's own address
         self.assertIn("- Brand data first (brand_intake): yes", site["instructions"])
+        self.assertIn("Read its brand_website too", site["instructions"])  # the requester may send the brand's own site later
         self.assertNotIn("token", json.dumps(out["request"]).lower())
 
     def test_a_form_brief_uses_the_client_answers_and_its_handle(self):
