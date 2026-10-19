@@ -1,0 +1,79 @@
+{
+  "_about": "Words a public DTJ article may not use. 'block' stops the draft; 'warn' is listed in the report for the reviewer. Sources: CLAUDE.md rule 5 (no invented claims), DTJ-CONTEXT.md (lead process, audience), memory 'never reveal DTJ's process', Halo research (words founders don't use). 'source_link_hosts': outside sites an article may cite as a source (official help pages, never another agency).",
+  "block": [
+    {
+      "pattern": "(\\b(best|no\\.?\\s?1|number one|top[- ]rated)\\b|#\\s?1\\b)(?![^.!]*\\?)|\\bleading (agency|agencies|company|firm)\\b|\\bmarket leader\\b",
+      "why": "a ranking claim DTJ cannot prove (allowed only inside a question, e.g. 'how to choose the best agency?')"
+    },
+    {
+      "pattern": "\\bguarantee[ds]?\\b|\\b100\\s?%",
+      "why": "a promise DTJ has not made"
+    },
+    {
+      "pattern": "\\b(call|talk|speak|meeting)\\b[^.]{0,40}\\bTushar\\b|\\bTushar\\b[^.]{0,40}\\b(call|calls|will contact)\\b",
+      "why": "Tushar does not take the first call"
+    },
+    {
+      "pattern": "\\bwithin\\s+\\d+\\s*(minutes?|hours?|days?)\\b|\\b24\\s?/\\s?7\\b",
+      "why": "a response or delivery time DTJ has not confirmed"
+    },
+    {
+      "pattern": "\\b(n8n|claude|chatgpt|gpt-?\\d|openai|anthropic|ai[- ]written|our (ai|automation|bots?)|ai agents?)\\b",
+      "why": "public copy never describes how DTJ works inside"
+    },
+    {
+      "pattern": "\\b(fixes?|solves?|reduces?)\\b[^.]{0,30}\\b(rto|cod returns?)\\b",
+      "why": "DTJ has not confirmed it fixes COD returns / RTO"
+    },
+    {
+      "pattern": "\\b(lock-?in|no contract|cancel anytime|money[- ]back)\\b",
+      "why": "contract terms are unknown"
+    },
+    {
+      "pattern": "\\b(lorem|ipsum|\\[\\[|TODO|TBD)\\b",
+      "why": "unfinished text"
+    }
+  ],
+  "warn": [
+    {
+      "pattern": "\\b(roas|cac|cvr|ctr|cpa|cpm|ltv|aov|funnel|retargeting|lookalike|attribution|cbo|abo)\\b",
+      "why": "jargon most founders don't use: explain it in plain words the first time, or say it plainly"
+    },
+    {
+      "pattern": "\\b(leverage|synerg\\w*|holistic|cutting[- ]edge|revolution\\w*|unlock|game[- ]changer|skyrocket)\\b",
+      "why": "agency filler words"
+    }
+  ],
+  "allowed_link_hosts": [
+    "digitaltusharjoshi.com"
+  ],
+  "article": {
+    "words_min": 700,
+    "words_max": 1800,
+    "short_answer_max_words": 60,
+    "title_max": 60,
+    "meta_min": 120,
+    "meta_max": 160,
+    "faq_min": 3,
+    "faq_max": 6
+  },
+  "source_link_hosts": [
+    "help.shopify.com",
+    "shopify.com",
+    "facebook.com",
+    "business.facebook.com",
+    "meta.com",
+    "support.google.com",
+    "developers.google.com",
+    "sellercentral.amazon.in",
+    "rbi.org.in",
+    "gst.gov.in"
+  ],
+  "city_page": {
+    "words_min": 500,
+    "words_max": 1400,
+    "faq_min": 3,
+    "faq_max": 6,
+    "max_similarity": 0.25
+  }
+}

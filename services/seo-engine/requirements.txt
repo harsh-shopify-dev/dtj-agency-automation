@@ -1,0 +1,3 @@
+jsonschema>=4.18
+# only for a LIVE run (the dry run and the tests do not need it); key from ANTHROPIC_API_KEY
+anthropic

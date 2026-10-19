@@ -1,0 +1,144 @@
+{
+  "_about": "What the engine writes about, one article a week, in this order. Each topic is a founder's real question; the pains come from the Halo research (docs/landing-page/2026-10-14-halo-research/README.md, 14 Oct 2026) and the live service pages. Add or reorder topics here; a written topic is never repeated: the state file remembers it, and once drafts go to WordPress the fixed 'slug' (the post's web address) is checked there too. 'tier' is the place ladder (local -> state -> national, docs/seo-aeo/README.md); problem questions are national from week 1.",
+  "topics": [
+    {
+      "id": "ads-no-orders",
+      "slug": "facebook-ads-no-orders",
+      "question": "My Facebook and Instagram ads are running but I get no orders. What should I check first?",
+      "pain": "Ad money goes out, orders don't come back",
+      "words_they_use": [
+        "no sales",
+        "ZERO orders",
+        "ad spend",
+        "views but no orders"
+      ],
+      "link_to": "https://digitaltusharjoshi.com/performance-marketing-agency-in-india/",
+      "tier": "national"
+    },
+    {
+      "id": "add-to-cart-no-buy",
+      "slug": "add-to-cart-but-no-purchase-shopify",
+      "question": "People add to cart on my Shopify store but don't buy. Why, and how do I fix it?",
+      "pain": "Visitors come, nobody buys",
+      "words_they_use": [
+        "add to cart",
+        "visits",
+        "no sales",
+        "checkout"
+      ],
+      "link_to": "https://digitaltusharjoshi.com/shopify-website-development-company-in-india/",
+      "tier": "national"
+    },
+    {
+      "id": "own-store-vs-amazon",
+      "slug": "sell-on-own-website-not-just-amazon",
+      "question": "Amazon keeps most of my profit. How do I get more sales on my own website without leaving Amazon?",
+      "pain": "Marketplace dependence; wanting an own store",
+      "words_they_use": [
+        "Amazon fees",
+        "own website",
+        "rent",
+        "pay ads or disappear"
+      ],
+      "link_to": "https://digitaltusharjoshi.com/ecommerce-marketing-agency-in-india/",
+      "tier": "national"
+    },
+    {
+      "id": "agency-report",
+      "slug": "what-marketing-agency-report-should-show",
+      "question": "What should a marketing agency show me every month, so I know where my money is going?",
+      "pain": "No idea what's working",
+      "words_they_use": [
+        "report",
+        "where money is going",
+        "numbers don't match"
+      ],
+      "link_to": "https://digitaltusharjoshi.com/performance-marketing-agency-in-india/",
+      "tier": "national"
+    },
+    {
+      "id": "choose-agency",
+      "slug": "choose-marketing-agency-gujarat-d2c",
+      "question": "How do I choose a marketing agency in Gujarat for my D2C brand without getting burned?",
+      "pain": "Paid an agency, then silence",
+      "words_they_use": [
+        "paise lene ke baad",
+        "no response",
+        "fake promises",
+        "trust"
+      ],
+      "link_to": "https://digitaltusharjoshi.com/about-us/",
+      "tier": "state",
+      "place": "Gujarat"
+    },
+    {
+      "id": "profit-leaks",
+      "slug": "sales-growing-but-no-profit",
+      "question": "My sales are growing but there is no profit left. Where is the money going?",
+      "pain": "Ads, fees and returns eat the profit",
+      "words_they_use": [
+        "no profit",
+        "fees",
+        "returns",
+        "COD"
+      ],
+      "link_to": "https://digitaltusharjoshi.com/ecommerce-marketing-agency-in-india/",
+      "tier": "national"
+    }
+  ],
+  "probe_questions": {
+    "_about": "Questions a founder might ask an AI assistant when looking for an agency, by place tier. The AEO check asks each one (searching as if from 'place') and records, by code, whether DTJ is named or its site is cited. Keep them in founder words. Only Rajkot and Ahmedabad are local: DTJ's offices (contact page, 14 Oct 2026).",
+    "items": [
+      {
+        "q": "Which digital marketing agency in Rajkot is good for an online brand?",
+        "tier": "local",
+        "place": "Rajkot"
+      },
+      {
+        "q": "Meta ads agency in Rajkot for a D2C brand",
+        "tier": "local",
+        "place": "Rajkot"
+      },
+      {
+        "q": "Best D2C marketing agency in Ahmedabad for a Shopify brand?",
+        "tier": "local",
+        "place": "Ahmedabad"
+      },
+      {
+        "q": "Shopify website developer in Ahmedabad for an ecommerce brand",
+        "tier": "local",
+        "place": "Ahmedabad"
+      },
+      {
+        "q": "Which performance marketing agency should a D2C brand in Gujarat hire?",
+        "tier": "state",
+        "place": null
+      },
+      {
+        "q": "Meta ads agency for a small D2C brand in Surat",
+        "tier": "state",
+        "place": "Surat"
+      },
+      {
+        "q": "Which agency in India can fix Facebook ads that are not giving orders for a small D2C brand?",
+        "tier": "national",
+        "place": null
+      },
+      {
+        "q": "Shopify website development company in India for D2C brands",
+        "tier": "national",
+        "place": null
+      },
+      {
+        "q": "Who can help my Amazon brand start selling on its own website in India?",
+        "tier": "national",
+        "place": null
+      },
+      {
+        "q": "Is Digital Tushar Joshi a good agency for D2C brands?",
+        "tier": "brand",
+        "place": null
+      }
+    ]
+  }
+}
