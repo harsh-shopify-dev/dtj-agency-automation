@@ -34,7 +34,9 @@ function build(show) {
   L.push('<b>Fixes waiting for one yes</b> (batch ' + esc(r.batch.id) + ')');
   L.push(c.auto + ' ready to apply, ' + c.blocked + ' stopped by the checks, ' + c.manual + ' for a person.');
   for (const x of auto.slice(0, show)) {
-    const what = x.kind === 'noindex' ? '' : (x.kind === 'site_jsonld' ? ': ' + esc(cut(x.after, 120)) : ' → "' + esc(cut(x.after, 160)) + '"');
+    const offices = String(x.after || '').replace(/^business details for Google and AI:?\s*/i, '');
+    const what = x.kind === 'noindex' ? '' : (x.kind === 'site_jsonld' ? (offices ? ': ' + esc(cut(offices, 120)) : '')
+      : ' → "' + esc(cut(x.after, 160)) + '"');
     L.push('• ' + esc(x.cid) + ' ' + esc(KIND[x.kind] || x.kind) + ', ' + esc(cut(page(x.url), 80)) + what);
   }
   if (auto.length > show) L.push('• and ' + (auto.length - show) + ' more in the file.');

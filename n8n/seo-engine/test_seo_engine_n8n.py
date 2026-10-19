@@ -289,7 +289,7 @@ class PlanAndMessages(unittest.TestCase):
         self.assertEqual((ask["yes_data"], ask["no_data"]), ("seo:yes:42", "seo:no:42"))
         self.assertLessEqual(len(ask["yes_data"].encode()), 64)
         self.assertLessEqual(len(ask["text"]), 4096)
-        for want in ("fix-2026-10-14", "4 ready to apply", "c001 Hide from Google, /elementor-hf/footer/", "Business details",
+        for want in ("fix-2026-10-14", "4 ready to apply", "c001 Hide from Google, /elementor-hf/footer/", "c004 Business details for Google and AI, /: offices in Rajkot, Ahmedabad",
                      "One yes covers this batch only", "test mode", "GitHub run 9990001"):
             self.assertIn(want, ask["text"])
 
