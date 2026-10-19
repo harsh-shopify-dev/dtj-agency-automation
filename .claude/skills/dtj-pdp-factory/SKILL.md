@@ -65,7 +65,12 @@ exists with no `pending` handle.
   - Yes: `python -m page_builder.brand_intake <brand site> --client ../../.work/clients/intake-<host>` (add `--drive "DTJ Clients"`
     when the laptop has the DTJ_GDRIVE_* keys): pictures and videos of up to 20 products, logo, policies, fonts, theme colours and
     a palette proposal in `.work/clients/intake-<host>/intake/`, one folder per website, shared by every page of that brand.
+  - Yes: give `--product "<the product's name as its pack says it>"` too: it finds that product's pictures on any site.
   - No: do not collect it again; use an earlier `.work/clients/intake-<host>/intake/` when there is one.
+  - Then "upload the brand's pictures to the shop?" (`upload_assets` on an n8n brief; otherwise ask): Yes = `python -m
+    page_builder.store_files --store <shop> --folder <intake>/intake/images/products --approved-by "<who said yes>"`, then use the
+    names in `store-files.json` as facts.media files for the story, final and customer-photo sections (a picture of another pack
+    version never in the buy box). No = the shop already has its pictures.
   - Start P2 from its BRAND.md, brand.json (draft) and brand-intake.json (every fact with its source); the colours, category and
     price tier are guesses to confirm against the pack and the brand site.
 - Material in order: client facts, the brand's own public pages (product page, FAQ, policies, a public reviews widget) with URL

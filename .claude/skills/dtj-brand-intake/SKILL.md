@@ -29,6 +29,16 @@ When a page starts, the person is asked whether to collect the brand's data firs
   first** / **No, design now**. The tap is saved on the brief (`dtj_client_intake.brand_intake`). After a Yes the bot asks "Which
   website is the brand's own?" (a reply box): the person replies with the address, or `same` when the shop is the brand's site.
   The address is saved as `dtj_client_intake.brand_website` (a demo shop like Elevate with Harsh carries other brands' products).
+- **Third question, after the website:** "upload the brand's pictures to the shop?" (**Yes, upload them** / **No, the shop has
+  them**): a new shop needs them, an old shop already has them. Saved as `upload_assets` + `upload_assets_by`; a Yes is that
+  person's approval for that one upload. The designer then runs `python -m page_builder.store_files --store <shop> --folder
+  <intake>/intake/images/products --approved-by "<name> (Telegram, brief N)"` (only stagedUploadsCreate + fileCreate, never a
+  delete; pictures the shop already has are skipped; action-log rows) and uses the names in `store-files.json` in facts.media.
+  An intake that ran on GitHub is only in Drive: `python -m page_builder.drive_upload --download "DTJ Clients/<brand>/Brand
+  intake <date>" <intake folder>/intake` first.
+- **`--product "<name as on the pack>"`** finds that product's pictures on ANY site: on Shopify its product comes first; on
+  WordPress and the like the site's own search and links lead to the matching product pages (full-size pictures only, no logos or
+  thumbnails). A site often shows several versions of a pack: check which one each picture shows.
 - **Claude Code:** the designer reads that answer when it starts (step 2 of the Page Design request) or, with no answer, asks the
   person at the laptop; a page started straight in Claude Code (`dtj-pdp-factory` P2, `dtj-home-page`) asks too.
 - Yes runs the intake on the designer's laptop into `.work/clients/intake-<host>/intake` (one folder per website, every page of

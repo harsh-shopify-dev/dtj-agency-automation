@@ -517,8 +517,14 @@ class Website(unittest.TestCase):
 
     def test_the_saved_website_is_confirmed(self):
         who = {"chat_id": "111", "row_id": 12, "website": "https://senso.in"}
-        ok = run_node("website_noted.js", [{"id": 12, "page_status": ""}], {"Who Is It": who})["out"][0]["json"]["text"]
-        self.assertEqual(ok, "Got it: for brief 12 the designer will collect the brand's data from senso.in.")
+        ok = run_node("website_noted.js", [{"id": 12, "page_status": ""}], {"Who Is It": who})["out"][0]["json"]
+        self.assertTrue(ok["text"].startswith("Got it: for brief 12 the designer will collect the brand's data from senso.in."))
+        # then the third question (Harsh, 19 Oct 2026): upload the brand's pictures to the shop?
+        self.assertTrue(ok["pictures_question"])
+        self.assertIn("upload the brand's pictures from senso.in to the shop", ok["text"])
+        self.assertEqual((ok["yes_data"], ok["no_data"]), ("brief:upload:12", "brief:keep:12"))
+        done = run_node("website_noted.js", [{"id": 12, "page_status": "written to draft"}], {"Who Is It": who})["out"][0]["json"]
+        self.assertNotIn("pictures_question", done)  # a finished page is not asked again
         self.assertIn("not on the list any more", run_node("website_noted.js", [{}], {"Who Is It": who})["out"][0]["json"]["text"])
 
 
@@ -536,6 +542,49 @@ class SiteDeploy(unittest.TestCase):
         nodes = {o["node"]["name"]: o["node"] for o in ops if o["type"] == "addNode"}
         self.assertEqual(nodes["Ask for the Website"]["parameters"]["replyMarkup"], "forceReply")
         self.assertEqual(nodes["Note the Website"]["parameters"]["columns"]["value"], {"brand_website": "={{ $json.website }}"})
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class Pictures(unittest.TestCase):
+    """"Upload the brand's pictures to the shop?" (19 Oct 2026, Harsh: "it should ask either upload the assets ... to the store")."""
+
+    def route(self, data, user=111):
+        msg = run_node("bot_read.js", button(data, user=user))["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD]})
+        return [i["json"] for i in res["out"]]
+
+    def test_a_tap_saves_the_answer_and_who_gave_it(self):
+        self.assertEqual(self.route("brief:upload:12")[0],
+                         {"action": "pictures", "chat_id": "111", "row_id": 12, "upload_assets": "yes", "by": "Riya"})
+        self.assertEqual(self.route("brief:keep:12")[0]["upload_assets"], "no")
+        for bad in ("brief:upload:x", "brief:upload:12;1", "brief:keepall:12"):
+            self.assertEqual(self.route(bad)[0]["action"], "reply", bad)
+        self.assertIn("only for the DTJ team", self.route("brief:upload:12", user=999)[0]["text"])
+
+    def test_the_answer_says_what_the_designer_will_do(self):
+        def noted(choice, rows):
+            who = {"chat_id": "111", "row_id": 12, "upload_assets": choice, "by": "Riya"}
+            return run_node("pictures_noted.js", rows or [{}], {"Who Is It": who})["out"][0]["json"]["text"]
+        self.assertIn("upload the brand's pictures to the shop's Files (approved by Riya)", noted("yes", [{"id": 12, "page_status": ""}]))
+        self.assertIn("nothing is uploaded", noted("no", [{"id": 12, "page_status": ""}]))
+        self.assertIn("not on the list any more", noted("yes", []))
+
+
+class PicturesDeploy(unittest.TestCase):
+    def test_the_pictures_take_the_seventh_output_and_follow_the_website(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.pictures_ops("tg-key")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules], ["design", "switch", "intake", "stop", "brief", "site", "pictures"])
+        links = {(o["source"], o.get("sourceIndex"), o["target"]) for o in ops if o["type"] == "addConnection"}
+        for link in (("What to Do", 6, "Note the Pictures"), ("What to Do", 7, "Send"), ("Website Noted", None, "Need the Pictures?"),
+                     ("Need the Pictures?", 0, "Ask About Pictures"), ("Need the Pictures?", 1, "Send")):
+            self.assertIn(link, links)
+        self.assertIn({"type": "removeConnection", "source": "Website Noted", "target": "Send"}, ops)
+        note = next(o["node"] for o in ops if o["type"] == "addNode" and o["node"]["name"] == "Note the Pictures")
+        self.assertEqual(note["parameters"]["columns"]["value"],
+                         {"upload_assets": "={{ $json.upload_assets }}", "upload_assets_by": "={{ $json.by }}"})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,7 +3,12 @@
 color palette so when a client comes for a redesign then we just get all the data and then start designing").
 
     cd services/store-builder
-    python -m page_builder.brand_intake https://client-store.com --client ../../.work/clients/<client>
+    python -m page_builder.brand_intake https://client-store.com --client ../../.work/clients/<client> [--product "Turmeric Latte Mix"]
+
+--product names the product being designed: its words pick that product's pictures first. On a Shopify store its product comes first
+among the 20; on any other site (WordPress and the like: no public products.json) the site's own search and links lead to the
+matching product pages, and their pictures (the full-size file, not the thumbnails) are saved like a Shopify product's (Harsh,
+19 Oct 2026: "the scraping should have applied and uploaded other images").
 
 Writes <client>/intake/:
     images/products/<handle>/<store file name>   every picture of at most 20 products (the first 20 the store lists)
@@ -251,10 +256,83 @@ def guess_price_tier(products: list[dict], currency: str | None) -> str | None:
 
 
 # ------------------------------------------------------------------------------------------------ the whole intake
+STOP_WORDS = {"with", "and", "the", "for", "mix", "pack", "box", "new", "from", "buy", "online", "best"}
+MIN_PICTURE_SIDE = 400  # smaller pictures are thumbnails or icons
+MAX_SITE_PAGES = 6
+MAX_SITE_PICTURES = 30
+
+
+def product_words(name: str) -> list[str]:
+    """The words that find a product: 'Turmeric Latte Mix with Saffron' -> ['turmeric', 'latte', 'saffron']."""
+    return [w for w in re.findall(r"[a-z]+", (name or "").lower()) if len(w) >= 3 and w not in STOP_WORDS][:6]
+
+
+def word_score(text: str, words: list[str]) -> int:
+    t = (text or "").lower()
+    return sum(1 for w in words if w in t)
+
+
+def _needed(words: list[str]) -> int:
+    return 1 if len(words) < 2 else 2
+
+
+def site_product_pages(base: str, page: str, get: Getter, words: list[str]) -> list[str]:
+    """A non-Shopify site's pages for this product: links on its home page and on its own search page (?s=, WordPress) whose
+    address names at least two of the product's words, best match first."""
+    host = urlparse(base).netloc
+    sources = [page]
+    status, body = _safe_get(get, f"{base}/?s={'+'.join(words)}")
+    if status == 200:
+        sources.append(body.decode("utf-8", "replace"))
+    scores: dict[str, int] = {}
+    for text in sources:
+        for href in re.findall(r'<a[^>]+href="([^"#]+)"', text, re.I):
+            link = urljoin(base + "/", html.unescape(href)).split("#")[0]
+            u = urlparse(link)
+            if u.netloc != host or u.query or re.search(r"\.(jpe?g|png|webp|gif|pdf|css|js|xml)$", u.path, re.I):
+                continue
+            slug = u.path.rstrip("/").rsplit("/", 1)[-1].replace("-", " ").replace("_", " ")
+            score = word_score(slug, words)
+            if score >= _needed(words):
+                key = f"{u.scheme}://{u.netloc}{u.path.rstrip('/')}/"
+                scores[key] = max(scores.get(key, 0), score)
+    return [k for k, _ in sorted(scores.items(), key=lambda kv: (-kv[1], len(kv[0]), kv[0]))][:MAX_SITE_PAGES]  # the closest name first
+
+
+def page_pictures(text: str, base: str, words: list[str]) -> list[str]:
+    """The pictures of one product page: its share picture (og:image) and every picture whose file name names the product,
+    as the full-size file (WordPress serves '-300x300' copies), never logos or icons, never another host's."""
+    host = urlparse(base).netloc
+    share = re.findall(r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"', text, re.I)
+    share += re.findall(r'<meta[^>]+content="([^"]+)"[^>]+property="og:image"', text, re.I)
+    tags = re.findall(r'<img[^>]+?(?:data-lazy-src|data-src|src)="([^"]+)"', text, re.I)
+    found: list[str] = []
+    for src in share + tags:
+        u = urlparse(urljoin(base + "/", html.unescape(src.split()[0])))
+        name = u.path.rsplit("/", 1)[-1].lower()
+        if u.netloc != host or not re.search(r"\.(jpe?g|png|webp)$", name) or re.search(r"logo|icon|favicon|placeholder|sprite|flag|avatar", name):
+            continue
+        full = re.sub(r"-\d{2,4}x\d{2,4}(\.\w+)$", r"\1", f"{u.scheme}://{u.netloc}{u.path}")
+        named = word_score(re.sub(r"[-_.]", " ", name), words) >= _needed(words)
+        if (src in share or named) and full not in found:
+            found.append(full)
+    return found
+
+
+def _big_enough(data: bytes) -> bool:
+    try:
+        from PIL import Image  # noqa: PLC0415
+        with Image.open(io.BytesIO(data)) as im:
+            return min(im.size) >= MIN_PICTURE_SIDE
+    except Exception:  # noqa: BLE001  (not a picture Pillow can read)
+        return False
+
+
 def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PRODUCTS, delay: float = POLITE_DELAY,
-           progress: Callable[..., None] | None = None) -> dict:
+           progress: Callable[..., None] | None = None, product: str = "") -> dict:
     """progress(stage, done, total), when given, hears where the work is (progress.py: the Telegram bar)."""
     tick = progress or (lambda *a: None)
+    words = product_words(product)
     base = url if url.startswith("http") else "https://" + url
     base = f"{urlparse(base).scheme}://{urlparse(base).netloc}"
     pause = lambda: time.sleep(delay) if delay else None  # noqa: E731
@@ -321,6 +399,8 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
     feed = _json(get, base + "/products.json?limit=250")
     platform = "shopify" if feed is not None else "other"
     all_products = (feed or {}).get("products", [])
+    if words:  # the product being designed first (a stable sort keeps the store's order otherwise)
+        all_products = sorted(all_products, key=lambda p: -word_score(f"{p.get('title', '')} {p.get('handle', '')}", words))
     products = []
     todo = min(len(all_products), max_products)
     tick("products", 0, todo)
@@ -364,8 +444,38 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
                    for h, n in packs.most_common(8)]
     if len(all_products) > max_products:
         notes.append(f"the store lists {len(all_products)}{'+' if len(all_products) == 250 else ''} products; only the first {max_products} were read")
-    if platform == "other":
-        notes.append("not a Shopify store (no public products.json): products and collections were not read, only the home page")
+    if platform == "other" and words:
+        seen: set[str] = set()
+        for link in site_product_pages(base, page, get, words):
+            pause()
+            status, body = _safe_get(get, link)
+            if status != 200:
+                continue
+            text = body.decode("utf-8", "replace")
+            title = html.unescape((re.search(r"<title[^>]*>(.*?)</title>", text, re.I | re.S) or [None, ""])[1] or "")
+            title = re.split(r"\s[|\u2013-]\s", re.sub(r"\s+", " ", title).strip())[0]
+            slug = re.sub(r"[^a-z0-9-]+", "-", urlparse(link).path.rstrip("/").rsplit("/", 1)[-1].lower()).strip("-")[:60] or "page"
+            saved = []
+            for src in page_pictures(text, base, words):
+                if src in seen or len(seen) >= MAX_SITE_PICTURES:
+                    continue
+                seen.add(src)
+                dest = images / "products" / slug / file_name(src)
+                data = save(src, dest)
+                if data and _big_enough(data):
+                    saved.append(dest.name)
+                elif data:
+                    dest.unlink(missing_ok=True)  # a thumbnail or an icon after all
+            if saved:
+                products.append({"videos": [], "external_videos": [], "title": title or slug, "handle": slug, "url": link, "type": "",
+                                 "vendor": "", "tags": [], "price_min": None, "price_max": None, "compare_at_max": None, "variants": 0,
+                                 "options": [], "pictures": saved, "description": ""})
+            tick("products", len(products), MAX_SITE_PAGES)
+        notes.append(f"not a Shopify store: {len(products)} product page(s) matching '{' '.join(words)}' were read through the site's "
+                     "own search and links; check which pack each picture shows (a site often shows several versions)")
+    elif platform == "other":
+        notes.append("not a Shopify store (no public products.json): products and collections were not read, only the home page "
+                     "(give --product to read the matching product pages)")
 
     tick("extras")
     collections = []
@@ -521,6 +631,7 @@ def main(argv: list[str] | None = None, *, get: Getter = _get, drive=None) -> in
     ap.add_argument("url", help="the store's address, e.g. https://brand.com or brand.myshopify.com")
     ap.add_argument("--client", required=True, help="the client folder (.work/clients/<client>); the intake goes to <client>/intake")
     ap.add_argument("--max-products", type=int, default=MAX_PRODUCTS)
+    ap.add_argument("--product", default="", help="the product being designed, e.g. 'Turmeric Latte Mix with Saffron': its pictures first")
     ap.add_argument("--drive", metavar="ROOT", help="also upload the intake to DTJ's Google Drive under ROOT, e.g. 'DTJ Clients' "
                     "(needs the DTJ_GDRIVE_* keys: drive_upload.py)")
     args = ap.parse_args(argv)
@@ -550,14 +661,17 @@ def _main_thread() -> bool:
 
 def _run(args, out: Path, bar: Progress, get: Getter, drive) -> int:
     try:
-        r = intake(args.url, out, get=get, max_products=min(args.max_products, MAX_PRODUCTS), delay=POLITE_DELAY, progress=bar.update)
+        r = intake(args.url, out, get=get, max_products=min(args.max_products, MAX_PRODUCTS), delay=POLITE_DELAY, progress=bar.update,
+                   product=args.product)
     except RuntimeError as exc:
         bar.finish(False)
         print(f"could not read {args.url}: {exc}", file=sys.stderr)
         return 1
     c = r["colours"]["chosen"]
     pics = sum(len(p["pictures"]) for p in r["products"])
-    print(f"{r['shop']['name'] or args.url}: {r['counts']['products_read']} of {r['counts']['products_listed']} products, {pics} pictures, "
+    read = (f"{r['counts']['products_read']} product pages" if r["platform"] == "other"
+            else f"{r['counts']['products_read']} of {r['counts']['products_listed']} products")
+    print(f"{r['shop']['name'] or args.url}: {read}, {pics} pictures, "
           f"{r['counts']['collections']} collections | brand {c['primary']} accent {c['accent']} | category guess {r['guesses']['category']}")
     for n in r["notes"]:
         print(f"  note: {n}")
