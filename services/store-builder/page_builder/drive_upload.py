@@ -11,7 +11,10 @@ Every upload:
     python -m page_builder.drive_upload <local folder> --to "DTJ Clients/Free Soul/Brand intake 2026-10-19"
         makes the folders that are missing, uploads every file (sub-folders mirrored), skips a file the Drive folder already has
         (a re-run sends only what is new), sends big videos in 8 MB pieces, and prints the folder's link.
-Exit 0 = uploaded, 1 = could not (the reason is printed; a secret never is).
+    python -m page_builder.drive_upload --download "DTJ Clients/Senso Foods/Brand intake 2026-10-19" <local folder>
+        copies a folder this app put in Drive back to this laptop (files it already has with the same size are kept): a page designer
+        gets an intake that ran on GitHub, to upload its pictures to the store (page_builder.store_files).
+Exit 0 = uploaded / downloaded, 1 = could not (the reason is printed; a secret never is).
 """
 from __future__ import annotations
 
@@ -119,7 +122,7 @@ class Drive:
         q = f"'{parent}' in parents and trashed = false" + (f" and mimeType = '{FOLDER}'" if folders_only else "")
         out, page = {}, ""
         while True:
-            url = f"{API}?" + urllib.parse.urlencode({"q": q, "fields": "nextPageToken,files(id,name,mimeType,webViewLink)", "pageSize": 1000,
+            url = f"{API}?" + urllib.parse.urlencode({"q": q, "fields": "nextPageToken,files(id,name,mimeType,webViewLink,size)", "pageSize": 1000,
                                                       **({"pageToken": page} if page else {})})
             res = self._json("GET", url)
             out.update({f["name"]: f for f in res.get("files", [])})
@@ -138,6 +141,15 @@ class Drive:
         node = {"id": "root"}
         for part in [p.strip() for p in drive_path.replace("\\", "/").split("/") if p.strip()]:
             node = self.folder(part, node["id"])
+        return node
+
+    def find(self, drive_path: str) -> dict | None:
+        """Like path() but never makes a folder: the folder, or None when a part of the path is missing."""
+        node: dict | None = {"id": "root"}
+        for part in [p.strip() for p in drive_path.replace("\\", "/").split("/") if p.strip()]:
+            node = self.children(node["id"], folders_only=True).get(part)
+            if not node:
+                return None
         return node
 
     # ---- files
@@ -198,6 +210,36 @@ class Drive:
         walk(local_dir, top["id"])
         link = top.get("webViewLink") or self._json("GET", f"{API}/{top['id']}?fields=webViewLink").get("webViewLink", "")
         return {"folder_id": top["id"], "link": link, "uploaded": sent, "skipped": skipped}
+
+    def download_tree(self, drive_path: str, local_dir: Path, out=print) -> dict:
+        """Copy a Drive folder this app made (drive.file) to a local folder; a file already there with the same size is kept."""
+        top = self.find(drive_path)
+        if not top:
+            raise DriveError(f"no folder '{drive_path}' in DTJ's Drive (or one this app did not make)")
+        got = kept = 0
+
+        def walk(parent: str, here: Path) -> None:
+            nonlocal got, kept
+            here.mkdir(parents=True, exist_ok=True)
+            for name, item in sorted(self.children(parent).items()):
+                if not name or name in (".", "..") or "/" in name or "\\" in name:
+                    continue  # never write outside the folder
+                if item.get("mimeType") == FOLDER:
+                    walk(item["id"], here / name)
+                    continue
+                dest = here / name
+                if dest.is_file() and item.get("size") and dest.stat().st_size == int(item["size"]):
+                    kept += 1
+                    continue
+                status, _, data = self.call("GET", f"{API}/{item['id']}?alt=media")
+                if status != 200:
+                    raise DriveError(f"{name}: Drive answered {status} on download")
+                dest.write_bytes(data)
+                got += 1
+                if got % 25 == 0:
+                    out(f"  {got} files downloaded...")
+        walk(top["id"], local_dir)
+        return {"downloaded": got, "kept": kept, "folder": str(local_dir)}
 
 
 # ------------------------------------------------------------------------------------------------ the one-time consent
@@ -268,12 +310,19 @@ def main(argv: list[str] | None = None, *, http: Http = _http, keys: dict | None
     ap.add_argument("--to", help="the Drive path, e.g. 'DTJ Clients/Free Soul/Brand intake 2026-10-19'")
     ap.add_argument("--authorize", action="store_true", help="one-time: sign in with Google and save the login on this laptop")
     ap.add_argument("--client-file", help="with --authorize: the OAuth client JSON downloaded from Google Cloud")
+    ap.add_argument("--download", metavar="DRIVE_PATH", help="copy this Drive folder to the local folder given")
     args = ap.parse_args(argv)
     try:
         if args.authorize:
             if not args.client_file:
                 ap.error("--authorize needs --client-file")
             authorize(Path(args.client_file), http=http)
+            return 0
+        if args.download:
+            if not args.folder:
+                ap.error("--download needs the local folder to copy into")
+            res = Drive(keys, http).download_tree(args.download, Path(args.folder))
+            print(f"downloaded {res['downloaded']} files ({res['kept']} already here) into {res['folder']}")
             return 0
         if not (args.folder and args.to):
             ap.error("give the local folder and --to '<Drive path>'")

@@ -226,5 +226,81 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(json.loads((self.out / "brand-intake.json").read_text(encoding="utf-8"))["counts"]["products_read"], 20)
 
 
+
+SITE = "https://senso.example"
+SITE_HOME = """<html><head><title>Senso Foods</title><meta property="og:site_name" content="Senso Foods"></head><body>
+<img src="/wp-content/uploads/senso-logo.png" class="logo"><a href="/my-product/turmeric-latte-mix-with-saffron/">Golden milk</a>
+<a href="/my-product/masala-tea-premix/">Masala tea</a><a href="/about/">About</a></body></html>"""
+SITE_SEARCH = """<a href="/my-product/turmeric-latte-mix-with-saffron-unsweetened/">x</a>
+<a href="https://senso.example/my-product/turmeric-latte-mix-with-saffron/#reviews">again</a><a href="/my-product/ginger-tea/">ginger</a>"""
+PAGE_1 = """<html><head><title>Turmeric Latte Mix with Saffron - Senso Foods</title>
+<meta property="og:image" content="https://senso.example/wp-content/uploads/2026/02/turmeric-latte-saffron-box.jpg"></head><body>
+<img src="/wp-content/uploads/2026/02/turmeric-latte-saffron-box-300x300.jpg">
+<img data-src="/wp-content/uploads/2026/01/TURMERIC-LATTEE-SAFRON-FLAVOUR.jpg">
+<img src="/wp-content/uploads/masala-tea.jpg"><img src="/wp-content/uploads/senso-logo.png">
+<img src="https://other.example/turmeric-latte-saffron.jpg"><img src="/wp-content/uploads/turmeric-latte-tiny.jpg"></body></html>"""
+PAGE_2 = """<html><head><title>Turmeric Latte Mix with Saffron Unsweetened</title>
+<meta property="og:image" content="/wp-content/uploads/turmeric-latte-saffron-unsweetened.jpg"></head></html>"""
+
+
+def wordpress_site():
+    pages = {SITE + "/": SITE_HOME.encode(), SITE + "/?s=turmeric+latte+saffron": SITE_SEARCH.encode(),
+             SITE + "/my-product/turmeric-latte-mix-with-saffron/": PAGE_1.encode(),
+             SITE + "/my-product/turmeric-latte-mix-with-saffron-unsweetened/": PAGE_2.encode()}
+    calls = []
+
+    def get(url):
+        calls.append(url)
+        if url in pages:
+            return 200, url, pages[url]
+        if "/wp-content/uploads/" in url and url.startswith(SITE):
+            return 200, url, png((240, 180, 0), size=(60, 60) if "tiny" in url else (600, 600))
+        return 404, url, b""
+    return get, calls
+
+
+class SitePictures(unittest.TestCase):
+    """Pictures from a site that is not Shopify (Harsh, 19 Oct 2026: "the scraping should have applied and uploaded other images")."""
+
+    def setUp(self):
+        self.out = Path(tempfile.mkdtemp()) / "intake"
+        self.addCleanup(shutil.rmtree, self.out.parent, ignore_errors=True)
+
+    def test_the_product_pages_are_found_and_their_full_size_pictures_kept(self):
+        get, calls = wordpress_site()
+        r = brand_intake.intake(SITE, self.out, get=get, delay=0, product="Turmeric Latte Mix with Saffron")
+        self.assertEqual(r["platform"], "other")
+        self.assertEqual([p["handle"] for p in r["products"]],
+                         ["turmeric-latte-mix-with-saffron", "turmeric-latte-mix-with-saffron-unsweetened"])
+        self.assertEqual(r["products"][0]["title"], "Turmeric Latte Mix with Saffron")
+        self.assertEqual(r["products"][0]["pictures"], ["turmeric-latte-saffron-box.jpg", "TURMERIC-LATTEE-SAFRON-FLAVOUR.jpg"])
+        self.assertEqual(r["products"][1]["pictures"], ["turmeric-latte-saffron-unsweetened.jpg"])
+        self.assertTrue((self.out / "images" / "products" / "turmeric-latte-mix-with-saffron" / "turmeric-latte-saffron-box.jpg").is_file())
+        self.assertFalse(any("300x300" in c for c in calls))  # the full-size file, never the thumbnail
+        for never in ("masala-tea.jpg", "other.example", "ginger-tea", "/about/"):
+            self.assertFalse(any(never in c for c in calls), never)
+        self.assertFalse(list(self.out.rglob("turmeric-latte-tiny.jpg")))  # downloaded, too small, removed
+        self.assertTrue(any("2 product page(s) matching 'turmeric latte saffron'" in n for n in r["notes"]))
+
+    def test_without_a_product_name_only_the_home_page_is_read(self):
+        get, calls = wordpress_site()
+        r = brand_intake.intake(SITE, self.out, get=get, delay=0)
+        self.assertEqual(r["products"], [])
+        self.assertTrue(any("give --product" in n for n in r["notes"]))
+        self.assertFalse(any("/?s=" in c for c in calls))
+
+    def test_on_a_shopify_store_the_named_product_comes_first(self):
+        get, _ = store(n_products=30)
+        feed = products(30)
+        feed["products"][25]["title"] = "Lavender burst foam"
+
+        def get2(url):
+            if url.endswith("/products.json?limit=250"):
+                return 200, url, json.dumps(feed).encode()
+            return get(url)
+        r = brand_intake.intake(BASE, self.out, get=get2, delay=0, product="Lavender burst")
+        self.assertEqual(r["products"][0]["title"], "Lavender burst foam")  # the 26th product, read first
+        self.assertEqual(len(r["products"]), 20)
+
 if __name__ == "__main__":
     unittest.main()

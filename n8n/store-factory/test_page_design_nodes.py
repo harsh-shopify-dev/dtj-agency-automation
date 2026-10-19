@@ -50,6 +50,14 @@ class Nodes(unittest.TestCase):
                       site["instructions"])  # no brand site: the product link's own address
         self.assertIn("- Brand data first (brand_intake): yes", site["instructions"])
         self.assertIn("Read its brand_website too", site["instructions"])  # the requester may send the brand's own site later
+        # the third answer: upload the intake's pictures to the store, the tap being the approval (19 Oct 2026)
+        up = self.run_node("request_page_design.js", self.row(upload_assets="yes", upload_assets_by="Riya"))["out"][0]["json"]
+        self.assertIn("- Upload the brand's pictures (upload_assets): yes, by Riya", up["instructions"])
+        self.assertIn('python -m page_builder.store_files --store qaxv3r-8g.myshopify.com --folder <the intake folder>/intake/images/products '
+                      '--approved-by "<upload_assets_by> (Telegram, brief 12)"', up["instructions"])
+        self.assertIn("python -m page_builder.drive_upload --download", up["instructions"])
+        self.assertIn('--product "<the product', up["instructions"])
+        self.assertEqual((up["request"]["upload_assets"], up["request"]["upload_assets_by"]), ("yes", "Riya"))
         self.assertNotIn("token", json.dumps(out["request"]).lower())
 
     def test_a_form_brief_uses_the_client_answers_and_its_handle(self):

@@ -24,7 +24,10 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
     brief   -> Note the Choice (dtj_client_intake.brand_intake = yes | no) -> Choice Noted -> Need the Website?
                    yes (after Yes) -> Ask for the Website (Telegram's reply box: "Which website is the brand's own for brief N?")
                    no              -> Send
-    site    -> Note the Website (dtj_client_intake.brand_website) -> Website Noted -> Send
+    site    -> Note the Website (dtj_client_intake.brand_website) -> Website Noted -> Need the Pictures?
+                   yes -> Ask About Pictures ("upload the brand's pictures to the shop?": Yes / No buttons)
+                   no  -> Send
+    pictures -> Note the Pictures (dtj_client_intake.upload_assets, upload_assets_by) -> Pictures Noted -> Send
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -62,7 +65,8 @@ GITHUB_HEADERS = {"parameters": [{"name": "Accept", "value": "application/vnd.gi
 CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
               "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js",
               "Intake Started": "intake_started.js", "Stop Plan": "stop_plan.js", "Stop Report": "stop_report.js",
-              "Intake Question": "intake_question.js", "Choice Noted": "choice_noted.js", "Website Noted": "website_noted.js"}
+              "Intake Question": "intake_question.js", "Choice Noted": "choice_noted.js", "Website Noted": "website_noted.js",
+              "Pictures Noted": "pictures_noted.js"}
 SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
@@ -416,6 +420,59 @@ def site_ops(telegram_id: str | None) -> list[dict]:
     return ops
 
 
+def pictures_ops(telegram_id: str | None) -> list[dict]:
+    """"Upload the brand's pictures to the shop?" after the website (19 Oct 2026, Harsh: "it should ask either upload the assets
+    from google drive to the store"): the question with Yes / No buttons, and a seventh rule on "What to Do" that saves the answer
+    and who gave it (the approval for that upload)."""
+    intake_table = {"__rl": True, "mode": "list", "value": INTAKE, "cachedResultName": "dtj_client_intake"}
+    column = lambda c: {"id": c, "displayName": c, "required": False, "defaultMatch": False, "display": True, "type": "string",  # noqa: E731
+                        "canBeUsedToMatch": True}
+    ops: list[dict] = [
+        {"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}}
+        for n, f in (("Who Is It", "bot_route.js"), ("Website Noted", "website_noted.js"))
+    ] + [
+        _add("Need the Pictures?", "n8n-nodes-base.if", 2.2, [1800, 1240], {
+            "conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose"},
+                           "conditions": [{"leftValue": "={{ $json.pictures_question }}", "rightValue": True,
+                                           "operator": {"type": "boolean", "operation": "true", "singleValue": True}}],
+                           "combinator": "and"}, "options": {}}),
+        _add("Ask About Pictures", "n8n-nodes-base.telegram", 1.2, [2040, 1200], {
+            "resource": "message", "operation": "sendMessage", "chatId": "={{ $json.chat_id }}", "text": "={{ $json.text }}",
+            "replyMarkup": "inlineKeyboard",
+            "inlineKeyboard": {"rows": [{"row": {"buttons": [
+                {"text": "Yes, upload them", "additionalFields": {"callback_data": "={{ $json.yes_data }}"}},
+                {"text": "No, the shop has them", "additionalFields": {"callback_data": "={{ $json.no_data }}"}}]}}]},
+            "additionalFields": SEND_FIELDS}),
+        {"type": "setNodeSettings", "nodeName": "Ask About Pictures", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "removeConnection", "source": "Website Noted", "target": "Send"},
+        {"type": "addConnection", "source": "Website Noted", "target": "Need the Pictures?"},
+        {"type": "addConnection", "source": "Need the Pictures?", "sourceIndex": 0, "target": "Ask About Pictures"},
+        {"type": "addConnection", "source": "Need the Pictures?", "sourceIndex": 1, "target": "Send"},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
+                   for v in ("design", "switch", "intake", "stop", "brief", "site", "pictures")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 6, "target": "Send"},
+        _add("Note the Pictures", "n8n-nodes-base.dataTable", 1.1, [1320, 1440], {
+            "operation": "update", "dataTableId": intake_table, "matchType": "allConditions",
+            "filters": {"conditions": [{"keyValue": "={{ $json.row_id }}"}]},
+            "columns": {"mappingMode": "defineBelow",
+                        "value": {"upload_assets": "={{ $json.upload_assets }}", "upload_assets_by": "={{ $json.by }}"},
+                        "schema": [column("upload_assets"), column("upload_assets_by")]},
+            "options": {}}),
+        {"type": "setNodeSettings", "nodeName": "Note the Pictures", "settings": {"alwaysOutputData": True, "onError": "continueRegularOutput"}},
+        _add("Pictures Noted", "n8n-nodes-base.code", 2, [1560, 1440], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                       "jsCode": code("pictures_noted.js")}),
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 6, "target": "Note the Pictures"},
+        {"type": "addConnection", "source": "Note the Pictures", "target": "Pictures Noted"},
+        {"type": "addConnection", "source": "Pictures Noted", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 7, "target": "Send"},
+    ]
+    if telegram_id:
+        ops.append({"type": "setNodeCredential", "nodeName": "Ask About Pictures", "credentialKey": "telegramApi",
+                    "credentialId": telegram_id, "credentialName": CREDENTIAL})
+    return ops
+
+
 def page_design_ops(live: dict) -> list[dict]:
     notify = code(NOTIFY_JS)
     if "Tell the Requester" in live:
@@ -446,7 +503,7 @@ def attach_credential() -> int:
         print("the bot workflow does not exist yet: run this script without --attach-credential first")
         return 1
     live = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
-    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop", "Ask About Intake", "Ask for the Website") if n in live]
+    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop", "Ask About Intake", "Ask for the Website", "Ask About Pictures") if n in live]
     for wf, nodes in ((bot, tg_nodes), (PAGE_DESIGN, ["Send Result"])):
         ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": cid, "credentialName": CREDENTIAL}
                for n in nodes]
@@ -480,7 +537,8 @@ def main(argv=None) -> int:
         print(sdk_code())
         for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
                            ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id")),
-                           ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id"))):
+                           ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id")),
+                           ("pictures", pictures_ops("telegram-credential-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -515,6 +573,10 @@ def main(argv=None) -> int:
                 ops = site_ops(credential_id(CREDENTIAL, "telegramApi"))
                 print("adding the website question:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Ask: the brand's own website"}).get("appliedOperations"), "operation(s)")
+            elif "Note the Pictures" not in live_bot:
+                ops = pictures_ops(credential_id(CREDENTIAL, "telegramApi"))
+                print("adding the pictures question:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Ask: upload the brand's pictures"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))

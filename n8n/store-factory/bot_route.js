@@ -8,6 +8,7 @@
 //   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs ("List Intakes"), then "Stop Plan"
 //   brief  -> the answer to "collect the brand's data first?" after a page was started: saved on the brief ("Note the Choice")
 //   site   -> the reply with the brand's own website for a brief: saved on the brief ("Note the Website")
+//   pictures -> the answer to "upload the brand's pictures to the shop?": saved on the brief ("Note the Pictures")
 //   reply  -> just answer
 const msg = $('Read the Message').first().json;
 if (msg.kind === 'ignore') return [];
@@ -90,6 +91,14 @@ if (msg.kind === 'site') {
   }
   const host = m[1].toLowerCase().replace(/^www\./, '');
   return [{ json: { action: 'site', chat_id: msg.chat_id, row_id: msg.row_id, website: 'https://' + host, by: myName } }];
+}
+// "upload the brand's pictures to the shop?" (19 Oct 2026, Harsh: "it should ask either upload the assets from google drive to
+// the store"): a Yes is that person's approval for this one upload (store_files.py --approved-by). Anyone on the bot.
+if (msg.kind === 'button' && /^brief:(upload|keep):/.test(String(msg.data || ''))) {
+  const p = String(msg.data).match(/^brief:(upload|keep):(\d{1,9})$/);
+  if (!p) return reply('That button is not valid any more.');
+  return [{ json: { action: 'pictures', chat_id: msg.chat_id, row_id: Number(p[2]), upload_assets: p[1] === 'upload' ? 'yes' : 'no',
+    by: myName } }];
 }
 // "collect the brand's data first?" (19 Oct 2026, Harsh: "it should ask me if it should run the scraper or not and using the data
 // available it should start designing"): the Yes / No buttons under "Intake Question" carry the brief's row id. Anyone on the bot.

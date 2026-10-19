@@ -27,6 +27,7 @@ class FakeDrive:
     def __init__(self, refuse_token=False, busy=0):
         self.files = {"root": {"id": "root", "name": "My Drive", "mimeType": FOLDER, "parents": []}}
         self.calls, self.sessions, self.refuse_token, self.busy = [], {}, refuse_token, busy
+        self.content = {}  # file id -> bytes (for downloads)
 
     def _new(self, name, parent, mime, size=0):
         fid = f"f{len(self.files)}"
@@ -50,6 +51,8 @@ class FakeDrive:
             only = FOLDER in q["q"][0]
             found = [f for f in self.files.values() if parent in f["parents"] and (not only or f["mimeType"] == FOLDER)]
             return 200, {}, json.dumps({"files": found}).encode()
+        if method == "GET" and url.startswith(API + "/") and "alt=media" in url:
+            return 200, {}, self.content[url.split("/")[-1].split("?")[0]]
         if method == "GET" and url.startswith(API + "/"):
             return 200, {}, json.dumps({"webViewLink": self.files[url.split("/")[-1].split("?")[0]]["webViewLink"]}).encode()
         if method == "POST" and url.startswith(API + "?"):
@@ -57,7 +60,10 @@ class FakeDrive:
             return 200, {}, json.dumps(self._new(meta["name"], meta["parents"][0], meta["mimeType"])).encode()
         if method == "POST" and url.startswith(UPLOAD) and q["uploadType"] == ["multipart"]:
             meta = json.loads(body.split(b"\r\n\r\n", 1)[1].split(b"\r\n--", 1)[0])
-            return 200, {}, json.dumps(self._new(meta["name"], meta["parents"][0], "file", len(body))).encode()
+            data = body.rsplit(b"\r\n\r\n", 1)[1].rsplit(b"\r\n--", 1)[0]
+            made = self._new(meta["name"], meta["parents"][0], "file", len(data))
+            self.content[made["id"]] = data
+            return 200, {}, json.dumps(made).encode()
         if method == "POST" and q["uploadType"] == ["resumable"]:
             sid = f"https://upload.example/session/{len(self.sessions)}"
             self.sessions[sid] = {"meta": json.loads(body), "got": 0, "size": int(headers["X-Upload-Content-Length"])}
@@ -65,10 +71,13 @@ class FakeDrive:
         if method == "PUT" and url in self.sessions:
             s = self.sessions[url]
             s["got"] += len(body)
+            s["data"] = s.get("data", b"") + body
             assert headers["Content-Range"].endswith(f"/{s['size']}")
             if s["got"] < s["size"]:
                 return 308, {}, b""
-            return 200, {}, json.dumps(self._new(s["meta"]["name"], s["meta"]["parents"][0], "file", s["size"])).encode()
+            made = self._new(s["meta"]["name"], s["meta"]["parents"][0], "file", s["size"])
+            self.content[made["id"]] = s["data"]
+            return 200, {}, json.dumps(made).encode()
         raise AssertionError(f"unexpected call {method} {url}")
 
     def named(self, name):
@@ -94,6 +103,25 @@ class DriveTests(unittest.TestCase):
         again = Drive(KEYS, fake).upload_tree(self.tmp, "DTJ Clients/Free Soul/Brand intake 2026-10-19", out=lambda *_: None)
         self.assertEqual((again["uploaded"], again["skipped"]), (0, 3))
         self.assertEqual(len(fake.named("DTJ Clients")), 1)  # folders are found again, never doubled
+
+    def test_a_folder_comes_back_from_drive_and_a_second_copy_keeps_what_is_there(self):
+        (self.tmp / "clip.mp4").write_bytes(b"v" * 2500)
+        fake = FakeDrive()
+        with mock.patch.object(drive_upload, "SMALL", 1000), mock.patch.object(drive_upload, "CHUNK", 1000):
+            Drive(KEYS, fake).upload_tree(self.tmp, "DTJ Clients/Senso Foods/Brand intake 2026-10-19", out=lambda *_: None)
+        back = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, back, ignore_errors=True)
+        folders = len(fake.named("DTJ Clients"))
+        res = Drive(KEYS, fake).download_tree("DTJ Clients/Senso Foods/Brand intake 2026-10-19", back, out=lambda *_: None)
+        self.assertEqual((res["downloaded"], res["kept"]), (4, 0))
+        for f in ("BRAND.md", "clip.mp4", "images/products/foam/a.png", "images/products/foam/b.png"):
+            self.assertEqual((back / f).read_bytes(), (self.tmp / f).read_bytes(), f)
+        again = Drive(KEYS, fake).download_tree("DTJ Clients/Senso Foods/Brand intake 2026-10-19", back, out=lambda *_: None)
+        self.assertEqual((again["downloaded"], again["kept"]), (0, 4))
+        with self.assertRaises(DriveError):
+            Drive(KEYS, fake).download_tree("DTJ Clients/Nobody/Brand intake", back, out=lambda *_: None)
+        self.assertEqual(len(fake.named("DTJ Clients")), folders)  # looking never makes a folder
+        self.assertFalse(fake.named("Nobody"))
 
     def test_a_big_video_goes_up_in_pieces(self):
         (self.tmp / "clip.mp4").write_bytes(b"v" * 2500)
