@@ -171,10 +171,12 @@ class Drive:
                 sent = end + 1
         return json.loads(data or b"{}")
 
-    def upload_tree(self, local_dir: Path, drive_path: str, out=print) -> dict:
-        """Mirror a local folder into the Drive path. Files the Drive folder already has (same name) are skipped."""
+    def upload_tree(self, local_dir: Path, drive_path: str, out=print, tick=None) -> dict:
+        """Mirror a local folder into the Drive path. Files the Drive folder already has (same name) are skipped.
+        tick(done, total), when given, hears each file (sent or skipped): the brand intake's progress bar."""
         top = self.path(drive_path)
         sent = skipped = 0
+        total = sum(1 for f in local_dir.rglob("*") if f.is_file())
 
         def walk(directory: Path, parent: str) -> None:
             nonlocal sent, skipped
@@ -191,6 +193,8 @@ class Drive:
                     sent += 1
                     if sent % 25 == 0:
                         out(f"  {sent} files uploaded...")
+                if tick and not item.is_dir():
+                    tick(sent + skipped, total)
         walk(local_dir, top["id"])
         link = top.get("webViewLink") or self._json("GET", f"{API}/{top['id']}?fields=webViewLink").get("webViewLink", "")
         return {"folder_id": top["id"], "link": link, "uploaded": sent, "skipped": skipped}
