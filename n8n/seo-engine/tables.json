@@ -1,0 +1,48 @@
+{
+ "dtj_seo_batches": {"columns": [
+  {"name": "batch_id", "type": "string"},
+  {"name": "run_id", "type": "string"},
+  {"name": "run_url", "type": "string"},
+  {"name": "report_date", "type": "string"},
+  {"name": "made_at", "type": "string"},
+  {"name": "site", "type": "string"},
+  {"name": "status", "type": "string"},
+  {"name": "can_approve", "type": "boolean"},
+  {"name": "auto_changes", "type": "number"},
+  {"name": "blocked_changes", "type": "number"},
+  {"name": "manual_tasks", "type": "number"},
+  {"name": "pages_checked", "type": "number"},
+  {"name": "check_complete", "type": "boolean"},
+  {"name": "sent_to", "type": "number"},
+  {"name": "received_at", "type": "string"},
+  {"name": "answered_by", "type": "string"},
+  {"name": "approved_by", "type": "string"},
+  {"name": "answered_at", "type": "string"},
+  {"name": "apply_status", "type": "string"}
+ ]},
+ "dtj_dead_letter": {"columns": [
+  {"name": "received_at", "type": "string"},
+  {"name": "source", "type": "string"},
+  {"name": "reason", "type": "string"},
+  {"name": "raw", "type": "string"},
+  {"name": "replayed", "type": "string"}
+ ]},
+ "dtj_action_log": {"columns": [
+  {"name": "ts", "type": "string"},
+  {"name": "run_id", "type": "string"},
+  {"name": "client_id", "type": "string"},
+  {"name": "automation", "type": "string"},
+  {"name": "tier", "type": "number"},
+  {"name": "mode", "type": "string"},
+  {"name": "target", "type": "string"},
+  {"name": "action", "type": "string"},
+  {"name": "reason", "type": "string"},
+  {"name": "result", "type": "string"},
+  {"name": "evidence", "type": "string"},
+  {"name": "before", "type": "string"},
+  {"name": "after", "type": "string"},
+  {"name": "approved_by", "type": "string"},
+  {"name": "approved_at", "type": "string"},
+  {"name": "error", "type": "string"}
+ ]}
+}

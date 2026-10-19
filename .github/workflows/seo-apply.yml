@@ -1,0 +1,95 @@
+# Applies ONE approved fixes batch to the live WordPress site (Tier 2). Run it by hand only after Harsh said yes to that batch
+# (or, when he can't be reached, a DTJ teammate, by name). One yes covers one batch. See docs/seo-aeo/README.md.
+# Needs the DTJ SEO Bridge plugin active on the site (services/seo-engine/wordpress-plugin) and the variables
+# AUTOMATION_ENABLED=true and SEO_DRY_RUN=false.
+name: SEO apply fixes
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run number: to apply, the Monday 'SEO weekly' run whose batch was approved (top of its summary); to undo, the 'SEO apply fixes' run"
+        required: true
+      approved_by:
+        description: "Who said yes, by name (e.g. Harsh, or '<teammate name> (Harsh not reachable)')"
+        required: true
+      only:
+        description: "Optional: only these change ids, comma-separated (e.g. c001,c004). Empty = every ready change"
+        required: false
+        default: ""
+      batch_id:
+        description: "Optional: the batch id that was approved (e.g. fix-2026-10-19). When given, nothing is applied unless that run's batch is exactly this one"
+        required: false
+        default: ""
+      undo:
+        description: "Undo that run's applied batch instead (puts the old values back)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: seo-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: pip install -r services/seo-engine/requirements.txt
+
+      - name: Get the batch from that run
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.undo && 'seo-applied' || 'seo-report' }}
+          path: .work/seo
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Apply (or undo)
+        working-directory: services/seo-engine
+        env:
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          AUTOMATION_ENABLED: ${{ vars.AUTOMATION_ENABLED }}
+          SEO_DRY_RUN: ${{ vars.SEO_DRY_RUN }}
+          SEO_MODE: ${{ vars.SEO_MODE }}
+          APPROVED_BY: ${{ inputs.approved_by }}
+          ONLY: ${{ inputs.only }}
+          UNDO: ${{ inputs.undo }}
+          BATCH_ID: ${{ inputs.batch_id }}
+        run: |
+          if [ "$UNDO" = "true" ]; then
+            REC=$(ls -t ../../.work/seo/*/applied-*.json | head -1)
+            python -m seo_engine.apply_batch --undo "$REC" --approved-by "$APPROVED_BY" | tee apply.log
+          else
+            BATCH=$(ls -t ../../.work/seo/*/fixes.json | head -1)
+            # one yes covers one batch: the Telegram yes names its batch, and a different one is never applied
+            if [ -n "$BATCH_ID" ]; then
+              GOT=$(python -c "import json,sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['id'])" "$BATCH")
+              if [ "$GOT" != "$BATCH_ID" ]; then
+                echo "Not applied: run ${{ inputs.run_id }} holds batch $GOT, but the yes was for $BATCH_ID." | tee -a "$GITHUB_STEP_SUMMARY"
+                exit 1
+              fi
+            fi
+            python -m seo_engine.apply_batch --batch "$BATCH" --approved-by "$APPROVED_BY" --only "$ONLY" | tee apply.log
+          fi
+          { echo "Approved by: $APPROVED_BY (started by ${{ github.actor }})"; echo '```'; cat apply.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the record (needed to undo)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-applied
+          path: .work/seo/
+          retention-days: 365

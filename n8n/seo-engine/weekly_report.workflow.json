@@ -1,0 +1,1845 @@
+{
+ "name": "SEO Engine: Weekly Report",
+ "description": "Monday SEO report from GitHub (signed) to the DTJ bot's admins with Yes / No for the fixes batch; records one named answer per batch. Shadow: a yes is recorded, nothing applied, until Harsh turns the apply on.",
+ "nodes": [
+  {
+   "id": "7d5df69b-84fb-5fc5-a22d-a2a83b24179e",
+   "name": "About the Report",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -420
+   ],
+   "parameters": {
+    "content": "## Monday SEO report (from GitHub)\n`.github/workflows/seo-weekly.yml` sends the report here, signed (JWT, credential **DTJ SEO Report Key**). Unsigned requests are refused at the door; a signed one that fails its checks goes to **dtj_dead_letter** and the admins are told. Otherwise the admins in **dtj_bot_users** get the report file and the fixes, with Yes / No when there is something to apply and the check read the whole site. One row per batch in **dtj_seo_batches**.",
+    "height": 260,
+    "width": 1000,
+    "color": 5
+   }
+  },
+  {
+   "id": "7051a0ca-12c1-56b0-99ee-8278372ac69d",
+   "name": "Report from GitHub",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "dtj-seo-weekly",
+    "authentication": "jwtAuth",
+    "responseMode": "onReceived",
+    "options": {}
+   },
+   "webhookId": "0b070ca2-1982-5640-8253-c7c5569a3fc7",
+   "credentials": {
+    "jwtAuth": {
+     "name": "DTJ SEO Report Key"
+    }
+   }
+  },
+  {
+   "id": "4c28a8b3-346c-56b1-9092-5967dcb11f68",
+   "name": "Check the Report",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Check the Report\" in \"SEO Engine: Weekly Report\" (mode: Run Once for All Items).\n// The Monday report from GitHub (.github/workflows/seo-weekly.yml, step \"Send the report to the bot\", n8n/seo-engine/notify_n8n.py).\n// CLAUDE.md rule 8: signature first, then the JSON Schema; anything else goes to the dead-letter queue and nothing else runs.\n//  1. The signature: the webhook node already refused any request without a valid JWT signed with the n8n credential\n//     \"DTJ SEO Report Key\" (HS256, the same secret as GitHub's N8N_SEO_REPORT_KEY). Here: its claims (issuer, audience, 15 minutes at\n//     most) and the SHA-256 of the body's \"content\" text, which the signature covers, so not one character can change on the way.\n//  2. The schema: schemas/seo-weekly-report.schema.json, written out below (n8n's Code step has no schema library); the tests run\n//     the same samples through both and expect the same verdict.\n// Output: one item, { ok: true, report } or { ok: false, reason, raw } (\"Plan the Report\" sends the second to the dead-letter table).\nconst item = $input.first().json || {};\nconst body = item.body && typeof item.body === 'object' ? item.body : {};\nconst rawText = (() => { try { return JSON.stringify(item.body === undefined ? null : item.body); } catch (e) { return String(item.body); } })();\nconst bad = (reason) => [{ json: { ok: false, reason, raw: String(rawText).slice(0, 20000) } }];\nconst REPO = 'harsh-shopify-dev/dtj-agency-automation';\n\n// ---- SHA-256 of a text's UTF-8 bytes (no crypto module in n8n's Code step) ----\nfunction utf8(s) {\n  const out = [];\n  for (let i = 0; i < s.length; i++) {\n    let c = s.charCodeAt(i);\n    if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {\n      const d = s.charCodeAt(i + 1);\n      if (d >= 0xdc00 && d <= 0xdfff) { c = 0x10000 + ((c - 0xd800) << 10) + (d - 0xdc00); i++; }\n    }\n    if (c < 0x80) out.push(c);\n    else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));\n    else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));\n    else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));\n  }\n  return out;\n}\nfunction sha256hex(text) {\n  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01,\n    0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,\n    0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70,\n    0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,\n    0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];\n  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];\n  const bytes = utf8(text);\n  const bitLen = bytes.length * 8;\n  bytes.push(0x80);\n  while (bytes.length % 64 !== 56) bytes.push(0);\n  const hi = Math.floor(bitLen / 0x100000000), lo = bitLen >>> 0;\n  bytes.push((hi >>> 24) & 255, (hi >>> 16) & 255, (hi >>> 8) & 255, hi & 255, (lo >>> 24) & 255, (lo >>> 16) & 255, (lo >>> 8) & 255, lo & 255);\n  const W = new Array(64);\n  const rotr = (x, n) => (x >>> n) | (x << (32 - n));\n  for (let off = 0; off < bytes.length; off += 64) {\n    for (let t = 0; t < 16; t++) {\n      W[t] = ((bytes[off + 4 * t] << 24) | (bytes[off + 4 * t + 1] << 16) | (bytes[off + 4 * t + 2] << 8) | bytes[off + 4 * t + 3]) >>> 0;\n    }\n    for (let t = 16; t < 64; t++) {\n      const s0 = rotr(W[t - 15], 7) ^ rotr(W[t - 15], 18) ^ (W[t - 15] >>> 3);\n      const s1 = rotr(W[t - 2], 17) ^ rotr(W[t - 2], 19) ^ (W[t - 2] >>> 10);\n      W[t] = (W[t - 16] + s0 + W[t - 7] + s1) >>> 0;\n    }\n    let [a, b, c, d, e, f, g, h] = H;\n    for (let t = 0; t < 64; t++) {\n      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);\n      const t1 = (h + S1 + ((e & f) ^ (~e & g)) + K[t] + W[t]) >>> 0;\n      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);\n      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;\n      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;\n    }\n    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;\n    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;\n  }\n  return H.map((x) => x.toString(16).padStart(8, '0')).join('');\n}\n\n// ---- the signature's claims: from the webhook node (jwtPayload), else read from the header it has already verified ----\nfunction claimsFromHeader() {\n  const auth = String((item.headers || {}).authorization || '');\n  const m = auth.match(/^Bearer\\s+[A-Za-z0-9_-]+\\.([A-Za-z0-9_-]+)\\.[A-Za-z0-9_-]+$/);\n  if (!m) return null;\n  try {\n    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');\n    return JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));\n  } catch (e) { return null; }\n}\nconst claims = (item.jwtPayload && typeof item.jwtPayload === 'object') ? item.jwtPayload : claimsFromHeader();\nif (!claims) return bad('no signed claims: the request did not carry the JWT the webhook checks');\nconst now = Math.floor(Date.now() / 1000);\nif (claims.iss !== 'dtj-seo-weekly' || claims.aud !== 'dtj-n8n') return bad('the signature was not made for this report (issuer or audience)');\nif (typeof claims.exp !== 'number' || typeof claims.iat !== 'number') return bad('the signature has no time on it');\nif (claims.exp < now) return bad('the signature has expired (older than its 15 minutes)');\nif (claims.iat > now + 120 || claims.exp - claims.iat > 900) return bad('the signature\\'s times are not valid');\nif (typeof body.content !== 'string' || !body.content) return bad('the body has no \"content\" text');\nif (body.content.length > 200000) return bad('the report is too large (more than 200,000 characters)');\nif (Object.keys(body).some((k) => k !== 'content')) return bad('the body has fields other than \"content\"');\nif (sha256hex(body.content) !== String(claims.sha256 || '').toLowerCase()) return bad('the content does not match its signature (SHA-256)');\n\nlet r;\ntry { r = JSON.parse(body.content); } catch (e) { return bad('the content is not valid JSON'); }\n\n// ---- schemas/seo-weekly-report.schema.json ----\nconst isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);\nconst isInt = (v) => Number.isInteger(v) && v >= 0;\nconst str = (v, max, re) => typeof v === 'string' && v.length <= max && (!re || re.test(v));\nfunction only(o, allowed) { return Object.keys(o).every((k) => allowed.includes(k)); }\nfunction check(r) {\n  if (!isObj(r)) return 'the report is not an object';\n  const top = ['schema', 'repo', 'run_id', 'run_url', 'ref', 'made_at', 'site', 'mode', 'scan', 'batch', 'report_md'];\n  for (const k of top.filter((k) => k !== 'mode')) if (!(k in r)) return 'missing ' + k;\n  if (!only(r, top)) return 'unknown field at the top: ' + Object.keys(r).filter((k) => !top.includes(k)).join(', ');\n  if (r.schema !== 'dtj-seo-weekly/1') return 'schema is not dtj-seo-weekly/1';\n  if (!str(r.repo, 200, /^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/)) return 'repo is not owner/name';\n  if (!str(r.run_id, 20, /^[0-9]{1,20}$/)) return 'run_id is not a run number';\n  if (!str(r.run_url, 300, /^https:\\/\\/github\\.com\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\/actions\\/runs\\/[0-9]{1,20}$/)) return 'run_url is not a GitHub run link';\n  if (!str(r.ref, 200) || !r.ref) return 'ref is empty';\n  if (!str(r.made_at, 40, /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$/)) return 'made_at is not a date and time';\n  if (!str(r.site, 200, /^https:\\/\\/[^\\s]+$/)) return 'site is not an https address';\n  if ('mode' in r && !['shadow', 'approve', 'auto'].includes(r.mode)) return 'mode is not shadow, approve or auto';\n  const s = r.scan;\n  if (!isObj(s)) return 'scan is not an object';\n  for (const k of ['pages', 'high', 'medium', 'low', 'complete']) if (!(k in s)) return 'scan: missing ' + k;\n  if (!only(s, ['pages', 'high', 'medium', 'low', 'complete', 'warning'])) return 'scan: unknown field';\n  if (!['pages', 'high', 'medium', 'low'].every((k) => isInt(s[k]))) return 'scan: counts must be whole numbers';\n  if (typeof s.complete !== 'boolean') return 'scan: complete must be true or false';\n  if ('warning' in s && !str(s.warning, 2000)) return 'scan: warning too long';\n  const b = r.batch;\n  if (!isObj(b)) return 'batch is not an object';\n  for (const k of ['id', 'counts', 'changes', 'manual', 'notes']) if (!(k in b)) return 'batch: missing ' + k;\n  if (!only(b, ['id', 'counts', 'changes', 'manual', 'notes'])) return 'batch: unknown field';\n  if (!str(b.id, 40, /^fix-[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) return 'batch: id is not fix-YYYY-MM-DD';\n  if (!isObj(b.counts) || !only(b.counts, ['auto', 'blocked', 'manual']) || !['auto', 'blocked', 'manual'].every((k) => isInt(b.counts[k]))) {\n    return 'batch: counts must be auto, blocked and manual whole numbers';\n  }\n  if (!Array.isArray(b.changes) || b.changes.length > 200) return 'batch: changes must be a list of at most 200';\n  for (const c of b.changes) {\n    if (!isObj(c)) return 'batch: a change is not an object';\n    for (const k of ['cid', 'kind', 'url', 'before', 'after', 'how']) if (!(k in c)) return 'batch: a change is missing ' + k;\n    if (!only(c, ['cid', 'kind', 'url', 'before', 'after', 'how', 'why'])) return 'batch: a change has an unknown field';\n    if (!str(c.cid, 6, /^c[0-9]{3,5}$/)) return 'batch: a change id is not c001 style';\n    if (!str(c.kind, 40, /^[a-z_]{1,40}$/)) return 'batch: a change kind is not valid';\n    if (!str(c.url, 500) || !c.url) return 'batch: a change has no page';\n    if (!(c.before === null || str(c.before, 600))) return 'batch: a change\\'s \"before\" is too long';\n    if (!str(c.after, 600)) return 'batch: a change\\'s \"after\" is too long';\n    if (!['auto', 'blocked'].includes(c.how)) return 'batch: a change is neither auto nor blocked';\n    if ('why' in c && !str(c.why, 600)) return 'batch: a change\\'s \"why\" is too long';\n  }\n  if (b.changes.filter((c) => c.how === 'auto').length !== b.counts.auto) return 'batch: the auto count does not match the list';\n  if (!Array.isArray(b.manual) || b.manual.length > 50 || !b.manual.every((x) => str(x, 600))) return 'batch: manual must be at most 50 short texts';\n  if (!Array.isArray(b.notes) || b.notes.length > 50 || !b.notes.every((x) => str(x, 600))) return 'batch: notes must be at most 50 short texts';\n  if (!str(r.report_md, 60000) || !r.report_md) return 'report_md is empty or longer than 60,000 characters';\n  return '';\n}\nconst problem = check(r);\nif (problem) return bad('the report does not match its schema: ' + problem);\nif (r.repo !== REPO) return bad('the report is from another repository: ' + r.repo);\nif (String(claims.run_id) !== r.run_id || String(claims.batch_id) !== r.batch.id) return bad('the signed run or batch is not the one in the report');\nreturn [{ json: { ok: true, report: r } }];\n"
+   }
+  },
+  {
+   "id": "7b49b978-be89-50c4-87e9-0984062a9bc8",
+   "name": "Load Bot Users",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    0
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "xJ9O19tBBmCJc1Hc",
+     "cachedResultName": "dtj_bot_users"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "telegram_user_id",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "50eba62e-6737-53a2-8865-6dc78715603c",
+   "name": "Load Batches",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    720,
+    0
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_seo_batches"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "batch_id",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "c035cb86-7461-5872-a436-95dd299ee2f9",
+   "name": "Plan the Report",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Plan the Report\" in \"SEO Engine: Weekly Report\" (mode: Run Once for All Items).\n// After \"Check the Report\": who gets it, the row for dtj_seo_batches, the action-log row, or the dead letter.\n// Who gets it: the active admins in dtj_bot_users (the people who may give a Tier 2 yes: Harsh, or a teammate when he is not\n// reachable). A Yes button only when there is something to apply AND the website check read the whole site (report.py says\n// \"run the check again before saying yes\" otherwise).\n// The same GitHub run twice (a retried send) is sent once: a run already in dtj_seo_batches gives no output.\n// Output: one item, action \"save\" (row, report, admins, log) or \"dead_letter\" (dead, admins, log), or nothing.\nconst checked = $('Check the Report').first().json || {};  // (this node's own input is the batch rows)\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst batches = $('Load Batches').all().map((i) => i.json).filter((b) => b && b.batch_id);\nconst admins = [...new Set(users.filter((u) => String(u.role || '').toLowerCase().trim() === 'admin')\n  .map((u) => String(u.telegram_user_id).trim()))];\nconst now = new Date().toISOString();\nconst log = (fields) => ({ ts: now, run_id: '', client_id: 'dtj', automation: 'seo-engine-n8n', tier: 0, mode: 'shadow', target: '',\n  action: '', reason: '', result: 'success', evidence: '', before: '', after: '', approved_by: '', approved_at: '', error: '', ...fields });\n\nif (!checked.ok) {\n  return [{ json: {\n    action: 'dead_letter', admins,\n    dead: { received_at: now, source: 'SEO Engine: Weekly Report', reason: String(checked.reason || 'unknown').slice(0, 500),\n      raw: String(checked.raw || '').slice(0, 20000), replayed: '' },\n    log: log({ target: 'Monday SEO report', action: 'receive weekly report', reason: 'CLAUDE.md rule 8: signature and schema first',\n      result: 'blocked', error: String(checked.reason || '').slice(0, 500) }),\n  } }];\n}\n\nconst r = checked.report;\nif (batches.some((b) => String(b.run_id) === r.run_id)) return [];\n\nconst c = r.batch.counts;\nconst canApprove = c.auto > 0 && r.scan.complete === true;\nconst row = {\n  batch_id: r.batch.id, run_id: r.run_id, run_url: r.run_url, report_date: String(r.made_at).slice(0, 10), made_at: r.made_at,\n  site: r.site, status: canApprove ? 'waiting' : 'not asked', can_approve: canApprove, auto_changes: c.auto,\n  blocked_changes: c.blocked, manual_tasks: c.manual, pages_checked: r.scan.pages, check_complete: r.scan.complete,\n  sent_to: admins.length, received_at: now, answered_by: '', approved_by: '', answered_at: '', apply_status: '',\n};\nreturn [{ json: {\n  action: 'save', row, report: r, admins,\n  log: log({ run_id: r.run_id, target: r.site + ' fixes batch ' + r.batch.id, action: 'send weekly report to the bot',\n    reason: 'Monday SEO report: one named yes per batch', result: canApprove ? 'recommended' : 'success',\n    evidence: JSON.stringify({ run_url: r.run_url, counts: c, pages: r.scan.pages, complete: r.scan.complete, admins: admins.length }) }),\n} }];\n"
+   }
+  },
+  {
+   "id": "0172c8ae-e890-5f18-a229-95f8ccdadc70",
+   "name": "Log the Report",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1200,
+    -200
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_action_log"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "ts": "={{ $json.log.ts }}",
+      "run_id": "={{ $json.log.run_id }}",
+      "client_id": "={{ $json.log.client_id }}",
+      "automation": "={{ $json.log.automation }}",
+      "tier": "={{ $json.log.tier }}",
+      "mode": "={{ $json.log.mode }}",
+      "target": "={{ $json.log.target }}",
+      "action": "={{ $json.log.action }}",
+      "reason": "={{ $json.log.reason }}",
+      "result": "={{ $json.log.result }}",
+      "evidence": "={{ $json.log.evidence }}",
+      "before": "={{ $json.log.before }}",
+      "after": "={{ $json.log.after }}",
+      "approved_by": "={{ $json.log.approved_by }}",
+      "approved_at": "={{ $json.log.approved_at }}",
+      "error": "={{ $json.log.error }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "ts",
+       "displayName": "ts",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "run_id",
+       "displayName": "run_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "client_id",
+       "displayName": "client_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "automation",
+       "displayName": "automation",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "tier",
+       "displayName": "tier",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "mode",
+       "displayName": "mode",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "target",
+       "displayName": "target",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "action",
+       "displayName": "action",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reason",
+       "displayName": "reason",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "result",
+       "displayName": "result",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "evidence",
+       "displayName": "evidence",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "before",
+       "displayName": "before",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "after",
+       "displayName": "after",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "approved_by",
+       "displayName": "approved_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "approved_at",
+       "displayName": "approved_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "error",
+       "displayName": "error",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "a10adb9e-ae13-5932-85be-36e07f21138c",
+   "name": "Save or Dead Letter",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "save",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "save"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "dead_letter",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "dead_letter"
+      }
+     ]
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "bec6a835-bf55-5407-a9cf-c954e8b719ac",
+   "name": "Save the Batch",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1440,
+    -60
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_seo_batches"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "batch_id": "={{ $json.row.batch_id }}",
+      "run_id": "={{ $json.row.run_id }}",
+      "run_url": "={{ $json.row.run_url }}",
+      "report_date": "={{ $json.row.report_date }}",
+      "made_at": "={{ $json.row.made_at }}",
+      "site": "={{ $json.row.site }}",
+      "status": "={{ $json.row.status }}",
+      "can_approve": "={{ $json.row.can_approve }}",
+      "auto_changes": "={{ $json.row.auto_changes }}",
+      "blocked_changes": "={{ $json.row.blocked_changes }}",
+      "manual_tasks": "={{ $json.row.manual_tasks }}",
+      "pages_checked": "={{ $json.row.pages_checked }}",
+      "check_complete": "={{ $json.row.check_complete }}",
+      "sent_to": "={{ $json.row.sent_to }}",
+      "received_at": "={{ $json.row.received_at }}",
+      "answered_by": "={{ $json.row.answered_by }}",
+      "approved_by": "={{ $json.row.approved_by }}",
+      "answered_at": "={{ $json.row.answered_at }}",
+      "apply_status": "={{ $json.row.apply_status }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "batch_id",
+       "displayName": "batch_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "run_id",
+       "displayName": "run_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "run_url",
+       "displayName": "run_url",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "report_date",
+       "displayName": "report_date",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "made_at",
+       "displayName": "made_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "site",
+       "displayName": "site",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "status",
+       "displayName": "status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "can_approve",
+       "displayName": "can_approve",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "boolean",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "auto_changes",
+       "displayName": "auto_changes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "blocked_changes",
+       "displayName": "blocked_changes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "manual_tasks",
+       "displayName": "manual_tasks",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "pages_checked",
+       "displayName": "pages_checked",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "check_complete",
+       "displayName": "check_complete",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "boolean",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "sent_to",
+       "displayName": "sent_to",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "received_at",
+       "displayName": "received_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "answered_by",
+       "displayName": "answered_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "approved_by",
+       "displayName": "approved_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "answered_at",
+       "displayName": "answered_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "apply_status",
+       "displayName": "apply_status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "83a775d1-72be-55cb-bb8f-b1d0ec39514a",
+   "name": "Report Messages",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1680,
+    -60
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Report Messages\" in \"SEO Engine: Weekly Report\" (mode: Run Once for All Items).\n// After \"Save the Batch\" (the new dtj_seo_batches row, whose id the buttons carry): for each admin, the full report as a file and\n// a short message in plain words with the fixes and, when there is something to approve, the Yes / No buttons.\n// The buttons say seo:yes:<row id> / seo:no:<row id>; the bot's \"Who Is It\" hands a tap to this workflow's answer lane.\n// Output: items of kind \"file\" (Send the Report File), \"ask\" (Ask Yes or No) or \"text\" (Send).\nconst APPLY_ON = false;  // must equal APPLY_ON in answer_plan.js (the tests check): false = shadow, a yes is recorded, nothing applied\nconst plan = $('Plan the Report').first().json;\nconst saved = $input.first().json || {};\nconst r = plan.report;\nconst row = plan.row;\nconst rowId = Number(saved.id);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst KIND = { meta_description: 'Google description', seo_title: 'Google title', noindex: 'Hide from Google', alt_text: 'Image alt text',\n  site_jsonld: 'Business details for Google and AI' };\nif (!Number.isInteger(rowId) || rowId < 1) return [];\n\nconst page = (url) => {\n  const u = String(url || '');\n  const site = String(r.site || '').replace(/\\/+$/, '');\n  return u.startsWith(site) ? (u.slice(site.length) || '/') : u;\n};\nconst cut = (s, n) => { const t = String(s == null ? '' : s); return t.length > n ? t.slice(0, n - 1) + '…' : t; };\nconst day = String(r.made_at).slice(0, 10);\nconst c = r.batch.counts;\nconst auto = r.batch.changes.filter((x) => x.how === 'auto');\nconst kind = row.can_approve ? 'ask' : 'text';\n\nfunction build(show) {\n  const L = [];\n  L.push('<b>DTJ search report, ' + esc(day) + '</b>');\n  L.push('Website check: ' + r.scan.pages + ' pages. ' + r.scan.high + ' to fix now, ' + r.scan.medium + ' soon, ' + r.scan.low + ' later.');\n  if (!r.scan.complete) L.push('\\n⚠️ <b>This check is incomplete:</b> ' + esc(r.scan.warning || 'part of the site was not read') + '.');\n  L.push('');\n  L.push('<b>Fixes waiting for one yes</b> (batch ' + esc(r.batch.id) + ')');\n  L.push(c.auto + ' ready to apply, ' + c.blocked + ' stopped by the checks, ' + c.manual + ' for a person.');\n  for (const x of auto.slice(0, show)) {\n    const offices = String(x.after || '').replace(/^business details for Google and AI:?\\s*/i, '');\n    const what = x.kind === 'noindex' ? '' : (x.kind === 'site_jsonld' ? (offices ? ': ' + esc(cut(offices, 120)) : '')\n      : ' → \"' + esc(cut(x.after, 160)) + '\"');\n    L.push('• ' + esc(x.cid) + ' ' + esc(KIND[x.kind] || x.kind) + ', ' + esc(cut(page(x.url), 80)) + what);\n  }\n  if (auto.length > show) L.push('• and ' + (auto.length - show) + ' more in the file.');\n  if (r.batch.manual.length) L.push('For a person: ' + r.batch.manual.length + ' task(s), listed in the file.');\n  L.push('');\n  L.push('Full report: the file above, or <a href=\"' + esc(r.run_url) + '\">GitHub run ' + esc(r.run_id) + '</a>.');\n  L.push('');\n  if (row.can_approve) {\n    L.push('<b>Yes</b> applies these ' + c.auto + ' change(s) to the live site; each one is skipped if its page changed since the check, '\n      + 'and every change can be undone. One yes covers this batch only. Harsh says yes; when he cannot be reached, a teammate, by name.');\n    L.push(APPLY_ON ? 'A yes starts \"SEO apply fixes\" on GitHub at once.'\n      : 'For now (test mode) your answer is only recorded: nothing is applied from here yet.');\n  } else if (c.auto === 0) {\n    L.push('Nothing to approve this week.');\n  } else {\n    L.push('No Yes button this week: the check missed part of the site. Run \"SEO weekly\" again on GitHub (Actions) and a new report comes here.');\n  }\n  return L.join('\\n');\n}\nlet show = 15;\nlet text = build(show);\nwhile (text.length > 4000 && show > 0) text = build(--show);\n\nconst file = Buffer.from(String(r.report_md), 'utf8').toString('base64');\nconst out = [];\nfor (const chat of plan.admins) {\n  out.push({ json: { kind: 'file', chat_id: chat, caption: 'DTJ search report ' + day + ' (batch ' + r.batch.id + ', run ' + r.run_id + ')' },\n    binary: { data: { data: file, mimeType: 'text/markdown', fileName: 'dtj-seo-report-' + day + '.md', fileExtension: 'md' } } });\n  out.push({ json: { kind, chat_id: chat, text: cut(text, 4096), yes_data: 'seo:yes:' + rowId, no_data: 'seo:no:' + rowId,\n    yes_text: 'Yes, apply these ' + c.auto, no_text: 'No, not this batch' } });\n}\nreturn out;\n"
+   }
+  },
+  {
+   "id": "a67216d1-ea29-516c-bb17-2635f2fb921d",
+   "name": "Message Kind",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1920,
+    -60
+   ],
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.kind }}",
+          "rightValue": "file",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "file"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.kind }}",
+          "rightValue": "ask",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "ask"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.kind }}",
+          "rightValue": "text",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "text"
+      }
+     ]
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "d3f6793e-d15e-5805-aa5e-836c073c7bd5",
+   "name": "Send the Report File",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2160,
+    -220
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendDocument",
+    "chatId": "={{ $json.chat_id }}",
+    "binaryData": true,
+    "binaryPropertyName": "data",
+    "additionalFields": {
+     "caption": "={{ $json.caption }}"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "db1c15f3-6a19-5fa1-bc46-355c2f7b1763",
+   "credentials": {
+    "telegramApi": {
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "ed356990-c28c-5240-9f45-2e4cbe34de51",
+   "name": "Ask Yes or No",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2160,
+    -60
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "replyMarkup": "inlineKeyboard",
+    "inlineKeyboard": {
+     "rows": [
+      {
+       "row": {
+        "buttons": [
+         {
+          "text": "={{ $json.yes_text }}",
+          "additionalFields": {
+           "callback_data": "={{ $json.yes_data }}"
+          }
+         },
+         {
+          "text": "={{ $json.no_text }}",
+          "additionalFields": {
+           "callback_data": "={{ $json.no_data }}"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "1929d7b9-54c8-586e-a80f-9f0c0ff246c1",
+   "credentials": {
+    "telegramApi": {
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "cafd6486-0a48-536b-a9af-cc98988a92f1",
+   "name": "Send",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2160,
+    160
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "5a3586fe-521c-581d-ab76-1d14a932784f",
+   "credentials": {
+    "telegramApi": {
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "fb9a170e-fcfc-5d0a-ac48-4063a83fd227",
+   "name": "Keep in Dead Letter",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1440,
+    160
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_dead_letter"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "received_at": "={{ $json.dead.received_at }}",
+      "source": "={{ $json.dead.source }}",
+      "reason": "={{ $json.dead.reason }}",
+      "raw": "={{ $json.dead.raw }}",
+      "replayed": "={{ $json.dead.replayed }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "received_at",
+       "displayName": "received_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "source",
+       "displayName": "source",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reason",
+       "displayName": "reason",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "raw",
+       "displayName": "raw",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "replayed",
+       "displayName": "replayed",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "da305553-b196-5636-8b27-520ce4c23452",
+   "name": "Dead Letter Alert",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1680,
+    160
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Dead Letter Alert\" in \"SEO Engine: Weekly Report\" (mode: Run Once for All Items).\n// After \"Keep in Dead Letter\" saved a report that failed its signature or schema check (CLAUDE.md rule 8: nothing else runs for\n// it): tell the admins once, in plain words, with the reason and where it is kept. No Yes button, no batch.\n// Output: items { chat_id, text } for \"Send\".\nconst plan = $('Plan the Report').first().json;\nconst kept = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst text = 'The Monday SEO report reached n8n but did not pass its checks, so it was not shown and nothing can be approved from it.\\n\\n'\n  + 'Why: ' + esc(plan.dead.reason) + '\\n'\n  + 'Kept in the data table dtj_dead_letter' + (kept.id ? ' (row ' + esc(kept.id) + ')' : '') + '. '\n  + 'The report itself is safe in the GitHub run (Actions > SEO weekly). Ask Claude Code to look at it.';\nreturn (plan.admins || []).map((chat) => ({ json: { chat_id: chat, text } }));\n"
+   }
+  },
+  {
+   "id": "75d14ce8-85bb-5b8b-b1fe-892965eb1379",
+   "name": "About the Answers",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    420
+   ],
+   "parameters": {
+    "content": "## The Yes / No taps (from the bot)\nThe bot's **Who Is It** hands every `seo:` button here. One named answer per batch: Harsh's, or a teammate's when Harsh can't be reached (they confirm that first; recorded as \"<name> (Harsh not reachable)\"). **Shadow** while `APPLY_ON` is false in *Decide the Answer* (and *Report Messages*): the answer is recorded and nothing is applied. On: a yes starts GitHub's **SEO apply fixes** with the run, the name and the batch id.",
+    "height": 240,
+    "width": 1000,
+    "color": 5
+   }
+  },
+  {
+   "id": "d176ad5e-6032-56c1-83af-11cb84bb3a2c",
+   "name": "Answer from the Bot",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.1,
+   "position": [
+    0,
+    700
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "row_id",
+       "type": "number"
+      },
+      {
+       "name": "answer",
+       "type": "string"
+      },
+      {
+       "name": "by",
+       "type": "string"
+      },
+      {
+       "name": "user_id",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "c2d61fdf-5ada-5c5f-bf64-5a917c270d3d",
+   "name": "Find the Batch",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    240,
+    700
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_seo_batches"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "batch_id",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "688ec094-a976-5959-9119-112355801052",
+   "name": "Load the Team",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    700
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "xJ9O19tBBmCJc1Hc",
+     "cachedResultName": "dtj_bot_users"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "telegram_user_id",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "d294314b-b094-5262-9385-5cf981110142",
+   "name": "Decide the Answer",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    700
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Decide the Answer\" in \"SEO Engine: Weekly Report\" (mode: Run Once for All Items).\n// A tap on the report's Yes / No (or on the teammate's \"Harsh can't be reached\" confirm), handed over by the bot's \"Who Is It\" as\n// { row_id, answer: yes | no | yesnr | cancel, by, user_id, chat_id }.\n// The rule (CLAUDE.md rule 2): applying the batch is Tier 2. One named yes covers ONE batch: Harsh's, or, when Harsh is not\n// reachable, a DTJ teammate's (an active person in dtj_bot_users), recorded as \"<name> (Harsh not reachable)\". So a teammate's Yes\n// first asks them to confirm that Harsh can't be reached. Harsh = the active bot user whose name has the word \"Harsh\".\n// A batch takes one answer: once it is answered, replaced by a newer report or 7 days old, its buttons only explain why not.\n// APPLY_ON false (shadow, Harsh's rule \"shadow first\"): a yes is recorded with its name and nothing is started; Harsh's yes turns it\n// on (n8n/seo-engine/README.md). Then a yes starts GitHub's \"SEO apply fixes\" with this batch's run, the name and the batch id.\n// Output: one item, action \"record\" (to \"Save the Answer\"), \"confirm\" (to \"Ask Who Approves\") or \"reply\" (to \"Send\").\nconst APPLY_ON = false;\nconst MAX_AGE_DAYS = 7;\nconst tap = $('Answer from the Bot').first().json || {};  // (this node's own input is the team rows)\nconst users = $('Load the Team').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst rows = $('Find the Batch').all().map((i) => i.json).filter((b) => b && b.batch_id);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chat = String(tap.chat_id || '');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: chat, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === String(tap.user_id || '').trim());\nif (!me) return reply('Only the DTJ team can answer the SEO fixes batch.');\nconst name = String(me.name || tap.by || '').trim();\nif (!name) return reply('Your name is missing in the team list (dtj_bot_users), so your answer cannot be recorded. Ask an admin to add it.');\nconst answer = String(tap.answer || '');\nif (!['yes', 'no', 'yesnr', 'cancel'].includes(answer)) return reply('That button is not valid any more.');\nconst row = rows.find((b) => Number(b.id) === Number(tap.row_id));\nif (!row) return reply('I cannot find that fixes batch any more.');\nconst label = 'batch ' + esc(row.batch_id) + ' (GitHub run ' + esc(row.run_id) + ')';\nif (answer === 'cancel') return reply('OK, nothing recorded. The buttons under the report still work.');\nif (row.status !== 'waiting') {\n  if (row.status === 'yes' || row.status === 'no') {\n    return reply('This ' + label + ' was already answered: ' + esc(row.status) + ' by ' + esc(row.answered_by) + ' on '\n      + esc(String(row.answered_at).slice(0, 16).replace('T', ' ')) + ' UTC. One answer per batch.');\n  }\n  return reply('There is nothing to approve in this ' + label + '.');\n}\nconst newest = Math.max(...rows.map((b) => Number(b.id) || 0));\nif (Number(row.id) < newest) {\n  return reply('This ' + label + ' was replaced by a newer report. Answer the newest one instead; nothing was recorded.');\n}\nconst made = Date.parse(row.made_at || row.received_at || '');\nif (!Number.isFinite(made) || Date.now() - made > MAX_AGE_DAYS * 86400000) {\n  return reply('This ' + label + ' is more than ' + MAX_AGE_DAYS + ' days old, so the site may have changed. Next Monday\\'s report brings a fresh batch.');\n}\nif (answer !== 'no' && row.can_approve !== true) return reply('There is nothing to approve in this ' + label + '.');\n\nconst isHarsh = /\\bharsh\\b/i.test(name);\nif (answer === 'yes' && !isHarsh) {\n  return [{ json: { action: 'confirm', chat_id: chat,\n    text: 'Applying this ' + label + ' needs Harsh\\'s yes. A teammate may say yes only when Harsh cannot be reached.\\n\\n'\n      + 'Is that the case now? Your yes is then recorded as \"' + esc(name) + ' (Harsh not reachable)\".',\n    yes_data: 'seo:yesnr:' + row.id, no_data: 'seo:cancel:' + row.id,\n    yes_text: 'Yes, Harsh can\\'t be reached', no_text: 'Cancel' } }];\n}\nconst yes = answer !== 'no';\nconst approvedBy = !yes ? '' : (isHarsh ? name : name + ' (Harsh not reachable)');\nconst now = new Date().toISOString();\nconst others = [...new Set(users.filter((u) => String(u.role || '').toLowerCase().trim() === 'admin')\n  .map((u) => String(u.telegram_user_id).trim()).filter((id) => id && id !== chat))];\nreturn [{ json: {\n  action: 'record', chat_id: chat, others, row_id: Number(row.id), batch_id: row.batch_id, run_id: String(row.run_id),\n  run_url: row.run_url, site: row.site, auto_changes: Number(row.auto_changes) || 0,\n  status: yes ? 'yes' : 'no', answered_by: name, approved_by: approvedBy, answered_at: now,\n  apply_status: yes ? (APPLY_ON ? 'apply requested (result in dtj_action_log)' : 'shadow: recorded, not applied') : 'not applied (no)',\n  dispatch: yes && APPLY_ON,\n  body: { ref: 'chore/initial-import', inputs: { run_id: String(row.run_id), approved_by: approvedBy, only: '', batch_id: row.batch_id } },\n} }];\n"
+   }
+  },
+  {
+   "id": "79885c82-ba4f-5d85-8b31-c51a3021422e",
+   "name": "Record or Reply",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    960,
+    700
+   ],
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "record",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "record"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "confirm",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "confirm"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "reply",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "reply"
+      }
+     ]
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "13237156-0637-5565-898a-b9a3cc9a7abb",
+   "name": "Save the Answer",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1200,
+    600
+   ],
+   "parameters": {
+    "operation": "update",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_seo_batches"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "id",
+       "condition": "eq",
+       "keyValue": "={{ $json.row_id }}"
+      },
+      {
+       "keyName": "status",
+       "condition": "eq",
+       "keyValue": "waiting"
+      }
+     ]
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "status": "={{ $json.status }}",
+      "answered_by": "={{ $json.answered_by }}",
+      "approved_by": "={{ $json.approved_by }}",
+      "answered_at": "={{ $json.answered_at }}",
+      "apply_status": "={{ $json.apply_status }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "status",
+       "displayName": "status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "answered_by",
+       "displayName": "answered_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "approved_by",
+       "displayName": "approved_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "answered_at",
+       "displayName": "answered_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "apply_status",
+       "displayName": "apply_status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "alwaysOutputData": true
+  },
+  {
+   "id": "784efafa-12ea-52db-be72-625b79caf9af",
+   "name": "Apply On?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1440,
+    600
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $('Decide the Answer').first().json.dispatch === true && !!$json.id }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "c10009dc-2ffc-5fa1-b0d9-ce2fbecf05fa",
+   "name": "Start SEO Apply",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1680,
+    520
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/workflows/seo-apply.yml/dispatches",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpBearerAuth",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Accept",
+       "value": "application/vnd.github+json"
+      },
+      {
+       "name": "X-GitHub-Api-Version",
+       "value": "2022-11-28"
+      },
+      {
+       "name": "User-Agent",
+       "value": "dtj-n8n-seo/1"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "json",
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($('Decide the Answer').first().json.body) }}",
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     },
+     "timeout": 30000
+    }
+   },
+   "onError": "continueRegularOutput",
+   "credentials": {
+    "httpBearerAuth": {
+     "name": "DTJ GitHub Actions"
+    }
+   }
+  },
+  {
+   "id": "73ee6728-5c79-5eed-973f-8fb6d8486f10",
+   "name": "Answer Messages",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1920,
+    600
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Answer Messages\" in \"SEO Engine: Weekly Report\" (mode: Run Once for All Items).\n// After the answer was saved on its dtj_seo_batches row (\"Save the Answer\" only passes when the row was still waiting, so two quick\n// taps cannot both count) and, when the apply switch is on, after \"Start SEO Apply\" (GitHub's answer, or its error).\n// Tells the person what happened and the other admins who answered. The first item also carries the action-log row (\"Log the\n// Answer\" runs once).\n// When \"Save the Answer\" matched no row, someone else answered a moment earlier: this tap is not counted (\"lost\").\n// \"Start SEO Apply\" keeps GitHub's answer (full response, never an error): 204 = the run was started.\n// Output: items { chat_id, text } for \"Send\"; the first has log.\nconst d = $('Decide the Answer').first().json;\nconst saved = $('Save the Answer').first().json || {};\nconst got = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst label = 'batch ' + esc(d.batch_id) + ' (GitHub run ' + esc(d.run_id) + ')';\nconst applyPage = 'https://github.com/harsh-shopify-dev/dtj-agency-automation/actions/workflows/seo-apply.yml';\nconst started = Number(got.statusCode) >= 200 && Number(got.statusCode) < 300;\nconst state = !saved.id ? 'lost' : (d.status === 'no' ? 'no' : (!d.dispatch ? 'shadow' : (started ? 'started' : 'failed')));\nconst why = got.error ? (got.error.message || got.error.description || JSON.stringify(got.error))\n  : ((got.body && got.body.message) || (got.statusCode ? 'GitHub answered ' + got.statusCode : 'no answer from GitHub'));\nconst err = state === 'failed' ? String(why).slice(0, 300) : (state === 'lost' ? 'someone else answered this batch a moment earlier' : '');\nlet mine;\nlet theirs;\nif (state === 'lost') {\n  mine = 'Someone else answered this ' + label + ' a moment ago, so your tap was not counted. One answer per batch.';\n  theirs = null;\n} else if (state === 'no') {\n  mine = 'Recorded: <b>no</b> to ' + label + ', from ' + esc(d.answered_by) + '. Nothing will be applied from this batch.';\n  theirs = esc(d.answered_by) + ' said <b>no</b> to the SEO fixes ' + label + '. Nothing will be applied.';\n} else if (state === 'shadow') {\n  mine = 'Recorded: <b>yes</b> to ' + label + ', approved by \"' + esc(d.approved_by) + '\".\\n\\n'\n    + 'Test mode (shadow): nothing was changed on the site. To apply it now, by hand: GitHub > Actions > \"SEO apply fixes\" > Run workflow, '\n    + 'run number ' + esc(d.run_id) + ', approved by \"' + esc(d.approved_by) + '\", batch ' + esc(d.batch_id) + '.\\n' + applyPage;\n  theirs = esc(d.approved_by) + ' said <b>yes</b> to the SEO fixes ' + label + '. Test mode: recorded only, nothing applied.';\n} else if (state === 'started') {\n  mine = 'Yes recorded for ' + label + ', approved by \"' + esc(d.approved_by) + '\". \"SEO apply fixes\" has started on GitHub: it applies the '\n    + d.auto_changes + ' change(s), checks each live page and keeps the old values for an undo.\\n' + applyPage;\n  theirs = esc(d.approved_by) + ' said <b>yes</b> to the SEO fixes ' + label + '. \"SEO apply fixes\" has started.';\n} else {\n  mine = 'Your yes for ' + label + ' is recorded, but GitHub did not start \"SEO apply fixes\": ' + esc(err) + '\\n'\n    + 'Nothing was changed on the site. Start it by hand: run number ' + esc(d.run_id) + ', approved by \"' + esc(d.approved_by) + '\", batch '\n    + esc(d.batch_id) + '.\\n' + applyPage;\n  theirs = esc(d.approved_by) + ' said <b>yes</b> to the SEO fixes ' + label + ', but GitHub did not start the apply run (see the bot chat).';\n}\nconst log = {\n  ts: new Date().toISOString(), run_id: String(d.run_id), client_id: 'dtj', automation: 'seo-engine-n8n', tier: 2,\n  mode: d.dispatch ? 'approve' : 'shadow', target: d.site + ' fixes batch ' + d.batch_id,\n  action: state === 'started' || state === 'failed' ? 'start SEO apply fixes' : 'record answer on fixes batch',\n  reason: 'Monday SEO report: one named yes per batch (CLAUDE.md rule 2)',\n  result: { lost: 'blocked', no: 'blocked', shadow: 'recommended', started: 'success', failed: 'failed' }[state],\n  evidence: JSON.stringify({ run_url: d.run_url, auto_changes: d.auto_changes, row_id: d.row_id }),\n  before: 'waiting', after: state === 'lost' ? 'not changed' : d.status, approved_by: d.approved_by || '', approved_at: d.status === 'yes' ? d.answered_at : '',\n  error: err,\n};\nconst out = [{ json: { chat_id: d.chat_id, text: mine, log } }];\nif (theirs) for (const chat of d.others || []) out.push({ json: { chat_id: chat, text: theirs } });\nreturn out;\n"
+   }
+  },
+  {
+   "id": "067c78f6-6213-5255-b4c7-cf056e282bca",
+   "name": "Log the Answer",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    2160,
+    440
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "",
+     "cachedResultName": "dtj_action_log"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "ts": "={{ $json.log.ts }}",
+      "run_id": "={{ $json.log.run_id }}",
+      "client_id": "={{ $json.log.client_id }}",
+      "automation": "={{ $json.log.automation }}",
+      "tier": "={{ $json.log.tier }}",
+      "mode": "={{ $json.log.mode }}",
+      "target": "={{ $json.log.target }}",
+      "action": "={{ $json.log.action }}",
+      "reason": "={{ $json.log.reason }}",
+      "result": "={{ $json.log.result }}",
+      "evidence": "={{ $json.log.evidence }}",
+      "before": "={{ $json.log.before }}",
+      "after": "={{ $json.log.after }}",
+      "approved_by": "={{ $json.log.approved_by }}",
+      "approved_at": "={{ $json.log.approved_at }}",
+      "error": "={{ $json.log.error }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "ts",
+       "displayName": "ts",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "run_id",
+       "displayName": "run_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "client_id",
+       "displayName": "client_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "automation",
+       "displayName": "automation",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "tier",
+       "displayName": "tier",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "mode",
+       "displayName": "mode",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "target",
+       "displayName": "target",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "action",
+       "displayName": "action",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reason",
+       "displayName": "reason",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "result",
+       "displayName": "result",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "evidence",
+       "displayName": "evidence",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "before",
+       "displayName": "before",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "after",
+       "displayName": "after",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "approved_by",
+       "displayName": "approved_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "approved_at",
+       "displayName": "approved_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "error",
+       "displayName": "error",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    },
+    "options": {}
+   },
+   "executeOnce": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "92c12349-5904-5232-9894-f628f6a6a6db",
+   "name": "Ask Who Approves",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1200,
+    820
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "replyMarkup": "inlineKeyboard",
+    "inlineKeyboard": {
+     "rows": [
+      {
+       "row": {
+        "buttons": [
+         {
+          "text": "={{ $json.yes_text }}",
+          "additionalFields": {
+           "callback_data": "={{ $json.yes_data }}"
+          }
+         },
+         {
+          "text": "={{ $json.no_text }}",
+          "additionalFields": {
+           "callback_data": "={{ $json.no_data }}"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "0be27f1b-0f43-5c3b-b379-fd1f3120674e",
+   "credentials": {
+    "telegramApi": {
+     "name": "DTJ Page Bot"
+    }
+   }
+  }
+ ],
+ "connections": {
+  "Report from GitHub": {
+   "main": [
+    [
+     {
+      "node": "Check the Report",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Check the Report": {
+   "main": [
+    [
+     {
+      "node": "Load Bot Users",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Bot Users": {
+   "main": [
+    [
+     {
+      "node": "Load Batches",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Batches": {
+   "main": [
+    [
+     {
+      "node": "Plan the Report",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Plan the Report": {
+   "main": [
+    [
+     {
+      "node": "Log the Report",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Save or Dead Letter",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save or Dead Letter": {
+   "main": [
+    [
+     {
+      "node": "Save the Batch",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Keep in Dead Letter",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save the Batch": {
+   "main": [
+    [
+     {
+      "node": "Report Messages",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Report Messages": {
+   "main": [
+    [
+     {
+      "node": "Message Kind",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Message Kind": {
+   "main": [
+    [
+     {
+      "node": "Send the Report File",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Ask Yes or No",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Keep in Dead Letter": {
+   "main": [
+    [
+     {
+      "node": "Dead Letter Alert",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Dead Letter Alert": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Answer from the Bot": {
+   "main": [
+    [
+     {
+      "node": "Find the Batch",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Find the Batch": {
+   "main": [
+    [
+     {
+      "node": "Load the Team",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load the Team": {
+   "main": [
+    [
+     {
+      "node": "Decide the Answer",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decide the Answer": {
+   "main": [
+    [
+     {
+      "node": "Record or Reply",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Record or Reply": {
+   "main": [
+    [
+     {
+      "node": "Save the Answer",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Ask Who Approves",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save the Answer": {
+   "main": [
+    [
+     {
+      "node": "Apply On?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Apply On?": {
+   "main": [
+    [
+     {
+      "node": "Start SEO Apply",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Answer Messages",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Start SEO Apply": {
+   "main": [
+    [
+     {
+      "node": "Answer Messages",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Answer Messages": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Log the Answer",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

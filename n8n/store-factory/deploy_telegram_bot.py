@@ -25,6 +25,7 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
                    yes (after Yes) -> Ask for the Website (Telegram's reply box: "Which website is the brand's own for brief N?")
                    no              -> Send
     site    -> Note the Website (dtj_client_intake.brand_website) -> Website Noted -> Send
+    seo     -> SEO Answer (the Monday SEO report's Yes / No: "SEO Engine: Weekly Report" checks, records and answers it itself)
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -48,6 +49,8 @@ NEW_PAGE = "Z3s9hqny1d2shvXT"
 BOT_USERS = "xJ9O19tBBmCJc1Hc"
 STORES = "QaOZ6MuvFLyft2y9"
 INTAKE = "7FWesTH7eVyLNuOQ"          # data table dtj_client_intake (the briefs)
+SEO_WORKFLOW = "SEO Engine: Weekly Report"  # n8n/seo-engine (deploy_seo_engine.py makes it); its answer lane takes the seo: taps
+SEO_INPUTS = (("row_id", "number"), ("answer", "string"), ("by", "string"), ("user_id", "string"), ("chat_id", "string"))
 CREDENTIAL = "DTJ Page Bot"                 # n8n Telegram API credential (the bot token)
 SWITCH_CREDENTIAL = "DTJ Catcher Bot Key"   # n8n Header Auth credential: name X-DTJ-Bot-Key, value = the catcher's BOT_KEY
 CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence"
@@ -414,6 +417,32 @@ def site_ops(telegram_id: str | None) -> list[dict]:
         ops.append({"type": "setNodeCredential", "nodeName": "Ask for the Website", "credentialKey": "telegramApi",
                     "credentialId": telegram_id, "credentialName": CREDENTIAL})
     return ops
+def seo_ops(seo_id: str) -> list[dict]:
+    """The Monday SEO report's Yes / No (19 Oct 2026): a seventh rule on "What to Do" hands the tap to "SEO Engine: Weekly Report"
+    (its "Answer from the Bot" lane checks the batch and the person, records the answer and replies); the reply branch moves to the
+    fallback output after it. The bot does not wait for it."""
+    values = {k: f"={{{{ $json.{k} }}}}" for k, _ in SEO_INPUTS}
+    schema = [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True, "canBeUsedToMatch": True, "type": t}
+              for k, t in SEO_INPUTS]
+    return [
+        _add("SEO Answer", "n8n-nodes-base.executeWorkflow", 1.3, [1320, 1440], {
+            "workflowId": {"__rl": True, "mode": "list", "value": seo_id, "cachedResultName": SEO_WORKFLOW},
+            "workflowInputs": {"mappingMode": "defineBelow", "value": values, "matchingColumns": [], "schema": schema,
+                               "attemptToConvertTypes": False, "convertFieldsToString": False},
+            "mode": "once", "options": {"waitForSubWorkflow": False}}),
+        {"type": "setNodeSettings", "nodeName": "SEO Answer", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
+                   for v in ("design", "switch", "intake", "stop", "brief", "site", "seo")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 6, "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 6, "target": "SEO Answer"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 7, "target": "Send"},
+    ]
+
+
+def find_seo() -> str | None:
+    found = [w for w in call("search_workflows", {"query": SEO_WORKFLOW}).get("data", []) if w.get("name") == SEO_WORKFLOW]
+    return found[0]["id"] if found else None
 
 
 def page_design_ops(live: dict) -> list[dict]:
@@ -480,7 +509,8 @@ def main(argv=None) -> int:
         print(sdk_code())
         for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
                            ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id")),
-                           ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id"))):
+                           ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id")),
+                           ("seo", seo_ops("seo-workflow-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -515,6 +545,14 @@ def main(argv=None) -> int:
                 ops = site_ops(credential_id(CREDENTIAL, "telegramApi"))
                 print("adding the website question:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Ask: the brand's own website"}).get("appliedOperations"), "operation(s)")
+            elif "SEO Answer" not in live_bot:
+                seo = find_seo()
+                if not seo:
+                    print(f"'{SEO_WORKFLOW}' is not on n8n yet: run python n8n/seo-engine/deploy_seo_engine.py --apply first")
+                    return 1
+                ops = [{"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}}] + seo_ops(seo)
+                print("adding the SEO report's Yes / No:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "SEO report: Yes / No for the fixes batch"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))
