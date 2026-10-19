@@ -7,6 +7,7 @@
 //   intake -> start a brand intake on GitHub ("Start Brand Intake")
 //   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs ("List Intakes"), then "Stop Plan"
 //   brief  -> the answer to "collect the brand's data first?" after a page was started: saved on the brief ("Note the Choice")
+//   seo    -> a tap on the Monday SEO report's Yes / No: handed to "SEO Engine: Weekly Report" ("SEO Answer"), which checks it
 //   reply  -> just answer
 const msg = $('Read the Message').first().json;
 if (msg.kind === 'ignore') return [];
@@ -65,6 +66,13 @@ if (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {
   const s = String(msg.data).match(/^stop:intake:(\d{1,20})$/);
   if (!s) return reply('That button is not valid any more.');
   return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];
+}
+// the Monday SEO fixes batch (19 Oct 2026): Yes / No under the report "SEO Engine: Weekly Report" sends to the admins, and the
+// teammate's "Harsh can't be reached" confirm. That workflow checks the batch, the person and the one-answer rule (CLAUDE.md rule 2).
+if (msg.kind === 'button' && String(msg.data || '').startsWith('seo:')) {
+  const s = String(msg.data).match(/^seo:(yes|no|yesnr|cancel):(\d{1,9})$/);
+  if (!s) return reply('That button is not valid any more.');
+  return [{ json: { action: 'seo', chat_id: msg.chat_id, row_id: Number(s[2]), answer: s[1], by: myName, user_id: msg.user_id } }];
 }
 if (msg.kind === 'nolink') {
   return reply('Please send a product link from the shop\'s website (it has /products/ in it). You can add a note after the link.');

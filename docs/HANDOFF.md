@@ -7,6 +7,31 @@ Update this file at the end of every working session (Harsh's rule).
 
 ---------------------------------------------------------------------------------------------------
 
+## SEO REPORT IN TELEGRAM WITH ONE YES PER BATCH (19 Oct 2026; `n8n/seo-engine/README.md`; branch feature/seo-telegram-approval)
+Harsh asked whether the SEO automation is ready in n8n: it was not (docs/seo-aeo/README.md, open item 6). Built in **shadow**:
+- **GitHub side:** `seo-weekly.yml`'s last step, `n8n/seo-engine/notify_n8n.py`, sends the report and the batch to the n8n webhook
+  `dtj-seo-weekly`. It is signed with an HS256 JWT (secret `N8N_SEO_REPORT_KEY`) covering the SHA-256 of the content.
+  `seo-apply.yml` has a new optional input `batch_id`: it refuses any other batch.
+- **Both workflow files and docs/seo-aeo/README.md are committed for the first time on this branch.** They were untracked in the
+  main checkout. The engine itself is PR #2.
+- **n8n:** workflow **SEO Engine: Weekly Report** (id `HRBXGVOXWBbmkHsn`, created 19 Oct, **NOT published**) and new data tables
+  `dtj_seo_batches` (`r6OGdkkdcyqUnQ43`), `dtj_dead_letter` (`XpetQItJgTWTAGZP`) and `dtj_action_log` (`Y5yAUEj1aY5JtKj8`).
+  - Lane 1: signature claims + schema check → the dead letter, or the report to the active admins with Yes / No.
+  - Lane 2: the answer rules. Harsh, or a teammate "(Harsh not reachable)" after a confirm; one answer per batch; newest batch only;
+    at most 7 days old.
+- **The bot:** `bot_route.js` routes `seo:` buttons; `deploy_telegram_bot.py` adds "SEO Answer" to the bot. **Not deployed to the
+  bot yet.**
+- **Open, each needs a person:**
+  1. `deploy_seo_engine.py --new-key` (GitHub secret + laptop variable; keep a copy in Bitwarden).
+  2. The n8n credential JWT Auth "DTJ SEO Report Key".
+  3. `deploy_telegram_bot.py`.
+  4. Harsh's yes to publish both.
+  5. Merge PR #2 + this PR.
+  6. Later, Harsh's yes to set `APPLY_ON = true` (then a yes starts "SEO apply fixes" itself).
+- **Verified:** 33 tests (sample = the 14 Oct run), 9 safety mutations caught; the store-factory suite (101) still OK; test executions
+  in n8n with every writing/sending node pinned. **Not verified:** a real webhook call through n8n's JWT check, a real Telegram
+  message or tap, a real GitHub dispatch of seo-apply.
+
 ## BRAND INTAKE INTO GOOGLE DRIVE (19 Oct 2026; skill `.claude/skills/dtj-brand-intake`)
 Harsh: "a scraper which will scrape all the product images max to only 20 products ... and a file that contains the details of the
 brand and brand color palette", then "uploads to the google drive", "no workspace, go with a dedicated dtj gmail and github actions,

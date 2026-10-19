@@ -1,0 +1,109 @@
+# DTJ SEO/AEO engine: every Monday 09:00 IST (and by hand from the Actions tab). See docs/seo-aeo/README.md.
+# Safe by default: without the repository variable SEO_LIVE=true it only checks the site (free) and plans.
+# Secrets (Settings > Secrets and variables > Actions), copied from DTJ's Bitwarden vault, never written anywhere else:
+#   ANTHROPIC_API_KEY, DATAFORSEO_LOGIN, DATAFORSEO_PASSWORD, WP_USER, WP_APP_PASSWORD
+# Variables: SEO_LIVE (true = AI and data steps), DFS_MAX_USD (DataForSEO cap per run, default 3), AUTOMATION_ENABLED, SEO_DRY_RUN,
+#   SEO_MODE (shadow | approve).
+# The report then goes to DTJ's Telegram bot through n8n ("SEO Engine: Weekly Report"), signed with the secret N8N_SEO_REPORT_KEY
+# (optional variable N8N_SEO_WEBHOOK_URL); without that secret it is not sent and the run still passes. See n8n/seo-engine/README.md.
+# The Thursday run only keeps the saved state alive (GitHub drops caches unused for 7 days). Scheduled runs use the default branch.
+name: SEO weekly
+
+on:
+  schedule:
+    - cron: "30 3 * * 1"   # Monday 09:00 IST: the weekly run
+    - cron: "30 3 * * 4"   # Thursday: keep the saved state alive, nothing else
+  workflow_dispatch:
+    inputs:
+      refresh_keywords:
+        description: "Redo the keyword plan now (paid, inside DFS_MAX_USD)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-weekly
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      KEEPALIVE: ${{ github.event.schedule == '30 3 * * 4' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore what was already written (state, keyword plan, city pages)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .work/seo/state.json
+            .work/seo/keyword_plan.json
+            .work/seo/city-pages
+          key: seo-state-${{ github.run_id }}
+          restore-keys: seo-state-
+
+      - uses: actions/setup-python@v5
+        if: env.KEEPALIVE != 'true'
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        if: env.KEEPALIVE != 'true'
+        run: pip install -r services/seo-engine/requirements.txt
+
+      - name: Tests
+        if: env.KEEPALIVE != 'true'
+        working-directory: services/seo-engine
+        run: python -m unittest discover -s tests
+
+      - name: Weekly run
+        if: env.KEEPALIVE != 'true'
+        working-directory: services/seo-engine
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DATAFORSEO_LOGIN: ${{ secrets.DATAFORSEO_LOGIN }}
+          DATAFORSEO_PASSWORD: ${{ secrets.DATAFORSEO_PASSWORD }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          DFS_MAX_USD: ${{ vars.DFS_MAX_USD }}
+          AUTOMATION_ENABLED: ${{ vars.AUTOMATION_ENABLED }}
+          SEO_DRY_RUN: ${{ vars.SEO_DRY_RUN }}
+          SEO_MODE: ${{ vars.SEO_MODE }}
+        run: |
+          ARGS=""
+          if [ "${{ vars.SEO_LIVE }}" = "true" ]; then ARGS="--live"; fi
+          if [ "${{ inputs.refresh_keywords }}" = "true" ]; then ARGS="$ARGS --refresh-keywords"; fi
+          python -m seo_engine.run_weekly $ARGS | tee run.log
+          echo "Run number for 'SEO apply fixes': ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          sed -n '1,/^Files:/p' run.log | head -n -1 >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remember what was written
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .work/seo/state.json
+            .work/seo/keyword_plan.json
+            .work/seo/city-pages
+          key: seo-state-${{ github.run_id }}
+
+      - name: Keep the report, fixes batch, drafts and action log
+        if: always() && env.KEEPALIVE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-report
+          path: .work/seo/
+          retention-days: 90
+
+      # After the upload, so "SEO apply fixes" can already download this run's batch when someone says yes in Telegram.
+      - name: Send the report to the bot (n8n, signed)
+        if: success() && env.KEEPALIVE != 'true'
+        env:
+          N8N_SEO_REPORT_KEY: ${{ secrets.N8N_SEO_REPORT_KEY }}
+          N8N_SEO_WEBHOOK_URL: ${{ vars.N8N_SEO_WEBHOOK_URL }}
+          SEO_MODE: ${{ vars.SEO_MODE }}
+        run: python n8n/seo-engine/notify_n8n.py --run-id "${{ github.run_id }}" | tee -a "$GITHUB_STEP_SUMMARY"

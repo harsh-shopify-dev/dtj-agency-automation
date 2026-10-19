@@ -1,0 +1,167 @@
+{
+ "id": "fix-2026-10-14",
+ "made_at": "2026-10-14T11:51:02.115271+00:00",
+ "site": "https://digitaltusharjoshi.com",
+ "source": "https://digitaltusharjoshi.com/sitemap_index.xml and each listed page, fetched by site_scan.py",
+ "changes": [
+  {
+   "cid": "c001",
+   "kind": "noindex",
+   "url": "https://digitaltusharjoshi.com/elementor-hf/footer/",
+   "before": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+   "after": "noindex",
+   "reason": "a theme building block (header/footer template) is listed for Google as a page (it leaves the sitemap once hidden)",
+   "how": "auto"
+  },
+  {
+   "cid": "c002",
+   "kind": "noindex",
+   "url": "https://digitaltusharjoshi.com/elementor-hf/header/",
+   "before": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+   "after": "noindex",
+   "reason": "a theme building block (header/footer template) is listed for Google as a page (it leaves the sitemap once hidden)",
+   "how": "auto"
+  },
+  {
+   "cid": "c003",
+   "kind": "noindex",
+   "url": "https://digitaltusharjoshi.com/sample-page/",
+   "before": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+   "after": "noindex",
+   "reason": "WordPress's default page is listed for Google (it leaves the sitemap once hidden)",
+   "how": "auto"
+  },
+  {
+   "cid": "c004",
+   "kind": "site_jsonld",
+   "url": "https://digitaltusharjoshi.com/",
+   "before": null,
+   "after": {
+    "@context": "https://schema.org",
+    "@graph": [
+     {
+      "@type": "Organization",
+      "@id": "https://digitaltusharjoshi.com/#organization",
+      "name": "Digital Tushar Joshi",
+      "alternateName": "DTJ",
+      "url": "https://digitaltusharjoshi.com/",
+      "founder": {
+       "@type": "Person",
+       "name": "Tushar Joshi"
+      }
+     },
+     {
+      "@type": "ProfessionalService",
+      "@id": "https://digitaltusharjoshi.com/#office-rajkot",
+      "name": "Digital Tushar Joshi (Rajkot head office)",
+      "url": "https://digitaltusharjoshi.com/contact-us/",
+      "telephone": "+91 9737888822",
+      "parentOrganization": {
+       "@id": "https://digitaltusharjoshi.com/#organization"
+      },
+      "address": {
+       "@type": "PostalAddress",
+       "streetAddress": "1124, RK Empire, Mavdi Chowkdi, 150ft. Ring Road, Rajkot",
+       "addressLocality": "Rajkot",
+       "addressRegion": "Gujarat",
+       "addressCountry": "IN"
+      }
+     },
+     {
+      "@type": "ProfessionalService",
+      "@id": "https://digitaltusharjoshi.com/#office-ahmedabad",
+      "name": "Digital Tushar Joshi (Ahmedabad)",
+      "url": "https://digitaltusharjoshi.com/contact-us/",
+      "telephone": "+91 9737888822",
+      "parentOrganization": {
+       "@id": "https://digitaltusharjoshi.com/#organization"
+      },
+      "address": {
+       "@type": "PostalAddress",
+       "streetAddress": "619, Shivalik Shilp - II, opp. ITC Hotel, Satellite, Ahmedabad",
+       "addressLocality": "Ahmedabad",
+       "addressRegion": "Gujarat",
+       "addressCountry": "IN"
+      }
+     }
+    ]
+   },
+   "reason": "no Organization or office data on the home page; one entry per real office (Rajkot, Ahmedabad)",
+   "how": "auto"
+  },
+  {
+   "cid": "c005",
+   "kind": "manual",
+   "url": "https://digitaltusharjoshi.com/llms.txt",
+   "before": null,
+   "after": null,
+   "reason": "llms.txt is made by Yoast from the site title and tagline: an administrator changes the tagline in Settings > General to a plain line (e.g. 'Performance marketing for D2C brands'). DTJ decides the wording.",
+   "how": "manual",
+   "rule": "llms-txt-claim",
+   "pages": 1
+  },
+  {
+   "cid": "c006",
+   "kind": "manual",
+   "url": "https://digitaltusharjoshi.com/author/dream-dev/",
+   "before": null,
+   "after": null,
+   "reason": "Yoast > Settings > Advanced > Author archives: off; and credit posts to a real person or 'DTJ Team' (Users > the author's display name). Needs an administrator.",
+   "how": "manual",
+   "rule": "author-archive",
+   "pages": 1
+  },
+  {
+   "cid": "c007",
+   "kind": "manual",
+   "url": "https://digitaltusharjoshi.com/about-us/, https://digitaltusharjoshi.com/blogs/, https://digitaltusharjoshi.com/career/, https://digitaltusharjoshi.com/case-studies/, https://digitaltusharjoshi.com/contact-us/, https://digitaltusharjoshi.com/ecommerce-marketing-agency-in-india/, https://digitaltusharjoshi.com/how-to-scale-d2c-brands-using-meta-ads-from-%e2%82%b91-lakh-to-%e2%82%b91-crore-per-month/, https://digitaltusharjoshi.com/indias-best-performance-marketing-agency-why-dtj-leads-the-digital-growth-revolution-in-india/, https://digitaltusharjoshi.com/influencer-marketing-agency-in-india/, ",
+   "before": null,
+   "after": null,
+   "reason": "These pages need exactly one main heading (H1): in Elementor, set the page's top heading to H1 and the others to H2.",
+   "how": "manual",
+   "rule": "h1-count",
+   "pages": 18
+  },
+  {
+   "cid": "c008",
+   "kind": "manual",
+   "url": "https://digitaltusharjoshi.com/about-us/, https://digitaltusharjoshi.com/career/, https://digitaltusharjoshi.com/case-studies/, https://digitaltusharjoshi.com/contact-us/, https://digitaltusharjoshi.com/ecommerce-marketing-agency-in-india/, https://digitaltusharjoshi.com/how-to-scale-d2c-brands-using-meta-ads-from-%e2%82%b91-lakh-to-%e2%82%b91-crore-per-month/, https://digitaltusharjoshi.com/influencer-marketing-agency-in-india/, https://digitaltusharjoshi.com/portfolio/, https://digitaltusharjoshi.com/privacy-policy/, https://digitaltusharjoshi.com/sample-page/, https://digitaltusharjoshi.com",
+   "before": null,
+   "after": null,
+   "reason": "Add 3-5 founder questions as headings, each answered in its first sentence.",
+   "how": "manual",
+   "rule": "no-question-headings",
+   "pages": 13
+  },
+  {
+   "cid": "c009",
+   "kind": "manual",
+   "url": "https://digitaltusharjoshi.com/blogs/, https://digitaltusharjoshi.com/portfolio/, https://digitaltusharjoshi.com/sample-page/",
+   "before": null,
+   "after": null,
+   "reason": "Say more on these pages: proof, steps and FAQs.",
+   "how": "manual",
+   "rule": "thin-page",
+   "pages": 3
+  },
+  {
+   "cid": "c010",
+   "kind": "manual",
+   "url": "blog posts with claims",
+   "before": null,
+   "after": null,
+   "reason": "Two posts make claims we can't source ('India's Best ... Agency', 'Why 90% of D2C Brands Fail'): DTJ decides to keep, reword or remove them. The engine never touches them.",
+   "how": "manual",
+   "rule": "claims"
+  }
+ ],
+ "notes": [
+  "15 pages need a new title or description: written on a live run (needs the Claude API key).",
+  "10 images need alt text: written on a live run."
+ ],
+ "counts": {
+  "auto": 4,
+  "blocked": 0,
+  "manual": 6
+ }
+}

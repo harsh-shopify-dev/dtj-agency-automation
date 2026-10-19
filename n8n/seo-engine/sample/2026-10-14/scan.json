@@ -1,0 +1,18 @@
+{
+ "scanned_at": "2026-10-14T11:51:02.116202+00:00",
+ "source": "https://digitaltusharjoshi.com/sitemap_index.xml and each listed page, fetched by site_scan.py",
+ "pages_in_sitemap": 24,
+ "counts": {
+  "high": 3,
+  "medium": 52,
+  "low": 49
+ },
+ "coverage": {
+  "complete": true,
+  "unreadable_sitemaps": [],
+  "fewer_than_before": false,
+  "pages_read": 24,
+  "previous_pages": null
+ },
+ "note": "Trimmed copy of the 14 Oct 2026 free run (.work/seo/2026-10-14/scan.json): counts only, the pages and findings left out; coverage added in the format the sitemap fix (PR #2) writes."
+}

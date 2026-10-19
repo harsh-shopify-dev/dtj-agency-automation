@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://schemas/seo-weekly-report.schema.json",
+  "title": "Monday SEO report from GitHub to n8n (the signed 'content' of n8n/seo-engine/notify_n8n.py)",
+  "description": "Checked by the n8n Code node 'Check the Report' (n8n/seo-engine/check_report.js); the tests keep both in step.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repo", "run_id", "run_url", "ref", "made_at", "site", "scan", "batch", "report_md"],
+  "properties": {
+    "schema": { "const": "dtj-seo-weekly/1" },
+    "repo": { "type": "string", "maxLength": 200, "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "run_id": { "type": "string", "maxLength": 20, "pattern": "^[0-9]{1,20}$", "description": "The 'SEO weekly' run whose artifact holds fixes.json" },
+    "run_url": { "type": "string", "maxLength": 300, "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/runs/[0-9]{1,20}$" },
+    "ref": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "made_at": { "type": "string", "maxLength": 40, "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$" },
+    "site": { "type": "string", "maxLength": 200, "pattern": "^https://[^\\s]+$" },
+    "mode": { "enum": ["shadow", "approve", "auto"] },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pages", "high", "medium", "low", "complete"],
+      "properties": {
+        "pages": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 },
+        "complete": { "type": "boolean", "description": "false = the website check missed part of the site: no Yes button that week" },
+        "warning": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "counts", "changes", "manual", "notes"],
+      "properties": {
+        "id": { "type": "string", "maxLength": 40, "pattern": "^fix-[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["auto", "blocked", "manual"],
+          "properties": {
+            "auto": { "type": "integer", "minimum": 0 },
+            "blocked": { "type": "integer", "minimum": 0 },
+            "manual": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "changes": {
+          "type": "array",
+          "maxItems": 200,
+          "description": "The changes a yes would apply (how=auto) and those the checks stopped (how=blocked); the count of auto ones must equal counts.auto",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cid", "kind", "url", "before", "after", "how"],
+            "properties": {
+              "cid": { "type": "string", "maxLength": 6, "pattern": "^c[0-9]{3,5}$" },
+              "kind": { "type": "string", "maxLength": 40, "pattern": "^[a-z_]{1,40}$" },
+              "url": { "type": "string", "minLength": 1, "maxLength": 500 },
+              "before": { "type": ["string", "null"], "maxLength": 600 },
+              "after": { "type": "string", "maxLength": 600 },
+              "how": { "enum": ["auto", "blocked"] },
+              "why": { "type": "string", "maxLength": 600 }
+            }
+          }
+        },
+        "manual": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 600 } },
+        "notes": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 600 } }
+      }
+    },
+    "report_md": { "type": "string", "minLength": 1, "maxLength": 60000 }
+  }
+}
