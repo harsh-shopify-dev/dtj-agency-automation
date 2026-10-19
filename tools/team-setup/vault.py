@@ -37,7 +37,10 @@ PERSONAL = {"N8N_MCP_TOKEN"}
 KNOWN = {"DTJ_CATCHER_VAULT_KEY", "DTJ_CATCHER_CONTROL_KEY", "DTJ_CATCHER_BOT_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID",
          "DTJ_BLOCKS_CLIENT_SECRET", "DTJ_SECTIONS_CLIENT_SECRET", "DTJ_SECTIONS2_CLIENT_SECRET",
          # n8n/store-factory/setup_n8n.py --apply builds the bot's n8n credentials from these (n8n API key: n8n > Settings > n8n API)
-         "DTJ_TELEGRAM_BOT_TOKEN", "N8N_API_KEY"}
+         "DTJ_TELEGRAM_BOT_TOKEN", "N8N_API_KEY",
+         # the brand intake (19 Oct 2026): DTJ's Google Drive login (page_builder/drive_upload.py --authorize) and the GitHub token n8n
+         # uses to start the "Brand intake" workflow (/intake in the bot)
+         "DTJ_GDRIVE_CLIENT_ID", "DTJ_GDRIVE_CLIENT_SECRET", "DTJ_GDRIVE_REFRESH_TOKEN", "DTJ_GITHUB_ACTIONS_TOKEN"}
 PATTERNS = (re.compile(r"^DTJ_THEME_ACCESS_[A-Z0-9_]+$"), re.compile(r"^DTJ_SECRET_[A-Z0-9_]+_(BLOCKS|SECTIONS|SECTIONS2)$"))
 NOTE = "Store factory key ({what}). Managed with tools/team-setup/vault.py; see docs/ACCESS-AND-KEYS.md. Never paste it into a chat."
 
@@ -63,6 +66,10 @@ def what(name: str) -> str:
         return "client secret of a client's app copy"
     if name == "DTJ_TELEGRAM_BOT_TOKEN":
         return "the token of @DtjPageDesignerBot, from @BotFather"
+    if name.startswith("DTJ_GDRIVE_"):
+        return "DTJ's Google Drive login for the brand intake (dtjharshsharma@gmail.com; drive_upload.py --authorize)"
+    if name == "DTJ_GITHUB_ACTIONS_TOKEN":
+        return "GitHub token that lets n8n start the Brand intake workflow (/intake)"
     if name == "N8N_API_KEY":
         return "n8n API key: lets the setup create the bot's n8n credentials"
     if name.startswith("DTJ_CATCHER_"):

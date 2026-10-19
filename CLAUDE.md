@@ -62,7 +62,9 @@ A new page is started in n8n with **Store Factory: New Page** (just a product li
 with `python tools/team-setup/check_setup.py`.
 **Setting everything up** (laptop, n8n, the app switch) and **"listen for the telegram call"** (wait for bot requests and design
 each one while a person is at the laptop): the skill `dtj-factory-setup`.
-**A new shop** (a client's store or one in DTJ's own Shopify organization): the skill `dtj-add-shop`. The page to share with a
+**A new shop** (a client's store or one in DTJ's own Shopify organization): the skill `dtj-add-shop`.
+**A brand intake before a redesign** (the client's public pictures, videos, colours and details into DTJ's Google Drive; also
+`/intake` in the bot): the skill `dtj-brand-intake`. The page to share with a
 new teammate: `docs/START-HERE.md`.
 
 ## `/start-dtj-engine`

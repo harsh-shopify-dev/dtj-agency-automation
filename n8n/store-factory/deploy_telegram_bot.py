@@ -5,7 +5,8 @@
                                                                            once, or refresh the code nodes; add Page Design's
                                                                            "Tell the Requester" + "Send Result"
     python n8n/store-factory/deploy_telegram_bot.py --attach-credential   put the saved credentials on their nodes: Telegram API
-                                                                           "DTJ Page Bot" and Header Auth "DTJ Catcher Bot Key"
+                                                                           "DTJ Page Bot", Header Auth "DTJ Catcher Bot Key" and
+                                                                           Bearer Auth "DTJ GitHub Actions"
 
 Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is It -> What to Do
     design  -> Ask New Page (Store Factory: New Page, waits for its answer) -> Write the Answers -> Send
@@ -13,6 +14,8 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
                    licence -> Licence Calls -> Ask the Switch (install catcher /licence, bot key) -> Licence Report -> Send
                    confirm -> Ask to Confirm (the "Yes, switch ..." / "Cancel" buttons)
                    reply   -> Send
+    intake  -> Start Brand Intake (GitHub: run the "Brand intake" workflow) -> Intake Started -> Send
+               (the GitHub run answers in the chat itself with the Drive link: .github/workflows/brand-intake.yml)
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -38,8 +41,11 @@ STORES = "QaOZ6MuvFLyft2y9"
 CREDENTIAL = "DTJ Page Bot"                 # n8n Telegram API credential (the bot token)
 SWITCH_CREDENTIAL = "DTJ Catcher Bot Key"   # n8n Header Auth credential: name X-DTJ-Bot-Key, value = the catcher's BOT_KEY
 CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence"
+GITHUB_CREDENTIAL = "DTJ GitHub Actions"   # n8n Bearer Auth credential: a GitHub token allowed to start this repo's workflows
+INTAKE_RUN = ("https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/workflows/brand-intake.yml/dispatches")
 CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
-              "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js"}
+              "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js",
+              "Intake Started": "intake_started.js"}
 SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
@@ -226,6 +232,36 @@ def directory_ops(switch_key: str | None) -> list[dict]:
     return ops
 
 
+def intake_ops(github_id: str | None) -> list[dict]:
+    """/intake <store> (19 Oct 2026, Harsh: "scrapes everything and uploads to the google drive", run on GitHub Actions): a third rule
+    on "What to Do"; the reply branch moves to the fallback output after it."""
+    ops: list[dict] = [
+        {"type": "updateNodeParameters", "nodeName": "Read the Message", "parameters": {"jsCode": code("bot_read.js")}},
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v} for v in ("design", "switch", "intake")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 2, "target": "Send"},
+        _add("Start Brand Intake", "n8n-nodes-base.httpRequest", 4.2, [1320, 560], {
+            "method": "POST", "url": INTAKE_RUN, "authentication": "genericCredentialType", "genericAuthType": "httpBearerAuth",
+            "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Accept", "value": "application/vnd.github+json"},
+                                                                     {"name": "X-GitHub-Api-Version", "value": "2022-11-28"},
+                                                                     {"name": "User-Agent", "value": "dtj-n8n-bot/1"}]},
+            "sendBody": True, "contentType": "json", "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.body) }}",
+            "options": {"response": {"response": {"fullResponse": True, "neverError": True}}, "timeout": 30000}}),
+        {"type": "setNodeSettings", "nodeName": "Start Brand Intake", "settings": {"onError": "continueRegularOutput"}},
+        _add("Intake Started", "n8n-nodes-base.code", 2, [1560, 560], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                       "jsCode": code("intake_started.js")}),
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 2, "target": "Start Brand Intake"},
+        {"type": "addConnection", "source": "Start Brand Intake", "target": "Intake Started"},
+        {"type": "addConnection", "source": "Intake Started", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 3, "target": "Send"},
+    ]
+    if github_id:
+        ops.append({"type": "setNodeCredential", "nodeName": "Start Brand Intake", "credentialKey": "httpBearerAuth",
+                    "credentialId": github_id, "credentialName": GITHUB_CREDENTIAL})
+    return ops
+
+
 def page_design_ops(live: dict) -> list[dict]:
     notify = code(NOTIFY_JS)
     if "Tell the Requester" in live:
@@ -269,6 +305,13 @@ def attach_credential() -> int:
         print(bot, call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"), "switch key attached")
     elif switch_nodes:
         print(f"no Header Auth credential named '{SWITCH_CREDENTIAL}' yet: the app switch has no key until Harsh creates it")
+    github = credential_id(GITHUB_CREDENTIAL, "httpBearerAuth")
+    if "Start Brand Intake" in live and github:
+        ops = [{"type": "setNodeCredential", "nodeName": "Start Brand Intake", "credentialKey": "httpBearerAuth", "credentialId": github,
+                "credentialName": GITHUB_CREDENTIAL}]
+        print(bot, call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"), "GitHub key attached")
+    elif "Start Brand Intake" in live:
+        print(f"no Bearer Auth credential named '{GITHUB_CREDENTIAL}' yet: /intake cannot start runs until it exists (setup_n8n.py --apply)")
     return 0
 
 
@@ -281,7 +324,8 @@ def main(argv=None) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if args.dry_run:
         print(sdk_code())
-        for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id"))):
+        for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
+                           ("intake", intake_ops("github-key-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -300,6 +344,10 @@ def main(argv=None) -> int:
                 ops = directory_ops(credential_id(SWITCH_CREDENTIAL, "httpHeaderAuth"))
                 print("adding the switch's shop list:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Switch: every shop the catcher reaches"}).get("appliedOperations"), "operation(s)")
+            elif "Start Brand Intake" not in live_bot:
+                ops = intake_ops(credential_id(GITHUB_CREDENTIAL, "httpBearerAuth"))
+                print("adding /intake:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Brand intake: /intake runs on GitHub"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))

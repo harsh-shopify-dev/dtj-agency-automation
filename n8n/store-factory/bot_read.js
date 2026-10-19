@@ -29,6 +29,10 @@ if (secret) return [{ json: { ...base, kind: 'secret' } }];
 
 if (/^\/(start|help)\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];
 
+// a brand intake before a redesign: /intake <the store's address> (19 Oct 2026; runs on GitHub, the Drive link comes back here)
+const intake = text.match(/^\/intake(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
+if (intake) return [{ json: { ...base, kind: 'intake', arg: String(intake[1] || '').trim().slice(0, 200) } }];
+
 // admin commands: /shops, /status <shop>, /on <shop>, /off <shop> (the bot's @name may follow the command)
 const cmd = text.match(/^\/(shops|status|on|off)(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
 if (cmd) return [{ json: { ...base, kind: 'command', command: cmd[1].toLowerCase(), arg: String(cmd[2] || '').trim().slice(0, 100) } }];

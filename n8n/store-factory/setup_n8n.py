@@ -30,6 +30,7 @@ Credentials from this laptop's keys: when one is missing on n8n, --apply creates
 header X-N8N-API-KEY) if this laptop has the Windows user variables N8N_API_KEY and the credential's own value:
     Telegram API "DTJ Page Bot"          accessToken = DTJ_TELEGRAM_BOT_TOKEN
     Header Auth "DTJ Catcher Bot Key"    name = X-DTJ-Bot-Key, value = DTJ_CATCHER_BOT_KEY
+    Bearer Auth "DTJ GitHub Actions"     token = DTJ_GITHUB_ACTIONS_TOKEN (a GitHub token that may start this repo's workflows: /intake)
 It first reads n8n's form for that credential type and refuses (says so, guesses nothing) if the form needs a field not listed here.
 The values go only into that one request body; they are never printed, logged or written, and are hidden in any error text.
 """
@@ -58,7 +59,7 @@ WORKFLOWS = {"Store Factory: Page Design": "page_design.workflow.json",
 DEPLOY = {"Store Factory: Page Design": "deploy_page_design.py (then deploy_telegram_bot.py for Tell the Requester / Send Result)",
           "Store Factory: New Page": "deploy_new_page.py",
           "Store Factory: Telegram Bot": "deploy_telegram_bot.py"}
-CREDENTIAL_LABELS = {"telegramApi": "Telegram API", "httpHeaderAuth": "Header Auth"}
+CREDENTIAL_LABELS = {"telegramApi": "Telegram API", "httpHeaderAuth": "Header Auth", "httpBearerAuth": "Bearer Auth"}
 NODE_SETTINGS = ("onError", "executeOnce", "alwaysOutputData", "retryOnFail", "maxTries", "waitBetweenTries")
 NODE_FIELDS = {"name", "type", "typeVersion", "position", "parameters", "credentials", "notes", "disabled",
                "id", "webhookId"} | set(NODE_SETTINGS)  # id and webhookId are not copied: n8n gives each node its own
@@ -77,7 +78,8 @@ USER_AGENT = "dtj-setup/1"
 # what each credential is made of: n8n's field -> "$NAME" (a Windows user variable on this laptop, read only when needed and never
 # printed) or a fixed text
 CREDENTIAL_RECIPES = {("telegramApi", "DTJ Page Bot"): {"accessToken": "$DTJ_TELEGRAM_BOT_TOKEN"},
-                      ("httpHeaderAuth", "DTJ Catcher Bot Key"): {"name": "X-DTJ-Bot-Key", "value": "$DTJ_CATCHER_BOT_KEY"}}
+                      ("httpHeaderAuth", "DTJ Catcher Bot Key"): {"name": "X-DTJ-Bot-Key", "value": "$DTJ_CATCHER_BOT_KEY"},
+                      ("httpBearerAuth", "DTJ GitHub Actions"): {"token": "$DTJ_GITHUB_ACTIONS_TOKEN"}}
 VAULT = "pull it from the vault: python tools/team-setup/vault.py pull"
 BOT = "@DtjPageDesignerBot"
 TELEGRAM_NUMBER = re.compile(r"^\d{5,15}$")

@@ -109,12 +109,12 @@ SPEC = {"dtj_client_intake": {"columns": [{"name": "status", "type": "string"}, 
         "dtj_bot_users": {"columns": [{"name": "telegram_user_id", "type": "string"}, {"name": "name", "type": "string"},
                                       {"name": "role", "type": "string"}, {"name": "active", "type": "boolean"}]}}
 CREDS = [{"id": "C-tg", "name": "DTJ Page Bot", "type": "telegramApi"}, {"id": "C-key", "name": "DTJ Catcher Bot Key", "type": "httpHeaderAuth"},
-         {"id": "C-other", "name": "Serper", "type": "httpHeaderAuth"}]
+         {"id": "C-gh", "name": "DTJ GitHub Actions", "type": "httpBearerAuth"}, {"id": "C-other", "name": "Serper", "type": "httpHeaderAuth"}]
 # made-up test values (not real shops, people or keys)
 SEED = [{"store_name": "Shop One", "myshopify_domain": "shop-one.myshopify.com", "active": True}]
 ADMIN = {"telegram_user_id": "900000001", "name": "Test Admin", "role": "admin", "active": True}
-API_KEY, BOT_TOKEN, BOT_KEY = "n8n-api-key-TEST-0001", "123456:TEST-bot-token-abcdef", "c" * 64
-KEYS = {"N8N_API_KEY": API_KEY, "DTJ_TELEGRAM_BOT_TOKEN": BOT_TOKEN, "DTJ_CATCHER_BOT_KEY": BOT_KEY}
+API_KEY, BOT_TOKEN, BOT_KEY, GH_TOKEN = "n8n-api-key-TEST-0001", "123456:TEST-bot-token-abcdef", "c" * 64, "github_pat_TEST_0001"
+KEYS = {"N8N_API_KEY": API_KEY, "DTJ_TELEGRAM_BOT_TOKEN": BOT_TOKEN, "DTJ_CATCHER_BOT_KEY": BOT_KEY, "DTJ_GITHUB_ACTIONS_TOKEN": GH_TOKEN}
 _real = {}
 
 
@@ -141,7 +141,9 @@ class FakeApi:
     FORMS = {"telegramApi": {"type": "object", "additionalProperties": False, "required": ["accessToken"],
                              "properties": {"accessToken": {"type": "string"}, "baseUrl": {"type": "string"}}},
              "httpHeaderAuth": {"type": "object", "additionalProperties": False, "required": ["name", "value"],
-                                "properties": {"name": {"type": "string"}, "value": {"type": "string"}}}}
+                                "properties": {"name": {"type": "string"}, "value": {"type": "string"}}},
+             "httpBearerAuth": {"type": "object", "additionalProperties": False, "required": ["token"],
+                                "properties": {"token": {"type": "string"}}}}
 
     def __init__(self, server, forms=None, post_status=200, post_answer=None):
         self.server, self.requests = server, []
@@ -533,7 +535,7 @@ class Apply(unittest.TestCase):
         ops = [op for t, a in fake.calls if t == "update_workflow" for op in a["operations"]]
         self.assertFalse([op for op in ops if op["type"] == "setNodeCredential" and op["nodeName"] == "Ask the Switch"])
         self.assertFalse([t for t in fake.tools() if "credential" in t and t != "list_credentials"])
-        self.assertEqual(len(fake.creds), 2)
+        self.assertEqual(len(fake.creds), len(CREDS) - 1)
         problems, text = run(setup.check, fake)
         self.assertIn("Ask the Switch: needs the Header Auth credential 'DTJ Catcher Bot Key': none attached", text)
         self.assertIn("create the Header Auth credential 'DTJ Catcher Bot Key' in n8n first", text)
@@ -696,6 +698,27 @@ class Credentials(unittest.TestCase):
         self.assertEqual(problems, 2, text)  # only publishing is left: the attachments changed Page Design's and the bot's drafts
         self.assertIn("[ok] n8n API key: works", text)
 
+    def test_the_github_key_for_intake_is_created_as_bearer_auth(self):
+        exports = copy.deepcopy(EXPORTS)
+        bot = exports["Store Factory: Telegram Bot"]
+        bot["nodes"].append(_node("Start Brand Intake", "n8n-nodes-base.httpRequest", 4.2, [1200, 480],
+                                  {"method": "POST", "url": "https://api.example/dispatches", "authentication": "genericCredentialType",
+                                   "genericAuthType": "httpBearerAuth"}, onError="continueRegularOutput",
+                                  credentials={"httpBearerAuth": {"id": "EXPORT-GH", "name": "DTJ GitHub Actions"}}))
+        fake = FakeN8n(creds=[c for c in CREDS if c["name"] != "DTJ GitHub Actions"])
+        fake.matching(exports=exports)
+        api = FakeApi(fake)
+        lines = []
+        setup.apply(fake, out=lines.append, exports=exports, spec=SPEC, env=keys(), http=api, seed=SEED)
+        text = "\n".join(lines)
+        self.assertEqual([b for _, _, _, b in api.posts()],
+                         [{"name": "DTJ GitHub Actions", "type": "httpBearerAuth", "data": {"token": GH_TOKEN}}])
+        self.assertIn("created credential DTJ GitHub Actions (Bearer Auth", text)
+        self.assertNotIn(GH_TOKEN, text)
+        wid = next(w["id"] for w in fake.workflows.values() if w["name"] == "Store Factory: Telegram Bot")
+        gh = next(c["id"] for c in fake.creds if c["name"] == "DTJ GitHub Actions")
+        self.assertEqual(fake.node(wid, "Start Brand Intake")["credentials"]["httpBearerAuth"]["id"], gh)
+
     def test_a_form_that_needs_more_fields_is_refused_and_nothing_is_created(self):
         fake = server_without("DTJ Page Bot")
         forms = copy.deepcopy(FakeApi.FORMS)
@@ -705,7 +728,7 @@ class Credentials(unittest.TestCase):
         self.assertEqual(api.posts(), [])
         self.assertIn("not created: n8n's Telegram API form needs baseUrl, which this tool does not fill (it guesses nothing)", text)
         self.assertGreater(left, 0)
-        self.assertEqual(len(fake.creds), 2)
+        self.assertEqual(len(fake.creds), len(CREDS) - 1)
 
     def test_a_form_without_one_of_our_fields_is_refused(self):
         fake = server_without("DTJ Catcher Bot Key")
