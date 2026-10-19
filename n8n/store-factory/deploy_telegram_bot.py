@@ -21,7 +21,10 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
                    cancel -> Cancel the Intake (GitHub: cancel that run) -> Stop Report -> Send
                    choose -> Ask to Stop (one message per running intake, each with a Stop button)
                    reply  -> Send
-    brief   -> Note the Choice (dtj_client_intake.brand_intake = yes | no) -> Choice Noted -> Send
+    brief   -> Note the Choice (dtj_client_intake.brand_intake = yes | no) -> Choice Noted -> Need the Website?
+                   yes (after Yes) -> Ask for the Website (Telegram's reply box: "Which website is the brand's own for brief N?")
+                   no              -> Send
+    site    -> Note the Website (dtj_client_intake.brand_website) -> Website Noted -> Send
     seo     -> SEO Answer (the Monday SEO report's Yes / No: "SEO Engine: Weekly Report" checks, records and answers it itself)
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
@@ -62,7 +65,7 @@ GITHUB_HEADERS = {"parameters": [{"name": "Accept", "value": "application/vnd.gi
 CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
               "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js",
               "Intake Started": "intake_started.js", "Stop Plan": "stop_plan.js", "Stop Report": "stop_report.js",
-              "Intake Question": "intake_question.js", "Choice Noted": "choice_noted.js"}
+              "Intake Question": "intake_question.js", "Choice Noted": "choice_noted.js", "Website Noted": "website_noted.js"}
 SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
@@ -370,15 +373,59 @@ def choice_ops(telegram_id: str | None) -> list[dict]:
     return ops
 
 
+def site_ops(telegram_id: str | None) -> list[dict]:
+    """The brand's own website after "Yes, collect it first" (19 Oct 2026, Harsh: "it didnt asked for the brand website link?"): the
+    question with Telegram's reply box, and a sixth rule on "What to Do" that saves the reply on the brief."""
+    intake_table = {"__rl": True, "mode": "list", "value": INTAKE, "cachedResultName": "dtj_client_intake"}
+    ops: list[dict] = [
+        {"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}}
+        for n, f in (("Read the Message", "bot_read.js"), ("Who Is It", "bot_route.js"), ("Choice Noted", "choice_noted.js"))
+    ] + [
+        _add("Need the Website?", "n8n-nodes-base.if", 2.2, [1800, 1040], {
+            "conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose"},
+                           "conditions": [{"leftValue": "={{ $json.site_question }}", "rightValue": True,
+                                           "operator": {"type": "boolean", "operation": "true", "singleValue": True}}],
+                           "combinator": "and"}, "options": {}}),
+        _add("Ask for the Website", "n8n-nodes-base.telegram", 1.2, [2040, 1000], {
+            "resource": "message", "operation": "sendMessage", "chatId": "={{ $json.chat_id }}", "text": "={{ $json.text }}",
+            "replyMarkup": "forceReply", "forceReply": {"force_reply": True}, "additionalFields": SEND_FIELDS}),
+        {"type": "setNodeSettings", "nodeName": "Ask for the Website", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
+                   for v in ("design", "switch", "intake", "stop", "brief", "site")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 5, "target": "Send"},
+        _add("Note the Website", "n8n-nodes-base.dataTable", 1.1, [1320, 1240], {
+            "operation": "update", "dataTableId": intake_table, "matchType": "allConditions",
+            "filters": {"conditions": [{"keyValue": "={{ $json.row_id }}"}]},
+            "columns": {"mappingMode": "defineBelow", "value": {"brand_website": "={{ $json.website }}"},
+                        "schema": [{"id": "brand_website", "displayName": "brand_website", "required": False, "defaultMatch": False,
+                                    "display": True, "type": "string", "canBeUsedToMatch": True}]},
+            "options": {}}),
+        {"type": "setNodeSettings", "nodeName": "Note the Website", "settings": {"alwaysOutputData": True, "onError": "continueRegularOutput"}},
+        _add("Website Noted", "n8n-nodes-base.code", 2, [1560, 1240], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                      "jsCode": code("website_noted.js")}),
+        {"type": "removeConnection", "source": "Choice Noted", "target": "Send"},
+        {"type": "addConnection", "source": "Choice Noted", "target": "Need the Website?"},
+        {"type": "addConnection", "source": "Need the Website?", "sourceIndex": 0, "target": "Ask for the Website"},
+        {"type": "addConnection", "source": "Need the Website?", "sourceIndex": 1, "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 5, "target": "Note the Website"},
+        {"type": "addConnection", "source": "Note the Website", "target": "Website Noted"},
+        {"type": "addConnection", "source": "Website Noted", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 6, "target": "Send"},
+    ]
+    if telegram_id:
+        ops.append({"type": "setNodeCredential", "nodeName": "Ask for the Website", "credentialKey": "telegramApi",
+                    "credentialId": telegram_id, "credentialName": CREDENTIAL})
+    return ops
 def seo_ops(seo_id: str) -> list[dict]:
-    """The Monday SEO report's Yes / No (19 Oct 2026): a sixth rule on "What to Do" hands the tap to "SEO Engine: Weekly Report"
+    """The Monday SEO report's Yes / No (19 Oct 2026): a seventh rule on "What to Do" hands the tap to "SEO Engine: Weekly Report"
     (its "Answer from the Bot" lane checks the batch and the person, records the answer and replies); the reply branch moves to the
     fallback output after it. The bot does not wait for it."""
     values = {k: f"={{{{ $json.{k} }}}}" for k, _ in SEO_INPUTS}
     schema = [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True, "canBeUsedToMatch": True, "type": t}
               for k, t in SEO_INPUTS]
     return [
-        _add("SEO Answer", "n8n-nodes-base.executeWorkflow", 1.3, [1320, 1240], {
+        _add("SEO Answer", "n8n-nodes-base.executeWorkflow", 1.3, [1320, 1440], {
             "workflowId": {"__rl": True, "mode": "list", "value": seo_id, "cachedResultName": SEO_WORKFLOW},
             "workflowInputs": {"mappingMode": "defineBelow", "value": values, "matchingColumns": [], "schema": schema,
                                "attemptToConvertTypes": False, "convertFieldsToString": False},
@@ -386,10 +433,10 @@ def seo_ops(seo_id: str) -> list[dict]:
         {"type": "setNodeSettings", "nodeName": "SEO Answer", "settings": {"onError": "continueRegularOutput"}},
         {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
          "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
-                   for v in ("design", "switch", "intake", "stop", "brief", "seo")]},
-        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 5, "target": "Send"},
-        {"type": "addConnection", "source": "What to Do", "sourceIndex": 5, "target": "SEO Answer"},
-        {"type": "addConnection", "source": "What to Do", "sourceIndex": 6, "target": "Send"},
+                   for v in ("design", "switch", "intake", "stop", "brief", "site", "seo")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 6, "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 6, "target": "SEO Answer"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 7, "target": "Send"},
     ]
 
 
@@ -428,7 +475,7 @@ def attach_credential() -> int:
         print("the bot workflow does not exist yet: run this script without --attach-credential first")
         return 1
     live = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
-    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop", "Ask About Intake") if n in live]
+    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop", "Ask About Intake", "Ask for the Website") if n in live]
     for wf, nodes in ((bot, tg_nodes), (PAGE_DESIGN, ["Send Result"])):
         ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": cid, "credentialName": CREDENTIAL}
                for n in nodes]
@@ -462,7 +509,8 @@ def main(argv=None) -> int:
         print(sdk_code())
         for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
                            ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id")),
-                           ("choice", choice_ops("telegram-credential-id")), ("seo", seo_ops("seo-workflow-id"))):
+                           ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id")),
+                           ("seo", seo_ops("seo-workflow-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -493,6 +541,10 @@ def main(argv=None) -> int:
                 ops = choice_ops(credential_id(CREDENTIAL, "telegramApi"))
                 print("adding the brand data question:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Ask: collect the brand data first?"}).get("appliedOperations"), "operation(s)")
+            elif "Note the Website" not in live_bot:
+                ops = site_ops(credential_id(CREDENTIAL, "telegramApi"))
+                print("adding the website question:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Ask: the brand's own website"}).get("appliedOperations"), "operation(s)")
             elif "SEO Answer" not in live_bot:
                 seo = find_seo()
                 if not seo:

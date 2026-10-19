@@ -430,10 +430,10 @@ class Bot(unittest.TestCase):
         bot = json.loads((HERE.parent / "store-factory" / "telegram_bot.workflow.json").read_text(encoding="utf-8"))
         nodes = {n["name"]: n for n in bot["nodes"]}
         rules = [r["outputKey"] for r in nodes["What to Do"]["parameters"]["rules"]["values"]]
-        self.assertEqual(rules, ["design", "switch", "intake", "stop", "brief", "seo"])
+        self.assertEqual(rules, ["design", "switch", "intake", "stop", "brief", "site", "seo"])
         outs = bot["connections"]["What to Do"]["main"]
-        self.assertEqual([t["node"] for t in outs[5]], ["SEO Answer"])
-        self.assertEqual([t["node"] for t in outs[6]], ["Send"])
+        self.assertEqual([t["node"] for t in outs[6]], ["SEO Answer"])
+        self.assertEqual([t["node"] for t in outs[7]], ["Send"])
         seo = nodes["SEO Answer"]["parameters"]
         self.assertEqual(seo["workflowId"]["cachedResultName"], build_workflow.NAME)
         self.assertEqual(set(seo["workflowInputs"]["value"]), {n for n, _ in build_workflow.INPUTS})

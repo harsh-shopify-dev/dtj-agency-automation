@@ -27,7 +27,15 @@ const secret = /\bshp(at|ca|ss|tka)_[0-9a-z]{8,}/i.test(text) || /\b[0-9]{8,10}:
   || /\b[0-9a-f]{32,}\b/i.test(text) || /\beyJ[A-Za-z0-9_-]{20,}\./.test(text) || /\bsk-ant-[A-Za-z0-9_-]{10,}/.test(text);
 if (secret) return [{ json: { ...base, kind: 'secret' } }];
 
+// a reply to the bot's "Which website is the brand's own for brief N?" (19 Oct 2026): the brand's website for that brief
+const asked = msg.reply_to_message || {};
+const forBrief = asked.from && asked.from.is_bot ? String(asked.text || '').match(/brand's own for brief (\d{1,9})\?/) : null;
+if (forBrief && text && !text.startsWith('/')) return [{ json: { ...base, kind: 'site', row_id: Number(forBrief[1]), arg: text.slice(0, 200) } }];
+
 if (/^\/(start|help)\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];
+
+// every command the bot knows, one line each (19 Oct 2026, Harsh: "create a command so it can show all the commands")
+if (/^\/(commands|menu)(?:@[A-Za-z0-9_]+)?\s*$/i.test(text)) return [{ json: { ...base, kind: 'commands' } }];
 
 // a brand intake before a redesign: /intake <the store's address> (19 Oct 2026; runs on GitHub, the Drive link comes back here)
 const intake = text.match(/^\/intake(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
