@@ -29,6 +29,9 @@ if (secret) return [{ json: { ...base, kind: 'secret' } }];
 
 if (/^\/(start|help)\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];
 
+// every command the bot knows, one line each (19 Oct 2026, Harsh: "create a command so it can show all the commands")
+if (/^\/(commands|menu)(?:@[A-Za-z0-9_]+)?\s*$/i.test(text)) return [{ json: { ...base, kind: 'commands' } }];
+
 // a brand intake before a redesign: /intake <the store's address> (19 Oct 2026; runs on GitHub, the Drive link comes back here)
 const intake = text.match(/^\/intake(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
 if (intake) return [{ json: { ...base, kind: 'intake', arg: String(intake[1] || '').trim().slice(0, 200) } }];

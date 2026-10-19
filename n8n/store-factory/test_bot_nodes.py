@@ -433,5 +433,43 @@ class ChoiceDeploy(unittest.TestCase):
         self.assertIn({"type": "setNodeCredential", "nodeName": "Ask About Intake", "credentialKey": "telegramApi", "credentialId": "tg-key",
                        "credentialName": "DTJ Page Bot"}, ops)
 
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class Commands(unittest.TestCase):
+    """/commands (19 Oct 2026, Harsh: "create a command so it can show all the commands in the bot available")."""
+
+    def ask(self, text, user):
+        msg = run_node("bot_read.js", update(text, user=user))["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD]})
+        self.assertTrue(res["ok"], res)
+        return msg, [i["json"] for i in res["out"]]
+
+    def test_everyone_on_the_bot_gets_the_list_and_only_admins_see_the_admin_part(self):
+        for text in ("/commands", "/menu", "/Commands@DtjPageDesignerBot"):
+            msg, out = self.ask(text, 111)
+            self.assertEqual(msg["kind"], "commands", text)
+        riya = out[0]["text"]
+        for must in ("a product link:", "/intake shop.com:", "/stop:", "/help:", "/commands:"):
+            self.assertIn(must, riya)
+        self.assertNotIn("/shops", riya)  # Riya is a requester
+        admin = self.ask("/commands", 333)[1][0]["text"]
+        for must in ("/shops:", "/status shop:", "/off shop and /on shop:"):
+            self.assertIn(must, admin)
+        self.assertIn("only for the DTJ team", self.ask("/commands", 999)[1][0]["text"])
+        self.assertIn("/commands lists everything I can do.", self.ask("/help", 111)[1][0]["text"])
+
+    def test_every_command_the_bot_reads_is_on_the_list(self):
+        import re  # noqa: PLC0415
+        from node_harness import HERE  # noqa: PLC0415
+        code = (HERE / "bot_read.js").read_text(encoding="utf-8")
+        known = set()
+        for group in re.findall(r"\^\\/\(?([a-z|]+)", code):  # the commands: patterns that start a message with "/"
+            known.update(c for c in group.split("|") if c)
+        self.assertGreaterEqual(len(known), 9, sorted(known))
+        known -= {"start", "menu"}  # /start = /help, /menu = /commands
+        admin = self.ask("/commands", 333)[1][0]["text"]
+        missing = [c for c in sorted(known) if "/" + c not in admin]
+        self.assertEqual(missing, [], "a command the bot reads is missing from /commands")
+
 if __name__ == "__main__":
     unittest.main()
