@@ -37,6 +37,7 @@ by Harsh.
 | **Cloudflare** | the install service (the app switch) | account with the workers.dev name `ultimateecomwithharsh`; owner **[unknown]** | the switch cannot be changed or redeployed | add a DTJ owner as Super Administrator now. Later, give the service a company web address, so a move never changes the address that every client app points at |
 | **Shopify Dev Dashboard organization** | DTJ's original apps and every client copy, with their secrets | organization **[unknown]**: Harsh to confirm which account owns the apps | no releases and no new clients | the organization owned by DTJ, at least two owners |
 | **Telegram bot** `@DtjPageDesignerBot` | the bot | created from Harsh's Telegram account | nobody can change the bot or get a new token | transfer the bot to a company owner in @BotFather (the bot's settings; **[verify]** the exact menu), and keep the token in the vault |
+| **Google (Drive + Cloud project "DTJ Brand Intake")** | the brand intakes (`DTJ Clients` folder) and the Google app that writes them | the dedicated Gmail dtjharshsharma@gmail.com (Harsh's choice, 19 Oct 2026) | nobody can sign the app in again; the intakes stay readable only by that Gmail | keep the Gmail's password and recovery in the vault; share `DTJ Clients` with a second DTJ account. Switching Gmail: `.claude/skills/dtj-brand-intake` |
 | **Claude** | the design sessions | the team's shared account | (already shared) | keep at least two admins |
 | **Each shop's Theme Access** | designers writing to draft themes | one password per person, per shop | that person's password stops working | the shop owner issues new ones (Part E of the team guide) |
 
@@ -54,6 +55,9 @@ by Harsh.
 | `N8N_MCP_TOKEN` | each person's laptop | each person, in n8n | make your own |
 | Telegram bot token | the n8n credential "DTJ Page Bot" | the bot's owner, in @BotFather | get a new one, paste it into the credential |
 | `DTJ_TELEGRAM_BOT_TOKEN`, `N8N_API_KEY` (vault items) | Bitwarden only (pulled to developer laptops) | the bot's owner / any n8n admin | make new ones, update the vault items |
+| `DTJ_GDRIVE_CLIENT_ID`, `DTJ_GDRIVE_CLIENT_SECRET`, `DTJ_GDRIVE_REFRESH_TOKEN` | Harsh's laptop (`drive_upload.py --authorize`); the vault; the repo's GitHub Actions secrets (`github_secrets.py push`) | whoever signs in to the Google project's Gmail | run `--authorize` again, then `vault.py push` and `github_secrets.py push` |
+| `DTJ_GITHUB_ACTIONS_TOKEN` | the vault; developer laptops; the n8n credential "DTJ GitHub Actions" (`/intake` in the bot) | any repo admin (a fine-grained token, Actions read and write on this repo only). It belongs to the GitHub account that made it and EXPIRES: expiry date **[fill in]** | make a new one, update the vault item, `vault.py pull --replace`, `setup_n8n.py --apply` |
+| `DTJ_TELEGRAM_BOT_TOKEN` in GitHub | the repo's Actions secrets (the brand intake answers in Telegram) | a developer | when the bot token changes: `github_secrets.py push DTJ_TELEGRAM_BOT_TOKEN` |
 | n8n's own encryption key | the n8n server | the server's owner | every n8n credential has to be made again |
 
 ## When someone leaves (checklist)
@@ -63,7 +67,9 @@ by Harsh.
 3. **Keys they held:**
    - Make new ones: `DTJ_CATCHER_CONTROL_KEY`, `DTJ_CATCHER_BOT_KEY` (then update the n8n credential), their Cloudflare token.
    - Have the shops revoke their Theme Access passwords.
-   - If they ran the Telegram bot: get a new bot token in @BotFather.
+   - If they ran the Telegram bot: get a new bot token in @BotFather (then also `github_secrets.py push DTJ_TELEGRAM_BOT_TOKEN`).
+   - If they made `DTJ_GITHUB_ACTIONS_TOKEN`: it dies with their GitHub access. Make a new one from another admin's account.
+   - If they owned the Drive Gmail: switch the Drive (`.claude/skills/dtj-brand-intake`, "Switching the Drive").
 4. **`DTJ_CATCHER_VAULT_KEY` cannot be changed today:** the stored store keys are locked with it. A new key would need a
    re-encryption step, which is not built yet. This is the reason it must live in the company vault and nowhere else.
 5. Update this page.

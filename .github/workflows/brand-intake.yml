@@ -1,0 +1,85 @@
+# Brand intake for a redesign (Harsh, 19 Oct 2026): reads a client's PUBLIC store (at most 20 products: their pictures and videos, the
+# logo, collections, policies, fonts, the theme's colours and a palette proposal) and puts it in DTJ's Google Drive:
+#   DTJ Clients / <brand> / Brand intake <date>
+# Started from the Telegram bot ("/intake <store>", through n8n) or by hand: Actions > Brand intake > Run workflow.
+# Reads public pages only and writes only to DTJ's Drive. Client files are NOT kept on GitHub (no artifacts, no cache).
+# Secrets (Settings > Secrets and variables > Actions): DTJ_GDRIVE_CLIENT_ID, DTJ_GDRIVE_CLIENT_SECRET, DTJ_GDRIVE_REFRESH_TOKEN
+# (made once with `python -m page_builder.drive_upload --authorize`), DTJ_TELEGRAM_BOT_TOKEN (to answer in Telegram).
+# To switch the Drive account later: run --authorize with the new Gmail and replace the three DTJ_GDRIVE_* secrets.
+name: Brand intake
+
+on:
+  workflow_dispatch:
+    inputs:
+      store:
+        description: "The store's address, e.g. freesoul.com or https://brand.com"
+        required: true
+      requested_by:
+        description: "Who asked (a name)"
+        required: false
+        default: ""
+      telegram_chat_id:
+        description: "Telegram chat to answer in (the bot fills it; leave empty when running by hand)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: brand-intake-${{ inputs.store }}
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: pip install -r services/store-builder/requirements.txt
+
+      - name: Check the address
+        env:
+          STORE: ${{ inputs.store }}
+        run: |
+          if ! printf '%s' "$STORE" | grep -Eq '^(https?://)?[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/[^ ]*)?$'; then
+            echo "Not a web address: $STORE"
+            exit 1
+          fi
+
+      - name: Read the store and upload to Drive
+        id: intake
+        working-directory: services/store-builder
+        env:
+          STORE: ${{ inputs.store }}
+          DTJ_GDRIVE_CLIENT_ID: ${{ secrets.DTJ_GDRIVE_CLIENT_ID }}
+          DTJ_GDRIVE_CLIENT_SECRET: ${{ secrets.DTJ_GDRIVE_CLIENT_SECRET }}
+          DTJ_GDRIVE_REFRESH_TOKEN: ${{ secrets.DTJ_GDRIVE_REFRESH_TOKEN }}
+        run: python -m page_builder.brand_intake "$STORE" --client "$RUNNER_TEMP/intake" --drive "DTJ Clients"
+
+      - name: Answer in Telegram
+        if: always() && inputs.telegram_chat_id != ''
+        env:
+          TOKEN: ${{ secrets.DTJ_TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ inputs.telegram_chat_id }}
+          STORE: ${{ inputs.store }}
+          WHO: ${{ inputs.requested_by }}
+          LINK: ${{ steps.intake.outputs.link }}
+          BRAND: ${{ steps.intake.outputs.brand }}
+          OUTCOME: ${{ steps.intake.outcome }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$OUTCOME" = "success" ] && [ -n "$LINK" ]; then
+            TEXT=$(printf 'Brand intake ready: %s (%s)\nDrive folder: %s\nOpen BRAND.md there first: colours, category and price tier are guesses to confirm.' "$BRAND" "$STORE" "$LINK")
+          else
+            TEXT=$(printf 'Brand intake for %s did not finish. A developer can see why here: %s' "$STORE" "$RUN")
+          fi
+          if [ -n "$WHO" ]; then TEXT=$(printf '%s\n(asked by %s)' "$TEXT" "$WHO"); fi
+          curl -sS -o /dev/null -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT}" --data-urlencode "text=${TEXT}" --data-urlencode "disable_web_page_preview=true"

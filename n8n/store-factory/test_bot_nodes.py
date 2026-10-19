@@ -97,6 +97,58 @@ class Bot(unittest.TestCase):
         self.assertEqual(run_node("notify_result.js", done, {"Load Brief": {"telegram_chat_id": ""}})["out"], [])  # not from Telegram
 
 
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class Intake(unittest.TestCase):
+    """/intake <store> (19 Oct 2026): the GitHub "Brand intake" run, answered in the chat with the Drive folder."""
+
+    def ask(self, text, user=111):
+        msg = run_node("bot_read.js", update(text, user=user))["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD]})
+        self.assertTrue(res["ok"], res)
+        return msg, [i["json"] for i in res["out"]]
+
+    def test_anyone_on_the_bot_starts_an_intake_with_the_store_and_their_chat(self):
+        msg, out = self.ask("/intake freesoul.com")
+        self.assertEqual((msg["kind"], msg["arg"]), ("intake", "freesoul.com"))
+        self.assertEqual(out[0]["action"], "intake")
+        self.assertEqual(out[0]["body"], {"ref": "chore/initial-import",
+                                          "inputs": {"store": "freesoul.com", "requested_by": "Riya", "telegram_chat_id": "111"}})
+
+    def test_no_address_or_a_bad_one_gets_an_example_and_nothing_starts(self):
+        for text in ("/intake", "/intake hello there", "/intake freesoul.com; rm -rf /"):
+            _, out = self.ask(text)
+            self.assertEqual(out[0]["action"], "reply", text)
+            self.assertIn("/intake freesoul.com", out[0]["text"], text)
+
+    def test_someone_not_on_the_bot_cannot_start_one(self):
+        _, out = self.ask("/intake freesoul.com", user=999)
+        self.assertEqual(out[0]["action"], "reply")
+        self.assertIn("only for the DTJ team", out[0]["text"])
+
+    def test_the_answer_says_started_or_why_not(self):
+        who = {"chat_id": "111", "store": "freesoul.com"}
+        ok = run_node("intake_started.js", {"statusCode": 204}, {"Who Is It": who})["out"][0]["json"]
+        self.assertIn("Started the brand intake for freesoul.com", ok["text"])
+        no = run_node("intake_started.js", {"statusCode": 404}, {"Who Is It": who})["out"][0]["json"]
+        self.assertIn("cannot find the \"Brand intake\" workflow", no["text"])
+        self.assertEqual(no["chat_id"], "111")
+
+
+class IntakeDeploy(unittest.TestCase):
+    def test_the_intake_branch_takes_the_third_output_and_the_reply_moves_to_the_fallback(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.intake_ops("gh-key")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules], ["design", "switch", "intake"])
+        links = [(o.get("sourceIndex"), o["target"]) for o in ops if o["type"] == "addConnection" and o["source"] == "What to Do"]
+        self.assertEqual(sorted(links), [(2, "Start Brand Intake"), (3, "Send")])
+        start = next(o["node"] for o in ops if o["type"] == "addNode" and o["node"]["name"] == "Start Brand Intake")
+        self.assertTrue(start["parameters"]["url"].endswith("/actions/workflows/brand-intake.yml/dispatches"))
+        self.assertEqual(start["parameters"]["genericAuthType"], "httpBearerAuth")
+        self.assertIn({"type": "setNodeCredential", "nodeName": "Start Brand Intake", "credentialKey": "httpBearerAuth",
+                       "credentialId": "gh-key", "credentialName": "DTJ GitHub Actions"}, ops)
+
+
 def button(data, user=333):
     return {"update_id": 2, "callback_query": {"id": "cb1", "data": data, "from": {"id": user, "first_name": "Harsh", "is_bot": False},
                                                "message": {"message_id": 9, "chat": {"id": user, "type": "private"}}}}

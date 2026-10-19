@@ -30,8 +30,21 @@ if (msg.kind === 'help') {
     + '- The link must have /products/ in it (not a Shopify admin link).\n'
     + '- Anything after the link is a note for the designer.\n'
     + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'
+    + '\n\nBefore a redesign: /intake shop.com collects the shop\'s pictures, videos, colours and details into Google Drive.'
     + (isAdmin ? '\n\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '
       + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));
+}
+// a brand intake (19 Oct 2026, Harsh: "scrapes everything and uploads to the google drive"): GitHub Actions runs it ("Brand intake"
+// workflow on the repo's default branch) and answers in this chat with the Drive folder's link. Anyone on the bot may ask.
+if (msg.kind === 'intake') {
+  const store = /^(https?:\/\/)?([A-Za-z0-9-]+\.)+[A-Za-z]{2,}(\/\S*)?$/.test(msg.arg) ? msg.arg : '';
+  if (!store) {
+    return reply('Send the shop\'s address after /intake, for example:\n/intake freesoul.com\n\n'
+      + 'I read the shop\'s public pages (pictures and videos of up to 20 products, logo, colours, fonts, policies) and send you the '
+      + 'Google Drive folder here in a few minutes.');
+  }
+  return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,
+    body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];
 }
 if (msg.kind === 'nolink') {
   return reply('Please send a product link from the shop\'s website (it has /products/ in it). You can add a note after the link.');

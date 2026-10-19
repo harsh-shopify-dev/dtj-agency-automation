@@ -59,6 +59,7 @@ Read `CLAUDE.md`, the latest entry of `docs/HANDOFF.md` and the client's folder 
 exists with no `pending` handle.
 
 ### P2. Facts, store checks, brand
+- **Redesign or new client: run the brand intake first** (`python -m page_builder.brand_intake <store> --client <dir>`, Harsh 19 Oct 2026): pictures of up to 20 products, logo, policies, fonts, theme colours and a palette proposal in `<client>/intake/` (BRAND.md first; the colours, category and price tier are guesses to confirm).
 - Material in order: client facts, the brand's own public pages (product page, FAQ, policies, a public reviews widget) with URL
   and date as source, the pack and every product picture (read what they print). `references/facts-intake-checklist.md`.
 - Store checks (public product JSON and page): title (placeholder?), stock ("Sold out"?), pictures (how many, any with printed

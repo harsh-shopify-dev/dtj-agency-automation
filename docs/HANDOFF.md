@@ -7,6 +7,30 @@ Update this file at the end of every working session (Harsh's rule).
 
 ---------------------------------------------------------------------------------------------------
 
+## BRAND INTAKE INTO GOOGLE DRIVE (19 Oct 2026; skill `.claude/skills/dtj-brand-intake`)
+Harsh: "a scraper which will scrape all the product images max to only 20 products ... and a file that contains the details of the
+brand and brand color palette", then "uploads to the google drive", "no workspace, go with a dedicated dtj gmail and github actions,
+use dtjharshsharma@gmail.com".
+- **What it does:** `page_builder/brand_intake.py` reads a client's PUBLIC store (pictures and videos of at most 20 products, logo,
+  collections, policies, fonts, theme colours, a palette proposal from `page_builder/palette.py`) into `<client>/intake/` with
+  `BRAND.md`, `brand-intake.json` (every fact with its source), a draft `brand.json`, `palette.png`, `products.png`. Colours,
+  category and price tier are guesses a person confirms. `--drive "DTJ Clients"` uploads it with `page_builder/drive_upload.py`
+  (DTJ's own Google app, `drive.file` only) to `DTJ Clients/<brand>/Brand intake <date>`.
+- **Three ways to run:** the bot's `/intake <store>` (n8n starts the GitHub workflow, which answers in the chat with the Drive link),
+  `gh workflow run brand-intake.yml -f store=...`, or locally (skill).
+- **Set up (19 Oct 2026):** Google Cloud project `dtj-brand-intake` on dtjharshsharma@gmail.com (Drive API on; consent screen
+  "DTJ Brand Intake", External, In production, scope drive.file only, no logo; publishing needed a home page and privacy link, so it
+  points at digitaltusharjoshi.com and its /privacy-policy/); Desktop client "DTJ Brand Intake laptop"; `--authorize` done on
+  Harsh's laptop (keys `DTJ_GDRIVE_*` in the vault and in the repo's Actions secrets with `DTJ_TELEGRAM_BOT_TOKEN`:
+  `tools/team-setup/github_secrets.py` says "all set"). First real upload from the laptop: Free Soul, 151 files / 45 MB, 7 min 11 s.
+- **Not live yet (each one Harsh's yes):** the bot's GitHub key `DTJ_GITHUB_ACTIONS_TOKEN` (fine-grained, Actions read/write on this
+  repo, kept in the vault; `setup_n8n.py --apply` makes the n8n Bearer Auth credential "DTJ GitHub Actions"), a first GitHub run,
+  `deploy_telegram_bot.py` (adds /intake to the bot's draft), a real `/intake` test, publishing the bot.
+- **Not verified yet:** a GitHub Actions run, `/intake` in real Telegram, n8n's real Bearer Auth form.
+- The palette method's own notes (`colour-and-vibe.md`) and its use on home pages come with the home-page branch, not this one.
+
+---------------------------------------------------------------------------------------------------
+
 ## MAIN TASK: READ THIS FIRST (Harsh, 9 Oct 2026; every Claude session must follow it before anything else in this file)
 
 **The goal of this whole project is a STORE FACTORY, in two parts. Everything else is support.**
