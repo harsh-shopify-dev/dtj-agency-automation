@@ -58,6 +58,23 @@ def _quiet(fn, argv: list[str]) -> tuple[int, str]:
     return code, out.getvalue() + err.getvalue()
 
 
+PEOPLE_APPROVAL = "Harsh (standing 19 Oct 2026: DTJ's sample people photos on every store we build)"
+
+
+def upload_people(store: str, files: list[str], log_dir: Path) -> tuple[bool, str]:
+    """DTJ's sample people photos that the page uses, into the store's Files (store_files: skips what the store already has; Harsh,
+    19 Oct 2026: "make this images as default any store we build"). (True, "") when every one is there."""
+    from . import store_files  # noqa: PLC0415  (only when a page uses them)
+    from .assemble import PEOPLE_DIR  # noqa: PLC0415
+    try:
+        plan = store_files.upload(store_files.Store(store), PEOPLE_DIR, PEOPLE_APPROVAL, only=files, limit=len(files),
+                                  out=lambda *_: None, log_dir=log_dir)
+    except (store_files.StoreError, OSError) as exc:
+        return False, str(exc)[:300]
+    bad = [p for p in plan if p["status"] not in ("uploaded", "already there")]
+    return not bad, "; ".join(f"{p['file']}: {p['status']}" for p in bad)
+
+
 def preview_url(store: str, handle: str | None, theme_id: str, suffix: str | None) -> str:
     if not handle:
         return f"https://{store}/?preview_theme_id={theme_id}"
@@ -65,7 +82,7 @@ def preview_url(store: str, handle: str | None, theme_id: str, suffix: str | Non
 
 
 def main(argv: list[str] | None = None, *, design=run_client.main, push=push_page.main, checks=run_design_checks,
-         sleep=time.sleep) -> int:
+         sleep=time.sleep, people=upload_people) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--client", required=True, help="the client folder (brand.json, facts.json, copy-answer.json, media/)")
     ap.add_argument("--store", help="the store's ORIGINAL .myshopify.com address")
@@ -151,7 +168,16 @@ def main(argv: list[str] | None = None, *, design=run_client.main, push=push_pag
     if args.design_only:
         return finish("designed (not written)", 0, "design only: run again with --store and --theme to write the draft")
 
-    # ---- 4. write the draft (push_page checks everything again and refuses the live theme)
+    # ---- 4. the sample people photos the page uses must be in the store's Files first (a draft never points at a missing picture)
+    used = report.get("people_photos") or []
+    if used:
+        ok, why = people(approval["store"], used, out)
+        if not ok:
+            return finish("needs a look", 2, f"not written: DTJ's sample people photos could not be put in the store's Files ({why}); "
+                                             "check the Shopify CLI's sign-in to this store (shopify store auth)")
+        result["note"] = f"{len(used)} sample people photos in the store's Files"
+
+    # ---- 5. write the draft (push_page checks everything again and refuses the live theme)
     flags = ["--out", str(out), "--approve", approval["approve_code"], "--approved-by", args.approved_by]
     flags += ["--allow-samples"] if result["samples"] else []
     flags += ["--allow-demo"] if approval.get("demo") else []

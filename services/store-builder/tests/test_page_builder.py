@@ -587,8 +587,68 @@ def standard_facts():
     return brand, facts
 
 
-STANDARD_ORDER = ["ugc_strip", "trust_marquee", "story_split", "story_split_2", "reviews_slider", "why_us", "benefit_strip_2", "why_features",
+STANDARD_ORDER = ["trust_marquee", "story_split", "story_split_2", "reviews_slider", "why_us", "benefit_strip_2", "why_features",
                   "guarantee", "facts_glance", "faq", "stories", "final_push"]
+
+
+class PeopleAndPhotoStripTests(unittest.TestCase):
+    """Harsh, 19 Oct 2026: DTJ's sample people photos in every human picture slot of a sample, and the customer-photo strip right
+    under the buy buttons (not a section of its own on the left)."""
+
+    def demo_page(self, **mods):
+        brand, facts = standard_facts()
+        facts["demo"] = True
+        facts["rating"] = {"value": "4.6", "source": "SAMPLE: replace before live"}
+        for r, who in zip(facts["reviews"], ("f", "m", "f")):
+            r["person"] = who
+        for st, who in zip(facts["stories"], ("m", "f", "m")):
+            st["person"] = who
+        facts.update(mods)
+        return build_pdp(brand, facts, recipe="dtj-standard-v1")
+
+    @staticmethod
+    def person(value):
+        from page_builder.assemble import load_people
+        name = str(value or "").rsplit("/", 1)[-1]
+        return next((p["person"] for p in load_people() if p["file"] == name), None)
+
+    def test_sample_reviews_stories_and_the_rating_line_get_matching_people_never_twice(self):
+        r = self.demo_page()
+        reviews = next(s for s in r.model.sections if s.kind == "reviews_slider").settings
+        stories = next(s for s in r.model.sections if s.kind == "stories").settings
+        stars = next(s for s in r.model.buybox_sections if s.kind == "rating").settings
+        self.assertEqual([self.person(reviews[f"image_{i}"]) for i in (1, 2, 3)], ["f", "m", "f"])
+        self.assertEqual([self.person(stories[f"photo_{i}"]) for i in (1, 2, 3)], ["m", "f", "m"])  # a person replaces the product picture
+        avatars = [stars[f"avatar_{i}"] for i in range(1, 6)]
+        self.assertTrue(all(self.person(a) for a in avatars))
+        used = r.report["people_photos"]
+        self.assertEqual(len(used), 11)
+        self.assertEqual(len(set(used)), 11)  # never the same face twice on a page
+        self.assertTrue(all(f"shopify://shop_images/{u}" in json.dumps(r.template) for u in used))
+        self.assertEqual(errors(r), [])
+
+    def test_a_real_review_never_gets_a_strangers_face_and_a_page_that_is_not_a_demo_gets_none(self):
+        brand, facts = standard_facts()
+        facts["demo"] = True
+        facts["reviews"][0]["source"] = "Judge.me review, 12 Oct 2026"
+        r = build_pdp(brand, facts, recipe="dtj-standard-v1")
+        reviews = next(s for s in r.model.sections if s.kind == "reviews_slider").settings
+        self.assertFalse(reviews.get("image_1"))
+        self.assertTrue(self.person(reviews["image_2"]))
+        brand, facts = standard_facts()  # demo not set: no test pictures and no people at all
+        self.assertEqual(build_pdp(brand, facts, recipe="dtj-standard-v1").report["people_photos"], [])
+
+    def test_the_photo_strip_sits_right_under_the_buy_buttons(self):
+        r = self.demo_page()
+        self.assertNotIn("ugc_strip", [s.kind for s in r.model.sections])
+        strip = next(s for s in r.model.buybox_sections if s.kind == "ugc_strip")
+        column = r.template["sections"]["main"]["blocks"]["product-details"]
+        order = column["block_order"]
+        self.assertEqual(order.index(next(k for k in order if "dtj_ugc" in k)), order.index("buy_buttons_eYQEYi") + 1)
+        self.assertEqual(strip.settings["card_width"], 170)
+        self.assertNotIn("background", strip.settings)  # the column's own white, no band
+        self.assertNotIn("dtj_ugc", r.model.extras)  # no button of its own: the buy buttons are right above
+        self.assertNotIn("dtj_ugc", r.template["sections"])
 
 
 class RangeStepTests(unittest.TestCase):
@@ -627,7 +687,7 @@ class StandardPageTests(unittest.TestCase):
     def test_the_cta_button_follows_the_wireframe_sections_inside_the_same_band(self):
         r = self.build()
         with_cta = [s["kind"] for s in r.report["sections_built"] if s["cta"]]
-        self.assertEqual(with_cta, ["ugc_strip", "story_split", "story_split_2", "reviews_slider", "why_us", "why_features", "facts_glance", "faq"])
+        self.assertEqual(with_cta, ["story_split", "story_split_2", "reviews_slider", "why_us", "why_features", "facts_glance", "faq"])
         sec = r.template["sections"]["dtj_reviews"]
         self.assertEqual(len(sec["block_order"]), 2)
         cta = sec["blocks"][sec["block_order"][1]]
@@ -671,7 +731,7 @@ class StandardPageTests(unittest.TestCase):
         r = self.build(vibe="electric")
         roles = {s.kind: r.model.roles[s.id] for s in r.model.sections}
         # Harsh, 10 Oct 2026: customer photos and numbers on white, reviews dark with white cards
-        self.assertEqual((roles["ugc_strip"], roles["facts_glance"], roles["reviews_slider"]), ("plain", "plain", "dark"))
+        self.assertEqual((roles["trust_marquee"], roles["facts_glance"], roles["reviews_slider"]), ("band", "plain", "dark"))
         self.assertEqual(roles["guarantee"], "accent")
         d = r.model.direction
         self.assertEqual(d.roles["band"], "#0B4A6F")  # the brand colour itself, not a tint
@@ -770,7 +830,7 @@ class StandardPageTests(unittest.TestCase):
         brand, facts = standard_facts()
         facts["ugc"] = [{"image_role": "hand", "video": f"clip{i}.mp4", "source": "Harsh, 10 Oct 2026"} for i in (1, 2, 3)]
         r = build_pdp(brand, facts, recipe="dtj-standard-v1")
-        sec = next(s for s in r.model.sections if s.kind == "ugc_strip")
+        sec = next(s for s in r.model.buybox_sections if s.kind == "ugc_strip")  # in the buy box column since 19 Oct 2026
         self.assertEqual([sec.settings[f"media_type_{i}"] for i in (1, 2, 3)], ["video"] * 3)
         self.assertEqual(sec.settings["video_2"], "shopify://files/videos/clip2.mp4")
         self.assertTrue(sec.settings["image_1"].startswith("shopify://shop_images/"))

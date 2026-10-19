@@ -122,13 +122,13 @@ def _url_name(url: str) -> str:
 
 
 def upload(store: Store, folder: Path, approved_by: str, only: list[str] | None = None, limit: int = MAX_PICTURES,
-           dry_run: bool = False, sleep: Callable[[float], None] = time.sleep, out=print) -> list[dict]:
+           dry_run: bool = False, sleep: Callable[[float], None] = time.sleep, out=print, log_dir: Path | None = None) -> list[dict]:
     files = pictures(folder, only, limit)
     if not files:
         raise StoreError(f"no pictures (jpg, png, webp) in {folder}")
     taken: set[str] = set()
     plan = [{"local": str(p.relative_to(folder)), "path": p, "file": store_name(p, taken)} for p in files]
-    log = ActionLog(folder / "action-log.jsonl", client_id=store.store, automation="store-files")
+    log = ActionLog((log_dir or folder) / "action-log.jsonl", client_id=store.store, automation="store-files")
     for item in plan:  # already in the store? (a re-run, or an old store that has the pictures)
         nodes = store.run(EXISTING, {"q": f"filename:{item['file']}"}).get("files", {}).get("nodes", [])
         item["status"] = "already there" if any(_url_name((n.get("image") or {}).get("url", "")).lower() == item["file"].lower() for n in nodes) else "to upload"

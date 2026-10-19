@@ -105,8 +105,11 @@ Desktop: gallery left (about 45 percent), buy column right. Mobile: gallery firs
 | l | Accordions: details, FAQ, how it works, shipping and returns | theme accordions (G7) | |
 
 ### 2. W03 Customer photos and videos strip (desktop-02, mobile-03/04)
-Answers "do real people like me use it?". 3-6 photos or short videos of customers or creators, heading, CTA. Desktop: full-width
-band, 3 cards visible, more scroll sideways. Mobile: about 1.3 cards visible. Block `dtj-shoppable-reels` (image or video per card).
+Answers "do real people like me use it?". 3-6 photos or short videos of customers or creators, heading. Since 19 Oct 2026 it sits
+INSIDE the buy box column, right under the buy buttons (Harsh: "the video section shows left aligned ... keep them aligned to right
+below the buy button"): on desktop it fills the column's empty space next to the gallery (cards 170 px, 3 across, more scroll
+sideways), on a phone it comes right after the buttons; no CTA of its own (the buy buttons are just above). Block
+`dtj-shoppable-reels` (image or video per card).
 Sample: product pictures as sample cards, listed in the graphics brief ("UGC video: customer opening the pack"). Background:
 white on every page (Harsh, 10 Oct 2026), so the photos carry the colour. Cards are tall (9:16): ask for vertical pictures.
 

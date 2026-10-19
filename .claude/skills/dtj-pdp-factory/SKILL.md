@@ -25,6 +25,11 @@ have a source starting with `SAMPLE`), `SOURCES.md`, `wireframe-plan.md` (sectio
    and the build report, and is replaced or signed off by Harsh before live. Never sample medical claims, "clinically proven",
    competitor names, licences or certifications, prices, discounts or offers. (Harsh, 10 Oct 2026; CLAUDE.md rule 5 "mark
    unknowns clearly".)
+   **People in samples:** give every SAMPLE review and story a `person` (`f` or `m`, matching its name) and no `image_role`: the
+   builder fills their faces, and the rating line's five round photos, from DTJ's sample people photos
+   (`page_builder/assets/sample-people`, 10 women and 10 men, never twice on a page, never on a real customer's review), and
+   `ship_draft` puts the ones it uses into the store's Files before the draft is written (Harsh, 19 Oct 2026: "make this
+   images as default any store we build ... once the design is ready we will update the assets which we get from the client").
 3. **Analyse each section fully before designing it** (`references/section-design-method.md`: material, ledger, 8 steps).
 4. **The vibe decides colour and motion** (`references/colour-and-vibe.md`, `references/motion-by-category.md`): an energy
    product must look energetic, a calm or fashion product must not shout. Contrast is never traded away.

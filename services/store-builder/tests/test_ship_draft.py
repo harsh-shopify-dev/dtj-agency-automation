@@ -28,13 +28,13 @@ class ShipDraft(unittest.TestCase):
         (self.client / "copy-answer.json").write_text("{}", encoding="utf-8")
         self.builds, self.pushes = [], []
 
-    def design(self, code=0, lint=(), problems=(), samples=3, demo=True, message="", files=None):
+    def design(self, code=0, lint=(), problems=(), samples=3, demo=True, message="", files=None, people=()):
         def fake(argv):
             self.builds.append(argv)
             out = Path(argv[argv.index("--out") + 1])
             if (code != 1) if files is None else files:
                 (out / "template.json").write_text("{}", encoding="utf-8")
-                (out / "build-report.json").write_text(json.dumps({"lint": list(lint), "problems": list(problems),
+                (out / "build-report.json").write_text(json.dumps({"lint": list(lint), "problems": list(problems), "people_photos": list(people),
                                                                    "sections_built": [{"kind": "faq"}] * 13}), encoding="utf-8")
                 (out / "approval.json").write_text(json.dumps({"approve_code": "0123456789ab", "store": STORE, "theme_id": THEME,
                                                                "file": "templates/product.dtj-glow.json", "samples": samples, "demo": demo,
@@ -51,11 +51,33 @@ class ShipDraft(unittest.TestCase):
             return rc
         return fake
 
-    def ship(self, *extra, design=None, push=None, checks=passing_checks):
+    def ship(self, *extra, design=None, push=None, checks=passing_checks, people=None):
         argv = ["--client", str(self.client), "--store", STORE, "--theme", THEME, "--template-suffix", "dtj-glow", *extra]
+        self.uploads = []
+
+        def fake_people(store, files, log_dir):
+            self.uploads.append((store, list(files), self.pushes[:]))
+            return (True, "") if people is None else people
+
         with contextlib.redirect_stdout(io.StringIO()):
-            code = ship_draft.main(argv, design=design or self.design(), push=push or self.push(), checks=checks, sleep=lambda s: None)
+            code = ship_draft.main(argv, design=design or self.design(), push=push or self.push(), checks=checks, sleep=lambda s: None,
+                                   people=fake_people)
         return code, json.loads((self.client / "run" / "ship-result.json").read_text(encoding="utf-8"))
+
+    def test_the_sample_people_photos_reach_the_stores_files_before_the_draft_is_written(self):
+        files = ["dtj-sample-person-02.webp", "dtj-sample-person-03.webp"]
+        code, res = self.ship(design=self.design(people=files))
+        self.assertEqual((code, res["page_status"]), (0, "written to draft"))
+        self.assertEqual(self.uploads, [(STORE, files, [])])  # uploaded first, while nothing was pushed yet
+        self.assertEqual(len(self.pushes), 1)
+        code, res = self.ship(design=self.design(people=files), people=(False, "access denied"))
+        self.assertEqual((code, res["page_status"]), (2, "needs a look"))
+        self.assertIn("could not be put in the store's Files (access denied)", res["note"])
+        self.assertEqual(len(self.pushes), 1)  # nothing more was written
+        code, _ = self.ship("--design-only", design=self.design(people=files))
+        self.assertEqual(self.uploads, [])  # design only never touches the store
+        code, _ = self.ship()
+        self.assertEqual(self.uploads, [])  # a page without people photos uploads nothing
 
     def test_a_page_that_passes_every_gate_is_written_to_the_draft(self):
         code, res = self.ship()
