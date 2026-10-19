@@ -27,6 +27,32 @@ if (!me) {
 }
 const isAdmin = roleOf(me) === 'admin';
 const myName = me.name || msg.name;
+// /commands: every command, one line each; the admin ones only for admins (Harsh, 19 Oct 2026: "create a command so it can show
+// all the commands in the bot available"). Keep this list in step with bot_read.js when a command is added.
+if (msg.kind === 'commands') {
+  const lines = [
+    'Everything I can do:',
+    '',
+    '<b>Pages</b>',
+    'a product link: start a product page in the shop\'s draft theme (anything after the link is a note for the designer). '
+      + 'I then ask whether to collect the brand\'s data first.',
+    '',
+    '<b>Brand data</b>',
+    '/intake shop.com: collect a shop\'s pictures, videos, colours and details into Google Drive, with a live progress bar',
+    '/stop: the brand intakes running now, each with a Stop button',
+    '',
+    '<b>Help</b>',
+    '/help: how to send a product link, with an example',
+    '/commands: this list',
+  ];
+  if (isAdmin) {
+    lines.push('', '<b>Admin: the DTJ apps on each shop</b>',
+      '/shops: every shop on the switch and whether its DTJ apps are on',
+      '/status shop: one shop\'s DTJ apps',
+      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)');
+  }
+  return reply(lines.join('\n'));
+}
 if (msg.kind === 'help') {
   return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\'s website and I will start a full '
     + 'product page in the shop\'s draft theme.\n\nExample:\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\n\n'
@@ -35,6 +61,7 @@ if (msg.kind === 'help') {
     + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'
     + '\n\nBefore a redesign: /intake shop.com collects the shop\'s pictures, videos, colours and details into Google Drive.'
     + ' /stop shows the intakes running now, each with a Stop button.'
+    + '\n\n/commands lists everything I can do.'
     + (isAdmin ? '\n\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '
       + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));
 }
