@@ -61,6 +61,9 @@ jobs:
           DTJ_GDRIVE_CLIENT_ID: ${{ secrets.DTJ_GDRIVE_CLIENT_ID }}
           DTJ_GDRIVE_CLIENT_SECRET: ${{ secrets.DTJ_GDRIVE_CLIENT_SECRET }}
           DTJ_GDRIVE_REFRESH_TOKEN: ${{ secrets.DTJ_GDRIVE_REFRESH_TOKEN }}
+          # the live progress bar in the chat that asked (page_builder/progress.py); empty chat = no progress message
+          DTJ_TELEGRAM_BOT_TOKEN: ${{ secrets.DTJ_TELEGRAM_BOT_TOKEN }}
+          DTJ_PROGRESS_CHAT: ${{ inputs.telegram_chat_id }}
         run: python -m page_builder.brand_intake "$STORE" --client "$RUNNER_TEMP/intake" --drive "DTJ Clients"
 
       - name: Answer in Telegram
@@ -72,11 +75,12 @@ jobs:
           WHO: ${{ inputs.requested_by }}
           LINK: ${{ steps.intake.outputs.link }}
           BRAND: ${{ steps.intake.outputs.brand }}
+          TOOK: ${{ steps.intake.outputs.took }}
           OUTCOME: ${{ steps.intake.outcome }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ "$OUTCOME" = "success" ] && [ -n "$LINK" ]; then
-            TEXT=$(printf 'Brand intake ready: %s (%s)\nDrive folder: %s\nOpen BRAND.md there first: colours, category and price tier are guesses to confirm.' "$BRAND" "$STORE" "$LINK")
+            TEXT=$(printf 'Brand intake ready: %s (%s)\nDrive folder: %s\nTook: %s\nOpen BRAND.md there first: colours, category and price tier are guesses to confirm.' "$BRAND" "$STORE" "$LINK" "$TOOK")
           else
             TEXT=$(printf 'Brand intake for %s did not finish. A developer can see why here: %s' "$STORE" "$RUN")
           fi

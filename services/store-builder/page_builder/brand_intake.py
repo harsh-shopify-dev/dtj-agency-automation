@@ -42,6 +42,7 @@ from typing import Callable
 from urllib.parse import urljoin, urlparse
 
 from . import palette
+from .progress import Progress
 from .fetch_product import as_text, file_name
 
 Getter = Callable[[str], tuple[int, str, bytes]]
@@ -249,7 +250,10 @@ def guess_price_tier(products: list[dict], currency: str | None) -> str | None:
 
 
 # ------------------------------------------------------------------------------------------------ the whole intake
-def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PRODUCTS, delay: float = POLITE_DELAY) -> dict:
+def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PRODUCTS, delay: float = POLITE_DELAY,
+           progress: Callable[..., None] | None = None) -> dict:
+    """progress(stage, done, total), when given, hears where the work is (progress.py: the Telegram bar)."""
+    tick = progress or (lambda *a: None)
     base = url if url.startswith("http") else "https://" + url
     base = f"{urlparse(base).scheme}://{urlparse(base).netloc}"
     pause = lambda: time.sleep(delay) if delay else None  # noqa: E731
@@ -264,6 +268,7 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
             if status == 200:
                 css += "/*sheet*/" + body.decode("utf-8", "replace")
     shop = read_home(base, page, css)
+    tick("read", 1, 2)
     images = out / "images"
     notes: list[str] = []
     candidates = theme_colours(page, css)
@@ -316,6 +321,8 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
     platform = "shopify" if feed is not None else "other"
     all_products = (feed or {}).get("products", [])
     products = []
+    todo = min(len(all_products), max_products)
+    tick("products", 0, todo)
     packs: Counter = Counter()  # the pack colours, counted once per product: the colour most products share is the brand's
     for p in all_products[:max_products]:
         variants = p.get("variants", [])
@@ -351,6 +358,7 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
             "options": [o.get("name") for o in p.get("options", [])], "pictures": saved,
             "description": as_text(p.get("body_html", ""))[:600],
         })
+        tick("products", len(products), todo)
     candidates += [{"hex": h, "share": round(n / max(1, len(products)), 2), "products": n, "source": f"product pictures ({n} of {len(products)} products)"}
                    for h, n in packs.most_common(8)]
     if len(all_products) > max_products:
@@ -358,6 +366,7 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
     if platform == "other":
         notes.append("not a Shopify store (no public products.json): products and collections were not read, only the home page")
 
+    tick("extras")
     collections = []
     for c in (_json(get, base + "/collections.json?limit=250") or {}).get("collections", []):
         entry = {"title": c.get("title"), "handle": c.get("handle"), "products": c.get("products_count"), "picture": None}
@@ -396,6 +405,7 @@ def intake(url: str, out: Path, get: Getter = _get, max_products: int = MAX_PROD
         "palette": {"ramps": pal.pop("_ramps"), "roles": pal} if pal else None,
         "guesses": {"category": category, "category_scores": scores, "price_tier": tier}, "notes": notes,
     }
+    tick("write")
     _write(out, result)
     return result
 
@@ -492,12 +502,13 @@ def drive_folder_name(name: str, source: str) -> str:
     return re.sub(r"\s+", " ", clean)[:80] or urlparse(source).netloc
 
 
-def to_drive(out: Path, r: dict, root: str, drive=None, today: str | None = None) -> dict:
+def to_drive(out: Path, r: dict, root: str, drive=None, today: str | None = None, progress: Callable[..., None] | None = None) -> dict:
     """Upload the intake folder to <root>/<brand>/Brand intake <date> in DTJ's Drive (drive_upload.py) and note the link."""
     from .drive_upload import Drive  # noqa: PLC0415  (only when --drive is asked for)
     today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     path = f"{root.strip('/')}/{drive_folder_name(r['shop']['name'], r['source'])}/Brand intake {today}"
-    res = (drive or Drive()).upload_tree(out, path)
+    tick = progress or (lambda *a: None)
+    res = (drive or Drive()).upload_tree(out, path, tick=lambda done, total: tick("drive", done, total))
     res["path"] = path
     r["drive"] = res
     (out / "brand-intake.json").write_text(json.dumps(r, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -513,9 +524,12 @@ def main(argv: list[str] | None = None, *, get: Getter = _get, drive=None) -> in
                     "(needs the DTJ_GDRIVE_* keys: drive_upload.py)")
     args = ap.parse_args(argv)
     out = Path(args.client) / "intake"
+    bar = Progress(args.url)  # the Telegram progress message: on only in a GitHub run started from the bot
+    bar.start()
     try:
-        r = intake(args.url, out, get=get, max_products=min(args.max_products, MAX_PRODUCTS), delay=POLITE_DELAY)
+        r = intake(args.url, out, get=get, max_products=min(args.max_products, MAX_PRODUCTS), delay=POLITE_DELAY, progress=bar.update)
     except RuntimeError as exc:
+        bar.finish(False)
         print(f"could not read {args.url}: {exc}", file=sys.stderr)
         return 1
     c = r["colours"]["chosen"]
@@ -528,13 +542,18 @@ def main(argv: list[str] | None = None, *, get: Getter = _get, drive=None) -> in
     if args.drive:
         from .drive_upload import DriveError  # noqa: PLC0415
         try:
-            res = to_drive(out, r, args.drive, drive=drive)
+            res = to_drive(out, r, args.drive, drive=drive, progress=bar.update)
         except DriveError as exc:
+            bar.finish(False)
             print(f"could not upload to Drive: {exc}", file=sys.stderr)
             return 1
         print(f"Drive: {res['path']} ({res['uploaded']} files uploaded, {res['skipped']} already there)")
         print(f"DRIVE_LINK={res['link']}")
+        res["took"] = bar.finish(True)
+        print(f"took {res['took']}")
         _github_outputs(r, res)
+    else:
+        print(f"took {bar.finish(True, 'Saved on this computer (no Drive upload asked).')}")
     return 0
 
 
@@ -542,7 +561,7 @@ def _github_outputs(r: dict, res: dict) -> None:
     """In GitHub Actions: the link as a step output and a short summary on the run's page (no client data beyond the counts)."""
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            fh.write(f"link={res['link']}\nbrand={r['shop']['name']}\n")
+            fh.write(f"link={res['link']}\nbrand={r['shop']['name']}\ntook={res.get('took', '')}\n")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         c = r["colours"]["chosen"]
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
