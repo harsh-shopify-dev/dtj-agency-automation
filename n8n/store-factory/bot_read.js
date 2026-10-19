@@ -1,6 +1,6 @@
 // n8n Code node "Read the Message" in "Store Factory: Telegram Bot" (mode: Run Once for All Items).
 // Turns one Telegram update into: who wrote, in which chat, and what they want: help, a page from a product link, an admin command
-// (/shops, /status, /on, /off) or a tap on one of the bot's buttons.
+// (/shops, /status, /on, /off), a brand intake (/intake), /stop (running brand intakes) or a tap on one of the bot's buttons.
 const update = $input.first().json || {};
 const esc = (s) => String(s == null ? '' : s);
 const cq = update.callback_query;
@@ -32,6 +32,9 @@ if (/^\/(start|help)\b/i.test(text) || !text) return [{ json: { ...base, kind: '
 // a brand intake before a redesign: /intake <the store's address> (19 Oct 2026; runs on GitHub, the Drive link comes back here)
 const intake = text.match(/^\/intake(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
 if (intake) return [{ json: { ...base, kind: 'intake', arg: String(intake[1] || '').trim().slice(0, 200) } }];
+
+// stop a running brand intake: /stop lists them, each with a Stop button (19 Oct 2026)
+if (/^\/stop(?:@[A-Za-z0-9_]+)?\s*$/i.test(text)) return [{ json: { ...base, kind: 'stop' } }];
 
 // admin commands: /shops, /status <shop>, /on <shop>, /off <shop> (the bot's @name may follow the command)
 const cmd = text.match(/^\/(shops|status|on|off)(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);

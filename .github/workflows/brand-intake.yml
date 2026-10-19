@@ -7,6 +7,7 @@
 # (made once with `python -m page_builder.drive_upload --authorize`), DTJ_TELEGRAM_BOT_TOKEN (to answer in Telegram).
 # To switch the Drive account later: run --authorize with the new Gmail and replace the three DTJ_GDRIVE_* secrets.
 name: Brand intake
+run-name: "Brand intake: ${{ inputs.store }}"  # the bot's /stop list shows this name
 
 on:
   workflow_dispatch:
@@ -64,6 +65,7 @@ jobs:
           # the live progress bar in the chat that asked (page_builder/progress.py); empty chat = no progress message
           DTJ_TELEGRAM_BOT_TOKEN: ${{ secrets.DTJ_TELEGRAM_BOT_TOKEN }}
           DTJ_PROGRESS_CHAT: ${{ inputs.telegram_chat_id }}
+          DTJ_PROGRESS_FILE: ${{ runner.temp }}/progress-message-id
         run: python -m page_builder.brand_intake "$STORE" --client "$RUNNER_TEMP/intake" --drive "DTJ Clients"
 
       - name: Answer in Telegram
@@ -78,8 +80,17 @@ jobs:
           TOOK: ${{ steps.intake.outputs.took }}
           OUTCOME: ${{ steps.intake.outcome }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PROGRESS_FILE: ${{ runner.temp }}/progress-message-id
         run: |
-          if [ "$OUTCOME" = "success" ] && [ -n "$LINK" ]; then
+          # the progress message the intake could not close itself (stopped or crashed): take its Stop button away
+          if [ -s "$PROGRESS_FILE" ]; then
+            if [ "$OUTCOME" = "cancelled" ]; then NOTE="Stopped."; else NOTE="Did not finish."; fi
+            curl -sS -o /dev/null -X POST "https://api.telegram.org/bot${TOKEN}/editMessageText" --data-urlencode "chat_id=${CHAT}" \
+              --data-urlencode "message_id=$(cat "$PROGRESS_FILE")" --data-urlencode "text=$(printf 'Brand intake: %s\n%s' "$STORE" "$NOTE")" || true
+          fi
+          if [ "$OUTCOME" = "cancelled" ]; then
+            TEXT=$(printf 'Brand intake for %s was stopped. Files it had already put in Google Drive stay there.' "$STORE")
+          elif [ "$OUTCOME" = "success" ] && [ -n "$LINK" ]; then
             TEXT=$(printf 'Brand intake ready: %s (%s)\nDrive folder: %s\nTook: %s\nOpen BRAND.md there first: colours, category and price tier are guesses to confirm.' "$BRAND" "$STORE" "$LINK" "$TOOK")
           else
             TEXT=$(printf 'Brand intake for %s did not finish. A developer can see why here: %s' "$STORE" "$RUN")

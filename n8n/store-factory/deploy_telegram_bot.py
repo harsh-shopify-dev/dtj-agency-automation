@@ -16,6 +16,10 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
                    reply   -> Send
     intake  -> Start Brand Intake (GitHub: run the "Brand intake" workflow) -> Intake Started -> Send
                (the GitHub run answers in the chat itself with the Drive link: .github/workflows/brand-intake.yml)
+    stop    -> List Intakes (GitHub: the workflow's latest runs) -> Stop Plan -> Stop Next
+                   cancel -> Cancel the Intake (GitHub: cancel that run) -> Stop Report -> Send
+                   choose -> Ask to Stop (one message per running intake, each with a Stop button)
+                   reply  -> Send
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -43,9 +47,15 @@ SWITCH_CREDENTIAL = "DTJ Catcher Bot Key"   # n8n Header Auth credential: name X
 CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence"
 GITHUB_CREDENTIAL = "DTJ GitHub Actions"   # n8n Bearer Auth credential: a GitHub token allowed to start this repo's workflows
 INTAKE_RUN = ("https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/workflows/brand-intake.yml/dispatches")
+INTAKE_RUNS = ("https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/workflows/brand-intake.yml/runs"
+               "?per_page=30")
+CANCEL_RUN = "=https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/runs/{{ $json.run_id }}/cancel"
+GITHUB_HEADERS = {"parameters": [{"name": "Accept", "value": "application/vnd.github+json"},
+                                 {"name": "X-GitHub-Api-Version", "value": "2022-11-28"},
+                                 {"name": "User-Agent", "value": "dtj-n8n-bot/1"}]}
 CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "Write the Answers": "bot_answer.js",
               "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js",
-              "Intake Started": "intake_started.js"}
+              "Intake Started": "intake_started.js", "Stop Plan": "stop_plan.js", "Stop Report": "stop_report.js"}
 SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
@@ -243,9 +253,7 @@ def intake_ops(github_id: str | None) -> list[dict]:
         {"type": "removeConnection", "source": "What to Do", "sourceIndex": 2, "target": "Send"},
         _add("Start Brand Intake", "n8n-nodes-base.httpRequest", 4.2, [1320, 560], {
             "method": "POST", "url": INTAKE_RUN, "authentication": "genericCredentialType", "genericAuthType": "httpBearerAuth",
-            "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Accept", "value": "application/vnd.github+json"},
-                                                                     {"name": "X-GitHub-Api-Version", "value": "2022-11-28"},
-                                                                     {"name": "User-Agent", "value": "dtj-n8n-bot/1"}]},
+            "sendHeaders": True, "headerParameters": GITHUB_HEADERS,
             "sendBody": True, "contentType": "json", "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json.body) }}",
             "options": {"response": {"response": {"fullResponse": True, "neverError": True}}, "timeout": 30000}}),
         {"type": "setNodeSettings", "nodeName": "Start Brand Intake", "settings": {"onError": "continueRegularOutput"}},
@@ -259,6 +267,55 @@ def intake_ops(github_id: str | None) -> list[dict]:
     if github_id:
         ops.append({"type": "setNodeCredential", "nodeName": "Start Brand Intake", "credentialKey": "httpBearerAuth",
                     "credentialId": github_id, "credentialName": GITHUB_CREDENTIAL})
+    return ops
+
+
+def stop_ops(github_id: str | None, telegram_id: str | None) -> list[dict]:
+    """/stop and the Stop button (19 Oct 2026, Harsh: "add a stop feature so it can stop any ongoing specific task"; brand intakes
+    only): a fourth rule on "What to Do"; the reply branch moves to the fallback output after it."""
+    github = {"authentication": "genericCredentialType", "genericAuthType": "httpBearerAuth", "sendHeaders": True,
+              "headerParameters": GITHUB_HEADERS,
+              "options": {"response": {"response": {"fullResponse": True, "neverError": True}}, "timeout": 30000}}
+    ops: list[dict] = [
+        {"type": "updateNodeParameters", "nodeName": "Read the Message", "parameters": {"jsCode": code("bot_read.js")}},
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v} for v in ("design", "switch", "intake", "stop")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 3, "target": "Send"},
+        _add("List Intakes", "n8n-nodes-base.httpRequest", 4.2, [1320, 800], {"method": "GET", "url": INTAKE_RUNS, **github}),
+        {"type": "setNodeSettings", "nodeName": "List Intakes", "settings": {"onError": "continueRegularOutput"}},
+        _add("Stop Plan", "n8n-nodes-base.code", 2, [1560, 800], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                  "jsCode": code("stop_plan.js")}),
+        _add("Stop Next", "n8n-nodes-base.switch", 3.2, [1800, 800], {
+            "rules": {"values": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v} for v in ("cancel", "choose")]},
+            "options": {"fallbackOutput": "extra", "renameFallbackOutput": "reply"}}),
+        _add("Cancel the Intake", "n8n-nodes-base.httpRequest", 4.2, [2040, 720], {"method": "POST", "url": CANCEL_RUN, **github}),
+        {"type": "setNodeSettings", "nodeName": "Cancel the Intake", "settings": {"onError": "continueRegularOutput"}},
+        _add("Stop Report", "n8n-nodes-base.code", 2, [2280, 720], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                    "jsCode": code("stop_report.js")}),
+        _add("Ask to Stop", "n8n-nodes-base.telegram", 1.2, [2040, 900], {
+            "resource": "message", "operation": "sendMessage", "chatId": "={{ $json.chat_id }}", "text": "={{ $json.text }}",
+            "replyMarkup": "inlineKeyboard",
+            "inlineKeyboard": {"rows": [{"row": {"buttons": [{"text": "Stop this intake",
+                                                              "additionalFields": {"callback_data": "={{ $json.stop_data }}"}}]}}]},
+            "additionalFields": SEND_FIELDS}),
+        {"type": "setNodeSettings", "nodeName": "Ask to Stop", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 3, "target": "List Intakes"},
+        {"type": "addConnection", "source": "List Intakes", "target": "Stop Plan"},
+        {"type": "addConnection", "source": "Stop Plan", "target": "Stop Next"},
+        {"type": "addConnection", "source": "Stop Next", "sourceIndex": 0, "target": "Cancel the Intake"},
+        {"type": "addConnection", "source": "Cancel the Intake", "target": "Stop Report"},
+        {"type": "addConnection", "source": "Stop Report", "target": "Send"},
+        {"type": "addConnection", "source": "Stop Next", "sourceIndex": 1, "target": "Ask to Stop"},
+        {"type": "addConnection", "source": "Stop Next", "sourceIndex": 2, "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 4, "target": "Send"},
+    ]
+    for node in ("List Intakes", "Cancel the Intake") if github_id else ():
+        ops.append({"type": "setNodeCredential", "nodeName": node, "credentialKey": "httpBearerAuth", "credentialId": github_id,
+                    "credentialName": GITHUB_CREDENTIAL})
+    if telegram_id:
+        ops.append({"type": "setNodeCredential", "nodeName": "Ask to Stop", "credentialKey": "telegramApi", "credentialId": telegram_id,
+                    "credentialName": CREDENTIAL})
     return ops
 
 
@@ -292,7 +349,7 @@ def attach_credential() -> int:
         print("the bot workflow does not exist yet: run this script without --attach-credential first")
         return 1
     live = {n["name"] for n in call("get_workflow_details", {"workflowId": bot})["workflow"]["nodes"]}
-    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button") if n in live]
+    tg_nodes = [n for n in ("Telegram Message", "Send", "Ask to Confirm", "Answer the Button", "Ask to Stop") if n in live]
     for wf, nodes in ((bot, tg_nodes), (PAGE_DESIGN, ["Send Result"])):
         ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": cid, "credentialName": CREDENTIAL}
                for n in nodes]
@@ -307,8 +364,8 @@ def attach_credential() -> int:
         print(f"no Header Auth credential named '{SWITCH_CREDENTIAL}' yet: the app switch has no key until Harsh creates it")
     github = credential_id(GITHUB_CREDENTIAL, "httpBearerAuth")
     if "Start Brand Intake" in live and github:
-        ops = [{"type": "setNodeCredential", "nodeName": "Start Brand Intake", "credentialKey": "httpBearerAuth", "credentialId": github,
-                "credentialName": GITHUB_CREDENTIAL}]
+        ops = [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "httpBearerAuth", "credentialId": github,
+                "credentialName": GITHUB_CREDENTIAL} for n in ("Start Brand Intake", "List Intakes", "Cancel the Intake") if n in live]
         print(bot, call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"), "GitHub key attached")
     elif "Start Brand Intake" in live:
         print(f"no Bearer Auth credential named '{GITHUB_CREDENTIAL}' yet: /intake cannot start runs until it exists (setup_n8n.py --apply)")
@@ -325,7 +382,7 @@ def main(argv=None) -> int:
     if args.dry_run:
         print(sdk_code())
         for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
-                           ("intake", intake_ops("github-key-id"))):
+                           ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -348,6 +405,10 @@ def main(argv=None) -> int:
                 ops = intake_ops(credential_id(GITHUB_CREDENTIAL, "httpBearerAuth"))
                 print("adding /intake:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Brand intake: /intake runs on GitHub"}).get("appliedOperations"), "operation(s)")
+            elif "List Intakes" not in live_bot:
+                ops = stop_ops(credential_id(GITHUB_CREDENTIAL, "httpBearerAuth"), credential_id(CREDENTIAL, "telegramApi"))
+                print("adding /stop:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Brand intake: /stop and the Stop button"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))
