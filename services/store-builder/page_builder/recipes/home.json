@@ -1,26 +1,59 @@
 {
-  "id": "home-v1",
-  "purpose": "The HOME page: a picture hero that says what the brand is, a trust strip, the reasons to choose it, the theme's own featured products, one brand story, real customer cards and last questions. The order and the hero layout follow the brand's NICHE (niches.py); blocks made for the niche come first, then blocks that suit every niche.",
+  "id": "home-v2",
+  "purpose": "The HOME page: a picture hero that says what the brand is, a trust strip, the shop's own categories and products, the reasons to choose it, proof (press, a real before/after, an approved comparison), one brand story, real customer cards and last questions. The order and the hero layout follow the brand's NICHE (niches.py); blocks made for the niche come first, then blocks that suit every niche. Every section is built ONLY from the client's real facts; one whose facts are missing is left out with the reason. A home page is designed only when someone asks for it, and only the sections the person picks are written (run_home --list / --sections).",
   "sections": [
+    {
+      "builder": "announcement_bar",
+      "why": "A bold moving strip above everything: the store's own shipping, returns or payment facts."
+    },
     {
       "builder": "hero_home",
       "why": "The first screen: what the brand is and one action. A picture hero, a short heading, one button."
     },
     {
-      "builder": "trust_marquee",
-      "why": "A scannable strip of things the brand can stand behind, right under the hero."
+      "builder": "trust_band_home",
+      "why": "A calm strip of things the brand can stand behind, right under the hero."
+    },
+    {
+      "builder": "press_home",
+      "why": "Real press logos (each with the article as proof): borrowed trust before the first scroll."
+    },
+    {
+      "builder": "categories_home",
+      "why": "The shop's own categories as story rings, a grid or a slider (by niche), so the shopper picks a path at once."
+    },
+    {
+      "builder": "best_sellers_home",
+      "why": "Live product rows from the shop's collections, one tab each, with quick add to cart."
+    },
+    {
+      "theme": "product_list",
+      "unless": "best_sellers_home",
+      "why": "The theme's own featured products, only when the DTJ product rows are not on the page."
     },
     {
       "builder": "value_props_home",
       "why": "The reasons to choose this brand: soft cards around a picture, or compact icon tiles, whichever fits the niche."
     },
     {
-      "theme": "product_list",
-      "why": "The theme's own featured products: the shopper can buy from the home page."
+      "builder": "before_after_home",
+      "why": "A real before / after the shopper drags across, shown with the person's permission."
+    },
+    {
+      "builder": "compare_home",
+      "why": "Us versus the usual alternative, only with the owner's approval of every row."
     },
     {
       "builder": "story_home",
       "why": "One brand story: a picture, a short paragraph, a few ticks and (only with a real one) a review."
+    },
+    {
+      "builder": "wave_home",
+      "why": "A soft wave into the next band (left out when the colours above and below are the same)."
+    },
+    {
+      "builder": "concerns_home",
+      "why": "Shop by concern: each concern is a real collection, picked from a dropdown, with product cards."
     },
     {
       "builder": "video_reviews_home",
@@ -42,56 +75,178 @@
   "overrides": {
     "beauty": {
       "order": [
+        "announcement_bar",
         "hero_home",
-        "trust_marquee",
-        "value_props_home",
-        "video_reviews_home",
+        "trust_band_home",
+        "categories_home",
+        "best_sellers_home",
         "theme:product_list",
+        "value_props_home",
+        "before_after_home",
+        "wave_home",
+        "concerns_home",
+        "video_reviews_home",
+        "press_home",
+        "compare_home",
         "story_home",
         "faq"
       ]
     },
     "wellness": {
       "order": [
+        "announcement_bar",
         "hero_home",
-        "trust_marquee",
+        "trust_band_home",
+        "press_home",
         "value_props_home",
-        "story_home",
+        "best_sellers_home",
         "theme:product_list",
+        "wave_home",
+        "concerns_home",
+        "before_after_home",
+        "story_home",
         "video_reviews_home",
+        "categories_home",
+        "compare_home",
         "faq"
       ]
     },
     "home": {
       "order": [
+        "announcement_bar",
         "hero_home",
-        "trust_marquee",
+        "trust_band_home",
+        "categories_home",
+        "best_sellers_home",
         "theme:product_list",
         "value_props_home",
+        "before_after_home",
+        "compare_home",
         "story_home",
         "video_reviews_home",
+        "press_home",
+        "wave_home",
+        "concerns_home",
         "faq"
       ]
     },
     "fashion": {
       "order": [
+        "announcement_bar",
         "hero_home",
+        "categories_home",
+        "best_sellers_home",
         "theme:product_list",
+        "trust_band_home",
         "value_props_home",
         "video_reviews_home",
         "story_home",
+        "press_home",
+        "before_after_home",
+        "compare_home",
+        "wave_home",
+        "concerns_home",
         "faq"
       ]
     },
     "food": {
       "order": [
+        "announcement_bar",
         "hero_home",
+        "categories_home",
+        "best_sellers_home",
         "theme:product_list",
+        "trust_band_home",
         "story_home",
         "video_reviews_home",
         "value_props_home",
+        "press_home",
+        "compare_home",
+        "before_after_home",
+        "wave_home",
+        "concerns_home",
         "faq"
       ]
+    }
+  },
+  "plan": {
+    "_comment": "Harsh, 13 Oct 2026: the AI decides per brand; must sections always (when their facts exist, else they are reported as gaps), add-ons in impact order only when they add something new and fit the length budget (strips count half, the wave nothing), repetition skipped (home_plan.py). 99% of stores are multi-product.",
+    "multi_product": {
+      "must": [
+        "hero_home",
+        "trust_band_home",
+        "categories_home",
+        "best_sellers_home",
+        "value_props_home",
+        "faq"
+      ],
+      "add": [
+        "press_home",
+        "before_after_home",
+        "video_reviews_home",
+        "concerns_home",
+        "announcement_bar",
+        "compare_home",
+        "story_home",
+        "wave_home"
+      ],
+      "never": {},
+      "max_sections": 11,
+      "why": {
+        "hero_home": "the first screen: what the brand is and one action",
+        "trust_band_home": "what the brand stands behind, right under the hero",
+        "categories_home": "a shop with many products needs a way to pick a path at once",
+        "best_sellers_home": "the shopper sees and adds products without leaving the home page",
+        "value_props_home": "the reasons to choose this brand over the rest",
+        "faq": "last objections, right above the footer",
+        "press_home": "real press is trust nothing else on the page gives",
+        "before_after_home": "a real result the shopper can see for themselves",
+        "video_reviews_home": "real customers in their own words",
+        "concerns_home": "a second way to shop: by the problem the shopper has",
+        "announcement_bar": "the store's own shipping or payment facts before anything else",
+        "compare_home": "why it beats the usual alternative (owner-approved)",
+        "story_home": "the brand's own voice and why it exists",
+        "wave_home": "a soft edge into the shop-by-concern band"
+      }
+    },
+    "single_product": {
+      "must": [
+        "hero_home",
+        "trust_band_home",
+        "value_props_home",
+        "faq"
+      ],
+      "add": [
+        "before_after_home",
+        "video_reviews_home",
+        "press_home",
+        "compare_home",
+        "story_home",
+        "announcement_bar"
+      ],
+      "never": {
+        "categories_home": "a one-product shop has no categories to browse",
+        "best_sellers_home": "one product: the hero's button already leads to it, and a row of one card repeats it",
+        "concerns_home": "one product: there is nothing to sort by concern",
+        "wave_home": "it only leads into the shop-by-concern band, which a one-product shop does not have"
+      },
+      "max_sections": 9,
+      "why": {
+        "hero_home": "the product itself on the first screen, with one button to its page",
+        "trust_band_home": "what the brand stands behind, right under the hero",
+        "categories_home": "a shop with many products needs a way to pick a path at once",
+        "best_sellers_home": "the shopper sees and adds products without leaving the home page",
+        "value_props_home": "the reasons to choose this one product",
+        "faq": "last objections, right above the footer",
+        "press_home": "real press is trust nothing else on the page gives",
+        "before_after_home": "a real result the shopper can see for themselves",
+        "video_reviews_home": "real customers in their own words",
+        "concerns_home": "a second way to shop: by the problem the shopper has",
+        "announcement_bar": "the store's own shipping or payment facts before anything else",
+        "compare_home": "why it beats the usual alternative (owner-approved)",
+        "story_home": "the brand's own voice and why it exists",
+        "wave_home": "a soft edge into the shop-by-concern band"
+      }
     }
   }
 }

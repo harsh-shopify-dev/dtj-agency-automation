@@ -2,6 +2,7 @@
   assign sl_icons = ',leaf,shield,check,globe,heart,bolt,snowflake,bulb,brain,drop,sparkle,star,truck,clock,award,atom,'
   assign sl_n = 0
   assign sl_first = nil
+  assign sl_first_m = nil
   for i in (1..3)
     assign ik = 'image_' | append: i
     assign ek = 'eyebrow_' | append: i
@@ -11,14 +12,18 @@
     assign ck = 'chips_' | append: i
     assign bk = 'button_label_' | append: i
     assign nk = 'note_' | append: i
+    assign mk = 'image_mobile_' | append: i
     assign has = false
-    if bs[ik] != blank or bs[ek] != blank or bs[hk] != blank or bs[rk] != blank or bs[dk] != blank or bs[ck] != blank or bs[bk] != blank or bs[nk] != blank
+    if bs[ik] != blank or bs[mk] != blank or bs[ek] != blank or bs[hk] != blank or bs[rk] != blank or bs[dk] != blank or bs[ck] != blank or bs[bk] != blank or bs[nk] != blank
       assign has = true
     endif
     if has
       assign sl_n = sl_n | plus: 1
       if sl_first == nil and bs[ik] != blank
         assign sl_first = bs[ik]
+      endif
+      if sl_first_m == nil and bs[mk] != blank
+        assign sl_first_m = bs[mk]
       endif
     endif
   endfor
@@ -27,8 +32,23 @@
   if sl_rd == 'adapt'
     assign sl_rd = sl_first.aspect_ratio | default: '3 / 2'
   endif
+  assign sl_hm = bs.desktop_max_height | plus: 0
+  assign sl_ml = bs.mobile_layout | default: 'stack'
+  assign sl_ma = bs.mobile_align | default: 'auto'
+  if sl_ma == 'auto'
+    assign sl_ma = 'center'
+    if sl_ml == 'overlay'
+      assign sl_ma = 'left'
+    endif
+  endif
   if sl_rm == 'adapt'
-    assign sl_rm = sl_first.aspect_ratio | default: '4 / 5'
+    if sl_first_m
+      assign sl_rm = sl_first_m.aspect_ratio | default: '4 / 5'
+    elsif sl_ml == 'overlay'
+      assign sl_rm = '4 / 5'
+    else
+      assign sl_rm = sl_first.aspect_ratio | default: '4 / 5'
+    endif
   endif
   assign sl_auto = false
   if bs.autoplay and sl_n > 1
@@ -41,7 +61,7 @@
   endcase
 -%}
 {%- if sl_n > 0 -%}
-  <dtj-slideshow class="dtj-b dtj-sl dtj-sl--pos-{{ sl_pos }} dtj-sl--v-{{ bs.content_align | default: 'center' }} dtj-sl--ov-{{ bs.overlay_style | default: 'side' }} dtj-sl--tr-{{ bs.transition | default: 'slide' }} dtj-sl--arrows-{{ bs.arrows_position | default: 'right-bottom' }} dtj-sl--chips-{{ bs.chip_style | default: 'outline' }} dtj-sl--rating-{{ bs.rating_style | default: 'plain' }} dtj-sl--btn-{{ bs.button_style | default: 'pill' }} dtj-sl--accent-{{ bs.accent_font | default: 'serif' }} dtj-sl--hf-{{ bs.heading_font | default: 'theme' }} dtj-sl--eyebrow-{{ bs.eyebrow_style | default: 'sans' }}{% if sl_auto %} dtj-sl--auto{% endif %}{% if bs.show_progress %} dtj-sl--progress{% endif %}{% if sl_n < 2 %} dtj-sl--single{% endif %}" data-auto="{{ sl_auto }}" style="{{ dtj_std_style | strip_newlines }} --sl-w: {{ bs.container_width }}px; --sl-r: {{ bs.corner_radius }}px; --sl-rd: {{ sl_rd }}; --sl-rm: {{ sl_rm }}; --sl-cw: {{ bs.content_width }}px; --sl-pad: {{ bs.content_padding }}px; --sl-focus: {{ bs.image_focus | default: 'center' }}; --sl-ov-pct: {{ bs.overlay_opacity }}%; --sl-ov-size: {{ bs.overlay_size }}%; --sl-blur: {{ bs.overlay_blur }}px; --sl-h-d: {{ bs.heading_size_desktop }}px; --sl-h-m: {{ bs.heading_size_mobile }}px; --sl-desc: {{ bs.description_size }}px; --sl-dur: {{ bs.autoplay_seconds }}s; --sl-pw: {{ bs.progress_width }}px;{% if bs.overlay_color != blank %} --sl-ov-c: {{ bs.overlay_color }};{% endif %}{% if bs.accent_color != blank %} --sl-accent: {{ bs.accent_color }};{% endif %}{% if bs.star_color != blank %} --sl-star: {{ bs.star_color }};{% endif %}{% if bs.button_bg != blank %} --sl-btn-bg: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --sl-btn-c: {{ bs.button_color }};{% endif %}{% if bs.arrow_bg != blank %} --sl-ab: {{ bs.arrow_bg }};{% endif %}{% if bs.arrow_color != blank %} --sl-ac: {{ bs.arrow_color }};{% endif %}{% if bs.progress_color != blank %} --sl-pc: {{ bs.progress_color }};{% endif %}" {{ block.shopify_attributes }}>
+  <dtj-slideshow class="dtj-b dtj-sl dtj-sl--pos-{{ sl_pos }} dtj-sl--v-{{ bs.content_align | default: 'center' }} dtj-sl--ov-{{ bs.overlay_style | default: 'side' }} dtj-sl--tr-{{ bs.transition | default: 'slide' }} dtj-sl--arrows-{{ bs.arrows_position | default: 'right-bottom' }} dtj-sl--chips-{{ bs.chip_style | default: 'outline' }} dtj-sl--rating-{{ bs.rating_style | default: 'plain' }} dtj-sl--btn-{{ bs.button_style | default: 'pill' }} dtj-sl--accent-{{ bs.accent_font | default: 'serif' }} dtj-sl--hf-{{ bs.heading_font | default: 'theme' }} dtj-sl--eyebrow-{{ bs.eyebrow_style | default: 'sans' }} dtj-sl--m-{{ sl_ml }} dtj-sl--ma-{{ sl_ma }}{% if sl_auto %} dtj-sl--auto{% endif %}{% if bs.show_progress %} dtj-sl--progress{% endif %}{% if sl_n < 2 %} dtj-sl--single{% endif %}" data-auto="{{ sl_auto }}" style="{{ dtj_std_style | strip_newlines }} --sl-w: {{ bs.container_width }}px; --sl-r: {{ bs.corner_radius }}px; --sl-rd: {{ sl_rd }}; --sl-rm: {{ sl_rm }}; --sl-mps: {{ bs.mobile_pic_space | default: 50 }}vw;{% if sl_hm > 0 %} --sl-hmax: {{ sl_hm }}vh;{% endif %} --sl-cw: {{ bs.content_width }}px; --sl-pad: {{ bs.content_padding }}px; --sl-focus: {{ bs.image_focus | default: 'center' }}; --sl-ov-pct: {{ bs.overlay_opacity }}%; --sl-ov-size: {{ bs.overlay_size }}%; --sl-blur: {{ bs.overlay_blur }}px; --sl-h-d: {{ bs.heading_size_desktop }}px; --sl-h-m: {{ bs.heading_size_mobile }}px; --sl-desc: {{ bs.description_size }}px; --sl-dur: {{ bs.autoplay_seconds }}s; --sl-pw: {{ bs.progress_width }}px;{% if bs.overlay_color != blank %} --sl-ov-c: {{ bs.overlay_color }};{% endif %}{% if bs.accent_color != blank %} --sl-accent: {{ bs.accent_color }};{% endif %}{% if bs.star_color != blank %} --sl-star: {{ bs.star_color }};{% endif %}{% if bs.button_bg != blank %} --sl-btn-bg: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --sl-btn-c: {{ bs.button_color }};{% endif %}{% if bs.arrow_bg != blank %} --sl-ab: {{ bs.arrow_bg }};{% endif %}{% if bs.arrow_color != blank %} --sl-ac: {{ bs.arrow_color }};{% endif %}{% if bs.progress_color != blank %} --sl-pc: {{ bs.progress_color }};{% endif %}" {{ block.shopify_attributes }}>
     <div class="dtj-sl__viewport" role="region" aria-roledescription="carousel" aria-label="Slideshow">
       <div class="dtj-sl__track">
         {%- assign sl_shown = 0 -%}
@@ -57,6 +77,8 @@
             assign uk = 'button_url_' | append: i
             assign nk = 'note_' | append: i
             assign s_img = bs[ik]
+            assign imk = 'image_mobile_' | append: i
+            assign s_img_m = bs[imk]
             assign s_eyebrow = bs[ek] | strip
             assign s_head = bs[hk] | strip
             assign s_rating = bs[rk] | strip
@@ -66,7 +88,7 @@
             assign s_url = bs[uk]
             assign s_note = bs[nk] | strip
             assign has = false
-            if s_img != blank or s_eyebrow != blank or s_head != blank or s_rating != blank or s_desc != blank or s_chips != blank or s_btn != blank or s_note != blank
+            if s_img != blank or s_img_m != blank or s_eyebrow != blank or s_head != blank or s_rating != blank or s_desc != blank or s_chips != blank or s_btn != blank or s_note != blank
               assign has = true
             endif
           -%}
@@ -74,8 +96,14 @@
             {%- assign sl_shown = sl_shown | plus: 1 -%}
             <div class="dtj-sl__slide{% if sl_shown == 1 %} is-active{% endif %}" role="group" aria-roledescription="slide" aria-label="{{ sl_shown }} / {{ sl_n }}"{% if sl_shown > 1 %} aria-hidden="true" inert{% endif %}>
               <div class="dtj-sl__media">
-                {%- if s_img != blank -%}
-                  <img class="dtj-sl__img" src="{{ s_img | image_url: width: 1600 }}" srcset="{{ s_img | image_url: width: 800 }} 800w, {{ s_img | image_url: width: 1200 }} 1200w, {{ s_img | image_url: width: 1600 }} 1600w, {{ s_img | image_url: width: 2000 }} 2000w" sizes="(min-width: 750px) min(100vw, {{ bs.container_width }}px), 100vw" width="{{ s_img.width | default: 1600 }}" height="{{ s_img.height | default: 1000 }}" alt="{{ s_img.alt | escape }}" loading="{% if sl_shown == 1 %}eager{% else %}lazy{% endif %}">
+                {%- if s_img != blank or s_img_m != blank -%}
+                  {%- assign s_main = s_img | default: s_img_m -%}
+                  <picture class="dtj-sl__pic">
+                    {%- if s_img_m != blank and s_img != blank -%}
+                      <source media="(max-width: 749px)" srcset="{{ s_img_m | image_url: width: 600 }} 600w, {{ s_img_m | image_url: width: 900 }} 900w, {{ s_img_m | image_url: width: 1200 }} 1200w" sizes="100vw" width="{{ s_img_m.width | default: 900 }}" height="{{ s_img_m.height | default: 1100 }}">
+                    {%- endif -%}
+                    <img class="dtj-sl__img" src="{{ s_main | image_url: width: 1600 }}" srcset="{{ s_main | image_url: width: 800 }} 800w, {{ s_main | image_url: width: 1200 }} 1200w, {{ s_main | image_url: width: 1600 }} 1600w, {{ s_main | image_url: width: 2000 }} 2000w" sizes="(min-width: 750px) min(100vw, {{ bs.container_width }}px), 100vw" width="{{ s_main.width | default: 1600 }}" height="{{ s_main.height | default: 1000 }}" alt="{{ s_main.alt | escape }}" loading="{% if sl_shown == 1 %}eager{% else %}lazy{% endif %}">
+                  </picture>
                 {%- endif -%}
               </div>
               <div class="dtj-sl__fade" aria-hidden="true"></div>

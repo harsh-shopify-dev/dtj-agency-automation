@@ -146,6 +146,61 @@ def _stand_in(kind: str, label: str, height: int) -> str:
             f'border-radius:6px;margin:6px 0">{htmllib.escape(label)}</div>')
 
 
+PHONE_SPACING_SCALE = 0.7  # Horizon: --spacing-scale-md under 990 px (snippets/theme-styles-variables.liquid), 1.0 from 990 px
+SPACING_MIN = 20  # Horizon's spacing-style snippet: a padding above 20 px never shrinks below 20 px on a phone
+
+
+def wrapper_style(settings: dict) -> str:
+    """The inline style Horizon's `_blocks` section wrapper gets from its own settings (snippets/section.liquid + spacing-style.liquid):
+    the band colour and the top/bottom padding, which the theme scales by --spacing-scale (0.7 on phones, 1 from 990 px)."""
+    out = []
+    for key, css in (("padding-block-start", "padding-top"), ("padding-block-end", "padding-bottom")):
+        v = settings.get(key) or 0
+        out.append(f"{css}:max({SPACING_MIN}px,calc(var(--pb-spacing-scale) * {v}px))" if v > SPACING_MIN else f"{css}:{v}px")
+    if settings.get("background_color"):
+        out.append(f"background:{settings['background_color']}")
+    return ";".join(out)
+
+
+def home_page_html(template: dict, *, media_dir: Path | None = None, bg: str = "#FFFFFF", text: str = "#0F171F") -> str:
+    """A built HOME page (templates/index.json content) as one HTML page: the real DTJ blocks inside a stand-in of the theme's section
+    wrapper (its padding and band colour, scaled for phones the way Horizon does). Not real: the theme header and footer, collections and
+    products (each block's preview sample) and pictures that are not in media_dir."""
+    used: dict[tuple[str, str], None] = {}
+    parts = []
+    for sid in template["order"]:
+        sec = template["sections"][sid]
+        if not sec.get("block_order"):  # one of the theme's own sections: a labelled stand-in
+            parts.append(f'<section class="pb-section" data-pb-theme="{sec.get("type")}">{_stand_in(sec.get("type", "section"), "theme: " + str(sec.get("type")), 120)}</section>')
+            continue
+        inner = ""
+        for key in sec["block_order"]:
+            entry = sec["blocks"][key]
+            m = _REF.match(entry["type"])
+            app, block = m["app"], m["block"]
+            used[(app, block)] = None
+            body = render_block(app, block, entry.get("settings", {}), key=key, section_id=sid, product=None, media_dir=media_dir)
+            inner += f'<div class="shopify-block shopify-app-block" data-pb-block="{key}" data-pb-dtj="{app}/{block}">{body}</div>'
+        parts.append(f'<section class="pb-section" data-pb-section="{sid}" style="{wrapper_style(sec.get("settings", {}))}">'
+                     f'<div class="layout-panel-flex layout-panel-flex--column section-content-wrapper mobile-column" '
+                     f'style="--horizontal-alignment:center;--vertical-alignment:flex-start;--gap:0px;--flex-wrap:nowrap;--flex-direction:column">'
+                     f'{inner}</div></section>')
+    css, js = [], []
+    for app, block in used:
+        c, j = _assets(app, block)
+        css.append(c)
+        if j:
+            js.append(j)
+    theme_css = THEME_CSS.read_text(encoding="utf-8") if THEME_CSS.is_file() else ""
+    page_css = (f"html{{color-scheme:light}}body{{margin:0;background:{bg};color:{text};font:15px/1.5 Inter,'Segoe UI',system-ui,sans-serif}}"
+                "*{transition:none!important;animation-duration:0s!important}img,video{max-width:100%}"
+                f".pb-section{{--pb-spacing-scale:{PHONE_SPACING_SCALE}}}@media screen and (min-width:990px){{.pb-section{{--pb-spacing-scale:1}}}}"
+                ".pb-section>.layout-panel-flex{width:100%}.pb-section .shopify-app-block{width:100%}")
+    return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<style>{theme_css}</style><style>{page_css}</style><style>{"".join(css)}</style></head>'
+            f'<body>{"".join(parts)}<script>{";".join(js)}</script></body></html>')
+
+
 def page_html(result, *, media_dir: Path | None = None, width_hint: str = "") -> tuple[str, dict]:
     """(html, notes). notes lists what is real and what is a stand-in, for the report."""
     model, template = result.model, result.template

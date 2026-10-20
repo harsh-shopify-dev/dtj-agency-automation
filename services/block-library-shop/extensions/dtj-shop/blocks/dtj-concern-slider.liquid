@@ -130,7 +130,7 @@
                   -%}
                   <li class="dtj-cs__card" data-handle="{{ product.handle }}">
                     <a class="dtj-cs__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
-                      {%- if p_pic != nil -%}<img class="dtj-cs__img" src="{{ p_pic | image_url: width: 600 }}" srcset="{{ p_pic | image_url: width: 300 }} 300w, {{ p_pic | image_url: width: 450 }} 450w, {{ p_pic | image_url: width: 600 }} 600w, {{ p_pic | image_url: width: 800 }} 800w" sizes="(min-width: 750px) {{ cs_vw }}vw, 60vw" width="{{ p_pic.width | default: 600 }}" height="{{ p_pic.height | default: 600 }}" alt="" loading="lazy" decoding="async">{%- endif -%}
+                      {%- if p_pic != nil -%}<img class="dtj-cs__img" src="{{ p_pic | image_url: width: 600 }}" srcset="{{ p_pic | image_url: width: 300 }} 300w, {{ p_pic | image_url: width: 450 }} 450w, {{ p_pic | image_url: width: 600 }} 600w, {{ p_pic | image_url: width: 800 }} 800w" sizes="(min-width: 750px) {{ cs_vw }}vw, 60vw" width="{{ p_pic.width | default: 600 }}" height="{{ p_pic.height | default: 600 }}" alt="" loading="{% if forloop.parentloop.first and forloop.index <= 4 %}eager{% else %}lazy{% endif %}" decoding="async">{%- endif -%}
                     </a>
                     <div class="dtj-cs__body">
                       {%- if r_src != '' -%}

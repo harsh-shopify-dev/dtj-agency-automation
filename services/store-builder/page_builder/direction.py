@@ -18,6 +18,8 @@ from pathlib import Path
 
 from provision import style
 
+from . import palette as palette_mod
+
 AA_TEXT = 4.5
 AA_LARGE = 3.0
 
@@ -81,6 +83,7 @@ class Direction:
     checks: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     palette_sources: dict = field(default_factory=dict)
+    ramps: dict = field(default_factory=dict)  # brand.palette "ramps": the 12-step scales the roles came from (palette.py)
 
     def failed_checks(self) -> list:
         return [c for c in self.checks if not c["ok"]]
@@ -88,7 +91,7 @@ class Direction:
     def as_report(self) -> dict:
         return {"roles": self.roles, "shape": self.shape, "type": self.type, "density": self.density, "motion": self.motion,
                 "signature": self.signature, "dark_mode": self.dark_mode, "vibe": self.vibe, "max_dark": self.max_dark, "why": self.why, "checks": self.checks,
-                "warnings": self.warnings, "palette_sources": self.palette_sources}
+                "warnings": self.warnings, "palette_sources": self.palette_sources, "ramps": self.ramps}
 
 
 def _steps_to_pass(color: str, bg: str, target: str) -> int:
@@ -225,6 +228,16 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
         r["banner"], r["on_banner"], r["accent_on_banner"] = r["panel"], r["on_panel"], r["accent_on_panel"]
     else:
         r["banner"], r["on_banner"], r["accent_on_banner"] = r["dark"], r["on_dark"], r["accent_on_dark"]
+    if brand.get("palette") == "ramps" and not d.dark_mode:
+        # the researched method (palette.py, 19 Oct 2026): 12-step OKLCH scales from the brand colour and its accent, tinted greys, one
+        # solid brand band, the button colour chosen per background. Opt-in while Harsh trials it on home pages; product pages keep the
+        # looks he approved until he says otherwise
+        raw_primary = (colors.get("primary") or primary).upper()
+        new = palette_mod.roles(raw_primary, (colors.get("accent") or raw_primary).upper(), category)
+        d.ramps = new.pop("_ramps")
+        d.warnings += new.pop("_warnings")
+        r.update(new)
+        r["star"] = r["accent"]
     for role in list(r):
         r[role] = r[role].upper()
     pairs = [("text on page", "text", "bg", AA_TEXT), ("text on band", "on_band", "band", AA_TEXT), ("muted text on page", "muted", "bg", AA_TEXT),
@@ -235,6 +248,10 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
              ("rating stars on page", "rating_star", "bg", AA_LARGE), ("words on story cards", "on_panel", "panel", AA_TEXT),
              ("heading on story cards", "panel_head", "panel", AA_LARGE), ("accent on story cards", "accent_on_panel", "panel", AA_LARGE),
              ("words on the closing banner", "on_banner", "banner", AA_TEXT)]
+    if d.ramps:  # the per-background buttons and the accent words on the solid band
+        pairs += [("text on the mint band", "text", "mint", AA_TEXT), ("accent on the mint band", "accent_on_mint", "mint", AA_TEXT),
+                  ("button on a band", "band_button_text", "band_button_bg", AA_TEXT), ("button on the brand band", "fill_button_text", "fill_button_bg", AA_TEXT),
+                  ("button on the dark hero", "dark_button_text", "dark_button_bg", AA_TEXT), ("accent words on the brand band", "accent_on_fill", "accent_fill", AA_TEXT)]
     if d.dark_mode:
         pairs = [p for p in pairs if p[0] not in ("accent on page",)] + [("accent on page", "accent", "band", AA_TEXT)]
     for name, fg, back, need in pairs:
@@ -246,7 +263,11 @@ def derive(brand: dict, logo_path: Path | None = None) -> Direction:
     d.checks.append({"pair": "white star on review tile", "fg": WHITE, "bg": r["review_tile"], "ratio": ratio, "needs": AA_LARGE, "ok": ratio >= AA_LARGE})
     d.why["colors"] = ("Page = the brand's background and text; band = a very light tint of the brand colour for alternating sections; dark band = the brand "
                        "colour darkened, used once for emphasis; accent colours were pushed toward black/white until they pass 4.5:1 on what they sit on.")
-    if d.vibe in BOLD_VIBES and not d.dark_mode:
+    if d.ramps:
+        d.why["colors"] = (f"palette method (palette.py): 12-step scales from the brand colour {r['accent_fill']} and its accent, greys tinted with the brand "
+                           f"hue, soft bands {r['band']}, one solid brand band, buttons per background ({r['button_bg']} on white, {r['fill_button_bg']} "
+                           f"on the brand band, {r['dark_button_bg']} on the dark hero). Every pair passes 4.5:1, every button edge 3:1.")
+    elif d.vibe in BOLD_VIBES and not d.dark_mode:
         d.why["colors"] = (f"{d.vibe} vibe: alternating bands in the brand colour itself ({r['band']}) with {r['on_band']} text, the brand's ink ({r['dark']}) "
                            f"for at most {d.max_dark} dark sections and for cards and boxes with white words, the button and accent bands in the accent colour "
                            f"({r['accent_fill']}) with {r['on_accent']} text; accent words on white use {r['accent']}. Every pair passes 4.5:1.")

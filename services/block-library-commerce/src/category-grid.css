@@ -4,6 +4,10 @@
 .dtj-cg {
   display: block;
   width: 100%;
+  /* the block's section colour and text colour (standard 'colors' controls): set, but never painted until 19 Oct 2026, so every
+     band the page builder chose stayed white. Left empty they change nothing (transparent / inherited). */
+  background: var(--dtj-background, transparent);
+  color: var(--dtj-text-color, inherit);
   content-visibility: auto;
   contain-intrinsic-size: auto 640px;
 }

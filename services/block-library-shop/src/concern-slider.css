@@ -15,17 +15,21 @@
   contain-intrinsic-size: auto 640px;
 }
 
+/* The words column and the cards sit side by side only while the section itself is wide enough for both (240 px of words + 420 px of cards); below that the
+   cards drop under the words. It follows the section's own width, not the screen's, so a narrow container (a theme wrapper, an editor preview, a nested
+   column) can never squeeze the cards into slivers (Harsh, 20 Oct 2026: cards 88 px wide, words broken mid-word). */
 .dtj-cs__wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px 48px;
   max-width: var(--cs-w, 1400px);
   margin-inline: auto;
 }
 
-.dtj-cs__main { min-width: 0; }
+.dtj-cs__main { flex: 999 1 420px; min-width: 0; }
 
-.dtj-cs__side { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 14px; }
+.dtj-cs__side { display: flex; flex: 1 1 clamp(240px, var(--cs-col, 28%), 340px); max-width: 340px; flex-direction: column; justify-content: center; align-items: flex-start; gap: 14px; min-width: 0; }
 
 .dtj-cs__heading {
   margin: 0;
@@ -43,7 +47,7 @@
 
 .dtj-cs__accent { color: var(--cs-acc); }
 
-.dtj-cs__sub { margin: 0; font-size: 16px; line-height: 1.4; }
+.dtj-cs__sub { max-width: 36ch; margin: 0; font-size: 16px; line-height: 1.4; }
 
 .dtj-cs__pick, .dtj-cs__selectwrap { position: relative; }
 
@@ -116,7 +120,7 @@
 
 .dtj-cs__card {
   display: flex;
-  flex: 0 0 calc((100% - (var(--cs-nm, 1.5) - 1) * var(--cs-gap, 16px)) / var(--cs-nm, 1.5));
+  flex: 0 0 clamp(200px, calc((100% - (var(--cs-nm, 1.5) - 1) * var(--cs-gap, 16px)) / var(--cs-nm, 1.5)), 300px);
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
@@ -129,7 +133,7 @@
 .dtj-cs__media {
   display: block;
   aspect-ratio: var(--cs-ar, 1);
-  background: white;
+  background: color-mix(in srgb, var(--cs-acc) 8%, white);
 }
 
 .dtj-cs__img {
@@ -250,6 +254,8 @@
 
 .dtj-cs__add.is-busy { opacity: 0.7; cursor: progress; }
 
+.dtj-cs--arrows-round .dtj-cs__arrow { display: inline-flex; }
+
 .dtj-cs__arrow {
   position: absolute;
   top: 36%;
@@ -314,11 +320,22 @@
 }
 
 @media screen and (min-width: 750px) {
-  .dtj-cs__wrap { grid-template-columns: var(--cs-col, 28%) minmax(0, 1fr); gap: 40px; align-items: center; }
-
   .dtj-cs__heading { font-size: var(--cs-h-d, 48px); }
 
-  .dtj-cs__card { flex-basis: calc((100% - (var(--cs-n, 3.5) - 1) * var(--cs-gap, 16px)) / var(--cs-n, 3.5)); }
+  .dtj-cs__panel:not([hidden]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px 28px;
+  }
+
+  .dtj-cs__panel .dtj-cs__viewport { grid-column: 1 / -1; }
+
+  .dtj-cs__panel .dtj-cs__progress { grid-column: 1; grid-row: 2; margin: 0; }
+
+  .dtj-cs__panel .dtj-cs__viewrow { grid-column: 2; grid-row: 2; margin: 0; }
+
+  .dtj-cs__card { flex-basis: clamp(200px, calc((100% - (var(--cs-n, 3.5) - 1) * var(--cs-gap, 16px)) / var(--cs-n, 3.5)), 280px); }
 
   .dtj-cs--arrows-round .dtj-cs__arrow { display: inline-flex; }
 

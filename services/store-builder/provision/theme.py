@@ -6,8 +6,12 @@ Commands confirmed from `shopify theme push --help` (CLI 4.8.4):
 """
 from __future__ import annotations
 
+import glob
 import json
+import os
+import shutil
 import subprocess
+import tempfile
 from typing import Callable, Sequence
 
 Runner = Callable[[Sequence[str]], "subprocess.CompletedProcess[str]"]
@@ -17,12 +21,39 @@ class ThemeError(Exception):
     pass
 
 
-def _run(cmd: Sequence[str]) -> "subprocess.CompletedProcess[str]":
-    # shell=False and a list: no shell parsing of any value. Windows needs the .cmd shim, so use shutil.which.
-    import shutil
+def cli_exe(name: str) -> str:
+    """The program to start for `name` (Windows needs the .cmd shim, so shutil.which). The Shopify CLI may live only inside the Claude
+    desktop app's own npm folder, which a normal PowerShell does not see (20 Oct 2026: ship_home stopped with "The system cannot find
+    the file specified" in Harsh's PowerShell)."""
+    found = shutil.which(name)
+    if found or name != "shopify":
+        return found or name
+    local = os.environ.get("LOCALAPPDATA", "")
+    hits = sorted(glob.glob(os.path.join(local, "Packages", "Claude_*", "LocalCache", "Roaming", "npm", "shopify.cmd")))
+    return hits[0] if hits else name
 
-    exe = shutil.which(cmd[0]) or cmd[0]
-    return subprocess.run([exe, *cmd[1:]], capture_output=True, text=True, timeout=900, check=False)
+
+def outside_git(cmd: Sequence[str]) -> tuple[list[str], str, dict[str, str]]:
+    """(the command with every --path made absolute, a folder to run it from, extra environment) so the CLI never sees a git project.
+    Started inside a git project with uncommitted changes, the CLI asks "Do you want to proceed?" in a normal PowerShell, and with no one
+    to answer, a theme pull waited until its time limit (20 Oct 2026, Harsh's ship_home run). The CLI checks the theme folder it is given
+    (--path, inside .work in this repo) and the folder it runs in (the system temp folder can itself sit inside a git project: on Harsh's
+    laptop the whole user folder is one), so git is told not to look above either of them."""
+    out = list(cmd)
+    cwd = tempfile.gettempdir()
+    ceilings = [os.path.dirname(os.path.abspath(cwd))]
+    for i, part in enumerate(out[:-1]):
+        if part == "--path":
+            out[i + 1] = os.path.abspath(out[i + 1])
+            ceilings.append(os.path.dirname(out[i + 1]))
+    return out, cwd, {"GIT_CEILING_DIRECTORIES": os.pathsep.join(ceilings)}
+
+
+def _run(cmd: Sequence[str]) -> "subprocess.CompletedProcess[str]":
+    # shell=False and a list: no shell parsing of any value.
+    cmd, cwd, extra = outside_git(cmd)
+    exe = cli_exe(cmd[0])
+    return subprocess.run([exe, *cmd[1:]], capture_output=True, text=True, timeout=900, check=False, cwd=cwd, env={**os.environ, **extra})
 
 
 def push_new_unpublished_cmd(store: str, theme_dir: str, theme_name: str) -> list[str]:

@@ -61,9 +61,28 @@ class ConcernSliderTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r'<option value="\d+"(?: selected)?>', html)), 2)
         self.assertIn(">Yellow Teeth</option>", html)  # a words override
         self.assertIn(">Coll two</option>", html)  # else the collection's own title
-        self.assertRegex(html, r'class="dtj-cs__panel" data-total="\d+" hidden')
-        self.assertEqual(len(re.findall(r'class="dtj-cs__panel" data-total="\d+">', html)), 1)
+        self.assertRegex(html, r'class="dtj-cs__panel" data-total="\d+"(?: style="[^"]*")? hidden')
+        self.assertEqual(len(re.findall(r'class="dtj-cs__panel" data-total="\d+"(?: style="[^"]*")?>', html)), 1)
         self.assertIn('data-total="4"', html)
+
+    def test_cards_are_a_comfortable_size_and_the_words_stay_on_the_left_from_700px(self):
+        # Harsh, 20 Oct 2026: cards 88 px wide with words broken mid-word, then (after a first fix) the words stacked above giant 450 px cards. The css keeps
+        # every card between 200 and 280 px on desktop (the row scrolls), lets the two columns wrap by the section's OWN width and puts the words LEFT
+        # whenever 240 px of words + 420 px of cards fit
+        self.assertNotRegex(self.r(), r'dtj-cs__panel" data-total="\d+" style=')  # no per-panel size tricks
+        css = (ASSETS / "dtj-concern-slider.css").read_text(encoding="utf-8")
+        self.assertGreaterEqual(css.count("clamp(200px, calc("), 2)  # desktop 200-280 px, phones 200-300 px
+        self.assertIn("280px)", css)
+        self.assertIn("300px)", css)
+        self.assertRegex(css, r"(?s)\.dtj-cs__wrap \{[^}]*flex-wrap: wrap")
+        self.assertIn("flex: 999 1 420px", css)
+        self.assertNotIn("grid-template-columns: var(--cs-col", css)  # the old screen-width grid is gone
+        self.assertRegex(css, r"(?s)\.dtj-cs__panel:not\(\[hidden\]\) \{[^}]*display: grid")  # the footer row: counter and View Collection together
+
+    def test_the_first_pictures_load_at_once_and_the_rest_lazily(self):
+        html = self.r()
+        self.assertIn(html.count('loading="eager"'), (3, 4))  # the first panel's first four products (the sample's engine counts 3; Shopify counts 4)
+        self.assertIn('loading="lazy"', html)
 
     def test_one_collection_has_no_dropdown(self):
         html = self.r(products=[product()])
