@@ -64,7 +64,9 @@ with `python tools/team-setup/check_setup.py`.
 each one while a person is at the laptop): the skill `dtj-factory-setup`.
 **A new shop** (a client's store or one in DTJ's own Shopify organization): the skill `dtj-add-shop`.
 **A brand intake before a redesign** (the client's public pictures, videos, colours and details into DTJ's Google Drive; also
-`/intake` in the bot): the skill `dtj-brand-intake`. The page to share with a
+`/intake` in the bot): the skill `dtj-brand-intake`.
+**DTJ's own social media** (one approved post a day on Instagram, Facebook, LinkedIn, YouTube Shorts and X; the weekly content
+session, approvals, results): the skill `dtj-smm`. The page to share with a
 new teammate: `docs/START-HERE.md`.
 
 ## `/start-dtj-engine`

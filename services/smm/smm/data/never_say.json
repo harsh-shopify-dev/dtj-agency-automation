@@ -1,0 +1,8 @@
+{
+  "_about": "Words a DTJ post may not use. Sources: Harsh's rule 'never reveal DTJ's process' (public copy never describes how the automation works); DTJ-CONTEXT.md (no 'call with Tushar', no response time, no fees until DTJ confirms them); CLAUDE.md rule 5 (no invented promises); the jargon table in .claude/skills/dtj-landing-variants/references/audience-and-voice.md. 'jargon' is skipped only when a post sets explains_jargon.",
+  "dtj_process": ["automation", "automated", "automate", "n8n", "chatgpt", "claude", "gpt", "our ai", "ai tool", "ai agent", "pipeline", "workflow", "bot", "prompt"],
+  "promises": ["guarantee", "guaranteed", "guaranteed results", "assured", "100% results", "overnight", "risk-free", "double your sales"],
+  "prices_and_terms": ["fee", "fees", "pricing", "price list", "per month", "/month", "retainer", "lock-in", "contract"],
+  "lead_process": ["call with tushar", "tushar will call", "tushar personally", "within 24 hours", "same day", "within an hour"],
+  "jargon": ["roas", "cvr", "cac", "ltv", "aov", "ctr", "cpc", "cpm", "acos", "funnel", "cbo", "abo", "retargeting", "conversion rate", "pdp", "creatives", "scaling"]
+}

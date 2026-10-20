@@ -1,0 +1,170 @@
+{
+  "_about": "Every number a post may show, by proof item. Copied from .claude/skills/dtj-landing-variants/references/claims-and-proof.md (20 Oct 2026) and the DTJ site repo it points to. A post cites the items it uses (proof_ids); any number in its text must be one of those items' figures. 'blocked' figures exist but may not go on social until DTJ confirms them. Add a figure only with its source. A blocked figure may still be visible inside the unedited dashboard picture (as on DTJ's website); it is never repeated in our own words.",
+  "items": {
+    "sales-proeffex": {
+      "brand": "Pro Effex",
+      "names_client": true,
+      "asset": "proof/sales-1-chart.webp",
+      "logo": "logos/proeffex.webp",
+      "figures": [
+        "₹40.18L",
+        "₹40,17,818",
+        "3,071",
+        "₹12L+",
+        "2025"
+      ],
+      "headline_figure": "₹40.18L",
+      "blocked": {
+        "₹1.5L": "the before-value of rows 1-3 is not confirmed (claims list, pre-launch item)"
+      },
+      "source": "DTJ repo components/proof/RealResults.tsx proof-1; components/simple/Proof.tsx ORDERS; CaseStudies.tsx (₹12L+ peak month); chart shows 'DTJ partnership begins Mar 2025'"
+    },
+    "sales-royal-dosa-paper": {
+      "brand": "The Royal Dosa Paper",
+      "names_client": true,
+      "asset": "proof/sales-2-chart.webp",
+      "logo": "logos/royal-dosa-paper.webp",
+      "figures": [
+        "₹5.28Cr",
+        "₹5,27,64,391",
+        "75,000",
+        "₹70L+",
+        "2025"
+      ],
+      "headline_figure": "₹5.28Cr",
+      "blocked": {
+        "₹0.8L": "the before-value of rows 1-3 is not confirmed"
+      },
+      "source": "RealResults.tsx proof-2; Proof.tsx ORDERS; CaseStudies.tsx ('from almost no sales when we started in March 2025', ₹70L+ peak month)"
+    },
+    "sales-zebein": {
+      "brand": "Zebein",
+      "names_client": true,
+      "asset": "proof/sales-3-chart.webp",
+      "logo": "logos/zebein.webp",
+      "figures": [
+        "₹3.56Cr",
+        "₹3,56,21,659",
+        "4,213",
+        "2024"
+      ],
+      "headline_figure": "₹3.56Cr",
+      "blocked": {
+        "₹9L": "the before-value of rows 1-3 is not confirmed",
+        "746%": "compares periods from before DTJ started (audit F4)",
+        "719%": "same period problem (audit F4)"
+      },
+      "source": "RealResults.tsx proof-3; Proof.tsx ORDERS; chart marks the partnership start in May 2024"
+    },
+    "sales-sindhoi": {
+      "brand": "Sindhoi Patola Arts",
+      "names_client": true,
+      "asset": "proof/sales-4-chart.webp",
+      "logo": "logos/sindhoi-patola-arts.webp",
+      "figures": [
+        "₹2.78Cr",
+        "₹2,78,44,320",
+        "₹52.7L",
+        "1,417",
+        "2024"
+      ],
+      "headline_figure": "₹2.78Cr",
+      "blocked": {
+        "428%": "compares periods from before DTJ started (audit F4)"
+      },
+      "source": "RealResults.tsx proof-4 (₹52.7L is the dashboard total divided by its growth figure); Proof.tsx ORDERS"
+    },
+    "sales-little-rituals": {
+      "brand": "Little Rituals",
+      "names_client": true,
+      "asset": "proof/sales-5-chart.webp",
+      "logo": "logos/little-rituals.webp",
+      "figures": [
+        "₹1.92Cr",
+        "₹1,92,37,480",
+        "₹46.7L",
+        "13,334",
+        "2024"
+      ],
+      "headline_figure": "₹1.92Cr",
+      "blocked": {
+        "312%": "compares periods from before DTJ started (audit F4)",
+        "296%": "same period problem (audit F4)"
+      },
+      "source": "RealResults.tsx proof-5; Proof.tsx ORDERS"
+    },
+    "sales-dadu-fresh": {
+      "brand": "Dadu Fresh",
+      "names_client": true,
+      "asset": "proof/sales-6-chart.webp",
+      "logo": "logos/dadu-fresh.webp",
+      "figures": [
+        "₹1.07Cr",
+        "₹1,06,84,250",
+        "₹37.6L",
+        "9,727",
+        "2024"
+      ],
+      "headline_figure": "₹1.07Cr",
+      "blocked": {
+        "184%": "compares periods from before DTJ started (audit F4)"
+      },
+      "source": "RealResults.tsx proof-6 (the team first sent this dashboard as 'Saatvi'); Proof.tsx ORDERS"
+    },
+    "google-dadu-fresh": {
+      "brand": "Dadu Fresh",
+      "names_client": true,
+      "asset": null,
+      "logo": "logos/dadu-fresh.webp",
+      "figures": [
+        "#1"
+      ],
+      "blocked": {},
+      "source": "public/images/results/google-search.webp: Dadu Fresh as the #1 organic result for 'healthy juice'"
+    },
+    "pdp-proeffex": {
+      "brand": "Pro Effex",
+      "names_client": true,
+      "asset": null,
+      "logo": "logos/proeffex.webp",
+      "figures": [
+        "1.4%",
+        "2.8%",
+        "14",
+        "28",
+        "1,000",
+        "+100%",
+        "100%"
+      ],
+      "blocked": {},
+      "source": "public/images/shopify/before-pdp.webp, after-pdp.webp, cvr-lift.webp (conversion rate 1.4% → 2.8%); plain words from the jargon table: 'out of every 1,000 visitors, 14 bought before; now 28 do'"
+    },
+    "meta-ads-report": {
+      "brand": null,
+      "names_client": false,
+      "asset": null,
+      "logo": null,
+      "figures": [
+        "₹5,15,566",
+        "₹5.15L",
+        "9,680",
+        "41,970",
+        "₹170.72",
+        "₹170",
+        "3,020",
+        "4.42X",
+        "₹4.42",
+        "₹1"
+      ],
+      "blocked": {},
+      "source": "public/images/results/meta-ads-dashboard.webp totals row. Never name a client next to it: say 'a real Facebook and Instagram ads report'"
+    }
+  },
+  "blocked_everywhere": {
+    "16X": "peak reported ROI: no source yet (claims list, pre-launch item)",
+    "208+": "review count: not confirmed",
+    "4.8": "Trustpilot rating: no Trustpilot profile was found",
+    "₹70Cr+": "ad spend managed: shown on the site as it is, not confirmed for new channels",
+    "90+": "brand count: shown on the site as it is, not confirmed for new channels"
+  }
+}

@@ -1,0 +1,60 @@
+# DTJ social media: record a named yes for posts, from GitHub (phone or laptop). Posting is Tier 2: the person who said yes types
+# their own name. If Harsh can't be reached, a DTJ teammate may approve; tick the box. One record per post. See docs/smm/README.md.
+name: SMM approve posts
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "Week, e.g. 2026-W44"
+        required: true
+      posts:
+        description: "Post numbers, e.g. p1-p7 or p1,p3"
+        required: true
+      approved_by:
+        description: "Your name (the person saying yes)"
+        required: true
+      harsh_unreachable:
+        description: "Harsh can't be reached (a teammate approves)"
+        type: boolean
+        default: false
+      withdraw:
+        description: "Withdraw the approval instead"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: smm-daily
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: smm-content
+          path: content
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r services/smm/requirements-run.txt
+      - name: Approve
+        working-directory: services/smm
+        env:
+          WEEK: ${{ inputs.week }}
+          POSTS: ${{ inputs.posts }}
+          BY: ${{ inputs.approved_by }}
+        run: |
+          git -C ../../content config user.name "DTJ SMM"
+          git -C ../../content config user.email "smm-bot@users.noreply.github.com"
+          ARGS=""
+          if [ "${{ inputs.harsh_unreachable }}" = "true" ]; then ARGS="$ARGS --harsh-unreachable"; fi
+          if [ "${{ inputs.withdraw }}" = "true" ]; then ARGS="$ARGS --revoke"; fi
+          python -m smm approve --store ../../content --week "$WEEK" --posts "$POSTS" --by "$BY" $ARGS | tee out.txt
+          cat out.txt >> "$GITHUB_STEP_SUMMARY"
