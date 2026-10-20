@@ -4,7 +4,8 @@
 Update this file at the end of every working session (Harsh's rule).
 
 **UPDATE 21 Oct 2026 (REEL FACTORY BUILT, branch `feature/reel-factory`): UGC ad reels from n8n, made in the browser (no API, Harsh's decision).**
-- n8n: **Reel Factory: New Reel** (id `dS36LVeRXLuIuajm`, UNPUBLISHED; form "New UGC reel" needs an n8n login; table **dtj_reel_jobs** id
+- n8n: **Reel Factory: New Reel** (id `dS36LVeRXLuIuajm`, PUBLISHED 21 Oct 2026 on Harsh's yes; live form
+  https://n8n.srv2048145.hstgr.cloud/form/dtj-new-reel, opens only after an n8n login; PR #16 merged; table **dtj_reel_jobs** id
   `eDnHZuYHvGPggAgX`). Form -> job row -> "Request for Claude Code: Reel" -> Wait (3 days) -> reply -> Record Reel -> Telegram reply
   (only for jobs that came from Telegram; `/reel` in the bot is NOT built yet). Source + tests: `n8n/reel-factory/`.
 - Worker: `services/reel-factory/` (`python -m reel_factory.job new|refs|lint|character|images|pick|clips|check|edit|result`), runbook =
@@ -18,7 +19,7 @@ Update this file at the end of every working session (Harsh's rule).
 - NOT VERIFIED: `flow.py` and `chatgpt.py` (the browser drivers) have not run against live Flow/ChatGPT; their selectors come from the
   20-21 Oct hand runs. First live run must be watched by a person (it spends Flow credits: 14 per 4 s x2, 24 per 8 s x2). `setup_vps.sh`
   has not run on a VPS.
-- OPEN for Harsh: publish the workflow (form production URL); Remotion licence if DTJ is over 3 people (else the libass captions);
+- OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
 ## PAGE DESIGN PROGRESS BAR IN TELEGRAM (20 Oct 2026, branch `feature/bot-progress-bar`)
