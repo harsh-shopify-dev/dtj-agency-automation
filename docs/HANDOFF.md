@@ -3,6 +3,22 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+## PAGE DESIGN PROGRESS BAR IN TELEGRAM (20 Oct 2026, branch `feature/bot-progress-bar`)
+Harsh: "in the telegram bot also add the progress bar for page designing". A page request from the bot now gets ONE Telegram message
+that the designer's Claude Code session edits at every step (like the brand intake's bar): reading the brief 0-5 %, collecting the
+brand's data 5-20, reading the product 20-30, facts / brand / words 30-55, build + design checks 55-85 (round 1-3 of 3), checking the
+draft 85-95, then "Done in N min" (the preview link follows as before) or "Stopped after N min: <why>". The split is a set layout, not
+a measured timing; the time is real. Each command always exits 0 and never stops the design.
+- Code: `page_builder/progress.py` (`PageProgress`, CLI `python -m page_builder.progress page start|step|done|stopped --state
+  <client>/progress.json`; the state file holds the chat id and message id, never the token; the token is the laptop's
+  `DTJ_TELEGRAM_BOT_TOKEN`). `request_page_design.js` adds the commands to the task list only when the brief has a
+  `telegram_chat_id` (a client-form brief gets none) and passes `request.telegram_chat_id`. `bot_answer.js`: "A progress bar shows up
+  here when they do". Tests: store-builder 410 OK (4 new), n8n 112 OK.
+- n8n: the two code nodes copied with `setup_n8n.py --apply` (drafts 20 Oct 13:17 UTC: Page Design f0bddd8f, Telegram Bot 3909c9d4),
+  then published under Harsh's standing merge/publish rule. ROLLBACK targets (the live versions before): Page Design
+  `327fb288-9013-4c83-9b13-f3ad0479823f`, Telegram Bot `9307e15b-790f-4630-aba9-a93fd2a38b87` (n8n workflow history > restore).
+- Not verified yet: a real page request from Telegram end to end (the bar was tested with a stand-in Telegram).
+
 ## COLLECTION PAGE: HANDOVER TO THE NEXT CLAUDE (written 20 Oct 2026 by account A; READ THIS FIRST for collection work)
 
 **Harsh's instruction (20 Oct 2026):** another Claude takes over everything for the collection page: (1) create the skill (`.claude/skills/dtj-collection-page/`, same shape as `dtj-home-page` / `dtj-pdp-factory`), (2) deploy the product-list section on the collection page and HIDE the theme's default product grid there, (3) design the whole collection page. Account A stops at the block; it does not do these three.

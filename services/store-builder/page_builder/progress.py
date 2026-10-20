@@ -12,6 +12,22 @@ best effort: a Telegram error never stops the intake, and an error message never
 In a GitHub run (GITHUB_RUN_ID) the message carries a Stop button (callback stop:intake:<run id>; the bot cancels that run, Harsh,
 19 Oct 2026: "add a stop feature"). The last edit removes the button. With DTJ_PROGRESS_FILE set, the message id is kept in that file
 until the last edit, so the workflow's final step can close a message the intake could not close itself (a stopped or crashed run).
+
+PAGE DESIGN (Harsh, 20 Oct 2026: "in the telegram bot also add the progress bar for page designing"): the same kind of message for a
+page request from the bot. The designer's Claude Code session runs one short command at each step of its task list
+(n8n/store-factory/request_page_design.js); every command edits the same message, its id kept in a small state file next to the page:
+
+    python -m page_builder.progress page start --chat <telegram chat id> --title "Page design: radiance-serum" --state <client>/progress.json
+    python -m page_builder.progress page step --stage build --done 2 --total 3 --state <client>/progress.json
+    python -m page_builder.progress page done --state <client>/progress.json          (or: page stopped --note "why")
+
+    Page design: radiance-serum
+    ███████░░░ 70%
+    Building the page and running the design checks: round 2 of 3
+    Time so far: 9 min 40 s
+
+The split between the steps is a set layout (PAGE_STAGES), not a measured timing; the time is the real time since the start. Each
+command always exits 0 and never stops the design: no chat or no token = nothing is sent.
 """
 from __future__ import annotations
 
@@ -140,3 +156,123 @@ class Progress:
                 text = f"Brand intake: {self.store}\nStopped after {spent}.\n{note or 'The next message says why.'}"
             self._edit(text, force=True, last=True)
         return spent
+
+
+# ------------------------------------------------------------------------------------------------ page design
+# step -> (what the person reads, where the bar starts, where it ends). A set layout: most of the bar for the slow parts (the brand
+# data, the facts and words, the build with its design checks), not a measured timing.
+PAGE_STAGES = {
+    "brief": ("Reading the brief", 0, 5),
+    "intake": ("Collecting the brand's pictures and details", 5, 20),
+    "product": ("Reading the product and its pictures", 20, 30),
+    "facts": ("Writing the facts, the brand and the words", 30, 55),
+    "build": ("Building the page and running the design checks", 55, 85),
+    "check": ("Checking the page on the draft theme", 85, 95),
+}
+ROUND_UNITS = {"build": "round", "intake": "step"}
+
+
+class PageProgress:
+    """The page-design bar. Each command is its own process, so the message id, the chat and the start time live in a state file
+    (no secret in it: the token comes from DTJ_TELEGRAM_BOT_TOKEN only)."""
+
+    def __init__(self, state: str | os.PathLike, token: str | None = None, post: Post = _post, clock: Callable[[], float] = time.time):
+        self.path, self.post, self.clock = os.fspath(state), post, clock
+        self.token = token if token is not None else os.environ.get("DTJ_TELEGRAM_BOT_TOKEN", "")
+        try:
+            with open(self.path, encoding="utf-8") as fh:
+                self.s = json.load(fh)
+        except (OSError, ValueError):
+            self.s = {}
+
+    def _save(self) -> None:
+        folder = os.path.dirname(self.path)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(self.s, fh, indent=1)
+
+    def _call(self, method: str, data: dict) -> dict:
+        if not self.token:
+            return {}
+        status, answer = self.post(f"https://api.telegram.org/bot{self.token}/{method}", data)
+        if status != 200:
+            print(f"progress bar: Telegram answered {status or 'nothing'} (the design goes on)")
+            return {}
+        return answer.get("result") or {}
+
+    def _time(self) -> str:
+        return took(self.clock() - float(self.s.get("started", self.clock())))
+
+    def _edit(self, text: str) -> None:
+        if not self.s.get("message_id") or text == self.s.get("last_text"):  # Telegram refuses an edit that changes nothing
+            return
+        self._call("editMessageText", {"chat_id": self.s["chat"], "message_id": self.s["message_id"], "text": text})
+        self.s["last_text"] = text
+        self._save()
+
+    def start(self, chat: str, title: str) -> str:
+        chat = str(chat or "").strip()
+        if not chat or not self.token:
+            return "progress bar: off (no Telegram chat for this request, or no DTJ_TELEGRAM_BOT_TOKEN)"
+        text = f"{title}\n{bar(0)}\nStarting...\nTime so far: 0 s"
+        sent = self._call("sendMessage", {"chat_id": chat, "text": text, "disable_notification": True})
+        self.s = {"chat": chat, "title": title, "message_id": sent.get("message_id"), "started": self.clock(), "last_text": text}
+        self._save()
+        return "progress bar: started" if sent.get("message_id") else "progress bar: Telegram did not take the message (the design goes on)"
+
+    def step(self, stage: str, done: int = 0, total: int = 0) -> str:
+        if stage not in PAGE_STAGES:
+            return f"progress bar: unknown step {stage!r}; use one of {', '.join(PAGE_STAGES)}"
+        if not self.s.get("message_id"):
+            return "progress bar: off"
+        label, lo, hi = PAGE_STAGES[stage]
+        share = min(1.0, done / total) if total else 0.0
+        percent = int(lo + (hi - lo) * share)
+        unit = ROUND_UNITS.get(stage)
+        line = f"{label}: {unit} {done} of {total}" if unit and total else label
+        self._edit(f"{self.s['title']}\n{bar(percent)}\n{line}\nTime so far: {self._time()}")
+        return f"progress bar: {percent}%"
+
+    def finish(self, ok: bool, note: str = "") -> str:
+        if not self.s.get("message_id"):
+            return "progress bar: off"
+        spent = self._time()
+        if ok:
+            self._edit(f"{self.s['title']}\n{bar(100)}\nDone in {spent}.\n{note or 'The preview link comes in the next message.'}")
+        else:
+            self._edit(f"{self.s['title']}\nStopped after {spent}.\n{note or 'The next message says why.'}")
+        return f"progress bar: {'done' if ok else 'stopped'} after {spent}"
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse  # noqa: PLC0415  (only the command line needs it)
+
+    ap = argparse.ArgumentParser(description="The page-design progress bar in Telegram (one message, edited at every step).")
+    sub = ap.add_subparsers(dest="kind", required=True)
+    page = sub.add_parser("page", help="a page request from the bot")
+    page.add_argument("action", choices=("start", "step", "done", "stopped"))
+    page.add_argument("--state", required=True, help="the state file, e.g. <client folder>/progress.json")
+    page.add_argument("--chat", help="start: the requester's Telegram chat id (the brief's telegram_chat_id)")
+    page.add_argument("--title", default="Page design", help="start: the first line, e.g. 'Page design: radiance-serum'")
+    page.add_argument("--stage", help=f"step: one of {', '.join(PAGE_STAGES)}")
+    page.add_argument("--done", type=int, default=0)
+    page.add_argument("--total", type=int, default=0)
+    page.add_argument("--note", default="", help="done / stopped: the last line")
+    a = ap.parse_args(argv)
+    p = PageProgress(a.state)
+    try:
+        if a.action == "start":
+            msg = p.start(a.chat, a.title)
+        elif a.action == "step":
+            msg = p.step(a.stage or "", a.done, a.total)
+        else:
+            msg = p.finish(a.action == "done", a.note)
+    except OSError as exc:  # a state file that cannot be written must not stop the design either
+        msg = f"progress bar: {type(exc).__name__} (the design goes on)"
+    print(msg)
+    return 0  # never stops the design
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

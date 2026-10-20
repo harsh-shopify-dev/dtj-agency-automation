@@ -189,5 +189,68 @@ class IntakeProgressTests(unittest.TestCase):
         self.assertRegex(gh_out.read_text(encoding="utf-8"), r"took=\d+ s\n")
 
 
+class PageDesignTests(unittest.TestCase):
+    """The page-design bar (Harsh, 20 Oct 2026: "in the telegram bot also add the progress bar for page designing"): one message, one
+    command per step, each its own process (the state file carries the message between them)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.state = self.tmp / "client" / "progress.json"  # the client folder does not exist yet at step 1
+        self.tg, self.clock = FakeTelegram(), Clock()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def page(self, token=TOKEN):  # a new object per call, as each command is a new process
+        return progress.PageProgress(self.state, token=token, post=self.tg, clock=self.clock)
+
+    def test_one_message_moves_through_the_steps_and_ends_with_the_time(self):
+        self.assertEqual(self.page().start("555", "Page design: radiance-serum"), "progress bar: started")
+        self.clock.now += 65
+        self.page().step("facts")
+        self.clock.now += 300
+        self.assertEqual(self.page().step("build", 2, 3), "progress bar: 75%")
+        self.page().step("build", 2, 3)  # the same text again: Telegram would refuse it, so nothing is sent
+        self.clock.now += 200
+        self.page().finish(True)
+        methods = [m for m, _ in self.tg.calls]
+        self.assertEqual(methods, ["sendMessage", "editMessageText", "editMessageText", "editMessageText"])
+        self.assertTrue(all(d.get("message_id") == 77 for _, d in self.tg.calls[1:]))  # always the same message
+        texts = self.tg.texts()
+        self.assertEqual(texts[0].split("\n")[:2], ["Page design: radiance-serum", bar(0)])
+        self.assertIn("Writing the facts, the brand and the words\nTime so far: 1 min 05 s", texts[1])
+        self.assertIn(bar(75) + "\nBuilding the page and running the design checks: round 2 of 3", texts[2])
+        self.assertIn(bar(100) + "\nDone in 9 min 25 s.\nThe preview link comes in the next message.", texts[3])
+        self.assertEqual(self.tg.calls[0][1]["chat_id"], "555")
+        self.assertNotIn(TOKEN, self.state.read_text(encoding="utf-8"))  # the state file holds the chat and the message, never the token
+
+    def test_a_page_that_was_not_written_says_stopped_and_why(self):
+        self.page().start("555", "Page design: x")
+        self.clock.now += 42
+        self.page().finish(False, "The store is password-protected.")
+        self.assertEqual(self.tg.texts()[-1], "Page design: x\nStopped after 42 s.\nThe store is password-protected.")
+
+    def test_no_chat_or_no_token_sends_nothing_and_every_step_is_off(self):
+        self.assertIn("off", self.page().start("", "Page design: x"))  # a brief from the client form has no chat
+        self.assertIn("off", self.page(token="").start("555", "Page design: x"))
+        self.assertEqual(self.page().step("build"), "progress bar: off")
+        self.assertEqual(self.page().finish(True), "progress bar: off")
+        self.assertEqual(self.tg.calls, [])
+
+    def test_telegram_errors_and_wrong_steps_never_stop_the_design(self):
+        self.tg.status = 500
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            msg = self.page().start("555", "Page design: x")
+        self.assertIn("did not take the message", msg)
+        self.assertNotIn(TOKEN, out.getvalue())
+        self.assertEqual(self.page().step("build"), "progress bar: off")
+        self.assertIn("unknown step", self.page().step("painting"))
+        with contextlib.redirect_stdout(io.StringIO()), mock.patch.dict(os.environ, {"DTJ_TELEGRAM_BOT_TOKEN": TOKEN}), \
+                mock.patch.object(progress, "_post", self.tg):
+            self.assertEqual(progress.main(["page", "step", "--stage", "nonsense", "--state", str(self.state)]), 0)
+            self.assertEqual(progress.main(["page", "done", "--state", str(self.tmp)]), 0)  # a folder as the state file: still 0
+
+
 if __name__ == "__main__":
     unittest.main()

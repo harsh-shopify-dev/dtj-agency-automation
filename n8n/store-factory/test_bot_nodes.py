@@ -77,6 +77,7 @@ class Bot(unittest.TestCase):
         self.assertIn("designing vitamin-c-serum on Hope N Skin (brief 12)", out[0]["text"])
         self.assertIn("handle the Claude Code trigger in n8n", out[1]["text"])
         self.assertNotIn("handle the Claude Code trigger", out[0]["text"])  # a requester is not asked to run Claude
+        self.assertIn("A progress bar shows up here when they do", out[0]["text"])  # the designer's session sends it (20 Oct 2026)
         own = [i["json"] for i in run_node("bot_answer.js", ok, {"Who Is It": {**ask, "chat_id": "222", "requester_id": "222"}})["out"]]
         self.assertEqual([o["chat_id"] for o in own], ["222", "333"])  # a designer who asked gets one message, with the instruction
         self.assertIn("handle the Claude Code trigger in n8n", own[0]["text"])
