@@ -1,0 +1,113 @@
+{%- liquid
+  assign vr_n = 0
+  for i in (1..6)
+    assign ik = 'image_' | append: i
+    assign vk = 'video_' | append: i
+    assign nk = 'name_' | append: i
+    assign tk = 'text_' | append: i
+    if bs[ik] != blank or bs[vk] != blank or bs[nk] != blank or bs[tk] != blank
+      assign vr_n = vr_n | plus: 1
+    endif
+  endfor
+  assign vr_h = vr_n | divided_by: 2
+  assign vr_rr = bs.card_ratio | default: '1.7778'
+  assign vr_head = bs.heading | strip
+  assign vr_sub = bs.subheading | strip
+  assign vr_label = bs.link_label | strip
+  assign vr_outer = 100 | minus: bs.outer_fade | divided_by: 100.0
+  assign vr_auto = false
+  if bs.autoplay and vr_n > 1
+    assign vr_auto = true
+  endif
+-%}
+{%- if vr_n > 0 -%}
+  <dtj-video-reviews class="dtj-b dtj-vr dtj-vr--vis-{{ bs.visible_desktop | default: '5' }} dtj-vr--play-{{ bs.play_style | default: 'outline' }} dtj-vr--arrows-{{ bs.arrows | default: 'sides' }}{% if bs.arrows_mobile %} dtj-vr--arrows-m{% endif %}{% if vr_n < 2 %} dtj-vr--single{% endif %}" data-auto="{{ vr_auto }}" data-seconds="{{ bs.autoplay_seconds | default: 5 }}" style="{{ dtj_std_style | strip_newlines }} --vr-w: {{ bs.container_width }}px; --vr-rr: {{ vr_rr }}; --vr-cwd: {{ bs.card_size }}cqw; --vr-cwm: {{ bs.mobile_card_size }}cqw; --vr-r: {{ bs.card_radius }}px; --vr-shade: {{ bs.shade }}%; --vr-outer: {{ vr_outer }}; --vr-h-d: {{ bs.heading_size_desktop }}px; --vr-h-m: {{ bs.heading_size_mobile }}px;{% if bs.verified_color != blank %} --vr-vc: {{ bs.verified_color }};{% endif %}{% if bs.link_color != blank %} --vr-link: {{ bs.link_color }};{% endif %}{% if bs.caption_color != blank %} --vr-cap: {{ bs.caption_color }};{% endif %}{% if bs.arrow_bg != blank %} --vr-ab: {{ bs.arrow_bg }};{% endif %}{% if bs.arrow_color != blank %} --vr-ac: {{ bs.arrow_color }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if vr_head != blank or vr_sub != blank -%}
+      <div class="dtj-vr__head">
+        {%- if vr_head != blank -%}<h2 class="dtj-vr__heading">{{ vr_head | escape }}</h2>{%- endif -%}
+        {%- if vr_sub != blank -%}<p class="dtj-vr__sub">{{ vr_sub | escape }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+    <div class="dtj-vr__viewport" role="region" aria-roledescription="carousel" aria-label="{{ vr_head | default: 'Video reviews' | escape }}">
+      <div class="dtj-vr__stage">
+        {%- assign vr_k = 0 -%}
+        {%- for i in (1..6) -%}
+          {%- liquid
+            assign ik = 'image_' | append: i
+            assign vk = 'video_' | append: i
+            assign nk = 'name_' | append: i
+            assign tk = 'text_' | append: i
+            assign uk = 'url_' | append: i
+            assign c_video = bs[vk]
+            assign c_pic = bs[ik] | default: c_video.preview_image
+            assign c_name = bs[nk] | strip
+            assign c_text = bs[tk] | strip
+            assign c_url = bs[uk]
+            assign has = false
+            if bs[ik] != blank or c_video != blank or c_name != blank or c_text != blank
+              assign has = true
+            endif
+          -%}
+          {%- if has -%}
+            {%- liquid
+              assign c_d = vr_k | plus: vr_h | modulo: vr_n | minus: vr_h
+              assign c_src = ''
+              assign c_best = 0
+              for s in c_video.sources
+                if s.format == 'mp4'
+                  assign sh = s.height | plus: 0
+                  if sh < 721 and sh > c_best
+                    assign c_best = sh
+                    assign c_src = s.url
+                  endif
+                endif
+              endfor
+              if c_src == ''
+                for s in c_video.sources
+                  if s.format == 'mp4' and c_src == ''
+                    assign c_src = s.url
+                  endif
+                endfor
+              endif
+              assign c_far = false
+              if c_d > 2 or c_d < -2
+                assign c_far = true
+              endif
+              assign c_tab = '-1'
+              if c_d == 0
+                assign c_tab = '0'
+              endif
+            -%}
+            <div class="dtj-vr__card" data-d="{% if c_far %}x{% else %}{{ c_d }}{% endif %}" role="group" aria-roledescription="slide" aria-label="{{ vr_k | plus: 1 }} / {{ vr_n }}"{% if c_d != 0 %} aria-hidden="true"{% endif %}>
+              <div class="dtj-vr__media">
+                {%- if c_pic != blank -%}
+                  <img class="dtj-vr__img" src="{{ c_pic | image_url: width: 660 }}" srcset="{{ c_pic | image_url: width: 360 }} 360w, {{ c_pic | image_url: width: 540 }} 540w, {{ c_pic | image_url: width: 720 }} 720w, {{ c_pic | image_url: width: 960 }} 960w" sizes="(min-width: 750px) {{ bs.card_size }}vw, {{ bs.mobile_card_size }}vw" width="{{ c_pic.width | default: 720 }}" height="{{ c_pic.height | default: 1280 }}" style="object-position: {{ c_pic.presentation.focal_point | default: '50% 50%' }}" alt="{{ c_pic.alt | default: c_name | escape }}" decoding="async"{% if c_d == 0 and bs.priority %} loading="eager" fetchpriority="high"{% else %} loading="lazy"{% endif %}>
+                {%- endif -%}
+              </div>
+              <div class="dtj-vr__shade" aria-hidden="true"></div>
+              <div class="dtj-vr__cap">
+                <div class="dtj-vr__who">
+                  {%- if c_name != blank -%}
+                    <p class="dtj-vr__name"><span>{{ c_name | escape }}</span>{%- if bs.show_verified -%}<svg class="dtj-vr__vf" viewBox="0 0 24 24" aria-label="Verified" role="img" focusable="false"><path d="M12 1.5l2.6 1.9 3.2-.1 1 3.1 2.6 1.9-1 3.1 1 3.1-2.6 1.9-1 3.1-3.2-.1L12 22.5l-2.6-1.9-3.2.1-1-3.1-2.6-1.9 1-3.1-1-3.1 2.6-1.9 1-3.1 3.2.1L12 1.5z"/><path class="dtj-vr__vf-tick" d="M7.8 12.2l3 3 5.4-5.8"/></svg>{%- endif -%}</p>
+                  {%- endif -%}
+                  {%- if c_text != blank -%}<p class="dtj-vr__text">{{ c_text | escape }}</p>{%- endif -%}
+                  {%- if c_url != blank and vr_label != blank -%}<a class="dtj-vr__link" href="{{ c_url }}" tabindex="{{ c_tab }}"><span>{{ vr_label | escape }}</span><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>{%- endif -%}
+                </div>
+                {%- if c_src != blank -%}
+                  <button type="button" class="dtj-vr__play" data-src="{{ c_src }}" tabindex="{{ c_tab }}" aria-label="Play video{% if c_name != blank %} from {{ c_name | escape }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg></button>
+                {%- endif -%}
+              </div>
+            </div>
+            {%- assign vr_k = vr_k | plus: 1 -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      {%- if vr_n > 1 and bs.arrows != 'none' -%}
+        <button type="button" class="dtj-vr__arrow dtj-vr__arrow--prev" data-dir="-1" aria-label="Previous review"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button type="button" class="dtj-vr__arrow dtj-vr__arrow--next" data-dir="1" aria-label="Next review"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7"/></svg></button>
+      {%- endif -%}
+    </div>
+  </dtj-video-reviews>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Video Reviews is empty. Add a picture or a name to "Card 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

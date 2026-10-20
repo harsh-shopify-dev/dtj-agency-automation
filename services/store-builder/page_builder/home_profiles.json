@@ -1,0 +1,488 @@
+{
+ "_comment": "Home page targets per category, made by .claude/skills/dtj-home-page/scripts/study_compare.py from 23 reference home pages measured on 19 Oct 2026 (study_numbers.py). Ranges are inclusive [min, max]. Spacing = the pages Harsh rated 85+ (the same for every category). Colour shares and band counts are what the good references DO, for guidance only: each brand's own palette decides its colours (Harsh, 19 Oct 2026). Re-run the script after a new study; record verdicts in the home skill's calibration log.",
+ "metrics": {
+  "pad_desktop / pad_phone": "median empty space between a section's edge and its first or last words or buttons (px), full-width photo sections left out, at 1440/1280 and 390 px",
+  "pad_floor_desktop / pad_floor_phone": "the smallest such gap one section may have: the 10th percentile of all single gaps on the 85+ pages",
+  "sections": "sections measured on the desktop page (strips under 80 px not counted)",
+  "page_px_desktop / page_px_phone": "page length in px",
+  "ground_share, tint_share, strong_share, picture_share": "share of the page between header and footer that is white or off-white, a light tint, a solid or dark band, a photo",
+  "strong_bands": "solid or dark bands of 150 px or more",
+  "h1_desktop / h1_phone": "the page's H1 size in px",
+  "h2_desktop / h2_phone": "the median section heading size in px"
+ },
+ "order": {
+  "_how": "from the order lines of the TOP pages (rated 85+) that have a note; see scripts/study_compare.py",
+  "pages": [
+   "blueland",
+   "branch-basics",
+   "grubbly-farms",
+   "ag1",
+   "method",
+   "ritual"
+  ],
+  "shop_within": 2,
+  "first_proof_by": 0.75,
+  "proof_kinds": [
+   "press_home",
+   "video_reviews_home",
+   "before_after_home"
+  ],
+  "faq_within_last": 2,
+  "story_after_shop": true
+ },
+ "profiles": {
+  "home-care": {
+   "for": "home care, cleaning, laundry, hygiene, kitchen",
+   "basis": "pages rated 75+ in this category",
+   "references": [
+    "blueland",
+    "branch-basics",
+    "cooking-guild",
+    "method"
+   ],
+   "n": 4,
+   "confidence": "usable",
+   "targets": {
+    "pad_desktop": [
+     80,
+     112
+    ],
+    "pad_phone": [
+     40,
+     66
+    ],
+    "pad_floor_desktop": 48,
+    "pad_floor_phone": 24,
+    "sections": [
+     6,
+     11
+    ],
+    "page_px_desktop": [
+     5579,
+     7808
+    ],
+    "page_px_phone": [
+     6171,
+     9854
+    ],
+    "ground_share": [
+     0.38,
+     0.88
+    ],
+    "tint_share": [
+     0.0,
+     0.09
+    ],
+    "strong_share": [
+     0.0,
+     0.62
+    ],
+    "picture_share": [
+     0.01,
+     0.25
+    ],
+    "strong_bands": [
+     0,
+     3
+    ],
+    "h1_desktop": [
+     48,
+     84
+    ],
+    "h1_phone": [
+     30,
+     40
+    ],
+    "h2_desktop": [
+     24,
+     44
+    ],
+    "h2_phone": [
+     22,
+     32
+    ]
+   },
+   "all_in_category": [
+    "blueland",
+    "branch-basics",
+    "cooking-guild",
+    "grove",
+    "method"
+   ]
+  },
+  "beauty": {
+   "for": "skincare, cosmetics, hair care, personal care",
+   "basis": "pages rated 75+ in this category",
+   "references": [
+    "jones-road"
+   ],
+   "n": 1,
+   "confidence": "low: one or two references; lean on the default profile and the brand's own palette",
+   "targets": {
+    "pad_desktop": [
+     80,
+     112
+    ],
+    "pad_phone": [
+     40,
+     66
+    ],
+    "pad_floor_desktop": 48,
+    "pad_floor_phone": 24,
+    "sections": [
+     8,
+     8
+    ],
+    "page_px_desktop": [
+     4546,
+     4546
+    ],
+    "page_px_phone": [
+     4665,
+     4665
+    ],
+    "ground_share": [
+     0.62,
+     0.62
+    ],
+    "tint_share": [
+     0.27,
+     0.27
+    ],
+    "strong_share": [
+     0.07,
+     0.07
+    ],
+    "picture_share": [
+     0.04,
+     0.04
+    ],
+    "strong_bands": [
+     1,
+     1
+    ],
+    "h1_desktop": [
+     32,
+     32
+    ],
+    "h1_phone": [
+     30,
+     30
+    ],
+    "h2_desktop": [
+     16,
+     16
+    ],
+    "h2_phone": [
+     16,
+     16
+    ]
+   },
+   "all_in_category": [
+    "boom-beauty",
+    "glossier",
+    "jones-road",
+    "mamaearth",
+    "minimalist",
+    "sugar-cosmetics"
+   ]
+  },
+  "supplements": {
+   "for": "supplements, wellness, nutrition powders",
+   "basis": "pages rated 75+ in this category",
+   "references": [
+    "ag1",
+    "ritual"
+   ],
+   "n": 2,
+   "confidence": "low: one or two references; lean on the default profile and the brand's own palette",
+   "targets": {
+    "pad_desktop": [
+     80,
+     112
+    ],
+    "pad_phone": [
+     40,
+     66
+    ],
+    "pad_floor_desktop": 48,
+    "pad_floor_phone": 24,
+    "sections": [
+     17,
+     19
+    ],
+    "page_px_desktop": [
+     7621,
+     16294
+    ],
+    "page_px_phone": [
+     6890,
+     16268
+    ],
+    "ground_share": [
+     0.65,
+     0.9
+    ],
+    "tint_share": [
+     0.0,
+     0.15
+    ],
+    "strong_share": [
+     0.0,
+     0.07
+    ],
+    "picture_share": [
+     0.09,
+     0.13
+    ],
+    "strong_bands": [
+     0,
+     3
+    ],
+    "h1_desktop": [
+     66,
+     66
+    ],
+    "h1_phone": [
+     40,
+     40
+    ],
+    "h2_desktop": [
+     40,
+     56
+    ],
+    "h2_phone": [
+     32,
+     32
+    ]
+   },
+   "all_in_category": [
+    "ag1",
+    "gfuel",
+    "ritual"
+   ]
+  },
+  "food": {
+   "for": "snacks, food, beverages",
+   "basis": "pages rated 75+ in this category",
+   "references": [
+    "carnivore-snax"
+   ],
+   "n": 1,
+   "confidence": "low: one or two references; lean on the default profile and the brand's own palette",
+   "targets": {
+    "pad_desktop": [
+     80,
+     112
+    ],
+    "pad_phone": [
+     40,
+     66
+    ],
+    "pad_floor_desktop": 48,
+    "pad_floor_phone": 24,
+    "sections": [
+     8,
+     8
+    ],
+    "page_px_desktop": [
+     7235,
+     7235
+    ],
+    "page_px_phone": [
+     7086,
+     7086
+    ],
+    "ground_share": [
+     0.25,
+     0.25
+    ],
+    "tint_share": [
+     0.32,
+     0.32
+    ],
+    "strong_share": [
+     0.28,
+     0.28
+    ],
+    "picture_share": [
+     0.15,
+     0.15
+    ],
+    "strong_bands": [
+     3,
+     3
+    ],
+    "h1_desktop": [
+     72,
+     72
+    ],
+    "h1_phone": [
+     38,
+     38
+    ],
+    "h2_desktop": [
+     56,
+     56
+    ],
+    "h2_phone": [
+     34,
+     34
+    ]
+   },
+   "all_in_category": [
+    "carnivore-snax",
+    "whole-truth"
+   ]
+  },
+  "pets": {
+   "for": "pet food and pet care",
+   "basis": "pages rated 75+ in this category",
+   "references": [
+    "grubbly-farms",
+    "kittyspout"
+   ],
+   "n": 2,
+   "confidence": "low: one or two references; lean on the default profile and the brand's own palette",
+   "targets": {
+    "pad_desktop": [
+     80,
+     112
+    ],
+    "pad_phone": [
+     40,
+     66
+    ],
+    "pad_floor_desktop": 48,
+    "pad_floor_phone": 24,
+    "sections": [
+     9,
+     12
+    ],
+    "page_px_desktop": [
+     8659,
+     8907
+    ],
+    "page_px_phone": [
+     9605,
+     10891
+    ],
+    "ground_share": [
+     0.65,
+     0.72
+    ],
+    "tint_share": [
+     0.19,
+     0.22
+    ],
+    "strong_share": [
+     0.0,
+     0.0
+    ],
+    "picture_share": [
+     0.09,
+     0.13
+    ],
+    "strong_bands": [
+     0,
+     0
+    ],
+    "h1_desktop": [
+     60,
+     63
+    ],
+    "h1_phone": [
+     40,
+     41
+    ],
+    "h2_desktop": [
+     42,
+     54
+    ],
+    "h2_phone": [
+     32,
+     35
+    ]
+   },
+   "all_in_category": [
+    "grubbly-farms",
+    "kittyspout"
+   ]
+  },
+  "default": {
+   "for": "any other category: the pages rated 85 and up across the study (fewer measuring artefacts than the 75+ set)",
+   "basis": "the pages rated 85+ (all categories)",
+   "references": [
+    "ag1",
+    "blueland",
+    "branch-basics",
+    "grubbly-farms",
+    "method",
+    "ritual"
+   ],
+   "n": 6,
+   "confidence": "usable",
+   "targets": {
+    "pad_desktop": [
+     80,
+     112
+    ],
+    "pad_phone": [
+     40,
+     66
+    ],
+    "pad_floor_desktop": 48,
+    "pad_floor_phone": 24,
+    "sections": [
+     7,
+     19
+    ],
+    "page_px_desktop": [
+     5595,
+     16294
+    ],
+    "page_px_phone": [
+     6171,
+     16268
+    ],
+    "ground_share": [
+     0.55,
+     0.9
+    ],
+    "tint_share": [
+     0.0,
+     0.19
+    ],
+    "strong_share": [
+     0.0,
+     0.14
+    ],
+    "picture_share": [
+     0.09,
+     0.25
+    ],
+    "strong_bands": [
+     0,
+     3
+    ],
+    "h1_desktop": [
+     48,
+     66
+    ],
+    "h1_phone": [
+     30,
+     40
+    ],
+    "h2_desktop": [
+     32,
+     56
+    ],
+    "h2_phone": [
+     26,
+     35
+    ]
+   },
+   "all_in_category": null
+  }
+ }
+}

@@ -5,6 +5,7 @@ You receive, as JSON:
 - `facts`: everything the page is allowed to say, each with its source. This is the only content that exists. Nothing else may appear on the page.
 - `store_product`: the live product as the store shows it publicly, when it could be read (price, options, variants). It may be missing.
 - `menu`: every section you can use. Each has what it is for, which of our app blocks it uses, and `available`: whether the client's facts can fill it right now (with the reason when they cannot).
+- `niche`: the brand's niche (beauty, wellness, home, food, fashion or general). Each section lists its `blocks` best fit first: blocks made for this niche come first, then blocks that suit every niche, then blocks made for other niches. Prefer the first block.
 - `house_default`: the order our rules would use for this category. It is a baseline, not an answer.
 - `agency_references`: the agency's written notes on sample product pages it likes (the order of ideas, the look, what each section answers). Follow their order of ideas where this client's facts allow; never take content from them.
 - Optionally, images of product pages the agency likes. They are references for rhythm, density, mood and order of ideas only.

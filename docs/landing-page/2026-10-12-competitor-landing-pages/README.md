@@ -157,3 +157,44 @@ Not now: paid audit (new price), calendar booking (clashes with "we check first"
 - `/audit`: new page. Pain headline + the 5-step form as the hero → facts row → real results → logos → Meet Tushar Joshi →
   Today vs with DTJ → what your free audit shows you → case studies → reels → reviews → closing band → FAQ; phone bottom bar.
 - `FounderBand` + `StickyCta` added to `/ads-no-orders`, `/sales-stuck`, `/website-no-sales` and `/v2` (not `/`).
+
+---
+
+# Third pass: how their pages are built, and speed (same day)
+
+Method (faster than reading raw source): each page loaded in Chromium as a mid-range Android phone on slow 4G
+(150 ms latency, 1.6 Mbps, CPU 4x slower), recording the section outline, fonts, button style, what's on the page
+(builder, video, sliders, chat, pixels), page weight and Largest Contentful Paint (LCP: when the main content shows;
+Google's "good" is ≤ 2.5 s). Ours were measured from a real production build served with gzip, like Hostinger.
+Raw data: `struct.json` in the session scratchpad (summary below).
+
+| Page | LCP | Weight | Built with | Notable |
+|---|---|---|---|---|
+| WebVeda (Ankur Warikoo) | 1.1 s | 11 MB | Framer | founder photo hero; 9 MB of images |
+| GetNos | 1.3 s | 5.9 MB | page builder, almost no JS | Impact headline font, lime buttons, 36,000 px long |
+| Siddharth Rajsekar | 1.5 s | 1.9 MB | funnel builder | Vimeo + 3 YouTube embeds |
+| Alex Hormozi roadmap | 2.0 s | 0.7 MB | Next.js | 84 px tall button, form-first, 3 sections only |
+| **DTJ `/audit`** | **2.0–2.1 s** | **0.9 MB** | Next.js (ours) | form-first, no video embeds |
+| **DTJ `/ads-no-orders`** | **2.3 s** | **1.0 MB** | | |
+| Rajiv Talreja | 2.5 s | 3.6 MB | WordPress + Elementor | green 51 px buttons, Lottie, chat widget |
+| Copyhackers | 2.6 s | 1.0 MB | ActiveCampaign page | 66 px yellow pill button |
+| EcomX | 2.8 s | 3.4 MB | WordPress + Elementor | 1.9 MB of video |
+| **DTJ `/website-no-sales`, `/v2`** | **2.2–2.9 s / 2.5–3.5 s** | 1.5 / 0.6 MB | | v2's hero word animation delays first paint on slow phones |
+| Deepak Kanakaraju | 4.9 s | 0.6 MB | custom | |
+| Rahul Malodia v2c-lp / v2c-lp3 | 6.8 / 9.6 s | 2.9 / 15 MB | Next.js + builder | 12.6 MB of images on lp3 |
+
+What this says:
+- **"Premium" is not code.** It's real founder photography, a bold headline font, big high-contrast buttons, and proof
+  cards. None of it needs a page builder, sliders or animation libraries. Copying their HTML/CSS/JS would make us
+  slower (most ship 1–1.8 MB of JS; ours ~210 KB compressed).
+- **We're already among the fastest.** `/audit` matches Hormozi; the pain pages beat Rajiv, EcomX, Deepak and Rahul.
+- **Every competitor tracks; we don't.** All but one run the Meta Pixel; most add GA4 and Microsoft Clarity
+  (free recordings/heatmaps). Without the Pixel (+ Conversions API), Meta can't optimise the ads for leads. This is
+  the biggest conversion gap left, and needs DTJ's Pixel ID / GA4 ID (Harsh to decide; installing is a client-visible change).
+
+Built from this pass (DTJ repo, uncommitted):
+- Reel posters load only when the reels are near the screen (`PerformanceCreative lazyPosters`): −300 KB before the
+  first screen on every variant; `/audit` full load 4.1 → 2.9 s on slow 4G.
+- Main button (`FormLink`) at least 48 px tall (was ~40), text kept at 13 px so it stays on one line at 312 px.
+- Founder photo served at full quality (`unoptimized`, 1122 × 1402) so the face stays sharp.
+- Production static build of the branch checked: all 7 routes export, founder photo resolves under `/free-growth-audit`.

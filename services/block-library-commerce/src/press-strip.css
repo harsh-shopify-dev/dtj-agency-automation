@@ -1,0 +1,172 @@
+/* Press Strip: an "as seen in" row of publication logos. Three layouts: a centred row that wraps, an even grid, and a scrolling band (CSS only: two
+   copies of the logos slide left by one copy, so the loop never jumps; the band stops on hover and stands still for visitors who prefer less motion).
+   One-color tones (soft gray, all dark, all white) make a mixed set of logos look even. No script. */
+.dtj-ps {
+  display: block;
+  width: 100%;
+  /* the block's section colour and text colour (standard 'colors' controls): set, but never painted until 19 Oct 2026, so every
+     band the page builder chose stayed white. Left empty they change nothing (transparent / inherited). */
+  background: var(--dtj-background, transparent);
+  color: var(--dtj-text-color, inherit);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
+}
+
+.dtj-ps--lines {
+  border-block: 1px solid color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+.dtj-ps__wrap {
+  max-width: var(--ps-w, 1200px);
+  margin-inline: auto;
+}
+
+.dtj-ps__heading {
+  margin: 0 0 18px;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--ps-hs, 14px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  opacity: 0.8;
+}
+
+.dtj-ps--head-center .dtj-ps__heading { text-align: center; }
+
+.dtj-ps--head-left .dtj-ps__heading { text-align: start; }
+
+.dtj-ps__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px calc(var(--ps-gap, 40px) * 0.6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dtj-ps__item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.dtj-ps__link {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.dtj-ps__link:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 4px;
+}
+
+.dtj-ps__logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: calc(var(--ps-h, 36px) * 0.8);
+  object-fit: contain;
+  opacity: var(--ps-op, 0.75);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.dtj-ps__word {
+  font-size: calc(var(--ps-h, 36px) * 0.55);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  opacity: var(--ps-op, 0.75);
+}
+
+/* tones: a CSS filter on the picture, so any logo file becomes a one-color mark */
+.dtj-ps--tone-gray .dtj-ps__logo { filter: grayscale(1); }
+
+.dtj-ps--tone-dark .dtj-ps__logo { filter: brightness(0); }
+
+.dtj-ps--tone-light .dtj-ps__logo { filter: brightness(0) invert(1); }
+
+.dtj-ps--hover .dtj-ps__item:hover .dtj-ps__logo,
+.dtj-ps--hover .dtj-ps__link:focus-visible .dtj-ps__logo {
+  filter: none;
+  opacity: 1;
+}
+
+/* even grid */
+.dtj-ps--grid .dtj-ps__list {
+  display: grid;
+  gap: 20px calc(var(--ps-gap, 40px) * 0.6);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* scrolling band */
+.dtj-ps__band {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 8%, black 92%, transparent 100%);
+}
+
+.dtj-ps__track {
+  display: flex;
+  width: max-content;
+  animation: dtj-ps-slide var(--ps-speed, 30s) linear infinite;
+}
+
+.dtj-ps--marquee .dtj-ps__list {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: calc(var(--ps-gap, 40px) * 0.6);
+  min-width: 100vw;
+  padding-inline: calc(var(--ps-gap, 40px) * 0.3);
+  justify-content: space-around;
+}
+
+.dtj-ps__band:hover .dtj-ps__track { animation-play-state: paused; }
+
+@keyframes dtj-ps-slide {
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-ps__track {
+    width: auto;
+    animation: none;
+  }
+
+  .dtj-ps__band {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .dtj-ps--marquee .dtj-ps__list {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .dtj-ps--marquee .dtj-ps__list[aria-hidden="true"] { display: none; }
+}
+
+@media screen and (min-width: 750px) {
+  .dtj-ps__heading { margin-bottom: 24px; }
+
+  .dtj-ps__logo { height: var(--ps-h, 36px); }
+
+  .dtj-ps__word { font-size: calc(var(--ps-h, 36px) * 0.6); }
+
+  .dtj-ps__list { gap: 24px var(--ps-gap, 40px); }
+
+  .dtj-ps--grid .dtj-ps__list {
+    gap: 28px var(--ps-gap, 40px);
+    grid-template-columns: repeat(var(--ps-cols, 4), minmax(0, 1fr));
+  }
+
+  .dtj-ps--marquee .dtj-ps__list {
+    gap: var(--ps-gap, 40px);
+    padding-inline: calc(var(--ps-gap, 40px) / 2);
+  }
+}

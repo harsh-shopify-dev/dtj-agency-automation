@@ -65,6 +65,14 @@ def resolve(key, value):
 
 
 settings.update({k: resolve(k, v) for k, v in extra.items()})
+if os.environ.get("PREVIEW_DATA"):  # a JSON file of settings that need nested data (a collection list with products): merged last, FILE: pictures resolved
+    def _walk(x):
+        if isinstance(x, dict):
+            return {k: _walk(v) for k, v in x.items()}
+        if isinstance(x, list):
+            return [_walk(v) for v in x]
+        return resolve("", x)
+    settings.update(_walk(json.loads(Path(os.environ["PREVIEW_DATA"]).read_text(encoding="utf-8"))))
 if os.environ.get("PREVIEW_AUTO_IMAGES", "1") != "0":  # numbered items get a placeholder picture unless one was given (set PREVIEW_AUTO_IMAGES=0 to skip)
     for n in range(1, 13):
         if any(settings.get(f"{p}_{n}") for p in ("name", "text", "number", "description")):
@@ -75,8 +83,8 @@ if os.environ.get("PREVIEW_AUTO_IMAGES", "1") != "0":  # numbered items get a pl
 env = Environment(loader=DictLoader({p.stem: p.read_text(encoding="utf-8") for p in tg.SNIPPETS.glob("*.liquid")}))
 env.add_filter("image_url", lambda value, **kw: value["src"] if isinstance(value, dict) else value)  # a picture object or a plain URL
 env.add_filter("json", lambda v: json.dumps(v, default=str))
-env.add_filter("money", lambda v: f"Rs. {int(v) / 100:,.2f}" if block == "price" else f"Rs. {v}")
-env.add_filter("money_without_trailing_zeros", lambda v: f"Rs. {int(v) / 100:,.0f}" if block == "price" else f"Rs. {v}")
+env.add_filter("money", lambda v: f"Rs. {int(v) / 100:,.2f}" if block in ("price", "best-sellers", "concern-slider") else f"Rs. {v}")
+env.add_filter("money_without_trailing_zeros", lambda v: f"Rs. {int(v) / 100:,.0f}" if block in ("price", "best-sellers", "concern-slider") else f"Rs. {v}")
 template = env.from_string(tg.cl.strip_schema(tg.block_text(m)), globals={"request": {"design_mode": False}})
 ctx = {"app": {"metafields": {"dtj": {"licence": {"value": "active"}}}}, "block": {"settings": settings, "shopify_attributes": ""}}
 if product:

@@ -379,6 +379,29 @@ class SlideshowProTests(unittest.TestCase):
         self.assertIn("--sl-rm: 1.25;", adapt)
         self.assertIn("--sl-rd: 3 / 2;", render(self.m, {"heading_1": "H", "ratio_desktop": "adapt"}))  # nothing to adapt to: the default shape
 
+    def test_phone_layout_text_on_the_picture_with_a_tall_shape_and_a_phone_picture(self):
+        # Harsh, 14 Oct 2026: the phone showed the words above a short wide strip; the references are a TALL picture with the words low on it
+        wide = {"aspect_ratio": 1.7, "width": 1700, "height": 1000, "alt": ""}
+        tall = {"aspect_ratio": 0.8, "width": 800, "height": 1000, "alt": ""}
+        base = render(self.m, {"heading_1": "H", "image_1": wide, "ratio_mobile": "adapt"})
+        self.assertIn("dtj-sl--m-stack", base)  # existing pages keep their look
+        self.assertIn("dtj-sl--ma-center", base)
+        self.assertIn("--sl-rm: 1.7;", base)
+        over = render(self.m, {"heading_1": "H", "image_1": wide, "ratio_mobile": "adapt", "mobile_layout": "overlay"})
+        self.assertIn("dtj-sl--m-overlay", over)
+        self.assertIn("dtj-sl--ma-left", over)  # automatic alignment: left on the picture
+        self.assertIn("--sl-rm: 4 / 5;", over)  # a wide picture is never shown as a thin strip on a phone
+        self.assertIn("dtj-sl--ma-center", render(self.m, {"heading_1": "H", "mobile_layout": "overlay", "mobile_align": "center"}))
+        phone = render(self.m, {"heading_1": "H", "image_1": wide, "image_mobile_1": tall, "ratio_mobile": "adapt", "mobile_layout": "overlay"})
+        self.assertIn("--sl-rm: 0.8;", phone)  # the phone picture's own shape
+        self.assertIn('<source media="(max-width: 749px)"', phone)
+        self.assertNotIn("<source", over)  # no phone picture: one picture, cropped to the phone shape
+        only = render(self.m, {"image_mobile_1": tall})
+        self.assertIn("dtj-sl__img", only)  # a phone picture alone still shows
+        css = (HERE / "src" / "slideshow-pro.css").read_text(encoding="utf-8")
+        self.assertIn(".dtj-sl--m-overlay .dtj-sl__slide", css)
+        self.assertIn("var(--sl-mps, 50vw)", css)
+
     def test_pictures_are_responsive_first_is_eager_and_alt_comes_from_the_picture(self):
         pic = {"aspect_ratio": 1.0, "width": 1000, "height": 1000, "alt": 'A "quoted" alt'}
         html = render(self.m, {"image_1": pic, "image_2": pic})
@@ -408,9 +431,17 @@ class SlideshowProTests(unittest.TestCase):
         for part in ("--sl-ov-pct: 40%", "--sl-ov-size: 55%", "--sl-blur: 12px", "--sl-cw: 500px"):
             self.assertIn(part, html)
 
-    def test_the_slider_stays_within_75_settings(self):
+    def test_desktop_height_cap_is_off_unless_chosen(self):
+        tall_collage = {"aspect_ratio": 1.2, "width": 1920, "height": 1600, "alt": ""}
+        self.assertNotIn("--sl-hmax", render(self.m, {"heading_1": "H", "image_1": tall_collage}))  # existing pages keep their height
+        self.assertNotIn("--sl-hmax", render(self.m, {"heading_1": "H", "desktop_max_height": 0}))
+        self.assertIn("--sl-hmax: 70vh;", render(self.m, {"heading_1": "H", "image_1": tall_collage, "desktop_max_height": 70}))
+        css = (HERE / "src" / "slideshow-pro.css").read_text(encoding="utf-8")
+        self.assertIn("max-height: max(var(--sl-hmax, 100000px), 440px)", css)  # never so short the words do not fit
+
+    def test_the_slider_stays_within_76_settings(self):
         settings = tg.cl.extract_schema(tg.block_text(self.m))["settings"]
-        self.assertLessEqual(len([s for s in settings if s.get("type") not in ("header", "paragraph")]), 75)
+        self.assertLessEqual(len([s for s in settings if s.get("type") not in ("header", "paragraph")]), 76)
 
 
 @unittest.skipIf(tg.Environment is None, "python-liquid not installed (use .work/.venv)")

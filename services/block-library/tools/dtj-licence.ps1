@@ -1,16 +1,16 @@
 # DTJ licence switch: hide, show or check the DTJ blocks of a store with ONE short command (it asks for the secrets for you).
 #
-#   tools\dtj-licence hide                 hide all three apps' blocks on the test store
+#   tools\dtj-licence hide                 hide all six apps' blocks on the test store
 #   tools\dtj-licence show                 show them again
 #   tools\dtj-licence status               only read the flags (changes nothing)
-#   tools\dtj-licence hide -App sections   only one app: blocks, sections or sections2
+#   tools\dtj-licence hide -App sections   only one app: blocks, sections, sections2, heroes, commerce or shop
 #
 # Each app has its OWN client secret (Shopify issues no master key). A secret is typed hidden, kept only in this window's memory while the
 # script runs, never written to a file, never printed, and removed from the window when the script ends.
 # Changing the flag is a tier 2 action: YOU run this, nothing runs it for you.
 param(
     [Parameter(Mandatory = $true, Position = 0)][ValidateSet('status', 'hide', 'show')][string]$Action,
-    [ValidateSet('all', 'blocks', 'sections', 'sections2')][string]$App = 'all',
+    [ValidateSet('all', 'blocks', 'sections', 'sections2', 'heroes', 'commerce', 'shop')][string]$App = 'all',
     [string]$Shop = 'elevate-with-harsh.myshopify.com',
     [string]$ApprovedBy = 'Harsh',
     [switch]$DryRun   # print the exact command instead of running it (no secret is shown, nothing is sent)
@@ -22,9 +22,9 @@ $python = Join-Path $tools '..\..\..\.work\.venv\Scripts\python.exe'
 $tool = Join-Path $tools 'licence.py'
 if (-not (Test-Path $python)) { throw "Python not found at $python (the project's .work\.venv is missing)." }
 
-$secretVars = [ordered]@{ blocks = 'DTJ_BLOCKS_CLIENT_SECRET'; sections = 'DTJ_SECTIONS_CLIENT_SECRET'; sections2 = 'DTJ_SECTIONS2_CLIENT_SECRET' }
+$secretVars = [ordered]@{ blocks = 'DTJ_BLOCKS_CLIENT_SECRET'; sections = 'DTJ_SECTIONS_CLIENT_SECRET'; sections2 = 'DTJ_SECTIONS2_CLIENT_SECRET'; heroes = 'DTJ_HEROES_CLIENT_SECRET'; commerce = 'DTJ_COMMERCE_CLIENT_SECRET'; shop = 'DTJ_SHOP_CLIENT_SECRET' }
 $apps = if ($App -eq 'all') { @($secretVars.Keys) } else { @($App) }
-$niceName = @{ blocks = 'DTJ Blocks'; sections = 'DTJ Sections'; sections2 = 'DTJ Sections 2' }
+$niceName = @{ blocks = 'DTJ Blocks'; sections = 'DTJ Sections'; sections2 = 'DTJ Sections 2'; heroes = 'DTJ Heroes'; commerce = 'DTJ Commerce'; shop = 'DTJ Shop' }
 
 # an explicit string array: a one-item result (status) would otherwise collapse into a plain string and the action word got lost
 [string[]]$actionArgs = @()

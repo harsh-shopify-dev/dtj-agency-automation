@@ -21,9 +21,11 @@ from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
 from provision import templates
-from provision.theme import ThemeError, assert_not_live, parse_pushed_theme, push_files_cmd
+from provision.theme import ThemeError, assert_not_live, cli_exe, outside_git, parse_pushed_theme, push_files_cmd
 
 PRODUCT_TEMPLATE = "templates/product.json"
+HOME_TEMPLATE = "templates/index.json"  # the home page (Harsh, 13 Oct 2026: home pages follow the same draft rule)
+PAGE_FILES = re.compile(r"templates/((product|collection)(\.[a-z0-9-]+)?|index)\.json")  # the only files the page builder ever writes
 SCHEMA_FILE = "config/settings_schema.json"
 SUPPORTED_THEMES = ("Horizon", "Dawn")  # the layouts assemble.py knows (Dawn added 9 Oct 2026)
 THEME_DIRS = ("assets", "blocks", "config", "layout", "locales", "sections", "snippets", "templates")
@@ -60,9 +62,10 @@ def read_token(store: str, environ: Mapping[str, str] | None = None, registry: b
 
 
 def _run(cmd: Sequence[str], env: Mapping[str, str]) -> "subprocess.CompletedProcess[str]":
-    exe = shutil.which(cmd[0]) or cmd[0]  # Windows needs the .cmd shim; a list and shell=False: no shell parsing of any value
-    return subprocess.run([exe, *cmd[1:]], capture_output=True, text=True, encoding="utf-8", errors="replace", env=dict(env),
-                          stdin=subprocess.DEVNULL, timeout=600, check=False)
+    cmd, cwd, extra = outside_git(cmd)  # absolute --path, no git project in sight: the CLI's "uncommitted changes, proceed?" never comes
+    exe = cli_exe(cmd[0])  # the .cmd shim on PATH, or the CLI inside the Claude app's own npm folder; a list and shell=False: no shell parsing
+    return subprocess.run([exe, *cmd[1:]], capture_output=True, text=True, encoding="utf-8", errors="replace", env={**env, **extra},
+                          stdin=subprocess.DEVNULL, timeout=600, check=False, cwd=cwd)
 
 
 def sha256(data: bytes) -> str:
@@ -112,8 +115,9 @@ class ThemeAccess:
         return dest
 
     def push_product_template(self, theme_id: str, staging: Path, file: str = PRODUCT_TEMPLATE) -> dict:
-        if not re.fullmatch(r"templates/product(\.[a-z0-9-]+)?\.json", file):
-            raise ThemeError(f"{file!r} is not a product template")
+        """Write ONE page template (a product template or the home page) into the theme; nothing else, nothing deleted, never published."""
+        if not PAGE_FILES.fullmatch(file):
+            raise ThemeError(f"{file!r} is not a page template the page builder writes (a product or collection template, or templates/index.json)")
         cmd = push_files_cmd(self.store, str(staging), str(theme_id), [file]) + ["--json"]
         assert "--allow-live" not in cmd and "--publish" not in cmd and "--live" not in cmd
         return parse_pushed_theme(self._cli(cmd))

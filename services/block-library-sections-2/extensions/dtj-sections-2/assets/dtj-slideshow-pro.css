@@ -26,8 +26,8 @@
   min-width: 0;
 }
 
-/* Slideshow Pro: a hero slider. Desktop: the picture fills the slide, the text sits on it (left, right or centre) over a fade; phones: the text
-   sits above the picture. A timer line under the text fills while a slide is shown, then the next slide comes in. */
+/* Slideshow Pro: a hero slider. Desktop: the picture fills the slide, the text sits on it (left, right or centre) over a fade; phones: a tall
+   picture with the text resting low on it over a fade (default), or the text above the picture. A timer line under the text fills while a slide is shown, then the next slide comes in. */
 .dtj-sl {
   display: block;
   background: transparent;
@@ -85,6 +85,12 @@
   order: 2;
   overflow: hidden;
   aspect-ratio: var(--sl-rm, 4 / 5);
+}
+
+.dtj-sl__pic {
+  position: absolute;
+  inset: 0;
+  display: block;
 }
 
 .dtj-sl__img {
@@ -397,6 +403,60 @@ a.dtj-sl__btn:hover {
   outline-offset: 3px;
 }
 
+/* phones: text left-aligned (the text-above layout is centred by default) */
+@media screen and (max-width: 749px) {
+  .dtj-sl--ma-left .dtj-sl__content { text-align: start; }
+
+  .dtj-sl--ma-left .dtj-sl__inner { align-items: flex-start; }
+
+  .dtj-sl--ma-left .dtj-sl__chips { justify-content: flex-start; }
+
+  /* phones, text on the picture: a tall picture fills the slide and the words rest on its lower part over a fade */
+  .dtj-sl--m-overlay .dtj-sl__slide {
+    position: relative;
+    display: grid;
+    aspect-ratio: var(--sl-rm, 4 / 5);
+    align-items: end;
+  }
+
+  .dtj-sl--m-overlay .dtj-sl__media {
+    position: absolute;
+    inset: 0;
+    order: 0;
+    aspect-ratio: auto;
+  }
+
+  .dtj-sl--m-overlay .dtj-sl__fade {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: linear-gradient(to top, color-mix(in srgb, var(--sl-ov-c, CanvasText) max(var(--sl-ov-pct, 60%), 70%), transparent) 0%, color-mix(in srgb, var(--sl-ov-c, CanvasText) 45%, transparent) 45%, transparent 85%);
+    pointer-events: none;
+  }
+
+  .dtj-sl--m-overlay.dtj-sl--ov-none .dtj-sl__fade { display: none; }
+
+  .dtj-sl--m-overlay .dtj-sl__content {
+    position: relative;
+    z-index: 1;
+    order: 0;
+    padding: var(--sl-mps, 50vw) 20px 26px;
+  }
+
+  .dtj-sl--m-overlay .dtj-sl__nav {
+    top: 14px;
+    right: 14px;
+    bottom: auto;
+  }
+
+  .dtj-sl--m-overlay .dtj-sl__arrow {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dtj-sl--m-overlay .dtj-sl__progress { margin-top: 22px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dtj-sl__track,
   .dtj-sl__slide,
@@ -411,6 +471,8 @@ a.dtj-sl__btn:hover {
     flex-direction: row;
     align-items: var(--sl-ai, center);
     aspect-ratio: var(--sl-rd, 3 / 2);
+    width: 100%; /* with a height cap the shape would otherwise narrow the slide instead of cropping the picture */
+    max-height: max(var(--sl-hmax, 100000px), 440px);
   }
 
   .dtj-sl--v-top { --sl-ai: flex-start; }

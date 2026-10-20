@@ -1,0 +1,315 @@
+{%- liquid
+  assign pl_coll = bs.collection
+  if request.page_type == 'collection' and pl_coll == blank or request.page_type == 'collection' and pl_coll == nil
+    assign pl_coll = collection
+  endif
+  assign pl_total = 0
+  if pl_coll != blank
+    assign pl_total = pl_coll.products.size | at_most: bs.max_products
+  endif
+  assign pl_compact = bs.pf_compact_cards
+  assign pl_layout = bs.layout_type | default: 'grid'
+  assign pl_mobile_grid2 = false
+  if bs.pf_mobile_layout == 'grid2'
+    assign pl_mobile_grid2 = true
+  endif
+  assign pl_mobile_carousel = false
+  if bs.carousel_on_mobile and pl_layout != 'carousel' and pl_mobile_grid2 == false
+    assign pl_mobile_carousel = true
+  endif
+  assign pl_view_label = bs.view_all_label | strip | default: 'View all'
+  assign pl_heading = bs.heading | strip
+  if pl_heading == blank and pl_coll != blank
+    assign pl_heading = pl_coll.title
+  endif
+  assign pl_rating_label = 'reviews'
+  assign pl_text_label_add = 'Add to cart'
+  assign pl_text_label_added = 'Added'
+  assign pl_text_label_sold = 'Sold out'
+  assign pl_dark = false
+  if bs.background != blank and bs.pf_card_frame == false
+    assign pl_bright = bs.background | color_brightness
+    if pl_bright < 128
+      assign pl_dark = true
+    endif
+  endif
+  case bs.pf_swatch_align
+    when 'left'
+      assign pl_sw_justify = 'flex-start'
+    when 'center'
+      assign pl_sw_justify = 'center'
+    else
+      assign pl_sw_justify = 'flex-start'
+  endcase
+  assign pl_scheme = 'light'
+  if pl_dark
+    assign pl_scheme = 'dark'
+  endif
+  assign pl_pad_start = bs['padding-block-start'] | default: 0
+  assign pl_pad_end = bs['padding-block-end'] | default: 0
+  assign pl_pt = pl_pad_start | append: 'px'
+  if pl_pad_start > 20
+    assign pl_pt = 'max(20px, calc(var(--pl-scale) * ' | append: pl_pad_start | append: 'px))'
+  endif
+  assign pl_pb = pl_pad_end | append: 'px'
+  if pl_pad_end > 20
+    assign pl_pb = 'max(20px, calc(var(--pl-scale) * ' | append: pl_pad_end | append: 'px))'
+  endif
+  assign pl_gap_css = bs.gap | append: 'px'
+  if bs.gap > 24
+    assign pl_gap_css = 'max(24px, calc(var(--pl-scale) * ' | append: bs.gap | append: 'px))'
+  endif
+-%}
+{%- if pl_total > 0 -%}
+  {%- capture pl_items -%}
+    {%- for pl_product in pl_coll.products limit: pl_total -%}
+      {%- liquid
+        assign pl_variant = pl_product.selected_or_first_available_variant
+        assign pl_price = pl_variant.price | default: 0 | plus: 0
+        assign pl_compare = pl_variant.compare_at_price | default: 0 | plus: 0
+        assign pl_off = 0
+        if pl_compare > pl_price and pl_price > 0
+          assign pl_off = pl_compare | minus: pl_price | times: 100.0 | divided_by: pl_compare | round
+        endif
+
+        assign pl_rating = pl_product.metafields.reviews.rating.value.rating | default: ''
+        assign pl_scale = pl_product.metafields.reviews.rating.value.scale_max | default: ''
+        assign pl_rcount = pl_product.metafields.reviews.rating_count | default: ''
+        if bs.pf_hide_no_reviews and pl_rcount != blank
+          assign pl_rcount_n = pl_rcount.value | default: pl_rcount | plus: 0
+          if pl_rcount_n < 1
+            assign pl_rating = ''
+          endif
+        endif
+
+        assign pl_badge = ''
+        if pl_compact and bs.pf_show_tag_badges
+          if bs.pf_badge_source == 'sample'
+            if request.design_mode
+              assign pl_seed = pl_product.id | modulo: 3
+              if pl_seed == 0
+                assign pl_badge = 'best'
+              elsif pl_seed == 1
+                assign pl_badge = 'new'
+              endif
+            endif
+          else
+            for pl_tag in pl_product.tags
+              assign pl_tag_key = pl_tag | strip | downcase
+              if pl_tag_key == 'best-seller'
+                assign pl_badge = 'best'
+                break
+              elsif pl_tag_key == 'new' and pl_badge == ''
+                assign pl_badge = 'new'
+              endif
+            endfor
+          endif
+        endif
+
+        assign pl_swatch_option = null
+        for pl_opt in pl_product.options_with_values
+          unless pl_swatch_option
+            assign pl_sw_count = pl_opt.values | map: 'swatch' | compact | size
+            if pl_sw_count > 0
+              assign pl_swatch_option = pl_opt
+            endif
+          endunless
+        endfor
+      -%}
+      <div class="pl-item" data-pl-item>
+        {%- if pl_badge == 'best' -%}<span class="pl-badge pl-badge--best">Best Seller</span>{%- elsif pl_badge == 'new' -%}<span class="pl-badge pl-badge--new">New Launches</span>{%- endif -%}
+        <article class="pl-card" data-pl-card data-url="{{ pl_product.url }}" data-handle="{{ pl_product.handle }}" data-product-id="{{ pl_product.id }}">
+          <div class="pl-card__frame">
+            <div class="pl-gallery" data-pl-gallery>
+              <div class="pl-gallery__slides" data-pl-slides>
+                {%- for pl_img in pl_product.images limit: 30 -%}
+                  <div class="pl-slide" data-media-id="{{ pl_img.id }}">
+                    <a class="pl-slide__link" href="{{ pl_product.url }}" tabindex="-1" aria-hidden="true"><img class="pl-img" src="{{ pl_img | image_url: width: 600 }}" srcset="{{ pl_img | image_url: width: 300 }} 300w, {{ pl_img | image_url: width: 450 }} 450w, {{ pl_img | image_url: width: 600 }} 600w, {{ pl_img | image_url: width: 900 }} 900w" sizes="(min-width: 750px) 300px, 50vw" width="{{ pl_img.width | default: 600 }}" height="{{ pl_img.height | default: 600 }}" alt="{{ pl_img.alt | default: pl_product.title | escape }}" loading="{% if forloop.first and forloop.parentloop.index <= 4 %}eager{% else %}lazy{% endif %}" decoding="async"></a>
+                  </div>
+                {%- endfor -%}
+              </div>
+              {%- if pl_product.images.size > 1 -%}
+                <button type="button" class="pl-arrow pl-arrow--prev" data-dir="-1" aria-label="Previous image"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2 10h16M11 3l7 7-7 7"/></svg></button>
+                <button type="button" class="pl-arrow pl-arrow--next" data-dir="1" aria-label="Next image"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2 10h16M11 3l7 7-7 7"/></svg></button>
+              {%- endif -%}
+            </div>
+            <div class="pl-info">
+              {%- if pl_rating != blank -%}
+                {%- liquid
+                  assign pl_rating_num = pl_rating | plus: 0.0
+                  assign pl_decimal = pl_rating_num | modulo: 1
+                  assign pl_filled = pl_rating_num | floor
+                  if pl_decimal >= 0.3
+                    assign pl_filled = pl_filled | plus: 1
+                  endif
+                -%}
+                <div class="pl-rating" aria-label="Rating of this product is {{ pl_rating }} out of {{ pl_scale | default: 5 }}">
+                  {%- if bs.pf_compact_rating -%}
+                    <span class="pl-stars"><svg class="pl-star pl-star--on" viewBox="0 0 32 32" aria-hidden="true"><path d="M31.547 12a.848.848 0 00-.677-.577l-9.427-1.376-4.224-8.532a.847.847 0 00-1.516 0l-4.218 8.534-9.427 1.355a.847.847 0 00-.467 1.467l6.823 6.664-1.612 9.375a.847.847 0 001.23.893l8.428-4.434 8.432 4.432a.847.847 0 001.229-.894l-1.615-9.373 6.822-6.665a.845.845 0 00.214-.869z"/></svg></span>
+                    <p class="pl-rating__count"><span class="pl-rating__value">{{ pl_rating_num | round: 1 }}</span>{%- if pl_rcount != blank -%}<span class="pl-rating__sep">|</span>{{ pl_rcount }} {{ pl_rating_label }}{%- endif -%}</p>
+                  {%- else -%}
+                    <span class="pl-stars">{%- for pl_n in (1..5) -%}<svg class="pl-star{% if pl_n <= pl_filled %} pl-star--on{% endif %}" viewBox="0 0 32 32" aria-hidden="true"><path d="M31.547 12a.848.848 0 00-.677-.577l-9.427-1.376-4.224-8.532a.847.847 0 00-1.516 0l-4.218 8.534-9.427 1.355a.847.847 0 00-.467 1.467l6.823 6.664-1.612 9.375a.847.847 0 001.23.893l8.428-4.434 8.432 4.432a.847.847 0 001.229-.894l-1.615-9.373 6.822-6.665a.845.845 0 00.214-.869z"/></svg>{%- endfor -%}</span>
+                    {%- if pl_rcount != blank -%}<p class="pl-rating__count">{{ pl_rcount }} {{ pl_rating_label }}</p>{%- endif -%}
+                  {%- endif -%}
+                </div>
+              {%- endif -%}
+              <div class="pl-title"><a class="pl-title__link" href="{{ pl_product.url }}"><p>{{ pl_product.title | escape }}</p></a></div>
+              <div class="pl-price" data-pl-price>
+                {%- if pl_off > 0 -%}<span class="pl-price__off">{% if bs.pf_offer_text %}{{ pl_off }}% OFF{% else %}SAVE {{ pl_off }}%{% endif %}</span>{%- endif -%}
+                <div class="pl-price__row"><span class="pl-price__now">{{ pl_price | money }}</span>{%- if pl_compare > pl_price -%}<s class="pl-price__was">{{ pl_compare | money }}</s>{%- endif -%}</div>
+              </div>
+              {%- if pl_swatch_option -%}
+                <div class="pl-swatches-host"><fieldset class="pl-swatches" data-pl-swatches>
+                  <legend class="pl-visually-hidden">{{ pl_swatch_option.name | escape }}</legend>
+                  <div class="pl-swatches__rows"><ul class="pl-swatches__list">
+                    {%- for pl_ov in pl_swatch_option.values -%}
+                      {%- liquid
+                        assign pl_ov_media = pl_ov.variant.featured_media
+                        assign pl_sw = pl_ov.swatch
+                        assign pl_sw_bg = ''
+                        if pl_sw.image
+                          assign pl_sw_bg = 'url(' | append: pl_sw.image | image_url: width: 80 | append: ')'
+                        elsif pl_sw.color
+                          assign pl_sw_bg = 'rgb(' | append: pl_sw.color.rgb | append: ')'
+                        endif
+                      -%}
+                      <li class="pl-swatch-item">
+                        <label class="pl-swatch-label" data-media-id="{{ pl_ov_media.id }}">
+                          <input type="radio" name="pl-sw-{{ block.id }}-{{ pl_product.id }}" value="{{ pl_ov | escape }}" aria-label="{{ pl_ov.name | escape }}" data-variant-id="{{ pl_ov.variant.id }}" data-media-id="{{ pl_ov_media.id }}" data-price="{{ pl_ov.variant.price | money }}" data-compare="{% if pl_ov.variant.compare_at_price > pl_ov.variant.price %}{{ pl_ov.variant.compare_at_price | money }}{% endif %}" data-price-cents="{{ pl_ov.variant.price }}" data-compare-cents="{{ pl_ov.variant.compare_at_price }}" data-available="{{ pl_ov.available }}"{% if pl_ov.selected %} checked{% endif %}>
+                          <span class="pl-swatch" style="--pl-swatch: {{ pl_sw_bg }};"></span>
+                        </label>
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                  <ul class="pl-swatches__more" hidden></ul></div>
+                </fieldset></div>
+              {%- endif -%}
+              <form class="pl-buy" action="{{ routes.cart_add_url }}" method="post" data-pl-form>
+                <input type="hidden" name="id" value="{{ pl_variant.id }}">
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="pl-add" data-pl-add{% unless pl_variant.available %} disabled{% endunless %}><span class="pl-add__text" data-added="{{ pl_text_label_added }}" data-sold="{{ pl_text_label_sold }}" data-add="{{ pl_text_label_add }}">{% if pl_variant.available %}{{ pl_text_label_add }}{% else %}{{ pl_text_label_sold }}{% endif %}</span></button>
+              </form>
+            </div>
+          </div>
+        </article>
+      </div>
+      {%- unless forloop.last -%}|pl-split|{%- endunless -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+  {%- assign pl_items_array = pl_items | strip | split: '|pl-split|' -%}
+
+  <section class="pl pl--{{ bs.section_width | default: 'page-width' }} pl--{{ pl_scheme }}{% if pl_compact %} pl--compact{% endif %}{% if bs.pf_card_frame %} pl--frame{% endif %}{% if bs.pf_hide_sale_badge %} pl--no-sale-badge{% endif %}{% if bs.pf_swatch_show_all %} pl--swatches-all{% endif %}" id="pl-{{ block.id }}" style="--pl-gap-eff: {{ pl_gap_css }}; --pl-pt: {{ pl_pt }}; --pl-pb: {{ pl_pb }}; --pl-col-gap: {{ bs.columns_gap }}px; --pl-row-gap: {{ bs.rows_gap }}px; --pl-cols: {{ bs.columns }}; --pl-cols-m: {{ bs.mobile_columns }}; --pl-justify: {{ bs.horizontal_alignment }}; --pl-card-pad: {{ bs.pf_card_padding }}px; --pl-ratio: {{ bs.pf_image_ratio }}; --pl-fit: {{ bs.pf_image_fit }}; --pl-title-lines: {{ bs.pf_title_lines }}; --pl-btn-h: {{ bs.pf_button_height }}px; --pl-sw: {{ bs.pf_swatch_size }}px; --pl-sw-gap: {{ bs.pf_swatch_gap }}px; --pl-sw-justify: {{ pl_sw_justify }};{% if bs.pf_compare_color != blank %} --pl-compare: {{ bs.pf_compare_color }};{% endif %}{% if bs.pf_review_color != blank %} --pl-review: {{ bs.pf_review_color }};{% endif %}{{ dtj_std_style | strip_newlines }}" data-layout="{{ pl_layout }}" data-offer="{{ bs.pf_offer_text }}" {{ block.shopify_attributes }}>
+    <div class="pl__inner">
+      <div class="pl__header">
+        {%- if bs.show_heading != false -%}
+        <div class="pl__header-row">
+          <h4 class="pl__heading">{{ pl_heading | escape }}</h4>
+          {%- if bs.show_view_all and pl_coll.url != blank -%}<a class="pl__viewall" href="{{ pl_coll.url }}">{{ pl_view_label | escape }}</a>{%- endif -%}
+        </div>
+        {%- endif -%}
+        {%- if bs.show_sort -%}
+        {%- assign pl_count = pl_coll.products_count | default: pl_total -%}
+        <div class="pl-tools">
+          <p class="pl-tools__count">{{ pl_count }} {% if pl_count == 1 %}product{% else %}products{% endif %}</p>
+          {%- if pl_coll.sort_options.size > 0 -%}
+            {%- assign pl_sort = pl_coll.sort_by | default: pl_coll.default_sort_by -%}
+            <form class="pl-tools__sort" method="get" action="{{ pl_coll.url }}">
+              <label class="pl-tools__label" for="pl-sort-{{ block.id }}">Sort by</label>
+              <select class="pl-tools__select" id="pl-sort-{{ block.id }}" name="sort_by" onchange="this.form.submit()">
+                {%- for pl_opt in pl_coll.sort_options -%}<option value="{{ pl_opt.value | escape }}"{% if pl_opt.value == pl_sort %} selected{% endif %}>{{ pl_opt.name | escape }}</option>{%- endfor -%}
+              </select>
+              <noscript><button type="submit" class="pl-tools__go">Sort</button></noscript>
+            </form>
+          {%- endif -%}
+        </div>
+        {%- endif -%}
+      </div>
+
+      <div class="pl-list pl-list--{{ pl_layout }}{% if pl_mobile_grid2 or pl_mobile_carousel %} pl-list--hide-mobile{% endif %}">
+        {%- case pl_layout -%}
+          {%- when 'grid' -%}
+            {%- for pl_item in pl_items_array -%}{{ pl_item }}{%- endfor -%}
+          {%- when 'carousel' -%}
+            <div class="pl-carousel" data-pl-carousel>
+              <div class="pl-carousel__slides" data-pl-track>
+                {%- for pl_item in pl_items_array -%}<div class="pl-carousel__slide">{{ pl_item }}</div>{%- endfor -%}
+              </div>
+              {%- if bs.icons_style != 'none' -%}
+                <button type="button" class="pl-nav pl-nav--prev pl-nav--{{ bs.icons_shape }} pl-nav--{{ bs.icons_style }}" data-nav="-1" aria-label="Previous"><span class="pl-nav__icon"></span></button>
+                <button type="button" class="pl-nav pl-nav--next pl-nav--{{ bs.icons_shape }} pl-nav--{{ bs.icons_style }}" data-nav="1" aria-label="Next"><span class="pl-nav__icon"></span></button>
+              {%- endif -%}
+            </div>
+          {%- when 'editorial' -%}
+            <div class="pl-editorial">
+              <div class="pl-editorial__spacer"></div>
+              {%- for pl_item in pl_items_array -%}
+                {%- liquid
+                  assign pl_gi = forloop.index0 | divided_by: 8
+                  assign pl_ci = forloop.index0 | modulo: 8
+                  case pl_ci
+                    when 0
+                      assign pl_col = '1 / span 7'
+                      assign pl_row = 1
+                      assign pl_span = 6
+                    when 1
+                      assign pl_col = '9 / span 4'
+                      assign pl_row = 5
+                      assign pl_span = 5
+                    when 2
+                      assign pl_col = '2 / span 5'
+                      assign pl_row = 8
+                      assign pl_span = 5
+                    when 3
+                      assign pl_col = '5 / span 8'
+                      assign pl_row = 14
+                      assign pl_span = 6
+                    when 4
+                      assign pl_col = '1 / span 7'
+                      assign pl_row = 21
+                      assign pl_span = 6
+                    when 5
+                      assign pl_col = '9 / span 4'
+                      assign pl_row = 25
+                      assign pl_span = 5
+                    when 6
+                      assign pl_col = '2 / span 5'
+                      assign pl_row = 28
+                      assign pl_span = 5
+                    when 7
+                      assign pl_col = '3 / span 8'
+                      assign pl_row = 34
+                      assign pl_span = 6
+                  endcase
+                  assign pl_full = pl_gi | times: 40
+                  assign pl_row = pl_row | plus: pl_full
+                -%}
+                <div class="pl-editorial__item pl-editorial__item-{{ forloop.index0 | modulo: 4 }}" style="grid-column: {{ pl_col }}; grid-row: {{ pl_row }} / span {{ pl_span }};">{{ pl_item }}</div>
+              {%- endfor -%}
+            </div>
+        {%- endcase -%}
+      </div>
+
+      {%- if pl_mobile_carousel -%}
+        <div class="pl-list pl-list--mobile-carousel">
+          <div class="pl-carousel" data-pl-carousel>
+            <div class="pl-carousel__slides" data-pl-track>
+              {%- for pl_item in pl_items_array -%}<div class="pl-carousel__slide">{{ pl_item }}</div>{%- endfor -%}
+            </div>
+            {%- if bs.icons_style != 'none' -%}
+              <button type="button" class="pl-nav pl-nav--prev pl-nav--{{ bs.icons_shape }} pl-nav--{{ bs.icons_style }}" data-nav="-1" aria-label="Previous"><span class="pl-nav__icon"></span></button>
+              <button type="button" class="pl-nav pl-nav--next pl-nav--{{ bs.icons_shape }} pl-nav--{{ bs.icons_style }}" data-nav="1" aria-label="Next"><span class="pl-nav__icon"></span></button>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endif -%}
+
+      {%- if pl_mobile_grid2 -%}
+        <div class="pl-list pl-list--mobile-grid2">
+          {%- for pl_item in pl_items_array -%}{{ pl_item }}{%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </section>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Product List: pick a collection that has products (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -113,6 +113,22 @@ L01 contrast 4.5:1 | L02 side space at least 12 px | L03 padding within 56 px, n
 L06 reviews directly under the buy buttons | L07 every text has an origin | L08 numbers traceable | L09 demo gating | L10 accent budget | L11 monotony (warning) | L12 the live price block
 replaces the theme's price line. The first run of the tests caught a real mistake in this document's own defaults (premium neighbours added up to 88 px): rules are checked, not decorative.
 
+## Niche-aware block choice (13 Oct 2026, Harsh's idea)
+Every block carries a niche tag in `page_builder/block_tags.json` (`niches` it is made for, empty = suits every niche; `cross_niche`; `wired`). A client category maps to a
+niche (beauty, wellness, home, food, fashion, general). `niches.order_blocks()` puts blocks made for the brand's niche first, then blocks that suit every niche, then blocks made for
+other niches, and drops a block that makes no sense there (a shade picker for a cleaning product) unless it is the only one. The plan step's menu uses it, so Claude is shown the best
+fit first, and it is told the niche. Today almost every block is universal, so a page changes little; the tags start to matter as niche-specific blocks are added. We do NOT make one app
+per niche yet: each app costs an install, a licence flag and a secret per client, and most blocks are the same in every niche (colours, shape and tone already adapt). A niche pack becomes
+its own app once a niche has about five genuinely niche-specific blocks. The tags are judgment, not data. A test fails when a block exists without a tag.
+
+## The home page recipe (13 Oct 2026)
+`assemble_home.build_home(brand, facts)` / `python -m page_builder.run_home --brand ... --facts ... --out ...`. Facts: `schemas/home-facts.schema.json` (hero, trust points, value props, brand story, customer cards, FAQs; every text names its
+source). Recipe: `recipes/home.json`. Sections: a picture hero (DTJ Heroes `hero-banner`: layout banner for beauty/wellness/home/general, cover for fashion/food), the trust strip, the reasons to choose
+(`feature-cards` or `feature-tiles`, whichever is made for the niche, the other when the facts cannot fill the first), the THEME'S OWN featured products (kept from the base template), one brand story
+(`hero-banner` split layout, a review only when the facts have a real one), customer cards (`video-reviews`) and the FAQ. The order follows the niche (beauty: proof early; fashion and food: products right
+after the hero; home: products after the strip). Same lint rules as the product page (the buy box rules only apply to a product page; a full-bleed hero is exempt from the side-space rule). Nothing is pushed:
+putting the template on a store stays a separate, approved step on an unpublished theme.
+
 ## Not built yet
 (Built 9 Oct 2026: the Claude API call `copy_step.py`, the screenshot review loop `review.py`, the end-to-end command `run_page.py`; first LIVE API
 call still waits for Harsh's yes and a key.) Still to do: measuring SVG icon contrast in the review loop, an optional Claude vision critique of the

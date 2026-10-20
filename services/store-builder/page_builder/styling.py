@@ -13,6 +13,58 @@ from .sections import Section
 # the trust strip under the buy box: big and calm (Harsh, 9 Oct 2026: "more padding, more height, more gigantic")
 MARQUEE = {"padding": 24, "text": 24, "icon": 30, "gap": 72}
 
+# ---- the HOME page's vertical rhythm and type scale (Harsh, 19 Oct 2026: our home page "looks cramped and flat"). Measured on 23 reference
+# home pages (.claude/skills/dtj-home-page/references/study/, page_builder/home_profiles.json): the pages rated 85 and up keep 80-112 px
+# between a section's edge and its first or last words on a laptop and 32-66 px on a phone; ours kept 20-32 on both. ONE number per step,
+# written on the theme's own section wrapper (Horizon's `padding-block-start` / `-end`), which the theme scales to 0.7 below 990 px
+# (snippets/spacing-style.liquid, never under 20 px), so one value is the laptop AND the phone rhythm. The block's own padding is then 0
+# and the wrapper carries the band colour, so a band is one colour from edge to edge.
+HOME_SPACE = {"section": 80, "related": 48}  # related: the 85+ pages' smallest usual gap (10th percentile, 48 px; 34 on a phone)
+# Thin strips carry their own height (no section padding): the top announcement, the trust strip under the hero, the wave.
+HOME_STRIPS = ("announcement_bar", "trust_band_home", "wave_home")
+# Related neighbours (above, below) sit closer, so the pair reads as one idea: the shop row right under its categories, and the
+# shop-by-concern band the wave flows into. Every other join keeps the full step.
+HOME_RELATED = {("categories_home", "best_sellers_home"), ("wave_home", "concerns_home")}
+# One heading scale (laptop, phone px): the reference pages rated 85+ use 32-56 px section headings (median 42) and 48-66 px hero
+# headings. The categories ring stays small: it is a way to move around, not a headline (Harsh, 14 Oct 2026).
+HOME_TYPE = {"hero": (56, 36), "section": (40, 30), "nav": (28, 22)}
+NAV_BLOCKS = ("circle-menu",)
+
+
+def home_rhythm(kinds: list[str]) -> list[tuple[int, int] | None]:
+    """(top, bottom) section padding for each section of a home page, in page order: thin strips 0, related neighbours the tighter step
+    on the side they share, everything else the full step. The hero is None: it keeps its own look (a picture banner runs edge to edge,
+    a one-product split hero keeps its panel's own space)."""
+    out: list[tuple[int, int] | None] = []
+    for i, kind in enumerate(kinds):
+        if kind == "hero_home":
+            out.append(None)
+            continue
+        if kind in HOME_STRIPS:
+            out.append((0, 0))
+            continue
+        above = kinds[i - 1] if i else None
+        below = kinds[i + 1] if i + 1 < len(kinds) else None
+        top = HOME_SPACE["related"] if (above, kind) in HOME_RELATED else HOME_SPACE["section"]
+        bottom = HOME_SPACE["related"] if (kind, below) in HOME_RELATED else HOME_SPACE["section"]
+        out.append((top, bottom))
+    return out
+
+
+def apply_home_type(sec: Section, cat: Catalog) -> None:
+    """The home type scale onto a section's heading-size settings (only the settings its block really has)."""
+    def put(key, value):
+        if cat.has(sec.app, sec.block, key):
+            sec.settings[key] = value
+
+    step = HOME_TYPE["hero" if sec.kind == "hero_home" else "nav" if sec.block in NAV_BLOCKS else "section"]
+    put("heading_size_desktop", step[0])
+    put("heading_size_mobile", step[1])
+    if sec.block == "faq":  # one size for both: the block takes 6 px off it on phones (faq.css), so the phone lands on the scale
+        put("heading_size", step[1] + 6)
+    elif sec.block == "stories":
+        put("heading_size", step[1])
+
 
 def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = False) -> None:
     r, s = d.roles, sec.settings
@@ -21,20 +73,25 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         if value is not None and cat.has(sec.app, sec.block, key):
             s[key] = value
 
-    dark, band, accent_band = role == "dark", role == "band", role == "accent"
+    mint = role == "mint"  # the palette method's second soft band (the accent family's tint): treated like a band everywhere
+    dark, band, accent_band = role == "dark", role in ("band", "mint"), role == "accent"
+    band_bg = r["mint"] if mint else r["band"]
     bold = d.vibe in BOLD_VIBES and not d.dark_mode  # electric / playful: brand-colour bands, ink boxes with white words
     if dark:
         acc, head = r["accent_on_dark"], r["on_dark"]
     elif accent_band:  # a band in the accent colour (electric / playful pages): everything on it is the ink colour
         acc, head = r["on_accent"], r["on_accent"]
     elif band:
-        acc, head = r["accent_on_band"], r["on_band"]
+        acc, head = (r["accent_on_mint"] if mint else r["accent_on_band"]), r["on_band"]
     else:
         acc, head = r["accent"], r["text"]
     pad = d.density["band"] if (dark or band or accent_band) else d.density["section"]
 
     # rhythm and side space (same for every block)
-    if sec.block != "marquee":
+    if sec.block == "marquee-band":  # each version of the moving strip sets its own height and lines: no section padding around it
+        put("padding_top", 0)
+        put("padding_bottom", 0)
+    elif sec.block != "marquee":
         put("padding_top", pad if not first else max(pad - 8, 16))
         put("padding_bottom", pad)
     else:  # the strip is a bold band of its own: clear space above and below so it never touches the pictures (Harsh, 9 Oct 2026)
@@ -48,7 +105,7 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("background", r["accent_fill"])
         put("text_color", r["on_accent"])
     elif band:
-        put("background", r["band"])
+        put("background", band_bg)
         if r["on_band"] != r["text"]:  # a bold band (the brand colour itself) carries its own text colour
             put("text_color", r["on_band"])
     # one radius family
@@ -138,7 +195,14 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("highlight_color", r["accent_on_dark"] if dark else acc)
     elif b == "comparison-table":
         put("heading_color", head)
-        put("our_bg_color", r["band"])
+        if d.ramps and sec.kind == "compare_home":  # the home table: a tall white column on the soft band, brand-blue hairlines, dark words (the reference table)
+            put("our_bg_color", r["tint_card"])
+            put("our_text_color", r["text"])
+            put("other_text_color", r["text"])
+            put("line_color", d.ramps["brand"][5])
+            put("muted_color", r["muted"])
+        else:
+            put("our_bg_color", r["band"])
     elif b == "testimonials-slider":
         put("button_color", r["button_bg"])
         # the cards are always the light card colour with their own text colour, so a dark band gets white cards with dark words
@@ -217,6 +281,135 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
             put("button_bg", r["button_bg"])
             put("button_color", r["button_text"])
         put("button_style", d.shape["button"] if d.shape["button"] in ("pill", "rounded", "square") else "pill")
+    elif b == "hero-banner":
+        put("corner_radius", 0)  # the container itself is never rounded; a split layout rounds its own panel
+        layout = s.get("layout", "banner")
+        if layout in ("banner", "cover"):  # a picture hero: always light words on a dark overlay, whatever band the page alternates
+            put("side_padding", 0)  # edge to edge: the text has its own inner space (lint L02 exempts it)
+            put("padding_top", 0)
+            put("padding_bottom", 0)
+            put("background", r["dark"])
+            put("text_color", r["on_dark"])
+            put("accent_color", r["accent_on_dark"])
+            put("star_color", r["accent_on_dark"])
+            if sec.kind == "hero_home" and r.get("dark_button_bg"):
+                put("button_bg", r["dark_button_bg"])
+                put("button_color", r["dark_button_text"])
+        else:  # split: a story panel on the page's own band. This block falls back to light words on black (it is made for pictures), so
+            # the split sets both: the section's own colour, and words that follow the PANEL they sit on (13 Oct 2026: white words on a pale
+            # panel on the Elevate home page)
+            on_band_role = band or dark or accent_band
+            put("background", r["dark"] if dark else r["accent_fill"] if accent_band else band_bg if band else r["bg"])
+            if sec.kind == "hero_home":  # the first screen: a bold dark panel, never the pale one the story uses further down
+                put("panel_bg", r["dark"])
+                put("text_color", r["on_dark"])
+                acc = r["accent_on_dark"]
+            else:
+                put("panel_bg", r["tint_card"] if on_band_role else r["band"])
+                put("text_color", r["on_card"] if on_band_role else r["on_band"])
+                acc = r["accent"] if on_band_role else r["accent_on_band"]
+            put("accent_color", acc)
+            put("star_color", r["rating_star"])
+            put("card_bg", r["bg"])
+        put("point_icon_color", r["accent_on_dark"] if layout in ("banner", "cover") else (r.get("mark") or acc))
+        put("button_bg", r["button_bg"])
+        put("button_color", r["button_text"])
+        put("button_style", "square" if d.shape["button"] == "square" else "rounded")  # a regular rectangle, never an oval (Harsh, 12 Oct 2026)
+        put("heading_font", d.type["heading_font"])
+        put("accent_font", d.type["accent_font"] if d.type["accent_font"] in ("italic", "serif", "bold", "plain") else "auto")
+    elif b in ("feature-cards", "feature-tiles"):
+        put("accent_color", acc)
+        put("heading_color", head)
+        put("title_color", head)
+        put("label_color", head)
+        put("desc_color", head)
+        put("card_bg" if b == "feature-cards" else "tile_bg", r["tint_card"] if band else r["band"])
+        put("icon_bg", acc)
+        put("icon_color", best_text_on(acc))
+        put("badge_bg", acc)
+        put("badge_color", best_text_on(acc))
+        put("image_radius", d.shape["card"])
+        put("tile_radius", min(d.shape["card"], 24))
+        put("button_style", "solid")
+        put("button_bg", r["button_bg"])
+        put("button_color", r["button_text"])
+        put("button_shape", "square" if d.shape["button"] == "square" else "rounded")  # a regular rectangle, never an oval (Harsh, 12 Oct 2026)
+        if accent_band and r.get("fill_button_bg"):  # the palette method's solid brand band: white tiles carry dark words and brand icons
+            put("heading_color", r["on_accent"])
+            put("accent_color", r["accent_on_fill"])
+            for key in ("title_color", "label_color", "desc_color"):
+                put(key, r["on_card"])
+            put("card_bg" if b == "feature-cards" else "tile_bg", r["tint_card"])
+            put("icon_bg", r["accent_fill"])
+            put("icon_color", r["on_accent"])
+            put("button_bg", r["fill_button_bg"])
+            put("button_color", r["fill_button_text"])
+    elif b == "video-reviews":
+        put("link_color", r["accent_on_dark"])
+        put("verified_color", r["accent_on_dark"])
+        put("arrow_bg", r["tint_card"])
+        put("arrow_color", r["on_card"])
+    # ---- the DTJ Commerce / DTJ Shop home blocks and the comparison showcase (13 Oct 2026). Buttons are regular rectangles, never ovals
+    # (Harsh, 12 Oct 2026); every colour pair below is one the direction already checked (button, accent on its band, card text).
+    elif b == "marquee-band":
+        if s.get("variation") == "bold" and d.ramps:  # the palette method: the top strip is the deep ink colour, icons in the fresh accent
+            put("background", r["dark"])
+            put("text_color", r["on_dark"])
+            put("icon_color", r["accent_on_dark"])
+        elif s.get("variation") == "bold":  # the top strip: the brand's accent colour with its own checked text colour
+            put("background", r["accent_fill"])
+            put("text_color", r["on_accent"])
+            put("icon_color", r["on_accent"])
+        else:  # the calm strip under the hero: the page colour, brand-coloured icons (the accent's fresh mark with the palette method)
+            put("icon_color", r.get("mark") or r["accent"])
+            put("line_color", r["border"])
+    elif b == "press-strip":
+        put("logo_tone", "gray")  # a mixed set of logos reads as one even row
+    elif b == "circle-menu":
+        put("ring_color_1", r["accent"])  # the story ring in the brand's own colours instead of the block's orange-pink-purple
+        put("ring_color_2", r["button_bg"])
+        put("ring_color_3", r["accent_on_band"])
+        put("frame_color", r["border"])
+    elif b == "category-grid":
+        put("button_bg", r["button_bg"])
+        put("button_color", r["button_text"])
+        put("button_shape", "square" if d.shape["button"] == "square" else "rounded")
+        put("tile_radius", d.shape["card"])
+    elif b == "category-slider":
+        put("arrow_bg", r["button_bg"])
+        put("arrow_color", r["button_text"])
+        put("arrows", "square" if d.shape["button"] == "square" else "circle")
+    elif b == "best-sellers":
+        put("accent_color", r["button_bg"])  # the active tab, the cart button, the badge: the page's button pair
+        put("accent_text", r["button_text"])
+        put("card_bg", r["tint_card"] if band else r["band"])
+        put("button_shape", "square" if d.shape["button"] == "square" else "rounded")
+        put("tab_style", "pill")
+        if sec.kind == "best_sellers_home":  # Harsh set it to 0 in the theme editor (19 Oct 2026): the cards sit close to the categories
+            put("padding_top", 0)
+            put("padding_bottom", 0)  # filled pills read as finished navigation; the block's dashed boxes looked unfinished (14 Oct 2026)
+    elif b == "concern-slider":
+        put("accent_color", acc)
+        put("card_bg", r["tint_card"])
+        put("button_color", r["button_bg"])
+        put("button_text", r["button_text"])
+        put("button_shape", "square" if d.shape["button"] == "square" else "rounded")
+    elif b == "before-after":
+        put("accent_color", acc)
+        put("button_color", r["button_bg"])
+        put("button_text", r["button_text"])
+        if band or dark:
+            put("panel_color", r["tint_card"])
+    elif b == "compare-showcase":
+        put("accent_color", acc)
+        put("button_bg", r["button_bg"])
+        put("button_color", r["button_text"])
+        put("button_shape", "square" if d.shape["button"] == "square" else "rounded")
+        put("card_bg", r["tint_card"])
+        put("col_from", r["button_bg"])  # our column: the button colour with its own checked text and tick colour
+        put("col_text", r["button_text"])
+        put("check_color", r["button_text"])
+        put("heading_font", d.type["heading_font"] if d.type["heading_font"] in ("theme", "serif", "sans") else "auto")
     elif b == "slideshow-pro":
         # the closing banner: the dark band, or the light card colour with dark words on a "neutral" page (direction.py)
         put("accent_color", r["accent_on_banner"])
@@ -232,3 +425,9 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("transition", d.motion["transition"])
         put("autoplay_seconds", d.motion["seconds"])
         put("background", r["banner"])
+        if sec.kind == "hero_home":  # the home hero: edge to edge like the full-image banner, its words keep their own inner space
+            for key, value in (("padding_top", 0), ("padding_bottom", 0), ("side_padding", 0), ("corner_radius", 0), ("container_width", 1920)):
+                put(key, value)
+            if r.get("dark_button_bg"):  # the palette method: a button that stands out on the dark shade over the photo
+                put("button_bg", r["dark_button_bg"])
+                put("button_color", r["dark_button_text"])

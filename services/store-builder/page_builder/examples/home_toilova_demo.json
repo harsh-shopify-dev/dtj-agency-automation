@@ -1,0 +1,35 @@
+{
+  "_comment": "DEMO ONLY (13 Oct 2026): stand-in home page facts on Harsh's dev store, using the store's own TOILOVA pictures. Every source says 'demo fixture'; nothing here is a real claim, review or rating. Replace with the client's real facts before any live page.",
+  "brand": {"brand_name": "Toilova", "category": "home-care", "price_tier": "value", "voice": "plain",
+            "colors": {"primary": "#0B66B2", "background": "#FFFFFF", "text": "#10202D"}},
+  "facts": {
+    "demo": true,
+    "media": [
+      {"role": "hero", "file": "toiletcleaningfoampowder-toilova_1.webp", "alt": "Toilova pack"},
+      {"role": "values", "file": "toiletcleaningfoampowder-toilova_3.webp", "alt": "Toilova in hand"},
+      {"role": "story", "file": "toiletcleaningfoampowder-toilova_2.webp", "alt": "Toilova in a bathroom"},
+      {"role": "c1", "file": "toiletcleaningfoampowder-toilova_1.webp"},
+      {"role": "c2", "file": "toiletcleaningfoampowder-toilova_2.webp"},
+      {"role": "c3", "file": "toiletcleaningfoampowder-toilova_3.webp"},
+      {"role": "c4", "file": "toiletcleaningfoampowder-toilova_5.webp"}
+    ],
+    "hero": {"headline": "Sample headline for *a clean bathroom.*", "sub": "Sample sub line, replace with the client's own words.", "points": ["Sample point one", "Sample point two"],
+             "cta_label": "Shop all", "cta_url": "/collections/all", "image_role": "hero", "source": "demo fixture"},
+    "trust_points": [{"text": "Sample trust point one", "source": "demo fixture"}, {"text": "Sample trust point two", "source": "demo fixture"},
+                     {"text": "Sample trust point three", "source": "demo fixture"}, {"text": "Sample trust point four", "source": "demo fixture"}],
+    "value_props": {"heading": "Sample reasons to choose us", "image_role": "values", "source": "demo fixture",
+                    "items": [{"title": "Sample reason one", "text": "Sample text for reason one.", "source": "demo fixture"},
+                              {"title": "Sample reason two", "text": "Sample text for reason two.", "source": "demo fixture"},
+                              {"title": "Sample reason three", "text": "Sample text for reason three.", "source": "demo fixture"},
+                              {"title": "Sample reason four", "text": "Sample text for reason four.", "source": "demo fixture"}]},
+    "story": {"heading": "Sample brand story", "body": "A short sample paragraph about the brand, replaced with the client's real story.",
+              "bullets": ["Sample tick one", "Sample tick two", "Sample tick three", "Sample tick four"], "image_role": "story", "source": "demo fixture"},
+    "video_reviews": {"heading": "Sample customer cards", "source": "demo fixture",
+                      "items": [{"name": "Demo name 1", "line": "Demo line", "image_role": "c1", "url": "/collections/all", "source": "demo fixture"},
+                                {"name": "Demo name 2", "line": "Demo line", "image_role": "c2", "url": "/collections/all", "source": "demo fixture"},
+                                {"name": "Demo name 3", "line": "Demo line", "image_role": "c3", "url": "/collections/all", "source": "demo fixture"},
+                                {"name": "Demo name 4", "line": "Demo line", "image_role": "c4", "url": "/collections/all", "source": "demo fixture"}]},
+    "faqs": [{"q": "Sample question one?", "a": "Sample answer one.", "source": "demo fixture"}, {"q": "Sample question two?", "a": "Sample answer two.", "source": "demo fixture"},
+             {"q": "Sample question three?", "a": "Sample answer three.", "source": "demo fixture"}]
+  }
+}

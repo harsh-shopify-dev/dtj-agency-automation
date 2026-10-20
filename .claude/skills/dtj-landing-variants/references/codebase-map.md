@@ -65,6 +65,11 @@ export const NEW_PAIN: PainPage = {
 - **Swipe rows widen the page:** a horizontal `overflow-x-auto` row must be `relative`, or its cards' absolutely positioned
   `sr-only` text (e.g. "Google review") anchors to the page and off-screen cards add thousands of px of sideways scroll.
 - **Screenshots:** Chromium can't capture full pages taller than 16,384 px (blank below). Phone pages are ~7k px today.
+- **Local production build from Git Bash:** `export MSYS_NO_PATHCONV=1 MSYS2_ENV_CONV_EXCL='*'` first, or the base path env var
+  becomes a Windows path and `next build` fails. Stop the dev server first. To measure speed like a real host, serve `out/`
+  under a `free-growth-audit/` folder with gzip (a plain `python -m http.server` doesn't compress and doubles the numbers).
+- **Speed (12 Oct 2026, slow 4G phone, gzip):** `/audit` LCP ~2.0 s, pain pages 2.2–2.9 s. Keep it there: no video embeds,
+  sliders or animation libraries on the variants; heavy media below the fold loads lazily (`lazyPosters`).
 - **Git Bash:** URLs/paths starting with `/` in arguments get rewritten; `export MSYS_NO_PATHCONV=1` before curl. `python -I`
   ignores `PYTHONIOENCODING`; call `sys.stdout.reconfigure(encoding="utf-8")` before printing ₹.
 - **Built-in browser:** screenshots time out when the pane is hidden; retry once, or use `get_page_text`/`find`. Figma's design

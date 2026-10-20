@@ -1,0 +1,46 @@
+{%- liquid
+  assign mq_n = 0
+  for i in (1..6)
+    assign tk = 'text_' | append: i
+    if bs[tk] != blank
+      assign mq_n = mq_n | plus: 1
+    endif
+  endfor
+  assign mq_ver = bs.variation | default: 'line'
+  assign mq_dir = bs.direction | default: 'left'
+  assign mq_rep = bs.repeat | default: 2 | plus: 0
+-%}
+{%- if mq_n > 0 -%}
+  {%- capture mq_items -%}
+    {%- for i in (1..6) -%}
+      {%- liquid
+        assign tk = 'text_' | append: i
+        assign ik = 'icon_' | append: i
+        assign uk = 'link_' | append: i
+        assign m_text = bs[tk] | strip
+        assign m_icon = bs[ik]
+        assign m_link = bs[uk]
+      -%}
+      {%- if m_text != blank -%}
+        <li class="dtj-mq__item">
+          {%- if m_link != blank -%}<a class="dtj-mq__link" href="{{ m_link }}">{%- else -%}<span class="dtj-mq__link">{%- endif -%}
+            {%- if m_icon != blank and m_icon != 'none' -%}<span class="dtj-mq__icon">{%- render 'dtj-mq-icon', name: m_icon -%}</span>{%- endif -%}
+            <span class="dtj-mq__text">{{ m_text | escape }}</span>
+          {%- if m_link != blank -%}</a>{%- else -%}</span>{%- endif -%}
+        </li>
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+  {%- comment -%} A copy for the loop only: hidden from readers, and its links become plain spans so the keyboard never lands on a repeat. {%- endcomment -%}
+  {%- assign mq_dup = mq_items | replace: '<li class="dtj-mq__item">', '<li class="dtj-mq__item" aria-hidden="true">' | replace: '<a class="dtj-mq__link"', '<span class="dtj-mq__link"' | replace: '</a>', '</span>' | replace: ' href=', ' data-href=' -%}
+  {%- capture mq_first -%}{{ mq_items }}{%- for r in (2..mq_rep) -%}{{ mq_dup }}{%- endfor -%}{%- endcapture -%}
+  {%- capture mq_second -%}{%- for r in (1..mq_rep) -%}{{ mq_dup }}{%- endfor -%}{%- endcapture -%}
+  <div class="dtj-b dtj-mq dtj-mq--{{ mq_ver }} dtj-mq--font-{{ bs.font_style | default: 'auto' }} dtj-mq--{{ mq_dir }}{% if bs.pause_on_hover %} dtj-mq--pause{% endif %}{% unless bs.show_lines %} dtj-mq--nolines{% endunless %}" style="{{ dtj_std_style | strip_newlines }} --mq-speed: {{ bs.speed }}s;{% if bs.font_size > 0 %} --mq-fs: {{ bs.font_size }}px;{% endif %}{% if bs.gap > 0 %} --mq-gap: {{ bs.gap }}px;{% endif %}{% if bs.icon_size > 0 %} --mq-icon: {{ bs.icon_size }}px;{% endif %}{% if bs.line_width > 0 %} --mq-line-w: {{ bs.line_width }}px;{% endif %}{% if bs.icon_color != blank %} --mq-icon-color: {{ bs.icon_color | escape }};{% endif %}{% if bs.line_color != blank %} --mq-line: {{ bs.line_color | escape }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-mq__track">
+      <ul class="dtj-mq__list" role="list">{{ mq_first }}</ul>
+      <ul class="dtj-mq__list" role="list" aria-hidden="true">{{ mq_second }}</ul>
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Marquee Band is empty. Fill in the words of at least one item (editor only: shoppers see nothing).</p>
+{%- endif -%}

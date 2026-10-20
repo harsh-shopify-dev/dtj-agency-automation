@@ -217,7 +217,66 @@
           "label": "Wide 16:9"
         }
       ],
-      "info": "On phones the text sits above the picture."
+      "info": "Adapt = the phone picture's own shape; with no phone picture the overlay layout uses a tall 4:5 so a wide picture is never shown as a thin strip."
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "Phone layout",
+      "default": "stack",
+      "options": [
+        {
+          "value": "stack",
+          "label": "Text above the picture"
+        },
+        {
+          "value": "overlay",
+          "label": "Text on the picture (tall picture, text low on it)"
+        }
+      ],
+      "info": "Overlay = the picture fills the slide and the words rest on its lower part over a fade (use it with a tall phone picture). Stack = the words sit above the picture (the original look)."
+    },
+    {
+      "type": "select",
+      "id": "mobile_align",
+      "label": "Text alignment on phones",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Automatic (left on the picture, centre above it)"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Centre"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "mobile_pic_space",
+      "label": "Picture showing above the text (phones)",
+      "min": 20,
+      "max": 90,
+      "step": 5,
+      "unit": "vw",
+      "default": 50,
+      "info": "Only for the overlay layout: how much picture stays clear above the words."
+    },
+    {
+      "type": "range",
+      "id": "desktop_max_height",
+      "label": "Tallest the slide may be on desktop (% of screen height)",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 0,
+      "info": "0 = no limit (the slide follows its picture's shape). A tall collage can fill the whole screen; 70 keeps it to about two thirds and crops the picture to fit. Never shorter than 440px so the words always fit."
     },
     {
       "type": "range",
@@ -690,6 +749,12 @@
       "label": "Slide 1: picture"
     },
     {
+      "type": "image_picker",
+      "id": "image_mobile_1",
+      "label": "Slide 1: picture for phones (optional)",
+      "info": "A tall picture (4:5 or 3:4) used on phones only. Empty = the main picture, cropped to the phone shape."
+    },
+    {
       "type": "text",
       "id": "eyebrow_1",
       "label": "Slide 1: small label"
@@ -739,6 +804,12 @@
       "label": "Slide 2: picture"
     },
     {
+      "type": "image_picker",
+      "id": "image_mobile_2",
+      "label": "Slide 2: picture for phones (optional)",
+      "info": "A tall picture (4:5 or 3:4) used on phones only. Empty = the main picture, cropped to the phone shape."
+    },
+    {
       "type": "text",
       "id": "eyebrow_2",
       "label": "Slide 2: small label"
@@ -782,6 +853,12 @@
       "type": "image_picker",
       "id": "image_3",
       "label": "Slide 3: picture"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile_3",
+      "label": "Slide 3: picture for phones (optional)",
+      "info": "A tall picture (4:5 or 3:4) used on phones only. Empty = the main picture, cropped to the phone shape."
     },
     {
       "type": "text",

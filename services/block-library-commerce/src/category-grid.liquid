@@ -1,0 +1,104 @@
+{%- liquid
+  assign cg_n = 0
+  assign cg_colls = 0
+  for c in bs.collections
+    assign cg_colls = cg_colls | plus: 1
+  endfor
+  for i in (1..5)
+    assign ik = 'image_' | append: i
+    assign tk = 'title_' | append: i
+    if cg_colls > i or cg_colls == i or bs[ik] != blank or bs[tk] != blank
+      assign cg_n = cg_n | plus: 1
+    endif
+  endfor
+  assign cg_head = bs.heading | strip
+  assign cg_sub = bs.subheading | strip
+  assign cg_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3'
+      assign cg_tag = bs.heading_tag
+  endcase
+  assign cg_layout = bs.layout | default: 'bento_left'
+  if cg_n != 5
+    assign cg_layout = 'even'
+  endif
+  assign cg_feature = 0
+  if cg_layout == 'bento_left'
+    assign cg_feature = 1
+  elsif cg_layout == 'bento_right'
+    assign cg_feature = 5
+  endif
+  assign cg_ov = bs.overlay | default: 0 | divided_by: 100.0
+-%}
+{%- if cg_n > 0 or cg_head != blank or cg_sub != blank -%}
+  <div class="dtj-b dtj-cg dtj-cg--{{ cg_layout | replace: '_', '-' }} dtj-cg--cap-{{ bs.caption_position | default: 'bottom' }} dtj-cg--btn-{{ bs.button_shape | default: 'square' }} dtj-cg--head-{{ bs.heading_align | default: 'center' }}{% if bs.feature_middle %} dtj-cg--fmid{% endif %}" style="{{ dtj_std_style | strip_newlines }} --cg-w: {{ bs.container_width }}px; --cg-gap: {{ bs.gap }}px; --cg-r: {{ bs.tile_radius }}px; --cg-ar: {{ bs.tile_shape | default: '1.6' }}; --cg-ov: {{ cg_ov }}; --cg-t-d: {{ bs.title_size_desktop }}px; --cg-t-m: {{ bs.title_size_mobile }}px;{% if bs.title_color != blank %} --cg-tc: {{ bs.title_color }};{% endif %}{% if bs.button_bg != blank %} --cg-bb: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --cg-bc: {{ bs.button_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-cg__wrap">
+      {%- if cg_head != blank or cg_sub != blank -%}
+        <div class="dtj-cg__intro">
+          {%- if cg_head != blank -%}<{{ cg_tag }} class="dtj-cg__heading">{{ cg_head | escape }}</{{ cg_tag }}>{%- endif -%}
+          {%- if cg_sub != blank -%}<p class="dtj-cg__sub">{{ cg_sub | escape }}</p>{%- endif -%}
+        </div>
+      {%- endif -%}
+      {%- if cg_n > 0 -%}
+        <div class="dtj-cg__grid">
+          {%- assign cg_k = 0 -%}
+          {%- for i in (1..5) -%}
+            {%- liquid
+              assign ik = 'image_' | append: i
+              assign tk = 'title_' | append: i
+              assign bk = 'button_' | append: i
+              assign lk = 'link_' | append: i
+              assign t_coll = nil
+              assign t_has_coll = false
+              for c in bs.collections
+                if forloop.index == i
+                  assign t_coll = c
+                  assign t_has_coll = true
+                endif
+              endfor
+              assign t_pic = bs[ik]
+              assign t_title = bs[tk] | strip
+              assign t_label = bs[bk] | strip
+              assign t_link = bs[lk]
+              if t_has_coll
+                if t_pic == blank
+                  assign t_pic = t_coll.image
+                endif
+                if t_title == blank
+                  assign t_title = t_coll.title | strip
+                endif
+                if t_link == blank
+                  assign t_link = t_coll.url
+                endif
+              endif
+              assign has = false
+              if t_has_coll or bs[ik] != blank or bs[tk] != blank
+                assign has = true
+              endif
+            -%}
+            {%- if has -%}
+              {%- assign cg_k = cg_k | plus: 1 -%}
+              <div class="dtj-cg__tile{% if cg_k == cg_feature %} dtj-cg__tile--feature{% endif %}">
+                {%- if t_pic != blank -%}
+                  <img class="dtj-cg__img" src="{{ t_pic | image_url: width: 800 }}" srcset="{{ t_pic | image_url: width: 400 }} 400w, {{ t_pic | image_url: width: 600 }} 600w, {{ t_pic | image_url: width: 800 }} 800w, {{ t_pic | image_url: width: 1100 }} 1100w, {{ t_pic | image_url: width: 1400 }} 1400w" sizes="(min-width: 750px) 34vw, {% if cg_k == cg_feature %}100vw{% else %}50vw{% endif %}" width="{{ t_pic.width | default: 800 }}" height="{{ t_pic.height | default: 600 }}" style="object-position: {{ t_pic.presentation.focal_point | default: '50% 50%' }}" alt="{{ t_pic.alt | default: t_title | escape }}" decoding="async"{% if bs.priority and cg_k == 1 %} loading="eager" fetchpriority="high"{% else %} loading="lazy"{% endif %}>
+                {%- endif -%}
+                <div class="dtj-cg__cap">
+                  {%- if t_link != blank and t_label == blank and t_title != blank -%}
+                    <a class="dtj-cg__title dtj-cg__stretch" href="{{ t_link }}">{{ t_title | escape }}</a>
+                  {%- else -%}
+                    {%- if t_title != blank -%}<p class="dtj-cg__title">{{ t_title | escape }}</p>{%- endif -%}
+                    {%- if t_label != blank -%}
+                      {%- if t_link != blank -%}<a class="dtj-cg__btn dtj-cg__stretch" href="{{ t_link }}">{{ t_label | escape }}</a>{%- else -%}<span class="dtj-cg__btn">{{ t_label | escape }}</span>{%- endif -%}
+                    {%- endif -%}
+                  {%- endif -%}
+                </div>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Category Grid is empty. Pick a collection or add a picture to "Tile 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

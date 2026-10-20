@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import Callable, Sequence
 
 from .gql import check_operation
+from .theme import cli_exe
 
 Runner = Callable[[Sequence[str]], "subprocess.CompletedProcess[str]"]
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
@@ -24,7 +24,7 @@ _THROTTLE = re.compile(r"throttl|\b429\b|rate limit", re.I)
 
 
 def _run(cmd: Sequence[str]) -> "subprocess.CompletedProcess[str]":
-    exe = shutil.which(cmd[0]) or cmd[0]
+    exe = cli_exe(cmd[0])  # on PATH, or inside the Claude app's own npm folder
     return subprocess.run([exe, *cmd[1:]], capture_output=True, text=True, encoding="utf-8", errors="replace",
                           stdin=subprocess.DEVNULL, timeout=180, check=False)
 

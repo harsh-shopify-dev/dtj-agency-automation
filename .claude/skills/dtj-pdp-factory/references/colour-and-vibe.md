@@ -106,3 +106,20 @@ The palette a designer would choose, all pairs measured:
 | Accent text on white (when needed) | cyan-deep `#0A6E93` | 5.73:1 |
 | Never | white on cyan (2.19), cyan text on white (2.19), volt on white (1.25) | fail |
 Marquee (W04) on navy with volt icons, moving (electric allows it). Headings 800, Urbanist (the brand's font, set at theme level).
+
+## The palette method (researched 19 Oct 2026; `page_builder/palette.py`, opt-in `brand.palette: "ramps"`, home pages first)
+Harsh: "find how to apply a best color palette how top figma designers think and decide the color palette". What the sources agree on
+(Refactoring UI, Radix Colors, Material 3 dynamic colour, the 60-30-10 rule), as code:
+1. **Seeds:** the brand colour (pack or logo) and ONE accent the brand already uses (measure it from the pack or the brand's own pictures).
+2. **12-step OKLCH scales** per colour (even steps to the eye, unlike HSL). Each step has one job: 1-2 page and soft bands, 3-5 cards and
+   selected states, 6-8 borders, 9 the solid colour (bands, buttons), 10 its hover, 11-12 text.
+3. **Tinted greys:** 12 neutrals with a little of the brand's hue. Never pure grey (`#DBDEE0`-style greys made the page cold and flat).
+4. **60-30-10:** about 60 % light ground, 30 % brand family (visible tint bands + ONE solid brand band), 10 % accent (buttons, ticks,
+   accent words). Before the method the Toilova home page was ~5 % brand colour: "boring".
+5. **Buttons per background:** words 4.5:1 AND the button's edge 3:1 against what it sits on (WCAG 1.4.11). Toilova: deep green with white
+   words on white and tint bands, white with blue words on the solid blue band, bright green with dark words on the dark hero.
+6. **Colours mean things per category.** Cleaning and home care: never yellow, amber or brown as a main or button colour, it reads as
+   stains (Harsh, 19 Oct 2026: "yellow also represents stains ... a blue-green combination would be much more better"). `palette.avoided`
+   warns. Blue + green reads clean and fresh.
+Worked example, Toilova: brand #0B66B2, accent #00B84C (the green in its own pictures, 103 degrees from the blue): bands #DEEDFE, solid
+band #0B66B2, text #0F171F, greys #CBD2D9 / #565F69, dark #002243, accent words on dark #BEEEC4. Every pair checked in `direction.checks`.

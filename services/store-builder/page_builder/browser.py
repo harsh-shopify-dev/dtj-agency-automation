@@ -99,9 +99,11 @@ class EdgeBrowser:
                          f'</body></html>', encoding="utf-8")
         return frame
 
-    def measure(self, doc: str, width: int) -> dict:
-        probe_doc = doc.replace("</body>", PROBE + "</body>", 1)
-        frame = self._frame(probe_doc, width, 2000, f"measure-{width}.html")
+    def measure(self, doc: str, width: int, probe: str = PROBE, height: int = 2000) -> dict:
+        """probe: another script that reports through the same PBRESULT...PBEND sink (home_checks.RHYTHM_PROBE); height: the frame's
+        height, tall enough that sections waiting to scroll into view are already in view."""
+        probe_doc = doc.replace("</body>", probe + "</body>", 1)
+        frame = self._frame(probe_doc, width, height, f"measure-{width}.html")
         r = subprocess.run([str(self.exe), "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--window-size={max(width, 500) + 20},2000",
                             "--virtual-time-budget=6000", "--dump-dom", frame.resolve().as_uri()],
                            capture_output=True, text=True, timeout=self.timeout, encoding="utf-8", errors="replace")

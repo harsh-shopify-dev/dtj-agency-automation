@@ -1,0 +1,95 @@
+{%- liquid
+  assign cm_n = 0
+  assign cm_colls = 0
+  for c in bs.collections
+    assign cm_colls = cm_colls | plus: 1
+  endfor
+  for i in (1..8)
+    assign ik = 'image_' | append: i
+    assign tk = 'title_' | append: i
+    if cm_colls > i or cm_colls == i or bs[ik] != blank or bs[tk] != blank
+      assign cm_n = cm_n | plus: 1
+    endif
+  endfor
+  assign cm_head = bs.heading | strip
+  assign cm_tag = 'h2'
+  case bs.heading_tag
+    when 'h1' or 'h3'
+      assign cm_tag = bs.heading_tag
+  endcase
+  assign cm_var = bs.variation | default: 'ring'
+  assign cm_labels = bs.labels | default: 'auto'
+  if cm_labels == 'auto'
+    assign cm_labels = 'show'
+    if cm_var == 'ring'
+      assign cm_labels = 'hide'
+    endif
+  endif
+  assign cm_mobile = bs.mobile_layout | default: 'auto'
+  if cm_mobile == 'auto'
+    assign cm_mobile = 'wrap'
+    if cm_var == 'ring'
+      assign cm_mobile = 'scroll'
+    endif
+  endif
+-%}
+{%- if cm_n > 0 or cm_head != blank -%}
+  <div class="dtj-b dtj-cm dtj-cm--{{ cm_var }} dtj-cm--labels-{{ cm_labels }} dtj-cm--m-{{ cm_mobile }} dtj-cm--head-{{ bs.heading_align | default: 'center' }} dtj-cm--lf-{{ bs.label_font | default: 'theme' }}{% if bs.hover_zoom %} dtj-cm--zoom{% endif %}{% if bs.bg_color_2 != blank %} dtj-cm--grad{% endif %}" style="{{ dtj_std_style | strip_newlines }} --cm-w: {{ bs.container_width }}px; --cm-r: {{ bs.corner_radius }}px; --cm-ring: {{ bs.ring_width }}px; --cm-frame: {{ bs.frame_width }}px; --cm-ls: {{ bs.label_size }}px; --cm-h-d: {{ bs.heading_size_desktop }}px; --cm-h-m: {{ bs.heading_size_mobile }}px;{% if bs.tile_size > 0 %} --cm-size: {{ bs.tile_size }}px;{% endif %}{% if bs.tile_size_mobile > 0 %} --cm-size-m: {{ bs.tile_size_mobile }}px;{% endif %}{% if bs.gap > 0 %} --cm-gap: {{ bs.gap }}px;{% endif %}{% if bs.bg_color_2 != blank %} --cm-bg2: {{ bs.bg_color_2 }};{% endif %}{% if bs.ring_color_1 != blank %} --cm-r1: {{ bs.ring_color_1 }};{% endif %}{% if bs.ring_color_2 != blank %} --cm-r2: {{ bs.ring_color_2 }};{% endif %}{% if bs.ring_color_3 != blank %} --cm-r3: {{ bs.ring_color_3 }};{% endif %}{% if bs.frame_color != blank %} --cm-fc: {{ bs.frame_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-cm__wrap">
+      {%- if cm_head != blank -%}<{{ cm_tag }} class="dtj-cm__heading">{{ cm_head | escape }}</{{ cm_tag }}>{%- endif -%}
+      {%- if cm_n > 0 -%}
+        <ul class="dtj-cm__list" role="list">
+          {%- assign cm_k = 0 -%}
+          {%- for i in (1..8) -%}
+            {%- liquid
+              assign ik = 'image_' | append: i
+              assign tk = 'title_' | append: i
+              assign lk = 'link_' | append: i
+              assign t_coll = nil
+              assign t_has_coll = false
+              for c in bs.collections
+                if forloop.index == i
+                  assign t_coll = c
+                  assign t_has_coll = true
+                endif
+              endfor
+              assign t_pic = bs[ik]
+              assign t_title = bs[tk] | strip
+              assign t_link = bs[lk]
+              if t_has_coll
+                if t_pic == blank
+                  assign t_pic = t_coll.image
+                endif
+                if t_title == blank
+                  assign t_title = t_coll.title | strip
+                endif
+                if t_link == blank
+                  assign t_link = t_coll.url
+                endif
+              endif
+              assign has = false
+              if t_has_coll or bs[ik] != blank or bs[tk] != blank
+                assign has = true
+              endif
+            -%}
+            {%- if has -%}
+              {%- assign cm_k = cm_k | plus: 1 -%}
+              <li class="dtj-cm__tile">
+                {%- if t_link != blank -%}<a class="dtj-cm__link" href="{{ t_link }}"{% if cm_labels == 'hide' and t_title != blank %} aria-label="{{ t_title | escape }}"{% endif %}>{%- else -%}<div class="dtj-cm__link">{%- endif -%}
+                  <span class="dtj-cm__ring"><span class="dtj-cm__pic">
+                    {%- if t_pic != blank -%}
+                      <img class="dtj-cm__img" src="{{ t_pic | image_url: width: 360 }}" srcset="{{ t_pic | image_url: width: 160 }} 160w, {{ t_pic | image_url: width: 240 }} 240w, {{ t_pic | image_url: width: 360 }} 360w, {{ t_pic | image_url: width: 480 }} 480w" sizes="(min-width: 750px) 200px, 110px" width="{{ t_pic.width | default: 360 }}" height="{{ t_pic.height | default: 360 }}" style="object-position: {{ t_pic.presentation.focal_point | default: '50% 50%' }}" alt="{% if cm_labels == 'hide' %}{{ t_pic.alt | escape }}{% endif %}" decoding="async"{% if bs.priority and cm_k < 5 %} loading="eager"{% else %} loading="lazy"{% endif %}>
+                    {%- endif -%}
+                  </span></span>
+                  {%- if t_title != blank and cm_labels == 'show' -%}<span class="dtj-cm__label">{{ t_title | escape }}</span>{%- endif -%}
+                {%- if t_link != blank -%}</a>{%- else -%}</div>{%- endif -%}
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Circle Menu is empty. Pick collections or add a picture to "Tile 1" (editor only: shoppers see nothing).</p>
+{%- endif -%}

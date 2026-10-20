@@ -1,0 +1,4 @@
+name = "DTJ Heroes"
+type = "theme"
+uid = "5bf0f1fc-0b42-b977-e109-f9b8a3830e4971be461c"
+# `uid` is added by the Shopify CLI the first time this extension is deployed from the linked app. Do not copy one from another app.

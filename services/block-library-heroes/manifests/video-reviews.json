@@ -1,0 +1,575 @@
+{
+  "id": "video-reviews",
+  "title": "DTJ Video Reviews",
+  "block_file": "extensions/dtj-heroes/blocks/dtj-video-reviews.liquid",
+  "placements": [
+    "home",
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "script": true,
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "subheading",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "link_label",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "name_1",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "text_1",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "name_2",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "text_2",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "name_3",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "text_3",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "name_4",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "text_4",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "name_5",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "text_5",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    },
+    {
+      "id": "name_6",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "text_6",
+      "type": "text",
+      "required": false,
+      "max_length": 120
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 32,
+    "padding_bottom": 32,
+    "side_padding": 0
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "info": "Empty = hidden."
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "Link text on the cards",
+      "info": "Shown on every card that has a link. Empty = no links."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_verified",
+      "label": "Verified tick after the name",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Cards (up to 6)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Card 1: picture",
+      "info": "A tall picture works best. Empty = the video's own still frame."
+    },
+    {
+      "type": "video",
+      "id": "video_1",
+      "label": "Card 1: video",
+      "info": "Optional. Only loads when a visitor presses play."
+    },
+    {
+      "type": "text",
+      "id": "name_1",
+      "label": "Card 1: name"
+    },
+    {
+      "type": "text",
+      "id": "text_1",
+      "label": "Card 1: line under the name",
+      "info": "e.g. what they bought. Empty = hidden."
+    },
+    {
+      "type": "url",
+      "id": "url_1",
+      "label": "Card 1: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Card 2: picture"
+    },
+    {
+      "type": "video",
+      "id": "video_2",
+      "label": "Card 2: video"
+    },
+    {
+      "type": "text",
+      "id": "name_2",
+      "label": "Card 2: name"
+    },
+    {
+      "type": "text",
+      "id": "text_2",
+      "label": "Card 2: line under the name"
+    },
+    {
+      "type": "url",
+      "id": "url_2",
+      "label": "Card 2: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_3",
+      "label": "Card 3: picture"
+    },
+    {
+      "type": "video",
+      "id": "video_3",
+      "label": "Card 3: video"
+    },
+    {
+      "type": "text",
+      "id": "name_3",
+      "label": "Card 3: name"
+    },
+    {
+      "type": "text",
+      "id": "text_3",
+      "label": "Card 3: line under the name"
+    },
+    {
+      "type": "url",
+      "id": "url_3",
+      "label": "Card 3: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_4",
+      "label": "Card 4: picture"
+    },
+    {
+      "type": "video",
+      "id": "video_4",
+      "label": "Card 4: video"
+    },
+    {
+      "type": "text",
+      "id": "name_4",
+      "label": "Card 4: name"
+    },
+    {
+      "type": "text",
+      "id": "text_4",
+      "label": "Card 4: line under the name"
+    },
+    {
+      "type": "url",
+      "id": "url_4",
+      "label": "Card 4: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_5",
+      "label": "Card 5: picture"
+    },
+    {
+      "type": "video",
+      "id": "video_5",
+      "label": "Card 5: video"
+    },
+    {
+      "type": "text",
+      "id": "name_5",
+      "label": "Card 5: name"
+    },
+    {
+      "type": "text",
+      "id": "text_5",
+      "label": "Card 5: line under the name"
+    },
+    {
+      "type": "url",
+      "id": "url_5",
+      "label": "Card 5: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_6",
+      "label": "Card 6: picture"
+    },
+    {
+      "type": "video",
+      "id": "video_6",
+      "label": "Card 6: video"
+    },
+    {
+      "type": "text",
+      "id": "name_6",
+      "label": "Card 6: name"
+    },
+    {
+      "type": "text",
+      "id": "text_6",
+      "label": "Card 6: line under the name"
+    },
+    {
+      "type": "url",
+      "id": "url_6",
+      "label": "Card 6: link"
+    },
+    {
+      "type": "header",
+      "content": "Look"
+    },
+    {
+      "type": "select",
+      "id": "card_ratio",
+      "label": "Card shape",
+      "default": "1.7778",
+      "options": [
+        {
+          "value": "1.7778",
+          "label": "Tall 9:16"
+        },
+        {
+          "value": "1.3333",
+          "label": "Portrait 3:4"
+        },
+        {
+          "value": "1.25",
+          "label": "Portrait 4:5"
+        },
+        {
+          "value": "1",
+          "label": "Square"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "card_size",
+      "label": "Card size on desktop",
+      "min": 14,
+      "max": 26,
+      "step": 1,
+      "unit": "%",
+      "default": 21,
+      "info": "Width of the centre card as a share of the carousel."
+    },
+    {
+      "type": "range",
+      "id": "mobile_card_size",
+      "label": "Card size on phones",
+      "min": 50,
+      "max": 80,
+      "step": 1,
+      "unit": "%",
+      "default": 64,
+      "info": "The neighbours peek in from the sides."
+    },
+    {
+      "type": "select",
+      "id": "visible_desktop",
+      "label": "Cards in view on desktop",
+      "default": "5",
+      "options": [
+        {
+          "value": "5",
+          "label": "Five (centre, two each side)"
+        },
+        {
+          "value": "3",
+          "label": "Three (centre, one each side)"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Card corner radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Maximum width",
+      "min": 800,
+      "max": 1920,
+      "step": 20,
+      "unit": "px",
+      "default": 1500
+    },
+    {
+      "type": "range",
+      "id": "shade",
+      "label": "Dark fade behind the text",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 70,
+      "info": "Keeps the name readable on a bright picture."
+    },
+    {
+      "type": "range",
+      "id": "outer_fade",
+      "label": "Fade of the outer cards",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 45
+    },
+    {
+      "type": "color",
+      "id": "caption_color",
+      "label": "Card text color",
+      "info": "Empty = white."
+    },
+    {
+      "type": "color",
+      "id": "verified_color",
+      "label": "Verified tick color"
+    },
+    {
+      "type": "color",
+      "id": "link_color",
+      "label": "Card link color"
+    },
+    {
+      "type": "select",
+      "id": "play_style",
+      "label": "Play button",
+      "default": "outline",
+      "options": [
+        {
+          "value": "outline",
+          "label": "Outline"
+        },
+        {
+          "value": "solid",
+          "label": "Solid"
+        }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading size, desktop",
+      "min": 24,
+      "max": 64,
+      "step": 1,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading size, phones",
+      "min": 20,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 26
+    },
+    {
+      "type": "header",
+      "content": "Arrows and motion"
+    },
+    {
+      "type": "select",
+      "id": "arrows",
+      "label": "Arrows",
+      "default": "sides",
+      "options": [
+        {
+          "value": "sides",
+          "label": "Arrows at both sides"
+        },
+        {
+          "value": "none",
+          "label": "No arrows (swipe only)"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "arrows_mobile",
+      "label": "Show arrows on phones too",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "arrow_bg",
+      "label": "Arrow color"
+    },
+    {
+      "type": "color",
+      "id": "arrow_color",
+      "label": "Arrow icon color"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Move to the next card by itself",
+      "default": false,
+      "info": "Only while the carousel is on screen, never while a video plays, never for visitors who prefer less motion."
+    },
+    {
+      "type": "range",
+      "id": "autoplay_seconds",
+      "label": "Seconds per card",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "checkbox",
+      "id": "priority",
+      "label": "This carousel is at the top of the page",
+      "default": false,
+      "info": "Loads the centre picture first. Leave off for a section further down: it then loads only when scrolled near."
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "Sternify 'Uber 1000+ Menschen vertrauen uns' video review carousel (centre card large, neighbours smaller, play button, verified name, product link)",
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "subheading": "Sub sample",
+      "link_label": "View product",
+      "show_verified": true,
+      "image_1": "pic1",
+      "name_1": "Sarah M.",
+      "text_1": "Bought the mask",
+      "url_1": "/products/a",
+      "video_1": {
+        "sources": [
+          {
+            "format": "webm",
+            "url": "//v/a.webm",
+            "height": 1080
+          },
+          {
+            "format": "mp4",
+            "url": "//v/a-1080.mp4",
+            "height": 1080
+          },
+          {
+            "format": "mp4",
+            "url": "//v/a-480.mp4",
+            "height": 480
+          },
+          {
+            "format": "mp4",
+            "url": "//v/a-720.mp4",
+            "height": 720
+          }
+        ]
+      },
+      "image_2": "pic2",
+      "name_2": "Anna K.",
+      "image_3": "pic3",
+      "name_3": "Lena B."
+    },
+    "expect": [
+      "Heading sample",
+      "Sub sample",
+      "Sarah M.",
+      "Bought the mask",
+      "View product",
+      "Anna K.",
+      "Lena B.",
+      "dtj-vr__card",
+      "dtj-vr__play",
+      "//v/a-720.mp4"
+    ]
+  }
+}

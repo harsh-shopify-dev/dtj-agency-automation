@@ -1,0 +1,120 @@
+{%- liquid
+  assign cs_rows = 0
+  for i in (1..7)
+    assign lk = 'r' | append: i | append: '_label'
+    if bs[lk] != blank
+      assign cs_rows = cs_rows | plus: 1
+    endif
+  endfor
+  assign cs_head = bs.heading | strip
+  assign cs_eyebrow = bs.eyebrow | strip
+  assign cs_text = bs.text | strip
+  assign cs_points = bs.points | strip
+  assign cs_btn = bs.button_label | strip
+  assign cs_img = bs.image
+  assign cs_var = bs.variation | default: 'spotlight'
+  assign cs_us = bs.us_title | strip
+  assign cs_has = false
+  if cs_rows > 0 or cs_head != blank or cs_eyebrow != blank or cs_text != blank or cs_points != blank or cs_btn != blank or cs_img != blank
+    assign cs_has = true
+  endif
+  assign cs_mimg = bs.mobile_image | default: 'auto'
+  if cs_mimg == 'auto'
+    assign cs_mimg = 'hide'
+    if cs_var == 'gradient'
+      assign cs_mimg = 'show'
+    endif
+  endif
+  assign cs_hf = bs.heading_font | default: 'auto'
+  if cs_hf == 'auto'
+    assign cs_hf = 'theme'
+    if cs_var == 'spotlight'
+      assign cs_hf = 'serif'
+    endif
+  endif
+  assign cs_cf = 'sans'
+  if cs_var == 'spotlight'
+    assign cs_cf = 'serif'
+  endif
+-%}
+{%- if cs_has -%}
+  <div class="dtj-b dtj-cs dtj-cs--{{ cs_var }} dtj-cs--hf-{{ cs_hf }} dtj-cs--cf-{{ cs_cf }} dtj-cs--mimg-{{ cs_mimg }} dtj-cs--align-{{ bs.image_align | default: 'bottom' }} dtj-cs--btn-{{ bs.button_shape | default: 'rounded' }}{% if bs.bg_color_2 != blank %} dtj-cs--grad{% endif %}{% if cs_img == blank %} dtj-cs--noimg{% endif %}" style="{{ dtj_std_style | strip_newlines }} --cs-w: {{ bs.container_width }}px; --cs-iw: {{ bs.image_width }}px; --cs-tw: {{ bs.table_width }}px; --cs-rh: {{ bs.row_height }}px; --cs-rhm: {{ bs.row_height_mobile }}px; --cs-r: {{ bs.card_radius }}px; --cs-h-d: {{ bs.heading_size_desktop }}px; --cs-h-m: {{ bs.heading_size_mobile }}px;{% if bs.bg_color_2 != blank %} --cs-bg2: {{ bs.bg_color_2 }};{% endif %}{% if bs.accent_color != blank %} --cs-accent: {{ bs.accent_color }};{% endif %}{% if bs.button_bg != blank %} --cs-btn: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --cs-btnc: {{ bs.button_color }};{% endif %}{% if bs.card_bg != blank %} --cs-card: {{ bs.card_bg }};{% endif %}{% if bs.col_from != blank %} --cs-from: {{ bs.col_from }};{% endif %}{% if bs.col_to != blank %} --cs-to: {{ bs.col_to }};{% endif %}{% if bs.col_text != blank %} --cs-ct: {{ bs.col_text }};{% endif %}{% if bs.check_color != blank %} --cs-check: {{ bs.check_color }};{% endif %}{% if bs.cross_color != blank %} --cs-cross: {{ bs.cross_color }};{% endif %}" {{ block.shopify_attributes }}>
+    <div class="dtj-cs__wrap">
+      <div class="dtj-cs__intro">
+        {%- if cs_eyebrow != blank -%}<p class="dtj-cs__eyebrow">{{ cs_eyebrow | escape }}</p>{%- endif -%}
+        {%- if cs_head != blank -%}
+          {%- assign h_parts = cs_head | split: '*' -%}
+          <h2 class="dtj-cs__heading">
+            {%- for part in h_parts -%}
+              {%- if part != blank -%}
+                {%- assign odd = forloop.index | modulo: 2 -%}
+                {%- if odd == 1 -%}<span>{{ part | escape }}</span>{%- else -%}<em class="dtj-cs__accent">{{ part | escape }}</em>{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </h2>
+        {%- endif -%}
+        {%- if cs_text != blank -%}<p class="dtj-cs__text">{{ cs_text | escape | newline_to_br }}</p>{%- endif -%}
+        {%- if cs_points != blank -%}
+          {%- assign p_lines = cs_points | newline_to_br | strip_newlines | split: '<br />' -%}
+          {%- assign p_count = 0 -%}
+          <ul class="dtj-cs__points">
+            {%- for p_line in p_lines -%}
+              {%- assign p_line = p_line | strip -%}
+              {%- if p_line != blank and p_count < 4 -%}
+                {%- assign p_count = p_count | plus: 1 -%}
+                <li><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 11.1V12a9 9 0 1 1-5.3-8.2M8 11.5l4 4L21 6"/></svg><span>{{ p_line | escape }}</span></li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+        {%- if cs_btn != blank -%}
+          {%- if bs.button_url != blank -%}<a class="dtj-cs__btn" href="{{ bs.button_url }}">{{ cs_btn | escape }}</a>{%- else -%}<span class="dtj-cs__btn">{{ cs_btn | escape }}</span>{%- endif -%}
+        {%- endif -%}
+      </div>
+      {%- if cs_img != blank -%}
+        <div class="dtj-cs__media"><img class="dtj-cs__img" src="{{ cs_img | image_url: width: 720 }}" srcset="{{ cs_img | image_url: width: 360 }} 360w, {{ cs_img | image_url: width: 540 }} 540w, {{ cs_img | image_url: width: 720 }} 720w, {{ cs_img | image_url: width: 1080 }} 1080w" sizes="(min-width: 750px) {{ bs.image_width }}px, 70vw" width="{{ cs_img.width | default: 720 }}" height="{{ cs_img.height | default: 960 }}" alt="{{ cs_img.alt | default: cs_head | escape }}" decoding="async"{% if bs.priority %} loading="eager" fetchpriority="high"{% else %} loading="lazy"{% endif %}></div>
+      {%- endif -%}
+      {%- if cs_rows > 0 -%}
+        <div class="dtj-cs__card">
+          <div class="dtj-cs__hl" aria-hidden="true"></div>
+          <table class="dtj-cs__table">
+            <caption class="dtj-cs__sr">{{ cs_us | default: cs_head | default: 'Comparison' | escape }}</caption>
+            <colgroup><col class="dtj-cs__c0"><col class="dtj-cs__c1"><col class="dtj-cs__c2"></colgroup>
+            <thead>
+              <tr class="dtj-cs__headrow">
+                <td></td>
+                <th scope="col" class="dtj-cs__us">
+                  {%- if bs.us_logo != blank -%}<img class="dtj-cs__logo" src="{{ bs.us_logo | image_url: width: 240 }}" width="{{ bs.us_logo.width | default: 120 }}" height="{{ bs.us_logo.height | default: 32 }}" alt="{{ cs_us | escape }}" loading="lazy" decoding="async">
+                  {%- elsif cs_us != blank -%}<span class="dtj-cs__us-name">{{ cs_us | escape }}</span>{%- endif -%}
+                  {%- if bs.us_sub != blank -%}<span class="dtj-cs__us-sub">{{ bs.us_sub | escape }}</span>{%- endif -%}
+                </th>
+                <th scope="col" class="dtj-cs__them">{{ bs.them_title | escape }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {%- for i in (1..7) -%}
+                {%- liquid
+                  assign lk = 'r' | append: i | append: '_label'
+                  assign uk = 'r' | append: i | append: '_us'
+                  assign tk = 'r' | append: i | append: '_them'
+                  assign r_label = bs[lk] | strip
+                  assign r_us = bs[uk] | strip
+                  assign r_them = bs[tk] | strip
+                -%}
+                {%- if r_label != blank -%}
+                  <tr class="dtj-cs__row">
+                    <th scope="row" class="dtj-cs__label">{{ r_label | escape }}</th>
+                    <td class="dtj-cs__us">{%- if r_us != blank -%}<span class="dtj-cs__val">{{ r_us | escape }}</span>{%- else -%}<svg class="dtj-cs__tick" viewBox="0 0 24 24" role="img" aria-label="Yes" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{%- endif -%}</td>
+                    <td class="dtj-cs__them">{%- if r_them != blank -%}<span class="dtj-cs__val">{{ r_them | escape }}</span>{%- else -%}<svg class="dtj-cs__cross" viewBox="0 0 24 24" role="img" aria-label="No" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>{%- endif -%}</td>
+                  </tr>
+                {%- endif -%}
+              {%- endfor -%}
+            </tbody>
+          </table>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Compare Showcase is empty. Add a heading, a picture or a table row (editor only: shoppers see nothing).</p>
+{%- endif -%}

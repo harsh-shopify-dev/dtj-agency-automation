@@ -6,6 +6,18 @@
       "runtimeExecutable": "powershell",
       "runtimeArgs": ["-NoProfile", "-Command", "Set-Location -LiteralPath 'D:\\CODE CONTAINERR\\WEB DEV\\DTJ'; npm run dev -- -p 3100"],
       "port": 3100
+    },
+    {
+      "name": "dtj-static-build",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3300", "--bind", "127.0.0.1", "--directory", "C:\\Users\\harsh\\AppData\\Local\\Temp\\claude\\D--CODE-CONTAINERR-WEB-DEV-dtj-agency-automation\\f0d17d9e-39a0-41ee-8883-af5b3b239ea3\\scratchpad\\static"],
+      "port": 3300
+    },
+    {
+      "name": "dtj-static-gzip",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\harsh\\AppData\\Local\\Temp\\claude\\D--CODE-CONTAINERR-WEB-DEV-dtj-agency-automation\\f0d17d9e-39a0-41ee-8883-af5b3b239ea3\\scratchpad\\gzip_server.py", "C:\\Users\\harsh\\AppData\\Local\\Temp\\claude\\D--CODE-CONTAINERR-WEB-DEV-dtj-agency-automation\\f0d17d9e-39a0-41ee-8883-af5b3b239ea3\\scratchpad\\static", "3301"],
+      "port": 3301
     }
   ]
 }

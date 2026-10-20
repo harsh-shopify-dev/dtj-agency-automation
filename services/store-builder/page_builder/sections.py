@@ -19,6 +19,7 @@ STRUCTURE = {
     "inside": "What's in the box", "inside_hl": "box",
     "notinside": "What's not inside", "notinside_hl": "not inside",
     "compare": "{brand} vs. {other}",
+    "compare_why": "Why {brand} outperforms {other}",
     "faq_h": "Questions,", "faq_a": "answered",
     "reviews": "What customers say",
     "numbers": "{brand} in numbers",

@@ -1,0 +1,195 @@
+{%- liquid
+  assign hb_head = bs.heading | strip
+  assign hb_badge = bs.badge_text | strip
+  assign hb_sub = bs.subheading | strip
+  assign hb_rate = bs.rating_value | default: 0 | plus: 0
+  assign hb_rate_text = bs.rating_text | strip
+  assign hb_points = bs.points | strip
+  assign hb_btn = bs.button_label | strip
+  assign hb_note = bs.note | strip
+  assign hb_quote = bs.review_quote | strip
+  assign hb_qname = bs.review_name | strip
+  assign hb_qrate = bs.review_stars | default: 0 | plus: 0
+  assign hb_img = bs.image
+  assign hb_img_m = bs.image_mobile
+  assign hb_split = false
+  assign hb_cover = false
+  if bs.layout == 'split'
+    assign hb_split = true
+  elsif bs.layout == 'cover'
+    assign hb_cover = true
+  endif
+  assign hb_has = false
+  if hb_img != blank or hb_img_m != blank or hb_head != blank or hb_badge != blank or hb_sub != blank or hb_rate > 0 or hb_rate_text != blank or hb_points != blank or hb_btn != blank or hb_note != blank or hb_quote != blank
+    assign hb_has = true
+  endif
+  assign hb_rd = bs.ratio_desktop
+  assign hb_rm = bs.ratio_mobile
+  if hb_rd == 'adapt'
+    assign hb_rd = hb_img.aspect_ratio | default: '2 / 1'
+  endif
+  if hb_rm == 'adapt'
+    assign hb_rm = hb_img_m.aspect_ratio | default: hb_img.aspect_ratio | default: '4 / 5'
+  endif
+  assign hb_pos = 'left'
+  case bs.content_position
+    when 'right' or 'center'
+      assign hb_pos = bs.content_position
+  endcase
+  assign hb_af = bs.accent_font | default: 'auto'
+  if hb_af == 'auto'
+    assign hb_af = 'italic'
+    if hb_split or hb_cover
+      assign hb_af = 'plain'
+    endif
+  endif
+  assign hb_ma = bs.mobile_align | default: 'auto'
+  if hb_ma == 'auto'
+    assign hb_ma = 'center'
+    if hb_split or hb_cover
+      assign hb_ma = 'left'
+    endif
+  endif
+  assign hb_pi = bs.point_icon | default: 'auto'
+  if hb_pi == 'auto'
+    assign hb_pi = 'shield'
+    if hb_split or hb_cover
+      assign hb_pi = 'circle'
+    endif
+  endif
+  assign hb_ov = bs.overlay_style | default: 'auto'
+  if hb_ov == 'auto'
+    assign hb_ov = 'side'
+    if hb_cover
+      assign hb_ov = 'bottom'
+    endif
+  endif
+  assign hb_va = bs.content_align | default: 'auto'
+  if hb_va == 'auto'
+    assign hb_va = 'center'
+    if hb_cover
+      assign hb_va = 'bottom'
+    endif
+  endif
+  assign hb_ml = bs.mobile_layout | default: 'auto'
+  if hb_ml == 'auto'
+    assign hb_ml = 'stack'
+    if hb_cover
+      assign hb_ml = 'overlay'
+    endif
+  endif
+  assign hb_cols = bs.split_columns | default: '1fr 1fr'
+  if bs.image_side == 'right'
+    assign hb_cc = hb_cols | split: ' '
+    assign hb_cols = hb_cc[1] | append: ' ' | append: hb_cc[0]
+  endif
+  assign hb_stars_pct = hb_rate | times: 20.0 | round: 1
+  if hb_stars_pct > 100
+    assign hb_stars_pct = 100
+  endif
+  assign hb_qstars_pct = hb_qrate | times: 20.0 | round: 1
+  if hb_qstars_pct > 100
+    assign hb_qstars_pct = 100
+  endif
+-%}
+{%- if hb_has -%}
+  {%- capture hb_pic -%}
+    {%- if hb_img != blank or hb_img_m != blank -%}
+      {%- assign hb_main = hb_img | default: hb_img_m -%}
+      <picture class="dtj-hb__pic">
+        {%- if hb_img_m != blank and hb_img != blank -%}
+          <source media="(max-width: 749px)" srcset="{{ hb_img_m | image_url: width: 600 }} 600w, {{ hb_img_m | image_url: width: 900 }} 900w, {{ hb_img_m | image_url: width: 1200 }} 1200w" sizes="100vw" width="{{ hb_img_m.width | default: 900 }}" height="{{ hb_img_m.height | default: 1100 }}">
+        {%- endif -%}
+        <img class="dtj-hb__img" src="{{ hb_main | image_url: width: 1920 }}" srcset="{{ hb_main | image_url: width: 750 }} 750w, {{ hb_main | image_url: width: 1200 }} 1200w, {{ hb_main | image_url: width: 1600 }} 1600w, {{ hb_main | image_url: width: 1920 }} 1920w, {{ hb_main | image_url: width: 2560 }} 2560w" sizes="(min-width: 750px) min(100vw, {{ bs.container_width }}px), 100vw" width="{{ hb_main.width | default: 1920 }}" height="{{ hb_main.height | default: 960 }}" alt="{{ hb_main.alt | escape }}"{% if bs.priority %} loading="eager" fetchpriority="high"{% else %} loading="lazy"{% endif %}>
+      </picture>
+    {%- endif -%}
+  {%- endcapture -%}
+  {%- capture hb_text -%}
+    {%- if hb_badge != blank -%}<p class="dtj-hb__badge">{{ hb_badge | escape }}</p>{%- endif -%}
+    {%- if hb_head != blank -%}
+      {%- assign h_parts = hb_head | split: '*' -%}
+      <h2 class="dtj-hb__heading">
+        {%- for part in h_parts -%}
+          {%- if part != blank -%}
+            {%- assign odd = forloop.index | modulo: 2 -%}
+            {%- if odd == 1 -%}<span>{{ part | escape | replace: '|', '<br>' }}</span>{%- else -%}<em class="dtj-hb__accent">{{ part | escape | replace: '|', '<br>' }}</em>{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </h2>
+    {%- endif -%}
+    {%- if hb_sub != blank -%}<p class="dtj-hb__sub">{{ hb_sub | escape | newline_to_br }}</p>{%- endif -%}
+    {%- if hb_rate > 0 or hb_rate_text != blank -%}
+      <p class="dtj-hb__rating">
+        {%- if hb_rate > 0 -%}
+          <span class="dtj-hb__stars" role="img" aria-label="Rated {{ hb_rate }} out of 5">
+            <span class="dtj-hb__stars-base" aria-hidden="true">{%- for k in (1..5) -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9L12 2.5z"/></svg>{%- endfor -%}</span>
+            <span class="dtj-hb__stars-fill" aria-hidden="true" style="width: {{ hb_stars_pct }}%">{%- for k in (1..5) -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9L12 2.5z"/></svg>{%- endfor -%}</span>
+          </span>
+        {%- endif -%}
+        {%- if hb_rate_text != blank -%}
+          {%- assign r_parts = hb_rate_text | split: '*' -%}
+          <span class="dtj-hb__rating-text">
+            {%- for part in r_parts -%}
+              {%- if part != blank -%}
+                {%- assign r_odd = forloop.index | modulo: 2 -%}
+                {%- if r_odd == 1 -%}{{ part | escape }}{%- else -%}<strong>{{ part | escape }}</strong>{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </span>
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+    {%- if hb_points != blank -%}
+      {%- assign p_lines = hb_points | newline_to_br | strip_newlines | split: '<br />' -%}
+      {%- assign p_count = 0 -%}
+      <ul class="dtj-hb__points">
+        {%- for p_line in p_lines -%}
+          {%- assign p_line = p_line | strip -%}
+          {%- if p_line != blank and p_count < 4 -%}
+            {%- assign p_count = p_count | plus: 1 -%}
+            <li class="dtj-hb__point"><span class="dtj-hb__tick dtj-hb__tick--{{ hb_pi }}" aria-hidden="true">{%- if hb_pi == 'check' -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{%- elsif hb_pi == 'dot' -%}<i></i>{%- elsif hb_pi == 'circle' -%}<svg viewBox="0 0 24 24" focusable="false"><circle class="dtj-hb__shield" cx="12" cy="12" r="11"/><path class="dtj-hb__shield-tick" d="M7.6 12.4l3 3.1 5.8-6.2"/></svg>{%- else -%}<svg viewBox="0 0 24 24" focusable="false"><path class="dtj-hb__shield" d="M12 1.8l8 3v6.4c0 5.2-3.5 9.4-8 11-4.5-1.6-8-5.8-8-11V4.8l8-3z"/><path class="dtj-hb__shield-tick" d="M8.2 11.9l2.6 2.7 5.4-5.4"/></svg>{%- endif -%}</span><span>{{ p_line | escape }}</span></li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+    {%- if hb_quote != blank and hb_split -%}
+      <figure class="dtj-hb__quote">
+        <blockquote class="dtj-hb__quote-text">{{ hb_quote | escape | newline_to_br }}</blockquote>
+        {%- if hb_qrate > 0 or hb_qname != blank -%}
+          <figcaption class="dtj-hb__quote-by">
+            {%- if hb_qrate > 0 -%}
+              <span class="dtj-hb__stars dtj-hb__stars--sm" role="img" aria-label="Rated {{ hb_qrate }} out of 5">
+                <span class="dtj-hb__stars-base" aria-hidden="true">{%- for k in (1..5) -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9L12 2.5z"/></svg>{%- endfor -%}</span>
+                <span class="dtj-hb__stars-fill" aria-hidden="true" style="width: {{ hb_qstars_pct }}%">{%- for k in (1..5) -%}<svg viewBox="0 0 24 24" focusable="false"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9L12 2.5z"/></svg>{%- endfor -%}</span>
+              </span>
+            {%- endif -%}
+            {%- if hb_qname != blank -%}<span class="dtj-hb__quote-name">{{ hb_qname | escape }}</span>{%- endif -%}
+          </figcaption>
+        {%- endif -%}
+      </figure>
+    {%- endif -%}
+    {%- if hb_btn != blank -%}
+      {%- capture b_arrow -%}{%- if bs.button_arrow -%}<svg class="dtj-hb__btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>{%- endif -%}{%- endcapture -%}
+      {%- if bs.button_url != blank -%}<a class="dtj-hb__btn" href="{{ bs.button_url }}"><span>{{ hb_btn | escape }}</span>{{ b_arrow }}</a>{%- else -%}<span class="dtj-hb__btn"><span>{{ hb_btn | escape }}</span>{{ b_arrow }}</span>{%- endif -%}
+    {%- endif -%}
+    {%- if hb_note != blank -%}<p class="dtj-hb__note">{{ hb_note | escape }}</p>{%- endif -%}
+  {%- endcapture -%}
+  <div class="dtj-b dtj-hb dtj-hb--{% if hb_split %}split dtj-hb--side-{{ bs.image_side | default: 'left' }}{% elsif hb_cover %}banner dtj-hb--cover{% else %}banner{% endif %} dtj-hb--pos-{{ hb_pos }} dtj-hb--v-{{ hb_va }} dtj-hb--ov-{{ hb_ov }} dtj-hb--m-{{ hb_ml }} dtj-hb--ma-{{ hb_ma }} dtj-hb--badge-{{ bs.badge_style | default: 'soft' }} dtj-hb--rating-{{ bs.rating_style | default: 'boxed' }} dtj-hb--btn-{{ bs.button_style | default: 'rounded' }} dtj-hb--accent-{{ hb_af }} dtj-hb--hf-{{ bs.heading_font | default: 'theme' }} dtj-hb--fit-{{ bs.image_fit | default: 'cover' }}{% if bs.button_full_mobile %} dtj-hb--btn-full{% endif %}" style="{{ dtj_std_style | strip_newlines }} --hb-w: {{ bs.container_width }}px; --hb-r: {{ bs.corner_radius }}px; --hb-rd: {{ hb_rd }}; --hb-rm: {{ hb_rm }}; --hb-cw: {{ bs.content_width }}px; --hb-pad: {{ bs.content_padding }}px; --hb-focus: {{ bs.image_focus | default: 'center' }}; --hb-focus-m: {{ bs.image_focus_mobile | default: 'center' }}; --hb-mfade: {{ bs.mobile_fade }}%; --hb-curve: {{ bs.mobile_curve }}px; --hb-mps: {{ bs.mobile_pic_space }}vw; --hb-ov-pct: {{ bs.overlay_opacity }}%; --hb-ov-size: {{ bs.overlay_size }}%; --hb-blur: {{ bs.overlay_blur }}px; --hb-h-d: {{ bs.heading_size_desktop }}px; --hb-h-m: {{ bs.heading_size_mobile }}px; --hb-s-d: {{ bs.subheading_size_desktop }}px; --hb-s-m: {{ bs.subheading_size_mobile }}px; --hb-cols: {{ hb_cols }}; --hb-prad: {{ bs.panel_radius }}px; --hb-gap: {{ bs.panel_gap }}px; --hb-body: {{ bs.split_text_size }}px;{% if bs.overlay_color != blank %} --hb-ov-c: {{ bs.overlay_color }};{% endif %}{% if bs.accent_color != blank %} --hb-accent: {{ bs.accent_color }};{% endif %}{% if bs.star_color != blank %} --hb-star: {{ bs.star_color }};{% endif %}{% if bs.badge_bg != blank %} --hb-badge-bg: {{ bs.badge_bg }};{% endif %}{% if bs.badge_color != blank %} --hb-badge-c: {{ bs.badge_color }};{% endif %}{% if bs.point_icon_color != blank %} --hb-pi: {{ bs.point_icon_color }};{% endif %}{% if bs.button_bg != blank %} --hb-btn-bg: {{ bs.button_bg }};{% endif %}{% if bs.button_color != blank %} --hb-btn-c: {{ bs.button_color }};{% endif %}{% if bs.panel_bg != blank %} --hb-panel-bg: {{ bs.panel_bg }};{% endif %}{% if bs.card_bg != blank %} --hb-card-bg: {{ bs.card_bg }};{% endif %}" {{ block.shopify_attributes }}>
+    {%- if hb_split -%}
+      <div class="dtj-hb__wrap dtj-hb__split">
+        <div class="dtj-hb__media">{{ hb_pic }}</div>
+        <div class="dtj-hb__panel"><div class="dtj-hb__inner">{{ hb_text }}</div></div>
+      </div>
+    {%- else -%}
+      <div class="dtj-hb__wrap">
+        <div class="dtj-hb__slide">
+          <div class="dtj-hb__media">{{ hb_pic }}<div class="dtj-hb__mfade" aria-hidden="true"></div></div>
+          <div class="dtj-hb__fade" aria-hidden="true"></div>
+          <div class="dtj-hb__content"><div class="dtj-hb__inner">{{ hb_text }}</div></div>
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ block.shopify_attributes }}>DTJ Hero Banner is empty. Add a picture and a heading (editor only: shoppers see nothing).</p>
+{%- endif -%}

@@ -1,0 +1,187 @@
+/* Category Grid: picture tiles with a centred title and a small capitals button. Two big layouts (a big tile on the left, or a tall tile on the right,
+   five tiles each) and an even grid for any other count. The grid decides the tile height from the small tiles' shape, so the big tile always
+   matches. Each tile has ONE link (a stretched link over the whole tile). Plain grid, no script. Phones: two columns, the big tile full width on top. */
+.dtj-cg {
+  display: block;
+  width: 100%;
+  /* the block's section colour and text colour (standard 'colors' controls): set, but never painted until 19 Oct 2026, so every
+     band the page builder chose stayed white. Left empty they change nothing (transparent / inherited). */
+  background: var(--dtj-background, transparent);
+  color: var(--dtj-text-color, inherit);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 640px;
+}
+
+.dtj-cg__wrap {
+  max-width: var(--cg-w, 1400px);
+  margin-inline: auto;
+}
+
+.dtj-cg__intro {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.dtj-cg--head-left .dtj-cg__intro { text-align: start; }
+
+.dtj-cg__heading {
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-heading--family, var(--font-heading-family, inherit));
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.dtj-cg__sub {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.dtj-cg__grid {
+  display: grid;
+  gap: var(--cg-gap, 16px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dtj-cg__tile {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border-radius: var(--cg-r, 0);
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+  color: var(--cg-tc, white);
+}
+
+.dtj-cg__tile--feature {
+  grid-column: 1 / -1;
+  aspect-ratio: 16 / 10;
+}
+
+/* the right-hand big tile comes first on phones */
+.dtj-cg--bento-right .dtj-cg__tile--feature { order: -1; }
+
+.dtj-cg__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dtj-cg__tile::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(0 0 0 / var(--cg-ov, 0.15));
+  content: "";
+  pointer-events: none;
+}
+
+.dtj-cg__cap {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 18px;
+  text-align: center;
+}
+
+.dtj-cg--cap-middle .dtj-cg__cap,
+.dtj-cg--fmid .dtj-cg__tile--feature .dtj-cg__cap {
+  inset: 0;
+  justify-content: center;
+  padding-bottom: 0;
+}
+
+.dtj-cg__title {
+  margin: 0;
+  color: inherit;
+  font-size: var(--cg-t-m, 18px);
+  font-weight: 700;
+  line-height: 1.15;
+  text-decoration: none;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.35);
+  text-wrap: balance;
+}
+
+.dtj-cg__btn {
+  display: inline-block;
+  max-width: 100%;
+  padding: 8px 14px;
+  border-radius: 0;
+  background: var(--cg-bb, Canvas);
+  color: var(--cg-bc, CanvasText);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: transform 0.2s ease;
+}
+
+.dtj-cg--btn-rounded .dtj-cg__btn { border-radius: 8px; }
+
+/* one link per tile: it stretches over the whole tile so the tile is the tap target */
+.dtj-cg__stretch::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.dtj-cg__tile:hover .dtj-cg__btn { transform: translateY(-1px); }
+
+.dtj-cg__stretch:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: -4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtj-cg__btn { transition: none; }
+}
+
+/* desktop */
+@media screen and (min-width: 750px) {
+  .dtj-cg__intro { margin-bottom: 28px; }
+
+  .dtj-cg__heading { font-size: 40px; }
+
+  .dtj-cg__sub { font-size: 17px; }
+
+  .dtj-cg__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .dtj-cg__tile { aspect-ratio: var(--cg-ar, 1.6); }
+
+  .dtj-cg__tile--feature { grid-column: auto; }
+
+  .dtj-cg--bento-left .dtj-cg__tile--feature,
+  .dtj-cg--bento-right .dtj-cg__tile--feature {
+    grid-row: 1 / span 2;
+    aspect-ratio: auto;
+    order: 0;
+  }
+
+  .dtj-cg--bento-right .dtj-cg__tile--feature { grid-column: 3; }
+
+  .dtj-cg__cap {
+    gap: 12px;
+    padding-bottom: 28px;
+  }
+
+  .dtj-cg__title { font-size: var(--cg-t-d, 26px); }
+
+  .dtj-cg__btn {
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+}

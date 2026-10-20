@@ -1,0 +1,28 @@
+# DTJ Shop (sixth theme app extension)
+
+Why it exists: DTJ Commerce is nearly full (94 of 100 KB, 7 blocks), so the product-card sections that follow live in their own app. First block: Harsh's "Shop by Concern" slider (screenshot of 13 Oct 2026).
+
+**Status (13 Oct 2026): app created and linked (client id in `shopify.app.toml`); first release `dtj-shop-2` is ACTIVE (deployed 13 Oct 2026 with Harsh's yes). Installed by Harsh on the test store; licence flag not yet checked; page-builder registry/tags not yet filled (needs the extension uuid from a block reference).** Setup steps are the same as DTJ Commerce's (see `services/block-library-commerce/README.md`, "First-time setup"), with the name `DTJ Shop`; register it in `licence.py` (`DTJ_SHOP_CLIENT_SECRET`), `dtj-licence.ps1`, `registry.json`, `block_tags.json`, the vault, install catcher and bot only AFTER it is linked. (A placeholder id would break `--app all`.)
+
+## Blocks (2; 38 KB of 100 KB)
+| Block (file `dtj-<id>`) | Editor name | Notes |
+|---|---|---|
+| `concern-slider` | DTJ Shop by Concern | Left column: two-line heading (second line in the accent colour), a line of words and a DROPDOWN of concerns; right: a swipeable row of product cards, a View Collection button and a "01 / 22" counter with a progress line. Each concern is ONE collection (the collection picker, up to 8; Shopify allows only one picker per block) with optional dropdown words; one collection = no dropdown. Card: picture, star rating + count (Judge.me, then the store's review ratings; none when a product has no reviews), title, short line (product's `custom.subtitle` field, else the start of its description), price, crossed-out old price and a green "19% OFF" pill (computed from the real compare-at price), an option dropdown (all variants, sold-out ones marked), and an Add to Cart pill. The dropdown IS the form field (`name="id"`), so Add to Cart works with no script. Script (6.7 KB): switches concern, keeps arrows / faded edge / counter / progress line in step with the row, updates price, old price, pill, picture and sold-out state when an option is picked, adds to the cart in place (falls back to a normal form post). Native scroll-snap row. Button shape pill/rounded/square, picture shape and fit, cards in view (desktop 2-5, phone 1-2.5), left-column width, colours (empty = soft purple), heading font and sizes, all button words. |
+
+| `before-after` | DTJ Before After | a drag-to-compare picture (before / after) beside a block of words: small line (bold + rest, optional five stars, OFF by default so no rating is claimed), heading with an accent part, paragraph (bold works), three points (bold lead + rest, each with an icon: tick, badge, heart, leaf, smile, star, bolt, shield) and a button with optional arrow. THREE versions (Version setting; each sets its own picture shape, side, tag place, icons and button): **Rounded picture in a soft card** (tags top corners, outline pill button, ticks), **Round picture** (tags at the sides, pink tint, red-to-orange gradient on the accent words, heart/leaf/smile icons, dark rounded button with shadow) and **Square picture on the right** (tags at the bottom, ecru gradient, badge icons, dark square button). The slider is a full-size invisible range input over the picture (mouse, touch and arrow keys work, a screen reader hears a slider); a 0.7 KB script copies its value into the divider position; without it the picture shows the start position (10 to 90 %). Overrides: picture side, shape, tag place, width, heading sizes, accent / second accent / button / tint colors. From three screenshots Harsh sent on 13 Oct 2026. |
+
+Standard controls: top/bottom padding, side space, text and background colour. No default copy, no hard-coded colours, every block runs the licence gate. Put it in a FULL-WIDTH section.
+**Decision (13 Oct 2026): no random/fake reviews** (CLAUDE.md rule 5); sample ratings appear only in the theme editor, clearly marked and dashed.
+
+## Daily commands (from `services/block-library-shop`, venv python)
+```
+python ../block-library/tools/build_blocks.py --root .            # write generated files (add --check to only verify)
+DTJ_APP_ROOT=$PWD python ../block-library/tools/check_library.py   # library rules + size budget
+DTJ_APP_ROOT=$PWD ../../.work/.venv/Scripts/python -m unittest discover -s tests -t .
+shopify theme check --path extensions/dtj-shop
+```
+
+## Verified / not verified
+Verified (13 Oct 2026): 44 unit tests (the shared ones plus 17 for Shop by Concern and 14 for Before After); library rules and size budget; Theme Check clean except the usual ExcessiveSettingsCount warning; rendered on desktop (1917 px) and phone (390 px) with the TOILOVA pictures as stand-ins, desktop matches the reference layout; the script was run in headless Edge against the real rendered page (concern switch, option change updating price, arrows, counter 01/08 -> 03/08 -> 05/08, progress line, end state, Add to Cart posting the right variant id to `/cart/add.js` with the store call stubbed, sold-out variant disabling the button).
+Before After: rendered in all three versions on desktop and phone with stand-in pictures (TOILOVA photos, not real before/after pairs); the slider was driven in headless Edge (value 80 moves the divider and the clip to 80 %, 0 clips fully). NOT seen: a finger drag on a real phone, a real before/after pair, a real store.
+NOT verified (Shop by Concern): a real Shopify store (real collections, real variants, money format, `custom.subtitle` is an assumed field name), Judge.me reading (same unverified code as Best Sellers), cart-icon update after Add to Cart, real phone / other browsers / theme editor, smooth arrow scrolling (headless Edge cannot show it).

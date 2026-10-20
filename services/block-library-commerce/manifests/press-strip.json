@@ -1,0 +1,406 @@
+{
+  "id": "press-strip",
+  "title": "DTJ Press Strip",
+  "block_file": "extensions/dtj-commerce/blocks/dtj-press-strip.liquid",
+  "placements": [
+    "home",
+    "product"
+  ],
+  "licence": true,
+  "min_filled_slots": 1,
+  "css_includes": [],
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "name_1",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_2",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_3",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_4",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_5",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_6",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_7",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    },
+    {
+      "id": "name_8",
+      "type": "text",
+      "required": false,
+      "max_length": 60
+    }
+  ],
+  "standard_controls": [
+    "spacing_v",
+    "gutter",
+    "colors"
+  ],
+  "standard_defaults": {
+    "padding_top": 24,
+    "padding_bottom": 24,
+    "side_padding": 16
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Words"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "e.g. As seen in. Empty = hidden."
+    },
+    {
+      "type": "select",
+      "id": "heading_align",
+      "label": "Heading alignment",
+      "default": "center",
+      "options": [
+        {
+          "value": "center",
+          "label": "Centred"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "default": "p",
+      "options": [
+        {
+          "value": "p",
+          "label": "Plain line"
+        },
+        {
+          "value": "h2",
+          "label": "h2"
+        },
+        {
+          "value": "h3",
+          "label": "h3"
+        }
+      ],
+      "info": "A small label can be a plain line; use a heading tag if it names a whole section."
+    },
+    {
+      "type": "header",
+      "content": "Logos (up to 8)"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_1",
+      "label": "Logo 1",
+      "info": "A wide logo on a clear or white background. Only publications that really featured the brand."
+    },
+    {
+      "type": "text",
+      "id": "name_1",
+      "label": "Logo 1: name",
+      "info": "The publication's name. Read aloud for the picture, and shown as words when there is no logo."
+    },
+    {
+      "type": "url",
+      "id": "link_1",
+      "label": "Logo 1: link",
+      "info": "The article, if you want the logo to open it. Empty = no link."
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_2",
+      "label": "Logo 2"
+    },
+    {
+      "type": "text",
+      "id": "name_2",
+      "label": "Logo 2: name"
+    },
+    {
+      "type": "url",
+      "id": "link_2",
+      "label": "Logo 2: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_3",
+      "label": "Logo 3"
+    },
+    {
+      "type": "text",
+      "id": "name_3",
+      "label": "Logo 3: name"
+    },
+    {
+      "type": "url",
+      "id": "link_3",
+      "label": "Logo 3: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_4",
+      "label": "Logo 4"
+    },
+    {
+      "type": "text",
+      "id": "name_4",
+      "label": "Logo 4: name"
+    },
+    {
+      "type": "url",
+      "id": "link_4",
+      "label": "Logo 4: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_5",
+      "label": "Logo 5"
+    },
+    {
+      "type": "text",
+      "id": "name_5",
+      "label": "Logo 5: name"
+    },
+    {
+      "type": "url",
+      "id": "link_5",
+      "label": "Logo 5: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_6",
+      "label": "Logo 6"
+    },
+    {
+      "type": "text",
+      "id": "name_6",
+      "label": "Logo 6: name"
+    },
+    {
+      "type": "url",
+      "id": "link_6",
+      "label": "Logo 6: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_7",
+      "label": "Logo 7"
+    },
+    {
+      "type": "text",
+      "id": "name_7",
+      "label": "Logo 7: name"
+    },
+    {
+      "type": "url",
+      "id": "link_7",
+      "label": "Logo 7: link"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_8",
+      "label": "Logo 8"
+    },
+    {
+      "type": "text",
+      "id": "name_8",
+      "label": "Logo 8: name"
+    },
+    {
+      "type": "url",
+      "id": "link_8",
+      "label": "Logo 8: link"
+    },
+    {
+      "type": "header",
+      "content": "Layout and look"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "default": "row",
+      "options": [
+        {
+          "value": "row",
+          "label": "Row: centred, wraps on phones"
+        },
+        {
+          "value": "grid",
+          "label": "Even grid"
+        },
+        {
+          "value": "marquee",
+          "label": "Scrolling band"
+        }
+      ],
+      "info": "The band moves by itself, stops on hover and stands still for visitors who prefer less motion."
+    },
+    {
+      "type": "range",
+      "id": "logo_height",
+      "label": "Logo height",
+      "min": 16,
+      "max": 80,
+      "step": 2,
+      "default": 36,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between logos",
+      "min": 8,
+      "max": 80,
+      "step": 2,
+      "default": 40,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "Columns in the grid on desktop",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "logo_tone",
+      "label": "Logo color",
+      "default": "gray",
+      "options": [
+        {
+          "value": "original",
+          "label": "Original colors"
+        },
+        {
+          "value": "gray",
+          "label": "Soft gray"
+        },
+        {
+          "value": "dark",
+          "label": "All dark"
+        },
+        {
+          "value": "light",
+          "label": "All white"
+        }
+      ],
+      "info": "Dark and white turn any logo into a one-color mark, so a mixed set looks even."
+    },
+    {
+      "type": "range",
+      "id": "logo_opacity",
+      "label": "Logo strength",
+      "min": 30,
+      "max": 100,
+      "step": 5,
+      "default": 75,
+      "unit": "%"
+    },
+    {
+      "type": "checkbox",
+      "id": "color_on_hover",
+      "label": "Show original colors on hover",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Scrolling band: seconds for one pass",
+      "min": 10,
+      "max": 80,
+      "step": 5,
+      "default": 30,
+      "unit": "s"
+    },
+    {
+      "type": "checkbox",
+      "id": "bordered",
+      "label": "Thin lines above and below",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "label": "Maximum width",
+      "min": 600,
+      "max": 1920,
+      "step": 20,
+      "default": 1200,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading size",
+      "min": 11,
+      "max": 32,
+      "step": 1,
+      "default": 14,
+      "unit": "px"
+    }
+  ],
+  "data_needs": [],
+  "reference_image": "'As seen in' press and logo strip (Harsh, 13 Oct 2026, no screenshot: common pattern, three layouts)",
+  "test": {
+    "sample": {
+      "heading": "Heading sample",
+      "logo_1": "l1",
+      "name_1": "Press One",
+      "link_1": "/pages/press-one",
+      "logo_2": "l2",
+      "name_2": "Press Two",
+      "name_3": "Press Three"
+    },
+    "expect": [
+      "Heading sample",
+      "Press One",
+      "Press Two",
+      "Press Three",
+      "dtj-ps__item",
+      "/pages/press-one"
+    ]
+  }
+}

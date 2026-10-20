@@ -1,0 +1,883 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dtj://page-builder/home-facts.schema.json",
+  "title": "Home page facts for the page builder",
+  "description": "Everything the HOME page may say. Same rules as the product facts: every text-bearing fact names its SOURCE, a section whose facts are missing is omitted, a source starting with SAMPLE marks sample content (draft themes only), 'demo': true allows test pictures on our own stores. Customer cards need permission; never invent them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "hero"
+  ],
+  "$defs": {
+    "source": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 120
+    },
+    "role": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{2,30}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "collection": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,99}$",
+      "description": "a collection's handle as in the store's address /collections/<handle>"
+    },
+    "url": {
+      "type": "string",
+      "maxLength": 300
+    }
+  },
+  "properties": {
+    "demo": {
+      "type": "boolean"
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "file"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/$defs/role"
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^[^/\\\\]+\\.(png|jpg|jpeg|webp)$"
+          },
+          "alt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headline",
+        "cta_label",
+        "image_role",
+        "source"
+      ],
+      "properties": {
+        "headline": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80,
+          "description": "*accent words* between asterisks; | starts a new line"
+        },
+        "sub": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "layout": {
+          "enum": [
+            "banner",
+            "cover",
+            "split"
+          ],
+          "description": "ONE-PRODUCT shops only (a multi-product store always gets the niche's full-image banner; Harsh, 14 Oct 2026). split = the whole picture beside a dark text panel, for a product shot with no empty space for words"
+        },
+        "badge": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "cta_label": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 30
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "image_mobile_role": {
+          "$ref": "#/$defs/role"
+        },
+        "slides": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "description": "banners 2 and 3 of a slideshow hero (banner 1 is this hero's own headline, picture and button: the main message, because most shoppers never wait for banner 2). Each picture must be a photo WITHOUT printed words: the phone crops the same picture taller A tall phone picture can be given per banner (image_mobile_role); without one the phone crops the main picture to 4:5.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "image_role",
+              "headline",
+              "cta_label",
+              "source"
+            ],
+            "properties": {
+              "image_role": {
+                "$ref": "#/$defs/role"
+              },
+              "eyebrow": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "headline": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 80
+              },
+              "sub": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "cta_label": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 30
+              },
+              "cta_url": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              },
+              "image_mobile_role": {
+                "$ref": "#/$defs/role"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "rating": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "source"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^[0-5](\\.[0-9])?$"
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "trust_points": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "source"
+        ],
+        "properties": {
+          "text": {
+            "$ref": "#/$defs/text"
+          },
+          "source": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      }
+    },
+    "value_props": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "cta_label": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 30,
+          "description": "the section's own button, named after it (2-5 words, verb first)"
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "badge": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "source"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "icon": {
+                "type": "string"
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "story": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "heading",
+        "body",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "bullets": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "cta_label": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "quote",
+            "name",
+            "source"
+          ],
+          "properties": {
+            "quote": {
+              "$ref": "#/$defs/text"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            },
+            "source": {
+              "$ref": "#/$defs/source"
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "video_reviews": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "source"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "image_role"
+                ]
+              },
+              {
+                "required": [
+                  "video"
+                ]
+              }
+            ],
+            "description": "a picture, a video, or both; a video alone shows its own cover frame until it is pressed",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "line": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "image_role": {
+                "$ref": "#/$defs/role"
+              },
+              "video": {
+                "type": "string",
+                "pattern": "^[^/\\\\]+\\.(mp4|mov|webm|m4v)$"
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "faqs": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "q",
+          "a",
+          "source"
+        ],
+        "properties": {
+          "q": {
+            "$ref": "#/$defs/text"
+          },
+          "a": {
+            "$ref": "#/$defs/text"
+          },
+          "source": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      }
+    },
+    "announcements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "source"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "icon": {
+                "type": "string"
+              },
+              "link": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "description": "The bold moving strip at the very top: real store facts only (shipping, returns, payment, support). An offer appears only when it is the store's own running offer, with its source."
+    },
+    "categories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "collection",
+              "source"
+            ],
+            "properties": {
+              "collection": {
+                "$ref": "#/$defs/collection"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "image_role": {
+                "$ref": "#/$defs/role"
+              },
+              "button": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 24
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "description": "Shop by category: the store's REAL collections. Without a title or picture a tile shows the collection's own."
+    },
+    "best_sellers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collections",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "collections": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "collection"
+            ],
+            "properties": {
+              "collection": {
+                "$ref": "#/$defs/collection"
+              },
+              "tab": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 24
+              }
+            }
+          }
+        },
+        "badge_tags": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 _-]{1,30}$"
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "description": "Product rows read live from the store's collections (one tab each). Ratings appear only from real reviews (Judge.me)."
+    },
+    "concerns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "heading_accent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "intro": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "collection",
+              "label",
+              "source"
+            ],
+            "properties": {
+              "collection": {
+                "$ref": "#/$defs/collection"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 30
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "description": "Shop by concern: each concern is one REAL collection of products that address it."
+    },
+    "press": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "logo_role",
+              "url",
+              "source"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "logo_role": {
+                "$ref": "#/$defs/role"
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https?://",
+                "maxLength": 300
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "description": "As seen in: ONLY publications that really featured the brand, each with the article's address as proof."
+    },
+    "compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows",
+        "them_title",
+        "claims_approved",
+        "source"
+      ],
+      "properties": {
+        "heading": {
+          "$ref": "#/$defs/text"
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "eyebrow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "us_title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "us_sub": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "them_title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "us": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 70
+              },
+              "them": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 70
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "label"
+                ]
+              },
+              {
+                "required": [
+                  "us",
+                  "them"
+                ]
+              }
+            ]
+          }
+        },
+        "image_role": {
+          "$ref": "#/$defs/role"
+        },
+        "cta_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "claims_approved": {
+          "type": "boolean",
+          "description": "the brand owner approved these statements about other products"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "them_image_role": {
+          "$ref": "#/$defs/role"
+        }
+      },
+      "description": "Us versus others. An empty 'us' cell shows a tick and an empty 'them' cell a cross, so every row is a claim about other products: it is built only when the owner approved it (claims_approved: true)."
+    },
+    "before_after": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before_role",
+        "after_role",
+        "heading",
+        "consent",
+        "source"
+      ],
+      "properties": {
+        "before_role": {
+          "$ref": "#/$defs/role"
+        },
+        "after_role": {
+          "$ref": "#/$defs/role"
+        },
+        "eyebrow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "heading_accent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bold"
+            ],
+            "properties": {
+              "bold": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "rest": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              }
+            }
+          }
+        },
+        "consent": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 200,
+          "description": "who allowed these photos to be shown, and when (a real before/after of a real customer)"
+        },
+        "cta_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "cta_url": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "description": "A REAL before / after photo pair, shown only with the person's permission (consent)."
+    },
+    "store_type": {
+      "type": "string",
+      "enum": [
+        "multi_product",
+        "single_product"
+      ],
+      "description": "multi_product (the default, about 99% of DTJ's stores) or single_product: decides which home sections the plan needs"
+    }
+  }
+}

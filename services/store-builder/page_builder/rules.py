@@ -7,6 +7,8 @@ import json
 import re
 from dataclasses import dataclass
 
+from provision import style
+
 MAX_PAD = 56
 MAX_JOIN = 80  # bottom padding of one section + top padding of the next
 MIN_SIDE = 12
@@ -36,7 +38,7 @@ class Finding:
 RULES = {
     "L01": ("error", "Every text/background pair must pass WCAG AA (4.5:1). Unreadable text is the fastest way to lose a sale and a client."),
     "L02": ("error", "Every full-width section keeps at least 12 px of side space, so nothing touches a phone's screen edge."),
-    "L03": ("error", "Section padding stays within 56 px and two neighbours together within 80 px, so there are no big empty holes between sections."),
+    "L03": ("error", "On a product page, section padding stays within 56 px and two neighbours together within 80 px, so there are no big empty holes between sections."),
     "L04": ("error", "Neighbouring sections never share the same background colour: bands alternate so each section reads as its own block."),
     "L05": ("error", "At most 2 dark bands on every page: dark is for emphasis, and emphasis only works when it is rare. Electric / playful pages put the ink colour into cards and boxes instead (Harsh, 10 Oct 2026)."),
     "L06": ("error", "Reviews sit directly under the buy buttons, where the last doubt appears."),
@@ -52,6 +54,7 @@ RULES = {
     "L16": ("error", "Every button on the page has its own label, named after what its section says; twelve identical labels read as one repeated ad (Harsh, 10 Oct 2026)."),
     "L17": ("error", "A story card is short and to the point: a paragraph of at most 20 words and points of at most 32 characters, or it reads as a wall of text on a phone (Harsh, 10 Oct 2026)."),
     "L19": ("error", "Copy DTJ writes (source 'DTJ COPY ...') makes the shopper feel the product but adds no claim: no health or body words, no claim word the brand's own facts do not use, no dependency jokes on supplements or skincare (references/copywriting.md; Harsh, 10 Oct 2026)."),
+    "L20": ("error", "A home page keeps ONE vertical rhythm (styling.HOME_SPACE, measured on the reference home pages rated 85+): every section gets the full step, the tighter step on the side it shares with a related neighbour, and the hero and thin strips none. Cramped sections read as one crowded block (Harsh, 19 Oct 2026: our home page \"looks cramped and flat\")."),
     "L18": ("error", "The buy box points are benefits (what the shopper gets: energy in minutes, easy to carry), not specs: doses and measures belong in the ingredients and numbers sections (Harsh, 10 Oct 2026)."),
 }
 
@@ -106,25 +109,46 @@ def lint(model) -> list[Finding]:
     for c in d.failed_checks():
         add("L01", f"{c['pair']}: {c['fg']} on {c['bg']} is {c['ratio']}:1, needs {c['needs']}:1")
     for sec in model.sections:
+        if sec.block == "hero-banner" and sec.settings.get("layout") == "split":  # its words sit on the panel; unset, they fall back to white
+            fg, bg = sec.settings.get("text_color"), sec.settings.get("panel_bg")
+            if not (fg and bg):
+                add("L01", f"{sec.id}: the story panel needs its own text and panel colours (the block falls back to white words)")
+            elif style.contrast(fg, bg) < 4.5:
+                add("L01", f"{sec.id}: {fg} on the panel {bg} is {style.contrast(fg, bg):.2f}:1, needs 4.5:1")
         if sec.block == "slideshow-pro" and any(k.startswith(("heading_", "description_")) for k in sec.settings):
             if sec.settings.get("overlay_style", "side") == "none" or sec.settings.get("overlay_opacity", 60) < 40:
                 add("L01", f"{sec.id}: text over a picture needs an overlay of at least 40 %")
 
-    # L02 side space, L03 rhythm
+    # L02 side space, L03 rhythm (product pages), L20 the home rhythm
+    home = "main" not in model.template.get("sections", {})
     pads = []
     for sec in model.sections:
-        if cat.has(sec.app, sec.block, "side_padding"):
+        full_bleed = (sec.block == "hero-banner" and sec.settings.get("layout", "banner") in ("banner", "cover")) or (
+            sec.block == "slideshow-pro" and sec.kind == "hero_home")  # the picture runs edge to edge; its text has its own inner space
+        if cat.has(sec.app, sec.block, "side_padding") and not full_bleed:
             side = sec.settings.get("side_padding", cat.default(sec.app, sec.block, "side_padding"))
             if side is None or side < MIN_SIDE:
                 add("L02", f"{sec.id}: side space {side} px is below {MIN_SIDE} px")
         top = sec.settings.get("padding_top", cat.default(sec.app, sec.block, "padding_top") or 0)
         bottom = sec.settings.get("padding_bottom", cat.default(sec.app, sec.block, "padding_bottom") or 0)
         pads.append((sec, top, bottom))
-        if top > MAX_PAD or bottom > MAX_PAD:
+        if not home and (top > MAX_PAD or bottom > MAX_PAD):
             add("L03", f"{sec.id}: padding {top}/{bottom} px is above {MAX_PAD} px")
     for (a, _, a_bottom), (b, b_top, _) in zip(pads, pads[1:]):
-        if a_bottom + b_top > MAX_JOIN:
+        if not home and a_bottom + b_top > MAX_JOIN:
             add("L03", f"{a.id} then {b.id}: {a_bottom + b_top} px between them is above {MAX_JOIN} px")
+    if home:
+        from .styling import home_rhythm  # noqa: PLC0415  (styling imports the direction, which never needs the rules)
+        page = {sid: i for i, sid in enumerate(model.template.get("order", []))}
+        ours = sorted((p for p in pads if p[0].id in page), key=lambda p: page[p[0].id])
+        for (sec, top, bottom), want in zip(ours, home_rhythm([p[0].kind for p in ours])):
+            if want is None:  # the hero keeps its own look
+                continue
+            want_top, want_bottom = want
+            wrap = model.template["sections"][sec.id].get("settings", {})
+            got = (top + (wrap.get("padding-block-start") or 0), bottom + (wrap.get("padding-block-end") or 0))
+            if got != (want_top, want_bottom):
+                add("L20", f"{sec.id}: space {got[0]}/{got[1]} px, the home rhythm wants {want_top}/{want_bottom} px")
 
     # L04 bands, L05 dark, L11 monotony
     bgs = [sec.settings.get("background") for sec in model.sections if model.roles.get(sec.id) != "none"]
@@ -142,22 +166,23 @@ def lint(model) -> list[Finding]:
             break
 
     # L06 / L12 buy box
-    from .assemble import BUY_BUTTON_TYPES, product_column  # the buy box's column, whatever the theme (Horizon or Dawn)
-    details = product_column(model.template)
-    order = details["block_order"]
-    btn = next((k for k in order if details["blocks"][k]["type"] in BUY_BUTTON_TYPES), None)
-    for key in order:
-        blk = details["blocks"][key]
-        if "/dtj-testimonials/" in blk["type"]:
-            if btn is None or order.index(key) != order.index(btn) + 1:
-                add("L06", "the DTJ reviews block is not directly under the buy buttons")
-    if not any("/dtj-price/" in details["blocks"][k]["type"] for k in order):
-        add("L12", "the DTJ price block is missing from the buy box")
-    theme_prices = [k for k in order if details["blocks"][k].get("type") == "price"]
-    for k in order:
-        theme_prices += [s for s, b in (details["blocks"][k].get("blocks") or {}).items() if b.get("type") == "price"]
-    if theme_prices:
-        add("L12", f"the theme's own price line is still in the buy box next to the DTJ price ({', '.join(theme_prices)})")
+    if "main" in model.template.get("sections", {}):  # a product page: the buy box rules (a home page has no buy box)
+        from .assemble import BUY_BUTTON_TYPES, product_column  # the buy box's column, whatever the theme (Horizon or Dawn)
+        details = product_column(model.template)
+        order = details["block_order"]
+        btn = next((k for k in order if details["blocks"][k]["type"] in BUY_BUTTON_TYPES), None)
+        for key in order:
+            blk = details["blocks"][key]
+            if "/dtj-testimonials/" in blk["type"]:
+                if btn is None or order.index(key) != order.index(btn) + 1:
+                    add("L06", "the DTJ reviews block is not directly under the buy buttons")
+        if not any("/dtj-price/" in details["blocks"][k]["type"] for k in order):
+            add("L12", "the DTJ price block is missing from the buy box")
+        theme_prices = [k for k in order if details["blocks"][k].get("type") == "price"]
+        for k in order:
+            theme_prices += [s for s, b in (details["blocks"][k].get("blocks") or {}).items() if b.get("type") == "price"]
+        if theme_prices:
+            add("L12", f"the theme's own price line is still in the buy box next to the DTJ price ({', '.join(theme_prices)})")
 
     # L13 exactly four ticks wherever a tick list is shown
     for sec in model.sections + model.buybox_sections:

@@ -1,13 +1,16 @@
-"""Write an APPROVED product page into the client's DRAFT theme (Tier 2: a person approves this exact page, every time).
+"""Write an APPROVED product page, home page update or collection page into the client's DRAFT theme (Tier 2: a person approves this
+exact page, or Harsh's standing rule for drafts covers it: ship_draft / ship_home; a collection page (run_collection) always needs a person's yes).
 
     cd services/store-builder
     python -m page_builder.push_page --out ../../.work/clients/<brand> --approve <code> --approved-by Harsh
 
 The approval code is the start of the page file's fingerprint, printed by run_client. If the page changed after it was approved, the code
 no longer matches and nothing is written. Right before writing it checks again that the theme is a draft (never the live theme), takes a
-fresh backup of the theme's current product page, writes ONLY templates/product.json (no other file, nothing deleted, nothing
-published), reads the file back to prove it landed, and writes an action-log row with who approved it.
-Undo: push the backup file the same way (backup-<time>/templates/product.json).
+fresh backup of the theme's current page, writes ONLY that one template (templates/product*.json, templates/collection*.json or
+templates/index.json; no other file, nothing deleted, nothing published), reads the file back to prove it landed, and writes an action-log
+row with who approved it. A home or collection page update also stops when that page changed in the theme after the update was prepared
+(base_sha256 in approval.json).
+Undo: push the backup file the same way (backup-<time>/templates/...).
 Exit code: 0 = written and verified, 1 = refused or failed (the theme is unchanged unless it says otherwise).
 """
 from __future__ import annotations
@@ -47,7 +50,7 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
     now = datetime.now(timezone.utc)
 
     def refuse(reason: str) -> int:
-        log.record(tier=2, mode="approve", target=target, action="write product page to draft theme", reason="approved page",
+        log.record(tier=2, mode="approve", target=target, action=f"write {file} to draft theme", reason="approved page",
                    result="blocked", error=reason, approved_by=args.approved_by, approved_at=now.isoformat())
         print(f"not written: {reason}", file=sys.stderr)
         return 1
@@ -76,18 +79,22 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
             access = tt.ThemeAccess(approval["store"], token)
         stamp = now.strftime("%Y%m%d-%H%M%S")
         check = tt.check_target(access, approval["theme_id"], out / f"backup-{stamp}", file)  # again, right before writing
+        # a home page update was merged into the page as it was then: if someone changed it since (the theme editor), writing now would
+        # throw their change away, so it stops and asks for a fresh run (run_home merges again from the page as it is now)
+        if approval.get("base_sha256") and check["current_product_template_sha256"] != approval["base_sha256"]:
+            return refuse(f"{file} changed in the theme since this update was prepared; run it again so the change is kept")
         staging = tt.stage(out / "template.json", out / "_push", file)
         theme = access.push_product_template(approval["theme_id"], staging, file)
         after = access.pull(approval["theme_id"], [file], out / f"after-{stamp}")
         landed = (after / file).exists() and tt.same_template(body, (after / file).read_text(encoding="utf-8"))
     except ThemeError as exc:
-        log.record(tier=2, mode="approve", target=target, action="write product page to draft theme", reason="approved page",
+        log.record(tier=2, mode="approve", target=target, action=f"write {file} to draft theme", reason="approved page",
                    result="failed", error=str(exc), approved_by=args.approved_by, approved_at=now.isoformat(),
                    evidence={"commands": access.commands if access else []})
         print(f"failed: {exc}", file=sys.stderr)
         return 1
 
-    log.record(tier=2, mode="approve", target=target, action="write product page to draft theme", reason="approved page",
+    log.record(tier=2, mode="approve", target=target, action=f"write {file} to draft theme", reason="approved page",
                result="success" if landed else "failed", error=None if landed else "the file read back does not match what was sent",
                approved_by=args.approved_by, approved_at=now.isoformat(), evidence={"commands": access.commands},
                before={"sha256": check["current_product_template_sha256"], "backup": check["backup"]},
