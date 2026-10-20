@@ -30,6 +30,14 @@ SECONDS = (4, 6, 8, 10)
 CREDITS = {4: 14, 8: 24}                   # per x2 generation; 6 s and 10 s were not read: "not available"
 MAX_WORDS_PER_S = 3.0                      # faster lines get cut off or rushed by Omni
 STATUSES = ("reel ready", "needs a look", "could not make")
+# Words that pull Flow / ChatGPT toward the polished "AI ad" look (studio light, glossy skin, perfect composition).
+SLOP_WORDS = ("cinematic", "studio", "flawless", "perfect skin", "porcelain", "airbrushed", "8k", "4k", "ultra-detailed", "ultra detailed",
+              "hyperrealistic", "hyper-realistic", "photorealistic", "masterpiece", "professional photo", "commercial", "bokeh",
+              "dramatic lighting", "softbox", "ring light", "glossy", "beautiful lighting", "perfect composition", "symmetrical")
+# Every clip must say what phone setup filmed it (the winners are all phone footage: selfie arm, propped phone, a friend holding it).
+CAMERA_WORDS = re.compile(r"handheld|selfie|propped|phone|front camera|arm.s length|held by a friend", re.I)
+# A finished reel inside these ranges reads as phone footage (realism.py; real reels and Harsh's AI winners, 21 Oct 2026).
+REAL_RANGES = {"shake_px": (0.5, 1.3), "sharpness": (40, 650)}
 
 
 # ---------------- files ----------------
@@ -112,11 +120,21 @@ def lint_script(script: dict, facts: str) -> list[str]:
         for c in claims_in(f"{s.get('line', '')} {s.get('caption', '')}"):
             if c.lower() not in f:
                 bad.append(f"{sid}: '{c}' is not in the approved facts (never invent numbers or claims)")
+        for field in ("image_prompt", "video_prompt"):
+            slop = [w for w in SLOP_WORDS if w in str(s.get(field, "")).lower()]
+            if slop:
+                bad.append(f"{sid}: {field} uses AI-ad words {slop}: describe a real phone video instead")
+        if not CAMERA_WORDS.search(str(s.get("video_prompt", ""))):
+            bad.append(f"{sid}: video_prompt must say how the phone films it (handheld selfie, propped phone, a friend holding it)")
         if s.get("product") and not re.search(r"\b(same|steady|keeps?|holds?|still)\b", s.get("video_prompt", ""), re.I):
             bad.append(f"{sid}: a product shot's video prompt must say how the product stays (e.g. 'holds the same box steady, "
                        "label to camera, never drops it')")
     if total > 60:
         bad.append(f"{total} s of clips: keep a reel under 60 s")
+    char = " ".join(str(v) for v in (script.get("character") or {}).values()).lower()
+    slop = [w for w in SLOP_WORDS if w in char]
+    if slop:
+        bad.append(f"character prompts use AI-ad words {slop}")
     return bad
 
 
@@ -425,6 +443,12 @@ def stage_edit(job: Job) -> int:
     lufs = (out.get("loudness") or {}).get("lufs")
     if marks:
         note.append(f"sparkle may be left in {marks[:6]}")
+    from .realism import measure
+    real = measure(out["nocap"])
+    off = {k: real[k] for k, (lo, hi) in REAL_RANGES.items() if real.get(k) is None or not lo <= real[k] <= hi}
+    if off:
+        note.append(f"does not read as phone footage: {off} (phone range {REAL_RANGES})")
+        marks.append("realism")
     shots_ok = all(picks[s["id"]].get("by_hand") or
                    next((t["check"]["ok"] for t in clips.get(s["id"], []) if t.get("clean") == picks[s["id"]]["take"]), False)
                    for s in script["shots"])
@@ -432,7 +456,7 @@ def stage_edit(job: Job) -> int:
         note.append("at least one picked take did not pass the automatic checks: a person must watch it")
     status = "reel ready" if not marks and shots_ok else "needs a look"
     qc = {"status": status, "final": final, "duration": out["duration"], "lufs": lufs, "captions": captions,
-          "caption_pages": out["pages_count"], "sparkle_hits": marks, "note": "; ".join(note)}
+          "caption_pages": out["pages_count"], "sparkle_hits": [m for m in marks if m != "realism"], "realism": real, "note": "; ".join(note)}
     _save(job.path("final", "qc.json"), qc)
     print(json.dumps(qc, indent=1, ensure_ascii=False))
     return 0

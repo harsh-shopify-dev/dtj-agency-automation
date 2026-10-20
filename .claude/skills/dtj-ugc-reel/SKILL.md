@@ -19,6 +19,10 @@ Decisions this runbook carries (Harsh, 20-21 Oct 2026):
 - **Captions at the bottom mark** (~69 % down); top (~14 %) only when the top band is empty AND the bottom would hide the product name.
 - **Languages**: English, Hindi, Hinglish. Music: only what the person supplies, and it must be licensed for paid ads.
 
+**Realism (Harsh, 21 Oct 2026: Higgsfield-level, no AI slop): read `references/realism.md` before writing script.json.**
+Start pictures and prompts are written as real phone footage; the edit adds the measured phone look; `job edit` refuses
+"reel ready" when the reel measures outside phone footage's range.
+
 ## Where things are
 - Worker: `services/reel-factory/` (`python -m reel_factory.job <stage> --job <dir>`, stages in `reel_factory/job.py`'s header).
 - n8n: **Reel Factory: New Reel** (form "New UGC reel", data table `dtj_reel_jobs`), source `n8n/reel-factory/`.
