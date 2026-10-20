@@ -1,0 +1,26 @@
+{
+ "dtj_reel_jobs": {"columns": [
+  {"name": "submitted_at", "type": "string"},
+  {"name": "status", "type": "string"},
+  {"name": "product_name", "type": "string"},
+  {"name": "brand_name", "type": "string"},
+  {"name": "product_images", "type": "string"},
+  {"name": "reference_reels", "type": "string"},
+  {"name": "language", "type": "string"},
+  {"name": "music", "type": "string"},
+  {"name": "facts", "type": "string"},
+  {"name": "notes", "type": "string"},
+  {"name": "requested_by", "type": "string"},
+  {"name": "telegram_chat_id", "type": "string"},
+  {"name": "raw_json", "type": "string"},
+  {"name": "reel_status", "type": "string"},
+  {"name": "final_path", "type": "string"},
+  {"name": "job_folder", "type": "string"},
+  {"name": "duration_s", "type": "number"},
+  {"name": "lufs", "type": "number"},
+  {"name": "generations", "type": "number"},
+  {"name": "credits_used", "type": "number"},
+  {"name": "reel_note", "type": "string"},
+  {"name": "reel_updated_at", "type": "string"}
+ ]}
+}

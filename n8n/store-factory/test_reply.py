@@ -24,6 +24,13 @@ class Check(unittest.TestCase):
         self.assertEqual(reply.check({"page_status": "ready for approval", "approve_code": "0123456789ab"}), "page_design")
         self.assertEqual(reply.check({"result": "written to draft", "approved_by": "Harsh"}), "write_to_draft")
 
+    def test_a_reel_answer_needs_its_file_when_ready(self):
+        self.assertEqual(reply.check({"reel_status": "reel ready", "final_path": "/home/dtj/reels/n8n-3/final/reel_final.mp4"}), "reel")
+        self.assertEqual(reply.check({"reel_status": "could not make", "note": "needs a person: Google sign-in"}), "reel")
+        for body in ({"reel_status": "reel ready"}, {"reel_status": "done"}):
+            with self.assertRaises(ValueError):
+                reply.check(body)
+
     def test_unknown_or_empty_answers_are_refused(self):
         for body in ({"page_status": "done"}, {}, {"result": "written to draft"}):
             with self.assertRaises(ValueError):

@@ -8,6 +8,7 @@ A designer's Claude Code session starts this in the background. When it exits wi
     python n8n/store-factory/listen.py --once              check once: exit 0 = printed one, 3 = nothing new is waiting
     python n8n/store-factory/listen.py --status            how many requests are waiting, and how many of those were offered already
     python n8n/store-factory/listen.py --forget 345        offer run 345 again (for a request that failed)
+    python n8n/store-factory/listen.py --workflow "Reel Factory: New Reel"   listen for reel requests instead (on the reel VPS)
 
 On a hit, stdout is ONE line: {"execution_id": "...", "workflow_id": "...", "started_at": "...", "waiting": <new ones still waiting>}.
 The oldest request is offered first and each run only once: offered ids are kept in .work/listen/offered.json (not in git).
@@ -132,13 +133,17 @@ def listen(call, workflow_id: str, path: Path, interval: int, hours: float, slee
         sleep(interval)
 
 
-def status(call, workflow_id: str, path: Path, sleep=time.sleep) -> str:
+def kind(name: str) -> str:
+    return "page requests" if name == WORKFLOW else "requests"
+
+
+def status(call, workflow_id: str, path: Path, sleep=time.sleep, name: str = WORKFLOW) -> str:
     runs = with_retry(lambda: waiting(call, workflow_id), sleep)
     offered = set(load_offered(path))
     ids = [str(r["id"]) for r in runs]
     done = [i for i in ids if i in offered]
     listing = ", ".join(f"{i} (offered)" if i in offered else i for i in ids)
-    return (f"{WORKFLOW}: {len(ids)} page request(s) waiting for Claude Code, {len(done)} of them already offered on this laptop."
+    return (f"{name}: {len(ids)} {kind(name)[:-1]}(s) waiting for Claude Code, {len(done)} of them already offered on this laptop."
             + (f" Oldest first: {listing}." if ids else ""))
 
 
@@ -146,6 +151,7 @@ def main(argv=None, *, call=None, sleep=time.sleep, clock=time.monotonic, offere
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--interval", type=int, default=30, help="seconds between checks (at least 10; default 30)")
     ap.add_argument("--hours", type=float, default=8, help="stop after this many hours (at most 12; default 8)")
+    ap.add_argument("--workflow", default=WORKFLOW, help=f'the n8n workflow to watch (default "{WORKFLOW}"; reels: "Reel Factory: New Reel")')
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="check once: exit 0 = printed one, 3 = nothing waiting")
     mode.add_argument("--status", action="store_true", help="how many are waiting and how many of those were offered")
@@ -176,14 +182,14 @@ def main(argv=None, *, call=None, sleep=time.sleep, clock=time.monotonic, offere
         if secrets is None:
             from setup_n8n import _live_secrets as secrets
     try:
-        workflow_id = with_retry(lambda: find_workflow(call), sleep)
+        workflow_id = with_retry(lambda: find_workflow(call, args.workflow), sleep)
         if args.status:
-            print(status(call, workflow_id, offered_path, sleep))
+            print(status(call, workflow_id, offered_path, sleep, args.workflow))
             return 0
         if args.once:
             hit = offer_next(call, workflow_id, offered_path, sleep)
         else:
-            print(f"Listening for page requests ({WORKFLOW}) every {args.interval} s, up to {args.hours:g} h. "
+            print(f"Listening for {kind(args.workflow)} ({args.workflow}) every {args.interval} s, up to {args.hours:g} h. "
                   "Only one laptop should listen at a time.", file=sys.stderr, flush=True)
             hit = listen(call, workflow_id, offered_path, args.interval, args.hours, sleep, clock)
     except NotFound as exc:

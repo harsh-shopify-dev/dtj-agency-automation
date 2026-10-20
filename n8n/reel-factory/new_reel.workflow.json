@@ -1,0 +1,727 @@
+{
+ "id": "dS36LVeRXLuIuajm",
+ "name": "Reel Factory: New Reel",
+ "description": "Reel factory: a product and winning reference reels -> Claude Code on the reel VPS makes a finished 9:16 UGC ad (ChatGPT + Google Flow in the browser, checks, LaMa, edit, captions). Records the result on dtj_reel_jobs.",
+ "nodes": [
+  {
+   "id": "22e993b8-a002-40a6-b4c9-24c2782d132b",
+   "name": "New UGC Reel",
+   "type": "n8n-nodes-base.formTrigger",
+   "typeVersion": 2.6,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "authentication": "n8nUserAuth",
+    "formTitle": "New UGC reel",
+    "formDescription": "One product, 1-5 winning reels to copy, the facts the reel may say. Claude makes the reel on the reel VPS while someone is on duty; nothing is posted.",
+    "formFields": {
+     "values": [
+      {
+       "fieldName": "product_name",
+       "fieldLabel": "Product name",
+       "fieldType": "text",
+       "requiredField": true,
+       "placeholder": "e.g. Senso Instant Detox Green Tea Kahwa"
+      },
+      {
+       "fieldName": "brand_name",
+       "fieldLabel": "Brand name",
+       "fieldType": "text",
+       "requiredField": false
+      },
+      {
+       "fieldName": "product_images",
+       "fieldLabel": "Product pictures (links, one per line)",
+       "fieldType": "textarea",
+       "requiredField": true,
+       "placeholder": "https://... (front of the pack, label readable)"
+      },
+      {
+       "fieldName": "reference_reels",
+       "fieldLabel": "Winning reference reels (links, one per line)",
+       "fieldType": "textarea",
+       "requiredField": true,
+       "placeholder": "https://... (mp4 or a Drive link anyone can open)"
+      },
+      {
+       "fieldName": "language",
+       "fieldLabel": "Language",
+       "fieldType": "dropdown",
+       "requiredField": true,
+       "fieldOptions": {
+        "values": [
+         {
+          "option": "English"
+         },
+         {
+          "option": "Hindi"
+         },
+         {
+          "option": "Hinglish"
+         }
+        ]
+       }
+      },
+      {
+       "fieldName": "music",
+       "fieldLabel": "Background music (licensed; link)",
+       "fieldType": "text",
+       "requiredField": false,
+       "placeholder": "leave empty for no music"
+      },
+      {
+       "fieldName": "facts",
+       "fieldLabel": "Approved facts (only these may be said)",
+       "fieldType": "textarea",
+       "requiredField": true,
+       "placeholder": "pack text, the product page's claims, offers the client approved"
+      },
+      {
+       "fieldName": "notes",
+       "fieldLabel": "Notes for the reel",
+       "fieldType": "textarea",
+       "requiredField": false
+      },
+      {
+       "fieldName": "requested_by",
+       "fieldLabel": "Your name",
+       "fieldType": "text",
+       "requiredField": true
+      }
+     ]
+    },
+    "responseMode": "onReceived",
+    "options": {
+     "appendAttribution": false,
+     "path": "dtj-new-reel",
+     "respondWithOptions": {
+      "values": {
+       "respondWith": "text",
+       "formSubmittedText": "Saved. The reel is made while someone is on duty on the reel VPS; the result is recorded in dtj_reel_jobs."
+      }
+     }
+    }
+   },
+   "webhookId": "fa4ae1a6-0e5b-4624-b489-118ff01f656a"
+  },
+  {
+   "id": "ac8e3eb5-88d6-4f54-8419-089654b325d2",
+   "name": "Take the Reel Request",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Take the Reel Request\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// Input: the form (\"New UGC Reel\") or another workflow (later: the Telegram bot's /reel). Output: { ok, problems, row } for dtj_reel_jobs.\n// Links only (one per line): pictures and reels must be reachable by the reel worker on the VPS (Drive \"anyone with the link\",\n// the store's CDN, or a path on the VPS). Nothing is invented here: facts are the client's own words, kept as typed.\nconst j = $input.first().json || {};\nconst pick = (...keys) => { for (const k of keys) { if (j[k] != null && String(j[k]).trim()) return String(j[k]).trim(); } return ''; };\nconst lines = (s) => String(s || '').split(/[\\r\\n]+/).map((x) => x.trim()).filter(Boolean);\nconst okLink = (s) => /^https:\\/\\/\\S+$/.test(s) || /^([A-Za-z]:[\\\\/]|\\/)\\S/.test(s);\nconst langs = { english: 'en', en: 'en', hindi: 'hi', hi: 'hi', hinglish: 'hinglish' };\n\nconst product = pick('product_name', 'Product name');\nconst images = lines(pick('product_images', 'Product pictures (links, one per line)'));\nconst refs = lines(pick('reference_reels', 'Winning reference reels (links, one per line)'));\nconst language = langs[pick('language', 'Language').toLowerCase()] || '';\nconst music = pick('music', 'Background music (licensed; link)');\nconst facts = pick('facts', 'Approved facts (only these may be said)');\nconst problems = [];\nif (!product) problems.push('no product name');\nif (!images.length) problems.push('no product picture link');\nif (!refs.length) problems.push('no reference reel link');\nif (!language) problems.push('language must be English, Hindi or Hinglish');\nif (!facts) problems.push('no approved facts (the reel may only say what is in them)');\nconst bad = [...images, ...refs, ...(music ? [music] : [])].filter((x) => !okLink(x));\nif (bad.length) problems.push('not a https link or a VPS path: ' + bad.slice(0, 3).join(', '));\nif (images.length > 5) problems.push('at most 5 product pictures');\nif (refs.length > 5) problems.push('at most 5 reference reels');\n\nreturn [{ json: {\n  ok: problems.length === 0,\n  problems: problems.join('; '),\n  row: {\n    submitted_at: new Date().toISOString(),\n    status: problems.length ? 'refused' : 'new',\n    product_name: product.slice(0, 200),\n    brand_name: pick('brand_name', 'Brand name').slice(0, 200),\n    product_images: images.join('\\n'),\n    reference_reels: refs.join('\\n'),\n    language,\n    music,\n    facts: facts.slice(0, 4000),\n    notes: pick('notes', 'Notes for the reel').slice(0, 2000),\n    requested_by: pick('requested_by', 'Your name') || 'form',\n    telegram_chat_id: pick('chat_id'),\n    raw_json: JSON.stringify(j).slice(0, 8000),\n    reel_status: problems.length ? 'refused: ' + problems.join('; ') : 'waiting for Claude Code',\n  },\n} }];\n"
+   }
+  },
+  {
+   "id": "0bb6b3f6-a1ba-4ec6-8ca0-0daa52ae1883",
+   "name": "From Another Workflow",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    240
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "product_name",
+       "type": "string"
+      },
+      {
+       "name": "brand_name",
+       "type": "string"
+      },
+      {
+       "name": "product_images",
+       "type": "string"
+      },
+      {
+       "name": "reference_reels",
+       "type": "string"
+      },
+      {
+       "name": "language",
+       "type": "string"
+      },
+      {
+       "name": "music",
+       "type": "string"
+      },
+      {
+       "name": "facts",
+       "type": "string"
+      },
+      {
+       "name": "notes",
+       "type": "string"
+      },
+      {
+       "name": "requested_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "9b90b8c1-8ed3-4d6e-95d8-f780cbb81dc7",
+   "name": "Save Reel Job",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "eDnHZuYHvGPggAgX",
+     "cachedResultName": "dtj_reel_jobs"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "submitted_at": "={{ $json.row.submitted_at }}",
+      "status": "={{ $json.row.status }}",
+      "product_name": "={{ $json.row.product_name }}",
+      "brand_name": "={{ $json.row.brand_name }}",
+      "product_images": "={{ $json.row.product_images }}",
+      "reference_reels": "={{ $json.row.reference_reels }}",
+      "language": "={{ $json.row.language }}",
+      "music": "={{ $json.row.music }}",
+      "facts": "={{ $json.row.facts }}",
+      "notes": "={{ $json.row.notes }}",
+      "requested_by": "={{ $json.row.requested_by }}",
+      "telegram_chat_id": "={{ $json.row.telegram_chat_id }}",
+      "raw_json": "={{ $json.row.raw_json }}",
+      "reel_status": "={{ $json.row.reel_status }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "submitted_at",
+       "displayName": "submitted_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "status",
+       "displayName": "status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "product_name",
+       "displayName": "product_name",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "brand_name",
+       "displayName": "brand_name",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "product_images",
+       "displayName": "product_images",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reference_reels",
+       "displayName": "reference_reels",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "language",
+       "displayName": "language",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "music",
+       "displayName": "music",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "facts",
+       "displayName": "facts",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "notes",
+       "displayName": "notes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "telegram_chat_id",
+       "displayName": "telegram_chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "raw_json",
+       "displayName": "raw_json",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reel_status",
+       "displayName": "reel_status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "7463b293-c8a8-48ad-b56d-9eeffe9939a2",
+   "name": "Accepted?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    720,
+    120
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.status }}",
+       "rightValue": "new",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "21c62a7b-e301-40f6-9102-415d83be88d3",
+   "name": "Request for Claude Code: Reel",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Request for Claude Code: Reel\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. A Claude Code session on the reel VPS (logged in to Claude, ChatGPT and Google\n// Flow in the reel Chrome) finds this waiting run, reads `instructions` and does everything in it, then answers resume_url.\n// Harsh's decision (20 Oct 2026): no API; Claude and ChatGPT run on the VPS, Flow is driven in that browser.\n// CLAUDE.md rule 9: a subscription Claude Code session is the AI step only while a person is on duty (\"listen\" mode).\nconst row = $input.first().json;\nif (!row || !row.id) throw new Error('No reel job row (dtj_reel_jobs id) reached this step');\nconst resumeUrl = $execution.resumeUrl;\nconst slug = String(row.product_name || 'reel').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'reel';\nconst folder = 'n8n-' + row.id + '-' + slug;\nconst J = '../../.work/reels/' + folder;\nconst list = (s) => String(s || '').split('\\n').filter(Boolean);\nconst request = {\n  job_id: row.id, product_name: row.product_name, brand_name: row.brand_name || '', product_images: list(row.product_images),\n  reference_reels: list(row.reference_reels), language: row.language, music: row.music || '', facts: row.facts || '',\n  notes: row.notes || '', requested_by: row.requested_by || '',\n};\nconst langName = { en: 'English', hi: 'Hindi', hinglish: 'Hinglish' }[row.language] || row.language;\n\nconst lines = [\n  'DTJ REEL FACTORY - make one finished 9:16 UGC ad reel for this product, copying the winning reference reel(s) closely.',\n  'You are the AI step: a Claude Code session on DTJ\\'s reel VPS. Nobody has briefed you; everything you need is below and in the repo.',\n  '',\n  'JOB',\n  '- Job row: id ' + row.id + ' in the n8n data table dtj_reel_jobs | Asked by: ' + (row.requested_by || '?'),\n  '- Product: ' + row.product_name + (row.brand_name ? ' (' + row.brand_name + ')' : ''),\n  '- Language: ' + langName + ' | Reference reels: ' + list(row.reference_reels).length + ' | Product pictures: ' + list(row.product_images).length,\n  '- Music: ' + (row.music ? row.music + ' (must be licensed for paid ads; if unsure, say so in the note)' : 'none given: no music bed'),\n  '- Approved facts (the ONLY claims the reel may make): ' + String(row.facts || '').replace(/\\s+/g, ' ').slice(0, 1500),\n  '- Notes: ' + (row.notes || '(none)'),\n  '',\n  'DO THIS, IN ORDER (every reel_factory command from services/reel-factory, with the reel Python)',\n  '1. Work in the repo (dtj-agency-automation). Read CLAUDE.md. Load the skill dtj-ugc-reel (the runbook) and follow it. Stay on the current git branch; do not commit.',\n  '2. Save `request` from this node as ' + J + '/request.in.json, then:',\n  '   python -m reel_factory.job new --job ' + J + ' --request ' + J + '/request.in.json',\n  '   python -m reel_factory.job refs --job ' + J,\n  '   Watch every reference: look at refs/<n>/hook.jpg and every sheet_*.jpg, read breakdown.json (words, cuts, pace).',\n  '3. Write ' + J + '/script.json as the skill says (character, shots with exact lines, image and video prompts; product shots say how the product stays). Then:',\n  '   python -m reel_factory.job lint --job ' + J + '   (exit 0 needed; it also prints the Flow credits for one round)',\n  '4. python -m reel_factory.job character --job ' + J + '   (ChatGPT, fresh chats). LOOK at images/character.png and images/hero.png: a real-person look, no AI-slop set, the exact product readable.',\n  '5. python -m reel_factory.job images --job ' + J + '   LOOK at checks/images_sheet.jpg and pick one start picture per shot: python -m reel_factory.job pick --job ' + J + ' --shot s1 --image <file>',\n  '6. python -m reel_factory.job clips --job ' + J + '   (2 takes per shot, sparkle removed with LaMa, checked). LOOK at every picked take\\'s 4 fps sheet: a drop, float, smear, extra hand or a wrong product = reject; fix that shot\\'s video_prompt and run clips --shots <id> again (at most 2 extra rounds per shot).',\n  '7. python -m reel_factory.job edit --job ' + J + '   then WATCH final/reel_final.mp4 (a 4 fps sheet) and read the words: captions at the bottom mark, nothing on a face, the product name right.',\n  '8. python -m reel_factory.job result --job ' + J + '   and answer this n8n run with it (also when the reel could not be made), from the repo root:',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body .work/reels/' + folder + '/result.json',\n  '9. Add a dated entry to docs/HANDOFF.md (what was made, where the file is, what needs a look). Tell the person on duty in plain words.',\n  '',\n  'RULES',\n  '- Never invent a number, review, result or claim: only the approved facts above. lint refuses numbers that are not in them.',\n  '- The character is made from a written description in a FRESH ChatGPT chat, never from the reference creator\\'s face.',\n  '- No password, token or key in any file or chat. If Google or ChatGPT asks for a sign-in or a human check, stop and answer n8n with reel_status \"could not make\" and the note \"needs a person: <what>\".',\n  '- Do not post the reel anywhere and do not start an ad: the reel goes to a person, who decides (Tier 2).',\n  '- Flow credits: stop after 3 rounds on one shot and answer \"needs a look\" with what went wrong.',\n];\n\nreturn [{ json: { claude_code_stage: 'reel', resume_url: resumeUrl, instructions: lines.join('\\n'), request, job_folder: '.work/reels/' + folder } }];\n"
+   }
+  },
+  {
+   "id": "594ceac3-74f6-4faf-8987-0d02247701d7",
+   "name": "Wait for Claude Code: Reel",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "resume": "webhook",
+    "httpMethod": "POST",
+    "limitWaitTime": true,
+    "limitType": "afterTimeInterval",
+    "resumeAmount": 3,
+    "resumeUnit": "days",
+    "options": {}
+   },
+   "webhookId": "430aaf91-903d-4e35-bfd8-f096d70f3d6a"
+  },
+  {
+   "id": "4a8c8356-9130-40a3-b987-89ec15e0475a",
+   "name": "Claude Code Reply: Reel",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1440,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Claude Code Reply: Reel\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same rules as\n// n8n/store-factory/reply.py (stage \"reel\"), which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['reel ready', 'needs a look', 'could not make'];\nlet status = allowed.includes(b.reel_status) ? b.reel_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst path = String(b.final_path || '');\nconst pathOk = /\\.mp4$/i.test(path) && !/[\\r\\n]/.test(path);\nif (status === 'reel ready' && !pathOk) status = 'reply not understood (no final file)';\nconst num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi ? v : null);\nreturn [{ json: {\n  row_id: $('Request for Claude Code: Reel').first().json.request.job_id,\n  reel_status: status,\n  final_path: pathOk ? path.slice(0, 400) : '',\n  job_folder: String(b.job_folder || '').slice(0, 400),\n  duration_s: num(b.duration_s, 0, 180),\n  lufs: num(b.lufs, -60, 0),\n  generations: Number.isInteger(b.generations) && b.generations >= 0 ? b.generations : null,\n  credits_used: num(b.credits_used, 0, 100000),\n  reel_note: String(b.note || '').slice(0, 1000),\n} }];\n"
+   }
+  },
+  {
+   "id": "e3fff0b9-5000-4f9b-b5c8-f93b2d7826fb",
+   "name": "Record Reel",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1680,
+    -120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "update",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "eDnHZuYHvGPggAgX",
+     "cachedResultName": "dtj_reel_jobs"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "id",
+       "condition": "eq",
+       "keyValue": "={{ $json.row_id }}"
+      }
+     ]
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "reel_status": "={{ $json.reel_status }}",
+      "final_path": "={{ $json.final_path }}",
+      "job_folder": "={{ $json.job_folder }}",
+      "duration_s": "={{ $json.duration_s }}",
+      "lufs": "={{ $json.lufs }}",
+      "generations": "={{ $json.generations }}",
+      "credits_used": "={{ $json.credits_used }}",
+      "reel_note": "={{ $json.reel_note }}",
+      "reel_updated_at": "={{ $now.toISO() }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "reel_status",
+       "displayName": "reel_status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "final_path",
+       "displayName": "final_path",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "job_folder",
+       "displayName": "job_folder",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "duration_s",
+       "displayName": "duration_s",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "lufs",
+       "displayName": "lufs",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "generations",
+       "displayName": "generations",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "credits_used",
+       "displayName": "credits_used",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reel_note",
+       "displayName": "reel_note",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reel_updated_at",
+       "displayName": "reel_updated_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "b8591434-8dc9-4d53-afba-c371ba55defe",
+   "name": "Tell the Requester",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1680,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Tell the Requester\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// When the reel was asked for from Telegram (the job has a telegram_chat_id), send the result back. Output: [] or one { chat_id, text }.\nconst job = $('Save Reel Job').first().json || {};\nconst chat = String(job.telegram_chat_id || '').trim();\nif (!chat) return [];\nconst r = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet text;\nif (r.reel_status === 'reel ready') {\n  text = 'Your reel for ' + esc(job.product_name) + ' is ready (' + esc(r.duration_s) + ' s). File on the reel VPS:\\n' + esc(r.final_path)\n    + '\\nNothing was posted. A person watches it and decides where it goes.';\n} else {\n  text = 'The reel for ' + esc(job.product_name) + ' is not finished (' + esc(r.reel_status || 'no answer') + ')'\n    + (r.reel_note ? ': ' + esc(String(r.reel_note).slice(0, 600)) : '.');\n}\nreturn [{ json: { chat_id: chat, text } }];\n"
+   }
+  },
+  {
+   "id": "1d4d16f1-5118-4d1d-81df-d7797458be58",
+   "name": "Send Result",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1920,
+    120
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "webhookId": "b49668d6-9cd0-44cd-8200-7338a570d1af",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "054df779-ef23-4936-a5b2-84835f7f7ca1",
+   "name": "Sticky Note 43728bb5",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -420
+   ],
+   "parameters": {
+    "content": "## Reel factory: new UGC reel\nFill the form **New UGC Reel** (links to the product pictures and to 1-5 winning reels, the language, the approved facts). The job is saved in **dtj_reel_jobs**, then the run pauses at **Wait for Claude Code: Reel**.\n\nOn the reel VPS, the person on duty runs Claude Code in the dtj-agency-automation folder and says \"handle the Claude Code trigger in n8n\" (or \"listen for reel requests\"). Claude makes the reel in the logged-in browser (ChatGPT, Google Flow), checks every take, removes the Flow sparkle, edits, captions, and posts the result here. Nothing is posted to Meta.\n\nSource in git: `n8n/reel-factory/` and `services/reel-factory/`.",
+    "color": 5,
+    "width": 760,
+    "height": 380
+   }
+  }
+ ],
+ "connections": {
+  "New UGC Reel": {
+   "main": [
+    [
+     {
+      "node": "Take the Reel Request",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Take the Reel Request": {
+   "main": [
+    [
+     {
+      "node": "Save Reel Job",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "From Another Workflow": {
+   "main": [
+    [
+     {
+      "node": "Take the Reel Request",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save Reel Job": {
+   "main": [
+    [
+     {
+      "node": "Accepted?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Accepted?": {
+   "main": [
+    [
+     {
+      "node": "Request for Claude Code: Reel",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Request for Claude Code: Reel": {
+   "main": [
+    [
+     {
+      "node": "Wait for Claude Code: Reel",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait for Claude Code: Reel": {
+   "main": [
+    [
+     {
+      "node": "Claude Code Reply: Reel",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Claude Code Reply: Reel": {
+   "main": [
+    [
+     {
+      "node": "Record Reel",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Tell the Requester",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tell the Requester": {
+   "main": [
+    [
+     {
+      "node": "Send Result",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}
