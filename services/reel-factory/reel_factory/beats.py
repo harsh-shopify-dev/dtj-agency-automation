@@ -32,7 +32,8 @@ def tempo(a: np.ndarray, sr: int, lo_bpm: float = 70, hi_bpm: float = 180, hop: 
 def plan_cuts(clips: list[dict], speech: list[tuple[float, float] | None], beat: float, lead: float = 0.9,
               tail: float = 0.15, max_len: float = 4.0) -> list[dict]:
     """New start/end per clip: trim dead air before the line to `lead` s, end each clip so the cumulative cut lands on a beat.
-    speech[i] = (first word start, last word end) in the clip's own time, or None."""
+    speech[i] = (first word start, last word end) in the clip's own time, or None. A clip's "max_end" (its take's length) is never
+    passed: the senso test (21 Oct 2026) planned 4.11 s on a 4.0 s take and every caption after it drifted by 0.11 s."""
     out, acc = [], 0.0
     for c, sp in zip(clips, speech):
         start, end0 = c.get("start", 0.0), c["end"]
@@ -43,10 +44,11 @@ def plan_cuts(clips: list[dict], speech: list[tuple[float, float] | None], beat:
             end_min = last + tail
         else:
             end_min = start + 1.0
-        end_max = min(end0 + 0.25, max_len)
+        end_max = min(end0 + 0.25, max_len, c.get("max_end", max_len))
         cands = [k * beat - acc + start for k in range(1, 400)]
         good = [e for e in cands if end_min <= e <= end_max]
         end = min(good, key=lambda e: abs(e - end0)) if good else max(end_min, min(end0, end_max))
+        end = min(end, c.get("max_end", end))
         out.append(dict(c, start=start, end=round(end, 3)))
         acc += end - start
     return out

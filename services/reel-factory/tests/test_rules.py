@@ -93,6 +93,14 @@ class Captions(unittest.TestCase):
         self.assertEqual([w[0] for w in got], ["Just", "add", "hot", "water."])
 
 
+    def test_digits_and_near_spellings_take_the_script_word_once(self):
+        heard = [("Boil", 0.1, 0.4), ("it", 0.4, 0.6), ("for", 0.6, 0.7), ("10", 0.7, 1.0), ("whole", 1.0, 1.3), ("minutes.", 1.3, 1.8),
+                 ("Arey,", 2.0, 2.5), ("this", 2.6, 2.8)]
+        got = [w[0] for w in captions.align_to_script(heard, "Boil it. Ten whole minutes. Arre... this")]
+        self.assertEqual(got, ["Boil", "it.", "for", "Ten", "whole", "minutes.", "Arre...", "this"])
+        self.assertFalse(captions.same_word("it", "at"))   # words under 4 letters must match exactly
+
+
 class Beats(unittest.TestCase):
     def test_cuts_land_on_beats(self):
         beat = 60 / 129.2
@@ -102,6 +110,10 @@ class Beats(unittest.TestCase):
             acc += c["end"] - c["start"]
             self.assertAlmostEqual(acc / beat, round(acc / beat), delta=0.05)
         self.assertAlmostEqual(out[0]["start"], 0.6, places=2)    # dead air before the first word trimmed to 0.9 s
+
+    def test_a_cut_never_runs_past_the_take(self):
+        out = beats.plan_cuts([{"start": 2.37, "end": 4.0, "max_end": 4.0}], [(2.62, 3.96)], 60 / 129.2)
+        self.assertLessEqual(out[0]["end"], 4.0)
 
 
 class Claims(unittest.TestCase):

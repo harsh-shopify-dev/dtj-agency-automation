@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 BOTTOM_MARK = 548   # text bottom 548 px above the frame bottom at 1080x1920 (text centre ~69 % down)
 TOP_MARK = 1608     # only when the top band is empty and the bottom would hide the product name
@@ -20,6 +21,20 @@ Word = tuple[str, float, float]   # (text, start s, end s)
 
 def bare(w: str) -> str:
     return re.sub(r"[^\w']", "", w).lower()
+
+
+NUMS = {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight",
+        "9": "nine", "10": "ten", "12": "twelve", "15": "fifteen", "20": "twenty", "30": "thirty"}
+
+
+def same_word(script_word: str, heard: str) -> bool:
+    """The heard word is this script word: same letters, a digit for its word ('10' = 'ten'), or a near spelling of a longer
+    word ('Arey' = 'Arre', senso test 21 Oct 2026)."""
+    a, b = bare(script_word), bare(heard)
+    a, b = NUMS.get(a, a), NUMS.get(b, b)
+    if a == b:
+        return True
+    return min(len(a), len(b)) >= 4 and SequenceMatcher(None, a, b).ratio() >= 0.75
 
 
 def apply_spelling(words: list[Word], spelling: dict[str, str]) -> list[Word]:
@@ -37,7 +52,7 @@ def align_to_script(words: list[Word], script: str, lookahead: int = 4) -> list[
         return list(words)
     toks, p, aligned = script.split(), 0, []
     for w, a, b in words:
-        k = next((j for j in range(p, min(p + lookahead, len(toks))) if bare(toks[j]) == bare(w)), None)
+        k = next((j for j in range(p, min(p + lookahead, len(toks))) if same_word(toks[j], w)), None)
         if k is None:
             aligned.append((w, a, b))
             continue

@@ -275,6 +275,7 @@ def stage_pick(job: Job, shot: str, image: str | None, take: str | None, start: 
         p["image"] = str(Path(image).resolve())
     if take:
         p["take"] = str(Path(take).resolve())
+        p["by_hand"] = True        # a person watched it and chose it (e.g. Whisper misheard a word the take says right)
     if start is not None:
         p["start"] = start
     if end is not None:
@@ -322,7 +323,7 @@ def stage_check(job: Job, only: str | None) -> int:
     """Offline: remove the sparkle (LaMa), then words, product and 4 fps sheet for every take; auto-pick the best take."""
     from .checks import ProductTracker, words_check
     from .media import duration, sheet, words
-    from .watermark import Remover
+    from .watermark import Remover, residual
     shots = job.shots(only)
     clips = job.state.get("clips", {})
     req = job.request
@@ -344,16 +345,19 @@ def stage_check(job: Job, only: str | None) -> int:
                                                                   "ok": bool(heard), "note": "Hindi/Hinglish: read 'said' against the line"}
             pt = tracker.take(clean, expect_product=bool(s.get("product")))
             t["words"] = heard
-            t["check"] = {**pt, "words": wc, "ok": pt["ok"] and wc["ok"], "duration": duration(clean)}
-            t["sheet"] = sheet(clean, str(job.path("checks", Path(clean).stem + "_4fps.jpg")), fps=4, cols=8, rows=5)
+            d = duration(clean)
+            left = residual(t["file"], clean)
+            t["check"] = {**pt, "words": wc, "sparkle_left": left, "ok": pt["ok"] and wc["ok"] and not left, "duration": d}
+            t["sheet"] = sheet(clean, str(job.path("checks", Path(clean).stem + "_4fps.jpg")), fps=4, cols=8, rows=max(1, -(-int(d * 4) // 8)))
         best = auto_pick(clips[s["id"]])
         picks = job.state.get("pick", {})
         current = picks.get(s["id"], {}).get("take")
         if best and current not in [t["clean"] for t in clips[s["id"]]]:   # a person's pick of one of these takes stays
-            picks.setdefault(s["id"], {})["take"] = best["clean"]
+            picks.setdefault(s["id"], {}).update(take=best["clean"], by_hand=False)
         job.set_state(clips=clips, pick=picks)
         print(json.dumps({s["id"]: [{"take": Path(t["clean"]).name, "ok": t["check"]["ok"], "visible_pct": t["check"]["visible_pct"],
                                      "issues": t["check"]["issues"], "missing_words": t["check"]["words"]["missing"],
+                                     "sparkle_left": len(t["check"].get("sparkle_left", [])),
                                      "sheet": t["sheet"]} for t in clips[s["id"]]], "picked": Path(best["clean"]).name if best else None},
                          ensure_ascii=False), flush=True)
     print(json.dumps({"next": "LOOK at every 4 fps sheet of the picked takes (drops, floats, smears, weird hands = reject); "
@@ -368,12 +372,13 @@ def stage_edit(job: Job) -> int:
     from .edit import render
     from .media import duration, run
     from .remotion import render as remotion_render
-    from .watermark import corner_visible
     script, req, st = job.script, job.request, job.state
     picks, clips = st.get("pick", {}), st.get("clips", {})
     missing = [s["id"] for s in script["shots"] if not picks.get(s["id"], {}).get("take")]
     if missing:
-        print(f"no good take picked for {missing}: regenerate them (clips --shots ...) or pick one by hand", file=sys.stderr); return 2
+        why = f"no good take for {missing}: regenerate them (clips --shots ...) or pick one by hand"
+        job.set_state(note=why)
+        print(why, file=sys.stderr); return 2
     tracker = ProductTracker((req["local"].get("product_cutout") or req["local"]["product_images"])[0])
     plan_clips, speech, heard_by_shot = [], [], []
     for i, s in enumerate(script["shots"]):
@@ -385,7 +390,7 @@ def stage_edit(job: Job) -> int:
         start = p.get("start", max(0.0, sp[0] - 0.25) if sp else 0.0)
         end = p.get("end", min(dur, sp[1] + 0.35) if sp else dur)
         place = caption_place(p["take"], tracker if s.get("product") else None)
-        plan_clips.append({"file": p["take"], "start": round(start, 2), "end": round(end, 2),
+        plan_clips.append({"file": p["take"], "start": round(start, 2), "end": round(min(end, dur), 2), "max_end": round(dur, 3),
                            "cap_margin": -1 if s.get("no_captions") else (TOP_MARK if place == "top" else BOTTOM_MARK)})
         speech.append(sp); heard_by_shot.append(heard)
     music = (req["local"].get("music") or [None])[0]
@@ -411,11 +416,17 @@ def stage_edit(job: Job) -> int:
     except (RuntimeError, OSError) as exc:
         shutil.copyfile(out["ass"], final); captions = "ass (fallback)"
         note.append(f"Remotion captions failed, plain captions used: {str(exc)[:200]}")
-    marks = corner_visible(final)
+    marks = []
+    for s in script["shots"]:
+        take = next((t for t in clips.get(s["id"], []) if t.get("clean") == picks[s["id"]]["take"]), None)
+        if take is None or "sparkle_left" not in take.get("check", {}):
+            continue
+        marks += [f"{s['id']}@{m['t']}s" for m in take["check"]["sparkle_left"]]
     lufs = (out.get("loudness") or {}).get("lufs")
     if marks:
-        note.append(f"sparkle still visible at {marks[:6]} s")
-    shots_ok = all(next((t["check"]["ok"] for t in clips.get(s["id"], []) if t.get("clean") == picks[s["id"]]["take"]), False)
+        note.append(f"sparkle may be left in {marks[:6]}")
+    shots_ok = all(picks[s["id"]].get("by_hand") or
+                   next((t["check"]["ok"] for t in clips.get(s["id"], []) if t.get("clean") == picks[s["id"]]["take"]), False)
                    for s in script["shots"])
     if not shots_ok:
         note.append("at least one picked take did not pass the automatic checks: a person must watch it")

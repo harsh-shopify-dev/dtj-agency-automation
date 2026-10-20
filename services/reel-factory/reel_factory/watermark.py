@@ -101,8 +101,43 @@ class Remover:
         return {"frames": n, "moving_star_found": found}
 
 
+def _score(gray: np.ndarray, x: int, y: int, s: int, pad: int = 6) -> float:
+    M = SHARP.get(s)
+    if M is None:
+        M = cv2.resize(SHARP[54], (s, s))
+    H, W = gray.shape
+    r = gray[max(0, y - pad):min(H, y + s + pad), max(0, x - pad):min(W, x + s + pad)]
+    if r.shape[0] < s or r.shape[1] < s:
+        return 0.0
+    hp = r - cv2.GaussianBlur(r, (0, 0), 8)
+    return float(cv2.minMaxLoc(cv2.matchTemplate(hp, M - M.mean(), cv2.TM_CCOEFF_NORMED))[1])
+
+
+def residual(raw: str, clean: str, every: int = 6, seen: float = 0.6, left: float = 0.5) -> list[dict]:
+    """Frames where a star that is clearly there in the raw take (score >= seen) still matches in the cleaned take at the same spot
+    (score >= left). Measured on senso-01 (21 Oct 2026): raw stars 0.7-0.9, cleaned spots 0.0-0.25, wood grain up to 0.43."""
+    a, b = cv2.VideoCapture(raw), cv2.VideoCapture(clean)
+    fps = a.get(cv2.CAP_PROP_FPS) or 24
+    out, i = [], 0
+    while True:
+        ok1, fr = a.read(); ok2, fc = b.read()
+        if not (ok1 and ok2):
+            break
+        if i % every == 0:
+            gr = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            gc = cv2.cvtColor(fc, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            spots = [("upper", STATIC)] + ([("lower", mv)] if (mv := find_moving(gr)) else [])
+            for name, (x, y, sz) in spots:
+                r, c = _score(gr, x, y, sz), _score(gc, x, y, sz)
+                if r >= seen and c >= left:
+                    out.append({"t": round(i / fps, 2), "star": name, "raw": round(r, 2), "clean": round(c, 2)})
+        i += 1
+    return out
+
+
 def corner_visible(path: str, every_s: float = 0.5) -> list[float]:
-    """Times (s) where a sparkle still shows in the final 1080x1920 reel's bottom-right corner (shape match >= 0.55)."""
+    """Times (s) where something star-shaped shows in the final 1080x1920 reel's bottom-right corner (shape match >= 0.55).
+    NOISY: wood grain and box edges match too (senso test, 21 Oct 2026). For a by-eye look only; the gate is residual()."""
     cap = cv2.VideoCapture(path); fps = cap.get(cv2.CAP_PROP_FPS) or 30
     step, i, hits = max(1, int(round(fps * every_s))), 0, []
     big = {s: cv2.resize(SHARP[s], (int(s * 1.5), int(s * 1.5))) for s in SIZES}
