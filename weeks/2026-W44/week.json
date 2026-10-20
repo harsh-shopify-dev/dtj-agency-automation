@@ -1,0 +1,441 @@
+{
+ "week": "2026-W44",
+ "made_by": "Claude Code session, 20 Oct 2026 (first week; for Harsh's review)",
+ "research": [
+  {
+   "topic": "Show real results, one brand a post",
+   "why": "DTJ's founders are a visual audience that 'speaks only numbers and results' and wants all the proof",
+   "source": "docs/DTJ-CONTEXT.md (Harsh, 10 Oct 2026)"
+  },
+  {
+   "topic": "Ads run, no orders",
+   "why": "One of the 4 live lead pages; the pain the research backs most",
+   "source": "memory: live lead pages (Harsh, 14 Oct 2026): /ads-no-orders"
+  },
+  {
+   "topic": "Paid an agency, then silence",
+   "why": "Agency distrust: the headline test on the live /tushar-joshi-b page",
+   "source": "memory: live lead pages (Harsh, 14 Oct 2026)"
+  },
+  {
+   "topic": "Product page before and after",
+   "why": "Shows that the same visitors can bring more buyers; a real before/after",
+   "source": "claims-and-proof.md: Pro Effex 1.4% to 2.8%"
+  }
+ ],
+ "posts": [
+  {
+   "id": "2026-W44-p1",
+   "publish_at": "2026-10-26T19:00:00+05:30",
+   "theme": "client-result",
+   "format": "image",
+   "proof_ids": [
+    "sales-royal-dosa-paper"
+   ],
+   "media": [
+    {
+     "file": "media/p1.jpg",
+     "alt": "The Royal Dosa Paper's own Shopify sales chart, with total sales of ₹5.28Cr, rising after the DTJ partnership began."
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p1.jpg",
+     "template": "result",
+     "fields": {
+      "proof_id": "sales-royal-dosa-paper",
+      "line": "*₹5.28Cr* in sales"
+     }
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "The Royal Dosa Paper had almost no sales when we started working together in March 2025.\n\nToday their own Shopify report shows ₹5.28Cr in sales and 75,000 orders.\n\nWant to know what's holding your sales back? Get a free growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#Shopify",
+      "#IndianBrands"
+     ]
+    },
+    "facebook": {
+     "caption": "The Royal Dosa Paper had almost no sales when we started working together in March 2025.\n\nToday their own Shopify report shows ₹5.28Cr in sales and 75,000 orders.\n\nWant to know what's holding your sales back? Get a free growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "The Royal Dosa Paper had almost no sales when we started working together in March 2025.\n\nToday their own Shopify report shows ₹5.28Cr in sales and 75,000 orders.\n\nWe find what's holding a brand's sales back. Then we fix it.\n\nFree growth audit for founders: {link}"
+    },
+    "x": {
+     "text": "The Royal Dosa Paper: almost no sales in March 2025. Today ₹5.28Cr in sales and 75,000 orders, from their own Shopify report.\n\nWhere are your sales leaking? Free growth audit: {link}"
+    }
+   },
+   "overlay_text": [
+    "Real Shopify sales report",
+    "The Royal Dosa Paper",
+    "₹5.28Cr in sales",
+    "Numbers from the brand's own Shopify sales report."
+   ]
+  },
+  {
+   "id": "2026-W44-p2",
+   "publish_at": "2026-10-27T19:00:00+05:30",
+   "theme": "founder-pain",
+   "format": "carousel",
+   "proof_ids": [],
+   "media": [
+    {
+     "file": "media/p2-1.jpg",
+     "alt": "Big white words on black: Ads are running. Orders are not."
+    },
+    {
+     "file": "media/p2-2.jpg",
+     "alt": "You already paid to bring them to your website."
+    },
+    {
+     "file": "media/p2-3.jpg",
+     "alt": "One ad rarely works for everyone."
+    },
+    {
+     "file": "media/p2-4.jpg",
+     "alt": "We look at the whole journey, from your ads to your product pages and checkout."
+    },
+    {
+     "file": "media/p2-5.jpg",
+     "alt": "Find out where your sales are leaking: free growth audit."
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p2-1.jpg",
+     "template": "pain",
+     "fields": {
+      "headline": "Ads are running.\nOrders are *not*.",
+      "sub": "Swipe to see where the money goes.",
+      "cta": "Swipe →"
+     }
+    },
+    {
+     "file": "media/p2-2.jpg",
+     "template": "slide",
+     "fields": {
+      "headline": "You already *paid* to bring them to your website.",
+      "body": "Every visitor who leaves without buying is ad money gone.",
+      "swipe": "Swipe →"
+     }
+    },
+    {
+     "file": "media/p2-3.jpg",
+     "template": "slide",
+     "fields": {
+      "headline": "One ad rarely works for *everyone*.",
+      "body": "Different people need different reasons to buy. One ad can't give all of them.",
+      "swipe": "Swipe →",
+      "dark": true
+     }
+    },
+    {
+     "file": "media/p2-4.jpg",
+     "template": "slide",
+     "fields": {
+      "headline": "We look at the *whole journey*.",
+      "body": "From your ads to your website, product pages and checkout, to find where buyers drop off.",
+      "swipe": "Swipe →"
+     }
+    },
+    {
+     "file": "media/p2-5.jpg",
+     "template": "cta",
+     "fields": {}
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "Ads running, but no orders coming in?\n\nIt's not always the ad. The leak is often somewhere on the path from your ad to a paid order.\n\nWe look at the whole journey, from your ads to your website, product pages and checkout, and find where you're losing buyers.\n\nFree growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#FacebookAds",
+      "#Shopify"
+     ]
+    },
+    "facebook": {
+     "caption": "Ads running, but no orders coming in?\n\nIt's not always the ad. The leak is often somewhere on the path from your ad to a paid order.\n\nWe look at the whole journey, from your ads to your website, product pages and checkout, and find where you're losing buyers.\n\nFree growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "Ads running, but no orders coming in?\n\nIt's not always the ad. The leak is often somewhere on the path from your ad to a paid order.\n\nWe look at the whole journey, from ads to website, product pages and checkout, to find where buyers drop off.\n\nFree growth audit for founders: {link}"
+    },
+    "x": {
+     "text": "Ads running, but no orders?\n\nIt's not always the ad. The leak is often somewhere between your ad and a paid order: the website, the product page, the checkout.\n\nFind your leak with a free growth audit: {link}",
+     "first_media": 4
+    }
+   },
+   "overlay_text": [
+    "Sound familiar?",
+    "Ads are running.\nOrders are not.",
+    "Swipe →",
+    "Swipe to see where the money goes.",
+    "You already paid to bring them to your website.",
+    "Every visitor who leaves without buying is ad money gone.",
+    "Swipe →",
+    "One ad rarely works for everyone.",
+    "Different people need different reasons to buy. One ad can't give all of them.",
+    "Swipe →",
+    "We look at the whole journey.",
+    "From your ads to your website, product pages and checkout, to find where buyers drop off.",
+    "Swipe →",
+    "Find out where your sales are leaking",
+    "Get a free growth audit of your ads, store and product pages.",
+    "We check your details first, then our team gets in touch.",
+    "Free growth audit",
+    "Link in bio"
+   ]
+  },
+  {
+   "id": "2026-W44-p3",
+   "publish_at": "2026-10-28T19:00:00+05:30",
+   "theme": "before-after",
+   "format": "image",
+   "proof_ids": [
+    "pdp-proeffex"
+   ],
+   "media": [
+    {
+     "file": "media/p3.jpg",
+     "alt": "Pro Effex product page on a phone, before and after the rebuild."
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p3.jpg",
+     "template": "before_after",
+     "fields": {
+      "headline": "Same visitors. *Twice* the buyers.",
+      "line": "Out of every 1,000 visitors, 14 bought before. Now 28 do.",
+      "note": "Pro Effex product page, before and after."
+     }
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "Pro Effex didn't need more visitors. Their product page needed to give visitors a reason to buy.\n\nOut of every 1,000 visitors, 14 bought before. After the new product page, 28 do.\n\nSame traffic. More customers.\n\nFree growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#Shopify",
+      "#ProductPage"
+     ]
+    },
+    "facebook": {
+     "caption": "Pro Effex didn't need more visitors. Their product page needed to give visitors a reason to buy.\n\nOut of every 1,000 visitors, 14 bought before. After the new product page, 28 do.\n\nSame traffic. More customers.\n\nFree growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "Pro Effex didn't need more visitors. Their product page needed to give visitors a reason to buy.\n\nOut of every 1,000 visitors, 14 bought before. After the new product page, 28 do.\n\nSame traffic. More customers.\n\nFree growth audit for founders: {link}"
+    },
+    "x": {
+     "text": "Same visitors, twice the buyers.\n\nPro Effex product page: out of every 1,000 visitors, 14 bought before. After the rebuild, 28 do.\n\nFree growth audit: {link}"
+    }
+   },
+   "overlay_text": [
+    "Same visitors. Twice the buyers.",
+    "Before",
+    "After",
+    "Out of every 1,000 visitors, 14 bought before. Now 28 do.",
+    "Pro Effex product page, before and after."
+   ]
+  },
+  {
+   "id": "2026-W44-p4",
+   "publish_at": "2026-10-29T19:00:00+05:30",
+   "theme": "client-result",
+   "format": "image",
+   "proof_ids": [
+    "sales-zebein"
+   ],
+   "media": [
+    {
+     "file": "media/p4.jpg",
+     "alt": "Zebein's own Shopify sales chart, with total sales of ₹3.56Cr, marked where the DTJ partnership began."
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p4.jpg",
+     "template": "result",
+     "fields": {
+      "proof_id": "sales-zebein",
+      "line": "*₹3.56Cr* in sales"
+     }
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "Zebein: ₹3.56Cr in sales and 4,213 orders, straight from their own Shopify report.\n\nWe find what's holding your sales back. Then we fix it.\n\nFree growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#Shopify",
+      "#IndianBrands"
+     ]
+    },
+    "facebook": {
+     "caption": "Zebein: ₹3.56Cr in sales and 4,213 orders, straight from their own Shopify report.\n\nWe find what's holding your sales back. Then we fix it.\n\nFree growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "Zebein: ₹3.56Cr in sales and 4,213 orders, straight from their own Shopify report.\n\nWe find what's holding a brand's sales back. Then we fix it.\n\nFree growth audit for founders: {link}"
+    },
+    "x": {
+     "text": "Zebein: ₹3.56Cr in sales and 4,213 orders, from their own Shopify report.\n\nWe find what's holding your sales back. Then we fix it. Free growth audit: {link}"
+    }
+   },
+   "overlay_text": [
+    "Real Shopify sales report",
+    "Zebein",
+    "₹3.56Cr in sales",
+    "Numbers from the brand's own Shopify sales report."
+   ]
+  },
+  {
+   "id": "2026-W44-p5",
+   "publish_at": "2026-10-30T19:00:00+05:30",
+   "theme": "founder-pain",
+   "format": "image",
+   "proof_ids": [],
+   "media": [
+    {
+     "file": "media/p5.jpg",
+     "alt": "Big white words on black: Paid an agency, then silence?"
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p5.jpg",
+     "template": "pain",
+     "fields": {
+      "headline": "Paid an agency,\nthen *silence*?",
+      "sub": "Get a clear outside view of your ads, store and product pages. No pressure. No generic pitch."
+     }
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "Paid an agency, then heard nothing back?\n\nGet a clear outside view of your ads, your store and the path from your ad to a paid order, and know exactly what to fix first.\n\nNo generic pitch. No pressure. If we don't see a clear opportunity, we'll tell you.\n\nFree growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#Founders",
+      "#Shopify"
+     ]
+    },
+    "facebook": {
+     "caption": "Paid an agency, then heard nothing back?\n\nGet a clear outside view of your ads, your store and the path from your ad to a paid order, and know exactly what to fix first.\n\nNo generic pitch. No pressure. If we don't see a clear opportunity, we'll tell you.\n\nFree growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "Paid an agency, then heard nothing back?\n\nGet a clear outside view of your ads, your store and the path from your ad to a paid order, and know exactly what to fix first.\n\nNo generic pitch. No pressure. If we don't see a clear opportunity, we'll tell you.\n\nFree growth audit: {link}"
+    },
+    "x": {
+     "text": "Paid an agency, then silence?\n\nGet a clear outside view of your ads and store, and know what to fix first. If we don't see a clear opportunity, we'll tell you.\n\nFree growth audit: {link}"
+    }
+   },
+   "overlay_text": [
+    "Sound familiar?",
+    "Paid an agency,\nthen silence?",
+    "Free growth audit · link in bio",
+    "Get a clear outside view of your ads, store and product pages. No pressure. No generic pitch."
+   ]
+  },
+  {
+   "id": "2026-W44-p6",
+   "publish_at": "2026-10-31T19:00:00+05:30",
+   "theme": "client-result",
+   "format": "image",
+   "proof_ids": [
+    "sales-little-rituals"
+   ],
+   "media": [
+    {
+     "file": "media/p6.jpg",
+     "alt": "Little Rituals' own Shopify sales chart, with total sales of ₹1.92Cr, marked where the DTJ partnership began."
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p6.jpg",
+     "template": "result",
+     "fields": {
+      "proof_id": "sales-little-rituals",
+      "line": "*₹1.92Cr* in sales"
+     }
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "Little Rituals: ₹1.92Cr in sales and 13,334 orders, from their own Shopify report.\n\nYou already paid to bring people to your website. We build and improve your Shopify store and product pages so more of them have a reason to buy.\n\nFree growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#Shopify",
+      "#IndianBrands"
+     ]
+    },
+    "facebook": {
+     "caption": "Little Rituals: ₹1.92Cr in sales and 13,334 orders, from their own Shopify report.\n\nYou already paid to bring people to your website. We build and improve your Shopify store and product pages so more of them have a reason to buy.\n\nFree growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "Little Rituals: ₹1.92Cr in sales and 13,334 orders, from their own Shopify report.\n\nYou already paid to bring people to your website. We build and improve Shopify stores and product pages so more of those visitors have a reason to buy.\n\nFree growth audit for founders: {link}"
+    },
+    "x": {
+     "text": "Little Rituals: ₹1.92Cr in sales and 13,334 orders, from their own Shopify report.\n\nMore of your visitors can buy. Free growth audit: {link}"
+    }
+   },
+   "overlay_text": [
+    "Real Shopify sales report",
+    "Little Rituals",
+    "₹1.92Cr in sales",
+    "Numbers from the brand's own Shopify sales report."
+   ]
+  },
+  {
+   "id": "2026-W44-p7",
+   "publish_at": "2026-11-01T19:00:00+05:30",
+   "theme": "client-result",
+   "format": "image",
+   "proof_ids": [
+    "sales-sindhoi"
+   ],
+   "media": [
+    {
+     "file": "media/p7.jpg",
+     "alt": "Sindhoi Patola Arts' own Shopify sales chart, with total sales of ₹2.78Cr, marked where the DTJ partnership began."
+    }
+   ],
+   "render": [
+    {
+     "file": "media/p7.jpg",
+     "template": "result",
+     "fields": {
+      "proof_id": "sales-sindhoi",
+      "line": "*₹2.78Cr* in sales"
+     }
+    }
+   ],
+   "platforms": {
+    "instagram": {
+     "caption": "Sindhoi Patola Arts: from ₹52.7L to ₹2.78Cr in sales, in their own Shopify report.\n\nTell us about your brand and we'll show you what to fix first, whether it's ads, your store, Google search or Amazon.\n\nFree growth audit. Link in bio.",
+     "hashtags": [
+      "#D2C",
+      "#Shopify",
+      "#Patola"
+     ]
+    },
+    "facebook": {
+     "caption": "Sindhoi Patola Arts: from ₹52.7L to ₹2.78Cr in sales, in their own Shopify report.\n\nTell us about your brand and we'll show you what to fix first, whether it's ads, your store, Google search or Amazon.\n\nFree growth audit: {link}"
+    },
+    "linkedin": {
+     "caption": "Sindhoi Patola Arts: from ₹52.7L to ₹2.78Cr in sales, in their own Shopify report.\n\nTell us about your brand and we'll show you what to fix first, whether it's ads, your store, Google search or Amazon.\n\nFree growth audit for founders: {link}"
+    },
+    "x": {
+     "text": "Sindhoi Patola Arts: ₹52.7L to ₹2.78Cr in sales, from their own Shopify report.\n\nWhat should you fix first? Free growth audit: {link}"
+    }
+   },
+   "overlay_text": [
+    "Real Shopify sales report",
+    "Sindhoi Patola Arts",
+    "₹2.78Cr in sales",
+    "Numbers from the brand's own Shopify sales report."
+   ]
+  }
+ ]
+}
