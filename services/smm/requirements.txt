@@ -1,0 +1,3 @@
+# Content session (laptop or VPS): also renders pictures. After install: python -m playwright install chromium
+-r requirements-run.txt
+playwright>=1.45

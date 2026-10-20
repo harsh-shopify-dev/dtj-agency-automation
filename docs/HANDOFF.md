@@ -3,6 +3,21 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+## SMM AUTOMATION (built 20 Oct 2026; branch `feature/smm-automation`, data branch `smm-content`)
+
+Harsh: automate DTJ's SMM process, "build the automation and it should post daily". DTJ's own accounts first; Instagram, Facebook
+Page, LinkedIn, YouTube Shorts, X; Claude + ChatGPT on the VPS; Meta's own API. Guide: `docs/smm/README.md`; skill `dtj-smm`.
+- **Built:** `services/smm/` (post format + schema, proof list, code gate, DTJ picture templates, deck, named approvals with a
+  fingerprint, daily poster, publishers for all 5 platforms, results pull + Monday report, Telegram, action log), GitHub Actions
+  "SMM daily" (hourly 07:05-22:05 IST + results 10:20) and "SMM approve posts". 27 tests pass. Nothing has been posted.
+- **Week 2026-W44 made** (Mon 26 Oct - Sun 1 Nov, 19:00 IST): 7 posts from real proof only, all pass the gate, deck
+  `weeks/2026-W44/DTJ-social-2026-W44.pptx` on `smm-content`. Not approved yet.
+- **Open (Harsh):** merge the PR; `SMM_TELEGRAM_CHAT_ID`; connect Meta (README "Going live"); the switches to let code post
+  (each his yes); yes for W44 by post number; may client brands be named on social; D1 (weekly vs per-post yes); the Meta ads
+  report picture has round-number rows (held back); LinkedIn Community Management API request; YouTube/X accounts.
+- **Not verified:** any live API call (no tokens connected); Meta app without App Review for own accounts; X OAuth 1.0a on v2;
+  YouTube private-lock for unaudited projects.
+
 **LATEST (9 Oct 2026): Harsh decided the project is now run from the Claude DESKTOP-APP session, not from `claude-a`/`claude-b` terminals.** That session took on the section A mission and wrote **`docs/automation-plan.md`** (draft for Harsh's approval: kill switch + wider automation, decisions D0-D10, phases K0-K8, sourced costs and Shopify facts). Key new fact: a **custom-distribution app installs on one store (or one Plus organization) only**, so the three apps cannot serve many clients as they are (decision D0). Baseline 9 Oct: 361 tests pass (146/77/50/88; store builder needs Pillow, not declared). Git: 28 commits not on GitHub + 13 uncommitted files. The two page-builder scripts were copied from another session's temp folder to `.work/rescued/` (not in git yet). n8n (own server `n8n.srv1969859.hstgr.cloud`) was added as an MCP server in this project's local Claude config and **needs Harsh's sign-in**. This session's Shopify CLI login still has to be fixed (visible-window sign-in, see line ~269). Nothing was built, deployed or changed on any store on 9 Oct.
 
 ---------------------------------------------------------------------------------------------------

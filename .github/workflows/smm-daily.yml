@@ -1,0 +1,93 @@
+# DTJ social media: posts each APPROVED post at its time (hourly check, 07:00-22:00 IST), reads results daily, sends the Monday report.
+# No AI runs here. See docs/smm/README.md.
+# Safe by default: without the variables below it posts nothing and sends due posts to Telegram for a person to post by hand.
+# Variables (Settings > Secrets and variables > Actions > Variables):
+#   AUTOMATION_ENABLED, SMM_ENABLED (both true to let code post), SMM_MODE (shadow | approve), SMM_DRY_RUN (default true),
+#   SMM_LIVE_PLATFORMS (e.g. instagram,facebook), SMM_TELEGRAM_CHAT_ID, SMM_AUDIT_URL (optional), LINKEDIN_TOKEN_EXPIRES (YYYY-MM-DD)
+# Secrets (copied from DTJ's Bitwarden vault, never written anywhere else):
+#   DTJ_TELEGRAM_BOT_TOKEN, WP_USER, WP_APP_PASSWORD, META_PAGE_TOKEN, META_PAGE_ID, META_IG_USER_ID,
+#   LINKEDIN_TOKEN, LINKEDIN_ORG_ID, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
+# Scheduled runs use the default branch's copy of this file.
+name: SMM daily
+
+on:
+  schedule:
+    - cron: "35 1-16 * * *"   # every hour at :05 past, 07:05 to 22:05 IST: post what is due
+    - cron: "50 4 * * *"      # 10:20 IST: read results (and on Monday send last week's report)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "post (check what is due now) or results"
+        type: choice
+        options: [post, results]
+        default: post
+
+permissions:
+  contents: write   # writes the content branch smm-content only
+
+concurrency:
+  group: smm-daily
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JOB: ${{ (github.event.schedule == '50 4 * * *' || inputs.job == 'results') && 'results' || 'post' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Content store (branch smm-content)
+        uses: actions/checkout@v4
+        with:
+          ref: smm-content
+          path: content
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: pip install -r services/smm/requirements-run.txt
+
+      - name: Tests
+        working-directory: services/smm
+        run: python -m unittest discover -s tests
+
+      - name: Run
+        working-directory: services/smm
+        env:
+          AUTOMATION_ENABLED: ${{ vars.AUTOMATION_ENABLED }}
+          SMM_ENABLED: ${{ vars.SMM_ENABLED }}
+          SMM_MODE: ${{ vars.SMM_MODE }}
+          SMM_DRY_RUN: ${{ vars.SMM_DRY_RUN }}
+          SMM_LIVE_PLATFORMS: ${{ vars.SMM_LIVE_PLATFORMS }}
+          SMM_TELEGRAM_CHAT_ID: ${{ vars.SMM_TELEGRAM_CHAT_ID }}
+          SMM_AUDIT_URL: ${{ vars.SMM_AUDIT_URL }}
+          LINKEDIN_TOKEN_EXPIRES: ${{ vars.LINKEDIN_TOKEN_EXPIRES }}
+          DTJ_TELEGRAM_BOT_TOKEN: ${{ secrets.DTJ_TELEGRAM_BOT_TOKEN }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_IG_USER_ID: ${{ secrets.META_IG_USER_ID }}
+          LINKEDIN_TOKEN: ${{ secrets.LINKEDIN_TOKEN }}
+          LINKEDIN_ORG_ID: ${{ secrets.LINKEDIN_ORG_ID }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+        run: |
+          git -C ../../content config user.name "DTJ SMM"
+          git -C ../../content config user.email "smm-bot@users.noreply.github.com"
+          if [ "$JOB" = "results" ]; then
+            ARGS=""
+            if [ "$(TZ=Asia/Kolkata date +%u)" = "1" ]; then ARGS="--report"; fi
+            python -m smm results --store ../../content $ARGS
+          else
+            python -m smm daily --store ../../content
+          fi
