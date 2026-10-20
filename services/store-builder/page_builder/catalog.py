@@ -28,6 +28,8 @@ class Catalog:
     def block_ref(self, app: str, block: str) -> str:
         if app not in self.reg:
             raise KeyError(f"unknown app {app!r}")
+        if self.reg[app]["uuid"] == "pending":  # an app released but never placed in a theme yet: its address is not known
+            raise KeyError(f"{app}: {self.reg[app].get('pending', 'the extension uuid is not known yet')}")
         return f"shopify://apps/{app}/blocks/dtj-{block}/{self.reg[app]['uuid']}"
 
     def schema(self, app: str, block: str) -> dict:

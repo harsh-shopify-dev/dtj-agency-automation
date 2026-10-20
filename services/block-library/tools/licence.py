@@ -12,7 +12,7 @@
 How it gets in: the app's own client credentials grant. This only works for stores in the SAME Shopify organization as
 the app. A client's store outside our org needs a hosted service that catches the install (authorization code grant)
 and keeps that client's token (see docs/block-library-design.md).
-Secrets: the client secret is read from the environment variable DTJ_BLOCKS_CLIENT_SECRET (DTJ_SECTIONS_CLIENT_SECRET with --app sections, DTJ_SECTIONS2_CLIENT_SECRET with --app sections2, DTJ_HEROES_CLIENT_SECRET with --app heroes, DTJ_COMMERCE_CLIENT_SECRET with --app commerce, DTJ_SHOP_CLIENT_SECRET with --app shop). It is never printed or logged.
+Secrets: the client secret is read from the environment variable DTJ_BLOCKS_CLIENT_SECRET (DTJ_SECTIONS_CLIENT_SECRET with --app sections, DTJ_SECTIONS2_CLIENT_SECRET with --app sections2, DTJ_HEROES_CLIENT_SECRET with --app heroes, DTJ_COMMERCE_CLIENT_SECRET with --app commerce, DTJ_SHOP_CLIENT_SECRET with --app shop, DTJ_COLLECTION_CLIENT_SECRET with --app collection). It is never printed or logged.
 Changing the flag is a tier 2 action: it needs --approved-by, and every change appends a row to the log.
 """
 from __future__ import annotations
@@ -38,6 +38,7 @@ APPS = {
     "heroes": (ROOT.parent / "block-library-heroes" / "shopify.app.toml", "DTJ_HEROES_CLIENT_SECRET"),
     "commerce": (ROOT.parent / "block-library-commerce" / "shopify.app.toml", "DTJ_COMMERCE_CLIENT_SECRET"),
     "shop": (ROOT.parent / "block-library-shop" / "shopify.app.toml", "DTJ_SHOP_CLIENT_SECRET"),
+    "collection": (ROOT.parent / "block-library-collection" / "shopify.app.toml", "DTJ_COLLECTION_CLIENT_SECRET"),
 }
 API_VERSION = "2026-07"
 STATUSES = ("active", "inactive")
@@ -144,7 +145,7 @@ def main(argv: list[str] | None = None, env=os.environ, post=post_json, ask=None
     group.add_argument("--status", action="store_true", help="read the current flag (read only)")
     group.add_argument("--set", choices=STATUSES)
     ap.add_argument("--approved-by")
-    ap.add_argument("--app", choices=sorted(APPS) + ["all"], default="blocks", help="which app's flag: blocks (DTJ Blocks, default), sections (DTJ Sections), sections2 (DTJ Sections 2), heroes (DTJ Heroes), commerce (DTJ Commerce), shop (DTJ Shop) or all six in one go")
+    ap.add_argument("--app", choices=sorted(APPS) + ["all"], default="blocks", help="which app's flag: blocks (DTJ Blocks, default), sections (DTJ Sections), sections2 (DTJ Sections 2), heroes (DTJ Heroes), commerce (DTJ Commerce), shop (DTJ Shop), collection (DTJ Collection) or all seven in one go")
     ap.add_argument("--log", default=str(ROOT.parents[1] / ".work" / "out" / "licence-log.jsonl"))
     args = ap.parse_args(argv)
     if not _SHOP.match(args.shop):

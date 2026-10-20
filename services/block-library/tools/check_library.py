@@ -115,6 +115,11 @@ def check_block(manifest_path: Path, root: Path = ROOT) -> list[str]:
     non_interactive = [s for s in settings if s.get("type") in ("header", "paragraph")]
     if len(non_interactive) > 6:
         problems.append(f"{len(non_interactive)} header/paragraph settings: Shopify allows at most 6 non-interactive settings in an app block")
+    # rule 23: no 'autofill' on an app block setting other than a product picker. Shopify refused the DTJ Collection release on 20 Oct 2026:
+    # "settings: with id="collection" 'autofill' is not a valid attribute" (an empty collection setting falls back to the page's collection instead).
+    for s in settings:
+        if "autofill" in s and s.get("type") != "product":
+            problems.append(f"setting {s.get('id')}: 'autofill' is not allowed on a {s.get('type')!r} setting (Shopify refuses the release)")
     # rule 21: a select option label is limited to 50 characters. Shopify refused the first DTJ Commerce release for exactly this (13 Oct 2026:
     # "option label is too long (max 50 characters)" on three blocks) although every local check had passed.
     for s in settings:
@@ -213,6 +218,14 @@ def check_block(manifest_path: Path, root: Path = ROOT) -> list[str]:
         names = cls.group(1).split() if cls else []
         if not any(_css_sets_size(css_text, rf"\.{re.escape(c)}") for c in names) and not _css_sets_size(css_text, r"[^{},]*\bimg"):
             problems.append(f"<img{' class=' + repr(cls.group(1)) if cls else ''} has no explicit width/height in the block's CSS (themes stretch images)")
+
+    # rule 22: a block that offers the standard colour controls must PAINT them. Six blocks took a section colour and never used it, so the
+    # bands the page builder chose stayed white and the home page looked flat (found on the elevate-with-harsh draft, 19 Oct 2026)
+    if "colors" in manifest.get("standard_controls", []):
+        flat_css = re.sub(r"\s+", "", css_text)
+        for var in ("--dtj-background", "--dtj-text-color") if manifest.get("slots") else ("--dtj-background",):  # no words, no text colour
+            if f"var({var}" not in flat_css:
+                problems.append(f"offers the colour controls but its CSS never uses {var}: the setting would do nothing on the page")
 
     # rule 19: a rule that sets `color` AND fills its background with currentColor paints the fill in that new colour
     # (white text on a "currentColor" fill = white on white; found 6 Oct 2026 on a tick that never showed). Put the text colour on a child.

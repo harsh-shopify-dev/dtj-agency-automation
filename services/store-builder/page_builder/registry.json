@@ -24,6 +24,10 @@
     "dtj-shop": {
       "uuid": "01a13473-ad4c-7f4c-9fcb-1352566e358a",
       "folder": "block-library-shop/extensions/dtj-shop/blocks"
+    },
+    "dtj-collection": {
+      "uuid": "01a158ac-fe15-738e-8c2e-b14636103612",
+      "folder": "block-library-collection/extensions/dtj-collection/blocks"
     }
   }
 }

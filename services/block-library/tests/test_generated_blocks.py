@@ -95,7 +95,10 @@ class GeneratedFilesTests(unittest.TestCase):
             bb.build_one(manifest, "{%- render 'dtj-licence' -%}", "")
 
     def test_the_builder_refuses_duplicate_setting_ids(self):
-        manifest = {**generated()[0], "settings": generated()[0]["settings"] + [{"type": "range", "id": "padding_top", "label": "x", "min": 0, "max": 10, "step": 1, "default": 0}]}
+        first = generated()[0]
+        # a setting with the id of one of the block's own standard controls (not every block takes padding_top: DTJ Product List takes only the colours)
+        duplicate = sorted(STANDARD_IDS[first["standard_controls"][0]])[0] if first.get("standard_controls") else "padding_top"
+        manifest = {**first, "settings": first["settings"] + [{"type": "range", "id": duplicate, "label": "x", "min": 0, "max": 10, "step": 1, "default": 0}]}
         with self.assertRaises(ValueError):
             bb.build_one(manifest, "x", "")
 

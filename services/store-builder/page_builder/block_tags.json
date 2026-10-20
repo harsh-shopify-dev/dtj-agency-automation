@@ -50,35 +50,45 @@
     },
     "dtj-commerce/best-sellers": {
       "niches": [],
-      "wired": false
+      "wired": true
     },
     "dtj-commerce/category-grid": {
-      "niches": [],
-      "wired": false
+      "niches": [
+        "home",
+        "general"
+      ],
+      "wired": true
     },
     "dtj-commerce/category-slider": {
-      "niches": [],
-      "wired": false
+      "niches": [
+        "fashion",
+        "food"
+      ],
+      "wired": true
     },
     "dtj-commerce/circle-menu": {
-      "niches": [],
-      "wired": false
+      "niches": [
+        "beauty",
+        "fashion",
+        "wellness"
+      ],
+      "wired": true
     },
     "dtj-commerce/marquee-band": {
       "niches": [],
-      "wired": false
+      "wired": true
     },
     "dtj-commerce/press-strip": {
       "niches": [],
-      "wired": false
+      "wired": true
     },
     "dtj-commerce/wave-divider": {
       "niches": [],
-      "wired": false
+      "wired": true
     },
     "dtj-heroes/compare-showcase": {
       "niches": [],
-      "wired": false
+      "wired": true
     },
     "dtj-heroes/feature-cards": {
       "niches": [
@@ -189,14 +199,18 @@
         "wellness",
         "home"
       ],
-      "wired": false
+      "wired": true
     },
     "dtj-shop/concern-slider": {
       "niches": [
         "beauty",
         "wellness"
       ],
-      "wired": false
+      "wired": true
+    },
+    "dtj-collection/product-list": {
+      "niches": [],
+      "wired": true
     }
   }
 }

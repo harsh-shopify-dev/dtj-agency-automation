@@ -1,0 +1,543 @@
+{
+ "_comment": "Setting specs of Horizon 4.2.0's own parts the collection page uses (read from the elevate-with-harsh draft theme 188893495469 on 20 Oct 2026, files sections/section.liquid, sections/_blocks.liquid, blocks/text.liquid). assemble_collection checks every theme setting it writes against these, as catalog.py does for DTJ blocks: Shopify refuses a whole template for one unknown select value.",
+ "section": {
+  "content_direction": {
+   "type": "select",
+   "default": "column",
+   "options": [
+    "column",
+    "row"
+   ]
+  },
+  "vertical_on_mobile": {
+   "type": "checkbox",
+   "default": true
+  },
+  "horizontal_alignment": {
+   "type": "select",
+   "default": "flex-start",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end",
+    "space-between"
+   ]
+  },
+  "vertical_alignment": {
+   "type": "select",
+   "default": "center",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end"
+   ]
+  },
+  "align_baseline": {
+   "type": "checkbox",
+   "default": false
+  },
+  "horizontal_alignment_flex_direction_column": {
+   "type": "select",
+   "default": "flex-start",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end"
+   ]
+  },
+  "vertical_alignment_flex_direction_column": {
+   "type": "select",
+   "default": "center",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end",
+    "space-between"
+   ]
+  },
+  "gap": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 12
+  },
+  "section_width": {
+   "type": "select",
+   "default": "page-width",
+   "options": [
+    "page-width",
+    "full-width"
+   ]
+  },
+  "section_height": {
+   "type": "select",
+   "default": "",
+   "options": [
+    "",
+    "small",
+    "medium",
+    "large",
+    "full-screen",
+    "custom"
+   ]
+  },
+  "section_height_custom": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 50
+  },
+  "background_media": {
+   "type": "select",
+   "default": "none",
+   "options": [
+    "none",
+    "image",
+    "video"
+   ]
+  },
+  "background_color": {
+   "type": "color"
+  },
+  "video": {
+   "type": "video"
+  },
+  "video_position": {
+   "type": "select",
+   "default": "cover",
+   "options": [
+    "cover",
+    "contain"
+   ]
+  },
+  "background_image": {
+   "type": "image_picker"
+  },
+  "background_image_position": {
+   "type": "select",
+   "default": "cover",
+   "options": [
+    "cover",
+    "fit"
+   ]
+  },
+  "toggle_overlay": {
+   "type": "checkbox"
+  },
+  "overlay_color": {
+   "type": "color",
+   "default": "#00000026"
+  },
+  "overlay_style": {
+   "type": "select",
+   "default": "solid",
+   "options": [
+    "solid",
+    "gradient"
+   ]
+  },
+  "gradient_direction": {
+   "type": "select",
+   "default": "to top",
+   "options": [
+    "to top",
+    "to bottom"
+   ]
+  },
+  "border": {
+   "type": "select",
+   "default": "none",
+   "options": [
+    "none",
+    "solid"
+   ]
+  },
+  "border_width": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 1
+  },
+  "border_opacity": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 100
+  },
+  "border_color": {
+   "type": "color"
+  },
+  "border_radius": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-block-start": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-block-end": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  }
+ },
+ "_blocks": {
+  "content_direction": {
+   "type": "select",
+   "default": "column",
+   "options": [
+    "column",
+    "row"
+   ]
+  },
+  "vertical_on_mobile": {
+   "type": "checkbox",
+   "default": true
+  },
+  "horizontal_alignment": {
+   "type": "select",
+   "default": "flex-start",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end",
+    "space-between"
+   ]
+  },
+  "vertical_alignment": {
+   "type": "select",
+   "default": "center",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end"
+   ]
+  },
+  "align_baseline": {
+   "type": "checkbox",
+   "default": false
+  },
+  "horizontal_alignment_flex_direction_column": {
+   "type": "select",
+   "default": "flex-start",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end"
+   ]
+  },
+  "vertical_alignment_flex_direction_column": {
+   "type": "select",
+   "default": "center",
+   "options": [
+    "flex-start",
+    "center",
+    "flex-end",
+    "space-between"
+   ]
+  },
+  "gap": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 12
+  },
+  "section_width": {
+   "type": "select",
+   "default": "page-width",
+   "options": [
+    "page-width",
+    "full-width"
+   ]
+  },
+  "section_height": {
+   "type": "select",
+   "default": "",
+   "options": [
+    "",
+    "small",
+    "medium",
+    "large",
+    "full-screen",
+    "custom"
+   ]
+  },
+  "section_height_custom": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 50
+  },
+  "background_media": {
+   "type": "select",
+   "default": "none",
+   "options": [
+    "none",
+    "image",
+    "video"
+   ]
+  },
+  "background_color": {
+   "type": "color"
+  },
+  "video": {
+   "type": "video"
+  },
+  "video_position": {
+   "type": "select",
+   "default": "cover",
+   "options": [
+    "cover",
+    "contain"
+   ]
+  },
+  "background_image": {
+   "type": "image_picker"
+  },
+  "background_image_position": {
+   "type": "select",
+   "default": "cover",
+   "options": [
+    "cover",
+    "fit"
+   ]
+  },
+  "toggle_overlay": {
+   "type": "checkbox"
+  },
+  "overlay_color": {
+   "type": "color",
+   "default": "#00000026"
+  },
+  "overlay_style": {
+   "type": "select",
+   "default": "solid",
+   "options": [
+    "solid",
+    "gradient"
+   ]
+  },
+  "gradient_direction": {
+   "type": "select",
+   "default": "to top",
+   "options": [
+    "to top",
+    "to bottom"
+   ]
+  },
+  "border": {
+   "type": "select",
+   "default": "none",
+   "options": [
+    "none",
+    "solid"
+   ]
+  },
+  "border_width": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 1
+  },
+  "border_opacity": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 100
+  },
+  "border_color": {
+   "type": "color"
+  },
+  "border_radius": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-block-start": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-block-end": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  }
+ },
+ "text": {
+  "text": {
+   "type": "richtext"
+  },
+  "width": {
+   "type": "select",
+   "default": "fit-content",
+   "options": [
+    "fit-content",
+    "100%"
+   ]
+  },
+  "max_width": {
+   "type": "select",
+   "default": "normal",
+   "options": [
+    "narrow",
+    "normal",
+    "none"
+   ]
+  },
+  "alignment": {
+   "type": "text_alignment",
+   "default": "left"
+  },
+  "type_preset": {
+   "type": "select",
+   "default": "rte",
+   "options": [
+    "rte",
+    "paragraph",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "custom"
+   ]
+  },
+  "font": {
+   "type": "select",
+   "default": "var(--font-body--family)",
+   "options": [
+    "var(--font-body--family)",
+    "var(--font-subheading--family)",
+    "var(--font-heading--family)",
+    "var(--font-accent--family)"
+   ]
+  },
+  "font_size": {
+   "type": "select",
+   "default": "1rem",
+   "options": [
+    "",
+    "0.625rem",
+    "0.75rem",
+    "0.875rem",
+    "1rem",
+    "1.125rem",
+    "1.25rem",
+    "1.5rem",
+    "2rem",
+    "2.5rem",
+    "3rem",
+    "3.5rem",
+    "4.5rem",
+    "5.5rem",
+    "7.5rem",
+    "9.5rem",
+    "11.5rem"
+   ]
+  },
+  "line_height": {
+   "type": "select",
+   "default": "normal",
+   "options": [
+    "tight",
+    "normal",
+    "loose"
+   ]
+  },
+  "letter_spacing": {
+   "type": "select",
+   "default": "normal",
+   "options": [
+    "tight",
+    "normal",
+    "loose"
+   ]
+  },
+  "case": {
+   "type": "select",
+   "default": "none",
+   "options": [
+    "none",
+    "uppercase"
+   ]
+  },
+  "wrap": {
+   "type": "select",
+   "options": [
+    "pretty",
+    "balance",
+    "nowrap"
+   ]
+  },
+  "text_color": {
+   "type": "color"
+  },
+  "background": {
+   "type": "checkbox",
+   "default": false
+  },
+  "background_color": {
+   "type": "color",
+   "default": "#00000026"
+  },
+  "corner_radius": {
+   "type": "range",
+   "min": 0,
+   "max": 50,
+   "step": 1,
+   "default": 0
+  },
+  "padding-block-start": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-block-end": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-inline-start": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  },
+  "padding-inline-end": {
+   "type": "range",
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "default": 0
+  }
+ }
+}

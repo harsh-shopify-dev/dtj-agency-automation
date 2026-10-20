@@ -11,9 +11,10 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
    - Tier 0 read only: do freely.
    - Tier 1 reversible and low risk (pause an ad set, make a draft): only inside the caps in the runbook, and log it.
    - Tier 2 spends money, changes anything client-visible, or contacts people (publish an ad, change a budget, push or publish a theme, send a message, create a store): **ask Harsh first, every time.** Approval for one action does not cover the next.
-     **Harsh's one standing exception (10 Oct 2026):** a product page that passes every gate may be written to a store's DRAFT
-     (unpublished) theme without asking, through `page_builder.ship_draft` / `push_page` only (they refuse a live theme). This holds
-     for every session and team member. A live theme, publishing a theme, app releases and creating stores or products still need
+     **Harsh's one standing exception (10 Oct 2026; home pages added 13 Oct 2026: "include home pages in the draft rule"):** a
+     product page or a home page that passes every gate may be written to a store's DRAFT (unpublished) theme without asking,
+     through the page builder's draft-write tools only (`page_builder.ship_draft` / `push_page`, and their home-page mode; they
+     refuse a live theme). This holds for every session and team member. A live theme, publishing a theme, app releases and creating stores or products still need
      Harsh's yes every time.
      **Who may say yes (Harsh, 12 Oct 2026: "any of the teammate"):** Harsh; or, when Harsh is not reachable, any DTJ teammate
      (an active person in n8n's `dtj_bot_users`). The rule stays the same: one yes covers one action, given in this session by
@@ -64,7 +65,10 @@ with `python tools/team-setup/check_setup.py`.
 each one while a person is at the laptop): the skill `dtj-factory-setup`.
 **A new shop** (a client's store or one in DTJ's own Shopify organization): the skill `dtj-add-shop`.
 **A brand intake before a redesign** (the client's public pictures, videos, colours and details into DTJ's Google Drive; also
-`/intake` in the bot): the skill `dtj-brand-intake`. The page to share with a
+`/intake` in the bot): the skill `dtj-brand-intake`.
+**A client's home page** (only when someone asks; the person picks the sections to build or update): the skill `dtj-home-page`.
+**A client's collection page** (DTJ Product List on every collection, real ratings only; the write needs a person's yes): the skill
+`dtj-collection-page`. The page to share with a
 new teammate: `docs/START-HERE.md`.
 
 ## `/start-dtj-engine`

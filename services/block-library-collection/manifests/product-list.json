@@ -1,0 +1,766 @@
+{
+  "id": "product-list",
+  "title": "DTJ Product List",
+  "block_file": "extensions/dtj-collection/blocks/dtj-product-list.liquid",
+  "placements": [
+    "collection",
+    "home"
+  ],
+  "licence": true,
+  "slots": [
+    {
+      "id": "heading",
+      "type": "text",
+      "required": false,
+      "max_length": 80
+    },
+    {
+      "id": "view_all_label",
+      "type": "text",
+      "required": false,
+      "max_length": 30
+    }
+  ],
+  "css_includes": [],
+  "script": true,
+  "standard_controls": [
+    "colors"
+  ],
+  "data_needs": [
+    "product.metafields.reviews.rating",
+    "product.metafields.reviews.rating_count"
+  ],
+  "reference_image": "Proeffex product list (section proeffex-producttab-collection.liquid, Dev theme 193583382709 page iconic-cover-concealer): replica, measured 25 Oct 2026",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Leave empty on a collection page: it shows that page's own collection."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Empty = the collection's own title."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_view_all",
+      "label": "Show the View all link",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "view_all_label",
+      "label": "View all link: words",
+      "info": "Example: View all. Empty = View all."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_heading",
+      "label": "Show the heading",
+      "default": true,
+      "info": "Off on a collection page: the page's own title is the heading."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "Show the product count and Sort",
+      "default": false,
+      "info": "For a collection page: the number of products and a Sort menu above the list."
+    },
+    {
+      "type": "select",
+      "id": "layout_type",
+      "label": "Type",
+      "options": [
+        {
+          "value": "grid",
+          "label": "Grid"
+        },
+        {
+          "value": "carousel",
+          "label": "Carousel"
+        },
+        {
+          "value": "editorial",
+          "label": "Editorial"
+        }
+      ],
+      "default": "grid"
+    },
+    {
+      "type": "checkbox",
+      "id": "carousel_on_mobile",
+      "label": "Carousel on mobile",
+      "default": false,
+      "visible_if": "{{ block.settings.layout_type != 'carousel' }}"
+    },
+    {
+      "type": "range",
+      "id": "max_products",
+      "label": "Product count",
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "default": 4,
+      "info": "Up to 50, the most Shopify gives one page of a collection."
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "Columns",
+      "min": 1,
+      "max": 8,
+      "step": 1,
+      "default": 4,
+      "visible_if": "{{ block.settings.layout_type != 'editorial' }}"
+    },
+    {
+      "type": "select",
+      "id": "mobile_columns",
+      "label": "Mobile columns",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ],
+      "default": "2",
+      "visible_if": "{{ block.settings.layout_type == 'grid' and block.settings.carousel_on_mobile == false }}"
+    },
+    {
+      "type": "range",
+      "id": "columns_gap",
+      "label": "Horizontal gap",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "default": 8,
+      "unit": "px",
+      "visible_if": "{{ block.settings.layout_type == 'grid' or block.settings.layout_type == 'carousel' }}"
+    },
+    {
+      "type": "range",
+      "id": "rows_gap",
+      "label": "Vertical gap",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "default": 8,
+      "unit": "px",
+      "visible_if": "{{ block.settings.layout_type == 'grid'}}"
+    },
+    {
+      "type": "header",
+      "content": "Carousel navigation",
+      "visible_if": "{{ block.settings.layout_type == 'carousel' or block.settings.carousel_on_mobile == true }}"
+    },
+    {
+      "type": "select",
+      "id": "icons_style",
+      "label": "Icon",
+      "options": [
+        {
+          "value": "arrow",
+          "label": "Arrows"
+        },
+        {
+          "value": "chevron",
+          "label": "Chevrons"
+        },
+        {
+          "value": "arrows_large",
+          "label": "Large arrows"
+        },
+        {
+          "value": "chevron_large",
+          "label": "Large chevrons"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        }
+      ],
+      "default": "arrow",
+      "visible_if": "{{ block.settings.layout_type == 'carousel' or block.settings.carousel_on_mobile == true }}"
+    },
+    {
+      "type": "select",
+      "id": "icons_shape",
+      "label": "Icon background",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "circle",
+          "label": "Circle"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ],
+      "default": "none",
+      "visible_if": "{{ block.settings.icons_style != 'none' and block.settings.layout_type == 'carousel' or block.settings.carousel_on_mobile == true }}"
+    },
+    {
+      "type": "header",
+      "content": "Section layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "Width",
+      "options": [
+        {
+          "value": "page-width",
+          "label": "Page"
+        },
+        {
+          "value": "full-width",
+          "label": "Full"
+        }
+      ],
+      "default": "page-width"
+    },
+    {
+      "type": "select",
+      "id": "horizontal_alignment",
+      "label": "Alignment",
+      "options": [
+        {
+          "value": "flex-start",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "flex-end",
+          "label": "Right"
+        }
+      ],
+      "default": "flex-start"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Gap",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "default": 12,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "default": 0,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "default": 0,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "Product card style"
+    },
+    {
+      "type": "select",
+      "id": "pf_mobile_layout",
+      "label": "Mobile layout",
+      "options": [
+        {
+          "value": "default",
+          "label": "As set above"
+        },
+        {
+          "value": "grid2",
+          "label": "Stacked, 2 columns"
+        }
+      ],
+      "default": "default",
+      "info": "Stacked, 2 columns shows the cards in a 2-column grid on phones (same as collection pages) instead of a carousel or a single column. Desktop is unchanged."
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_compact_cards",
+      "label": "Compact product cards",
+      "default": true,
+      "info": "Same compact card look as the collection pages. Turn off to keep the theme's default cards."
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_compact_rating",
+      "label": "Compact rating",
+      "default": true,
+      "info": "Shows one star, the rating and the review count (e.g. 4.6 | 252 reviews) instead of five stars."
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_hide_no_reviews",
+      "label": "Hide stars when there are 0 reviews",
+      "default": true,
+      "info": "Some stores hold a placeholder rating with no reviews behind it; it is never shown."
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_card_frame",
+      "label": "Card border and white background",
+      "default": true,
+      "info": "Same card frame as the collection pages.",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "range",
+      "id": "pf_card_padding",
+      "label": "Card padding",
+      "min": 0,
+      "max": 16,
+      "step": 1,
+      "default": 8,
+      "unit": "px",
+      "visible_if": "{{ block.settings.pf_compact_cards and block.settings.pf_card_frame }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_show_tag_badges",
+      "label": "Show New Launches / Best Seller badge",
+      "default": true,
+      "info": "Uses the product's own tags: new and best-seller (whole tags, any capitals).",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "select",
+      "id": "pf_badge_source",
+      "label": "Badge source",
+      "options": [
+        {
+          "value": "tags",
+          "label": "Product tags"
+        },
+        {
+          "value": "sample",
+          "label": "Sample badges (theme editor only)"
+        }
+      ],
+      "default": "tags",
+      "info": "Product tags = what the store's data says. Sample badges are shown only inside the theme editor, so you can see the look; shoppers never see them.",
+      "visible_if": "{{ block.settings.pf_compact_cards and block.settings.pf_show_tag_badges }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_hide_sale_badge",
+      "label": "Hide the Sale pill on the image",
+      "default": true,
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_offer_text",
+      "label": "Show X% OFF instead of SAVE X%",
+      "default": true,
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "select",
+      "id": "pf_image_ratio",
+      "label": "Image shape",
+      "options": [
+        {
+          "value": "1 / 1",
+          "label": "Square"
+        },
+        {
+          "value": "4 / 5",
+          "label": "Portrait (4:5)"
+        },
+        {
+          "value": "3 / 4",
+          "label": "Tall portrait (3:4)"
+        },
+        {
+          "value": "4 / 3",
+          "label": "Landscape (4:3)"
+        }
+      ],
+      "default": "1 / 1",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "select",
+      "id": "pf_image_fit",
+      "label": "Image fit",
+      "options": [
+        {
+          "value": "contain",
+          "label": "Show full image"
+        },
+        {
+          "value": "cover",
+          "label": "Fill and crop"
+        }
+      ],
+      "default": "contain",
+      "info": "Show full image never crops the product. Fill and crop covers the whole area but can cut the edges.",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "range",
+      "id": "pf_title_lines",
+      "label": "Title lines",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 2,
+      "info": "Maximum number of lines for the product name before it is cut with ...",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "range",
+      "id": "pf_button_height",
+      "label": "Add to cart button height",
+      "min": 28,
+      "max": 52,
+      "step": 2,
+      "default": 34,
+      "unit": "px",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "color",
+      "id": "pf_compare_color",
+      "label": "Compare price color",
+      "info": "Leave empty to match the section text (black on light sections, white on dark sections).",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "color",
+      "id": "pf_review_color",
+      "label": "Review count color",
+      "info": "Leave empty to match the section text (black on light sections, white on dark sections).",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "header",
+      "content": "Shade swatches"
+    },
+    {
+      "type": "range",
+      "id": "pf_swatch_size",
+      "label": "Swatch size",
+      "min": 16,
+      "max": 36,
+      "step": 2,
+      "default": 22,
+      "unit": "px",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "range",
+      "id": "pf_swatch_gap",
+      "label": "Space between swatches",
+      "min": 4,
+      "max": 16,
+      "step": 1,
+      "default": 8,
+      "unit": "px",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "select",
+      "id": "pf_swatch_align",
+      "label": "Swatch alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "block",
+          "label": "Use each swatch block's own setting"
+        }
+      ],
+      "default": "left",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "pf_swatch_show_all",
+      "label": "Show all swatches",
+      "default": true,
+      "info": "Shows every shade and wraps them onto extra rows instead of cutting the list with +N.",
+      "visible_if": "{{ block.settings.pf_compact_cards }}"
+    }
+  ],
+  "test": {
+    "sample": {
+      "collection": {
+        "title": "Iconic Cover Concealer",
+        "url": "/collections/iconic",
+        "products": [
+          {
+            "id": 1,
+            "handle": "p1",
+            "title": "Iconic Cover Concealer",
+            "url": "/products/p1",
+            "tags": [
+              "renewal"
+            ],
+            "available": true,
+            "images": [
+              {
+                "id": 501,
+                "src": "img1-1",
+                "width": 800,
+                "height": 800,
+                "alt": ""
+              },
+              {
+                "id": 502,
+                "src": "img1-2",
+                "width": 800,
+                "height": 800,
+                "alt": ""
+              },
+              {
+                "id": 503,
+                "src": "img1-3",
+                "width": 800,
+                "height": 800,
+                "alt": ""
+              }
+            ],
+            "variants": [
+              {
+                "id": 101,
+                "title": "Shade 1",
+                "price": 119900,
+                "compare_at_price": 119900,
+                "available": true,
+                "featured_media": {
+                  "id": 501
+                }
+              },
+              {
+                "id": 102,
+                "title": "Shade 2",
+                "price": 119900,
+                "compare_at_price": 119900,
+                "available": true,
+                "featured_media": {
+                  "id": 502
+                }
+              },
+              {
+                "id": 103,
+                "title": "Shade 3",
+                "price": 89900,
+                "compare_at_price": 119900,
+                "available": false,
+                "featured_media": {
+                  "id": 503
+                }
+              }
+            ],
+            "selected_or_first_available_variant": {
+              "id": 101,
+              "title": "Shade 1",
+              "price": 119900,
+              "compare_at_price": 119900,
+              "available": true,
+              "featured_media": {
+                "id": 501
+              }
+            },
+            "options_with_values": [
+              {
+                "name": "Color",
+                "position": 1,
+                "values": [
+                  {
+                    "name": "Fair",
+                    "id": 901,
+                    "selected": true,
+                    "available": true,
+                    "variant": {
+                      "id": 101,
+                      "title": "Shade 1",
+                      "price": 119900,
+                      "compare_at_price": 119900,
+                      "available": true,
+                      "featured_media": {
+                        "id": 501
+                      }
+                    },
+                    "swatch": {
+                      "color": {
+                        "rgb": "242 230 211"
+                      }
+                    }
+                  },
+                  {
+                    "name": "Ivory",
+                    "id": 902,
+                    "selected": false,
+                    "available": true,
+                    "variant": {
+                      "id": 102,
+                      "title": "Shade 2",
+                      "price": 119900,
+                      "compare_at_price": 119900,
+                      "available": true,
+                      "featured_media": {
+                        "id": 502
+                      }
+                    },
+                    "swatch": {
+                      "color": {
+                        "rgb": "239 217 186"
+                      }
+                    }
+                  },
+                  {
+                    "name": "Tan",
+                    "id": 903,
+                    "selected": false,
+                    "available": false,
+                    "variant": {
+                      "id": 103,
+                      "title": "Shade 3",
+                      "price": 89900,
+                      "compare_at_price": 119900,
+                      "available": false,
+                      "featured_media": {
+                        "id": 503
+                      }
+                    },
+                    "swatch": {
+                      "color": {
+                        "rgb": "148 113 90"
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "metafields": {
+              "reviews": {
+                "rating": {
+                  "value": {
+                    "rating": "4.5",
+                    "scale_max": "5.0"
+                  }
+                },
+                "rating_count": 252
+              }
+            }
+          },
+          {
+            "id": 2,
+            "handle": "p2",
+            "title": "Sale shade set",
+            "url": "/products/p2",
+            "tags": [
+              "New",
+              "best-seller"
+            ],
+            "available": true,
+            "images": [
+              {
+                "id": 501,
+                "src": "img2-1",
+                "width": 800,
+                "height": 800,
+                "alt": ""
+              },
+              {
+                "id": 502,
+                "src": "img2-2",
+                "width": 800,
+                "height": 800,
+                "alt": ""
+              },
+              {
+                "id": 503,
+                "src": "img2-3",
+                "width": 800,
+                "height": 800,
+                "alt": ""
+              }
+            ],
+            "variants": [
+              {
+                "id": 109,
+                "title": "Shade 9",
+                "price": 89900,
+                "compare_at_price": 119900,
+                "available": true,
+                "featured_media": {
+                  "id": 509
+                }
+              }
+            ],
+            "selected_or_first_available_variant": {
+              "id": 109,
+              "title": "Shade 9",
+              "price": 89900,
+              "compare_at_price": 119900,
+              "available": true,
+              "featured_media": {
+                "id": 509
+              }
+            },
+            "options_with_values": [],
+            "metafields": {
+              "reviews": {}
+            }
+          }
+        ]
+      },
+      "heading": "Concealers",
+      "show_view_all": true
+    },
+    "expect": [
+      "Concealers",
+      "Iconic Cover Concealer",
+      "Sale shade set",
+      "pl-card",
+      "Add to cart",
+      "25% OFF",
+      "Best Seller",
+      "pl-swatch",
+      "4.5",
+      "252 reviews",
+      "View all"
+    ]
+  }
+}

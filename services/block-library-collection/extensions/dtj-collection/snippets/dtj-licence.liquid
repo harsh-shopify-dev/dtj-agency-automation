@@ -1,0 +1,17 @@
+{%- comment -%}
+  Licence gate for every DTJ block, used as a WRAPPER:
+    {% render 'dtj-licence', value: app.metafields.dtj.licence.value, content: html, design_mode: request.design_mode, attributes: block.shopify_attributes %}
+  Outputs `content` only when the flag is exactly "active" (case and spaces ignored). Anything else, including a missing flag,
+  outputs nothing on the storefront. In the theme editor it outputs a short notice that says what flag value it saw.
+  Fail closed. The caller never compares this snippet's output: in the theme editor Shopify wraps every snippet's
+  output in <!-- BEGIN app snippet --> comments, which broke an "== 'active'" test on 5 Oct 2026 (the flag itself was fine).
+  Where the flag lives: an app-DATA metafield on the app installation (per store, hidden from the admin), written by
+  tools/licence.py with ownerId = currentAppInstallation.id, namespace "dtj", key "licence".
+  Blocks and sections are not visible inside a snippet, so the caller passes in what is needed (library rule 7).
+{%- endcomment -%}
+{%- assign dtj_flag = value | default: '' | strip | downcase -%}
+{%- if dtj_flag == 'active' -%}
+  {{- content -}}
+{%- elsif design_mode -%}
+  <p style="margin:0;padding:8px 12px;border:1px dashed currentColor;font-size:12px;opacity:.7" {{ attributes }}>DTJ block hidden: the licence is not active (flag seen: {{ value | default: 'not set' | escape }}).</p>
+{%- endif -%}
