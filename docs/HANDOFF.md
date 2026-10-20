@@ -3,6 +3,24 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+**UPDATE 21 Oct 2026 (REEL FACTORY BUILT, branch `feature/reel-factory`): UGC ad reels from n8n, made in the browser (no API, Harsh's decision).**
+- n8n: **Reel Factory: New Reel** (id `dS36LVeRXLuIuajm`, UNPUBLISHED; form "New UGC reel" needs an n8n login; table **dtj_reel_jobs** id
+  `eDnHZuYHvGPggAgX`). Form -> job row -> "Request for Claude Code: Reel" -> Wait (3 days) -> reply -> Record Reel -> Telegram reply
+  (only for jobs that came from Telegram; `/reel` in the bot is NOT built yet). Source + tests: `n8n/reel-factory/`.
+- Worker: `services/reel-factory/` (`python -m reel_factory.job new|refs|lint|character|images|pick|clips|check|edit|result`), runbook =
+  skill `dtj-ugc-reel`. `reply.py` now answers stage "reel"; `listen.py --workflow "Reel Factory: New Reel"` listens for reels.
+- VERIFIED: 16 worker rule tests, 6 n8n node tests, 113 store-factory tests pass; the workflow validated, created and ran end to end (test
+  run 588: row 1 saved, paused at the Claude Code step with a complete task list, the listener saw it, reply.py answered it, the row
+  now says reel ready / 24.22 s / -14 LUFS; nothing sent on Telegram). Offline run of the whole back half on the 16 senso-01
+  takes (check -> LaMa -> pick -> edit -> Remotion captions -> result): `.work/reels/test-senso/final/reel_final.mp4`, 24.6 s, 1080x1920,
+  -14.0 LUFS (24.2 s after the fixes). Watching it found and fixed: duplicate caption words ("10 TEN", "AREY ARRE"), a cut planned past the take's end, a corner
+  check that took wood grain for the sparkle (now raw-vs-clean at the star spots).
+- NOT VERIFIED: `flow.py` and `chatgpt.py` (the browser drivers) have not run against live Flow/ChatGPT; their selectors come from the
+  20-21 Oct hand runs. First live run must be watched by a person (it spends Flow credits: 14 per 4 s x2, 24 per 8 s x2). `setup_vps.sh`
+  has not run on a VPS.
+- OPEN for Harsh: publish the workflow (form production URL); Remotion licence if DTJ is over 3 people (else the libass captions);
+  licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
+
 ## PAGE DESIGN PROGRESS BAR IN TELEGRAM (20 Oct 2026, branch `feature/bot-progress-bar`)
 Harsh: "in the telegram bot also add the progress bar for page designing". A page request from the bot now gets ONE Telegram message
 that the designer's Claude Code session edits at every step (like the brand intake's bar): reading the brief 0-5 %, collecting the

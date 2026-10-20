@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Ignore the output video from Git but not videos you import into src/.
+out
+whisper.cpp
+
+# per-job videos copied in by reel_factory/remotion.py
+public/*.mp4
+public/*.pages.json

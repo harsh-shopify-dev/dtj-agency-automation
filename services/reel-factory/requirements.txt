@@ -1,0 +1,8 @@
+# Python 3.11+. Torch: install the CUDA build that matches the GPU first (https://pytorch.org/get-started/locally/), then:
+numpy
+opencv-contrib-python      # SIFT product tracker, contact sheets, the sparkle shape match
+openai-whisper             # word timings (model "medium"; GPU strongly recommended)
+simple-lama-inpainting     # LaMa (Apache-2.0) for the Flow sparkle; downloads big-lama.pt (~196 MB) on first use
+playwright                 # attaches to the reel Chrome over CDP (no browser download needed: it uses that Chrome)
+demucs                     # optional: music stem of a reference reel (breakdown --music-stem)
+# Also on PATH: ffmpeg + ffprobe (with libass), Node 22+ (captions-remotion: npm ci)
