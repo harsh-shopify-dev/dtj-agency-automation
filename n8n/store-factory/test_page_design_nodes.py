@@ -60,6 +60,25 @@ class Nodes(unittest.TestCase):
         self.assertEqual((up["request"]["upload_assets"], up["request"]["upload_assets_by"]), ("yes", "Riya"))
         self.assertNotIn("token", json.dumps(out["request"]).lower())
 
+    def test_a_request_from_the_bot_gets_a_progress_bar_at_every_step(self):
+        # Harsh, 20 Oct 2026: "in the telegram bot also add the progress bar for page designing"
+        out = self.run_node("request_page_design.js", self.row(telegram_chat_id="5551234"))["out"][0]["json"]
+        text, state = out["instructions"], " --state ../../.work/clients/n8n-12-radiance-serum/progress.json"
+        self.assertEqual(out["request"]["telegram_chat_id"], "5551234")
+        self.assertIn('python -m page_builder.progress page start --chat 5551234 --title "Page design: radiance-serum"' + state, text)
+        for stage in ("brief", "intake", "product", "facts", "check"):
+            self.assertIn(f"python -m page_builder.progress page step --stage {stage}{state}", text)
+        self.assertIn("page step --stage build --done <this round: 1, 2 or 3> --total 3" + state, text)
+        self.assertIn("python -m page_builder.progress page done" + state, text)
+        self.assertIn('page stopped --note "<why, in plain words>"' + state, text)
+        # in the order of the work: start, brief, intake, product, facts, build, check, done (the done line before reply.py)
+        order = [text.index(k) for k in ("page start", "--stage brief", "--stage intake", "--stage product", "--stage facts", "--stage build",
+                                         "--stage check", "progress page done", "reply.py --resume-url")]
+        self.assertEqual(order, sorted(order))
+        form = self.run_node("request_page_design.js", self.row())["out"][0]["json"]  # a brief from the client form: no chat, no bar
+        self.assertNotIn("page_builder.progress", form["instructions"])
+        self.assertEqual(form["request"]["telegram_chat_id"], "")
+
     def test_a_form_brief_uses_the_client_answers_and_its_handle(self):
         res = self.run_node("request_page_design.js", self.row(product_url="", template_suffix="", client_registry="",
                                                                 facts_json=json.dumps({"product": {"handle": "toilova-1"}}),

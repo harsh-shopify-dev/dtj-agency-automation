@@ -23,6 +23,13 @@ const site = row.brand_website || ((String(row.product_url || '').match(/^https?
 const host = String(site).replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/[/?#].*$/, '').toLowerCase();
 const INTAKE = '../../.work/clients/intake-' + host;
 const regArg = registry ? ' --client-registry ' + registry : ' --client-registry <the file in page_builder/clients/ whose "store" is ' + store + '>';
+// the progress bar (Harsh, 20 Oct 2026: "in the telegram bot also add the progress bar for page designing"): a request from the bot
+// carries the requester's chat; the designer's session edits ONE Telegram message at every step (page_builder/progress.py). A brief from
+// the client form has no chat, so these lines are left out.
+const chat = String(row.telegram_chat_id || '').trim();
+const PROG = 'python -m page_builder.progress page ';
+const PSTATE = ' --state ' + C + '/progress.json';
+const prog = (what) => chat ? ['   Progress bar (Telegram; run it from services/store-builder; it never stops the work): ' + PROG + what + PSTATE] : [];
 
 const lines = [
   'DTJ STORE FACTORY - design the WHOLE product page for this brief and write it into the DRAFT theme.',
@@ -46,11 +53,14 @@ const lines = [
   '',
   'DO THIS, IN ORDER',
   '1. Work in the repo D:\\CODE CONTAINERR\\WEB DEV\\dtj-agency-automation. Read CLAUDE.md. Load the skill dtj-pdp-factory (the runbook, phases P0-P9) and follow it; dtj-pdp-design-review is its review gate. Stay on the current git branch; do not commit or push unless Harsh asks.',
+  ...prog('start --chat ' + chat + ' --title "Page design: ' + handle + '"'),
   '2. Brand data first? Read the brief\'s brand_intake NOW (n8n tool get_data_table_rows, table dtj_client_intake, row id ' + row.id + '): '
     + 'the requester answers in Telegram after this request was written.',
+  ...prog('step --stage brief'),
   '   Read its brand_website too: after a Yes the requester sends the brand\'s OWN website (the shop is not always the brand\'s site). '
     + 'When it is set and differs from ' + site + ', collect from it instead, into ../../.work/clients/intake-<its host>.',
   '   - "yes": collect it before anything else (public pages only, a few minutes):',
+  ...prog('step --stage intake'),
   '     cd services/store-builder',
   '     python -m page_builder.brand_intake ' + site + ' --client ' + INTAKE + ' --product "<the product\'s name as its pack says it>"  (add --drive "DTJ Clients" when this laptop has the DTJ_GDRIVE_* keys, so the team gets a copy; --product finds its pictures on any site, also a non-Shopify one)',
   '   - "no": do not collect it again; use an earlier intake in ' + INTAKE + '/intake if there is one.',
@@ -62,18 +72,24 @@ const lines = [
   '     Then use the names in its store-files.json as facts.media[].file (roles such as lifestyle, pack, serve), point story, story_2, final_push and ugc image_role at them, and keep a picture of another pack version out of the buy box.',
   '   - "no" or empty: upload nothing; the store already has its pictures.',
   '3. Read the product as the store shows it and fetch its pictures (read-only):',
+  ...prog('step --stage product'),
   '   cd services/store-builder',
   '   python -m page_builder.fetch_product --store ' + store + ' --handle ' + handle + ' --client ' + C,
   '   It writes store-product.json and saves every picture in media/ under its STORE file name. Use exactly those names in facts.media[].file.',
   '4. Facts and brand (P2): from store-product.json, the brand intake when there is one (' + INTAKE + '/intake: start from BRAND.md, brand.json and brand-intake.json, every fact with its source; its colours, category and price tier are guesses to confirm against the pack and the brand site), the brand\'s own site and what the pictures print, write in ' + C + ': brand.json (with a vibe), facts.json (every fact with a source; fill every gap with modest SAMPLE content whose source starts with "SAMPLE"; never sample medical claims, "clinically proven", competitor names, licences or certifications, prices, discounts or offers), SOURCES.md, content-needed.md. Voice lines per the skill\'s copywriting.md, each marked "DTJ COPY (basis: ...)". If a look reference is named, open its site and measure its colours before choosing yours (design-principles.md 13).',
+  ...prog('step --stage facts'),
   '5. Design-only run (writes run/copy-request.json; touches no store):',
   '   python -m page_builder.ship_draft --client ' + C + ' --design-only --template-suffix ' + suffix + regArg,
   '   Then answer run/copy-request.json into ' + C + '/copy-answer.json (its rules are inside the request).',
   '6. Build, check and write the DRAFT in one command:',
+  ...prog('step --stage build --done <this round: 1, 2 or 3> --total 3'),
   '   python -m page_builder.ship_draft --client ' + C + ' --store ' + store + ' --theme ' + theme + ' --template-suffix ' + suffix + regArg,
   '   Exit 0 = written to the draft. Exit 2 = a gate failed: read "note" in run/ship-result.json, fix brand.json / facts.json (never hand-edit template.json) and run again, at most 3 rounds. Exit 1 = could not build: read run/ship-build-*.log.',
   '7. Check the real page (P9): open preview_url from run/ship-result.json in the browser at 390 px and 1280 px. Every DTJ section shows, pictures load, no sideways scroll. If not, fix and repeat step 6.',
+  ...prog('step --stage check'),
   '8. Answer this n8n run, also when the page could not be written (the brief row then records why):',
+  ...(chat ? ['   Progress bar, FIRST, from services/store-builder (the result message follows it): ' + PROG + 'done' + PSTATE + '   (page not written: ' + PROG
+    + 'stopped --note "<why, in plain words>"' + PSTATE + ')'] : []),
   '   python n8n/store-factory/reply.py --resume-url "' + resumeUrl + '" --body ' + '.work/clients/' + folder + '/run/ship-result.json',
   '   (run it from the repo root; if you stopped before step 6, send a small JSON file instead: {"page_status": "could not build", "note": "<why>"})',
   '9. Add a dated entry to docs/HANDOFF.md (what was built, the preview link, the samples to replace, anything open). Tell Harsh in plain words: the preview link, the SAMPLE list, what needs his action.',
@@ -96,6 +112,7 @@ return [{ json: {
     brand_intake: row.brand_intake || '', intake_folder: INTAKE.replace('../../', ''),
     upload_assets: row.upload_assets || '', upload_assets_by: row.upload_assets_by || '',
     status: row.status, problems: row.problems || '', brand, facts,
+    telegram_chat_id: chat,
     picture_links: parse(row.picture_links_json, []), logo_link: row.logo_link || '',
   },
 } }];

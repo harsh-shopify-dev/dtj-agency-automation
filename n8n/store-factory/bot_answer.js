@@ -11,7 +11,7 @@ const toDesigner = 'New page waiting (brief ' + esc(res.row_id) + ') from ' + es
   + 'Open Claude Code in the dtj-agency-automation folder and type:\nhandle the Claude Code trigger in n8n';
 const askerIsDesigner = (ask.designers || []).includes(ask.requester_id);
 const out = [{ json: { chat_id: ask.chat_id, text: 'Got it: designing ' + esc(what) + ' (brief ' + esc(res.row_id) + ').\n'
-  + (askerIsDesigner ? '\n' + toDesigner : 'A designer will start it on their laptop; I will send you the preview link here when it is ready.') } }];
+  + (askerIsDesigner ? '\n' + toDesigner : 'A designer will start it on their laptop. A progress bar shows up here when they do, and I will send you the preview link here when it is ready.') } }];
 for (const d of ask.designers || []) {
   if (d !== ask.requester_id) out.push({ json: { chat_id: d, text: toDesigner } });
 }
