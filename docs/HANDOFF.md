@@ -9,7 +9,7 @@ Update this file at the end of every working session (Harsh's rule).
   (only for jobs that came from Telegram; `/reel` in the bot is NOT built yet). Source + tests: `n8n/reel-factory/`.
 - Worker: `services/reel-factory/` (`python -m reel_factory.job new|refs|lint|character|images|pick|clips|check|edit|result`), runbook =
   skill `dtj-ugc-reel`. `reply.py` now answers stage "reel"; `listen.py --workflow "Reel Factory: New Reel"` listens for reels.
-- VERIFIED: 16 worker rule tests, 6 n8n node tests, 86 store-factory tests pass; the workflow validated, created and ran end to end (test
+- VERIFIED: 16 worker rule tests, 6 n8n node tests, 113 store-factory tests pass; the workflow validated, created and ran end to end (test
   run 588: row 1 saved, paused at the Claude Code step with a complete task list, the listener saw it, reply.py answered it, the row
   now says reel ready / 24.22 s / -14 LUFS; nothing sent on Telegram). Offline run of the whole back half on the 16 senso-01
   takes (check -> LaMa -> pick -> edit -> Remotion captions -> result): `.work/reels/test-senso/final/reel_final.mp4`, 24.6 s, 1080x1920,
