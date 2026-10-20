@@ -3,6 +3,16 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+**UPDATE 21 Oct 2026 (REEL REALISM, branch `feature/reel-realism`): Harsh asked for Higgsfield-level realism, no AI slop.**
+Measured (reel_factory/realism.py) real phone reels and Harsh's AI winners vs raw Omni Flash takes: our takes are locked off
+(hand wobble 0.20-0.26 px vs 0.73-0.86) and hyper-detailed (sharpness 1,058-1,517 vs 47-614); grain and colour were fine.
+The edit now adds an edge-keeping soften and a slow per-clip hand wobble (senso test: 0.94 px, sharpness 272; looked at side by
+side: not blurry, captions still). `job edit` refuses "reel ready" outside the phone range; lint refuses AI-ad words and clips
+with no phone setup. Rules for start pictures, prompts, emotion and a messy-voice script: skill reference `realism.md`.
+Found: Omni garbles pack fine print ("Seshets", "Not Quantity"): now a required check. Files: Downloads/dtj-ugc-senso-01/final/
+senso-01_v6_phone_look.mp4 (after) and senso-01_v6_before_phone_look.mp4. NOT done: new generations with the new prompt rules
+(needs a live Flow run), voice timbre, a waxy-skin check.
+
 **UPDATE 21 Oct 2026 (REEL FACTORY BUILT, branch `feature/reel-factory`): UGC ad reels from n8n, made in the browser (no API, Harsh's decision).**
 - n8n: **Reel Factory: New Reel** (id `dS36LVeRXLuIuajm`, PUBLISHED 21 Oct 2026 on Harsh's yes; live form
   https://n8n.srv2048145.hstgr.cloud/form/dtj-new-reel, opens only after an n8n login; PR #16 merged; table **dtj_reel_jobs** id
