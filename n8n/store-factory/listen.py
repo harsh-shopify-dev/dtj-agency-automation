@@ -3,8 +3,9 @@
 A designer's Claude Code session starts this in the background. When it exits with a request, Claude handles it (CLAUDE.md,
 "n8n hand-offs": read the run, do its instructions, answer through reply.py) and then starts listening again.
 
-    python n8n/store-factory/listen.py                     check "Store Factory: Page Design" and "Store Factory: Add Shop"
-                                                           every 30 s, for up to 8 hours (Add Shop is skipped if not on n8n)
+    python n8n/store-factory/listen.py                     check "Store Factory: Page Design", "Store Factory: Add Shop" and
+                                                           "Store Factory: New Store" every 30 s, for up to 8 hours (the last
+                                                           two are skipped when not on n8n)
     python n8n/store-factory/listen.py --interval 60 --hours 4
     python n8n/store-factory/listen.py --once              check once: exit 0 = printed one, 3 = nothing new is waiting
     python n8n/store-factory/listen.py --status            how many requests are waiting, and how many of those were offered already
@@ -12,7 +13,7 @@ A designer's Claude Code session starts this in the background. When it exits wi
     python n8n/store-factory/listen.py --workflow "Reel Factory: New Reel"   listen for reel requests instead (on the reel VPS)
 
 On a hit, stdout is ONE line: {"execution_id": "...", "workflow_id": "...", "started_at": "...", "waiting": <new ones still waiting>},
-plus "workflow": "<its name>" when more than one workflow is watched (Add Shop's step is "Request for Claude Code: Add Shop").
+plus "workflow": "<its name>" when more than one workflow is watched (Add Shop's step is "Request for Claude Code: Add Shop", New Store's "Request for Claude Code: New Store").
 The oldest request is offered first and each run only once: offered ids are kept in .work/listen/offered.json (not in git).
 Exit codes: 0 found (or --status / --forget done), 1 bad arguments, 2 n8n failed 3 times in a row or the workflow is missing,
 3 nothing came in.
@@ -35,8 +36,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]  # the repo root (this file is <root>/n8n/store-factory/listen.py)
 OFFERED = ROOT / ".work" / "listen" / "offered.json"
 WORKFLOW = "Store Factory: Page Design"
-ADD_SHOP = "Store Factory: Add Shop"  # /addshop (21 Oct 2026): the same laptop takes both kinds of request, oldest first
-DEFAULT_WORKFLOWS = (WORKFLOW, ADD_SHOP)
+ADD_SHOP = "Store Factory: Add Shop"  # /addshop (21 Oct 2026): the same laptop takes every kind of request, oldest first
+NEW_STORE = "Store Factory: New Store"  # a store link (21 Oct 2026): the whole store
+DEFAULT_WORKFLOWS = (WORKFLOW, ADD_SHOP, NEW_STORE)
 KEEP = 500                # offered ids remembered (oldest dropped first)
 RETRY_DELAYS = (5, 15)    # seconds before the 2nd and the 3rd try; a 3rd failure in a row stops the listener
 
@@ -147,7 +149,7 @@ def listen(call, workflow_id, path: Path, interval: int, hours: float, sleep=tim
 
 
 def kind(name: str) -> str:
-    return {WORKFLOW: "page requests", ADD_SHOP: "add-shop requests"}.get(name, "requests")
+    return {WORKFLOW: "page requests", ADD_SHOP: "add-shop requests", NEW_STORE: "store requests"}.get(name, "requests")
 
 
 def status(call, workflow_id: str, path: Path, sleep=time.sleep, name: str = WORKFLOW) -> str:
@@ -164,7 +166,7 @@ def main(argv=None, *, call=None, sleep=time.sleep, clock=time.monotonic, offere
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--interval", type=int, default=30, help="seconds between checks (at least 10; default 30)")
     ap.add_argument("--hours", type=float, default=8, help="stop after this many hours (at most 12; default 8)")
-    ap.add_argument("--workflow", action="append", help=f'an n8n workflow to watch, repeatable (default "{WORKFLOW}" and "{ADD_SHOP}"; '
+    ap.add_argument("--workflow", action="append", help=f'an n8n workflow to watch, repeatable (default "{WORKFLOW}", "{ADD_SHOP}" and "{NEW_STORE}"; '
                                                         'reels: "Reel Factory: New Reel")')
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="check once: exit 0 = printed one, 3 = nothing waiting")

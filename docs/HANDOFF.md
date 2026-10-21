@@ -22,6 +22,36 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## A WHOLE STORE FROM ONE LINK (21 Oct 2026, branch `feature/store-from-link`, account A)
+Harsh: "i just share the brand store link and it starts designing the store and it asks the specific questions it needs along with
+the app installation". His choices: every part by default; the product-page count asked per store; **Approve taps in Telegram** as
+the yes (now in CLAUDE.md rule 2); **his collaborator login** instead of a Theme Access password.
+- **Flow:** an admin sends the bot a store's own link (no /products/) -> "Start New Store" -> n8n **Store Factory: New Store**
+  (id `nvaph1ZhD1mreJHD`, waits up to 7 days for Claude Code) -> a laptop follows skill `dtj-new-store`:
+  `n8n/store-factory/store_job.py start` reads the store (`page_builder/store_scan.py`: original .myshopify.com address, live theme,
+  products in best-selling order, collections) and asks in Telegram: whose store, the client's name, the theme question when it is
+  not Horizon, what to design, which products (options sized to the store), the offer (typed words only). `draft` = Approve tap, then
+  `shopify theme duplicate` of the live theme as "DTJ Draft <date>" (unpublished, read back). `apps` = Approve tap, then the exact
+  `add_shop.py` command. Then brand intake, header/footer (tap each), home (no tap), collection (tap), product pages (no tap),
+  `finish` -> `reply.py`. A button tap or typed reply goes bot -> "Save the Answer" -> n8n table **dtj_bot_answers**
+  (id `k4r02PeayiGh60gW`) -> the laptop reads it (`bot_ask.py`). Every tap is logged with the person's name.
+- **Store access:** `theme_target.open_access(store)` = the Theme Access password when saved, else the CLI's own login with
+  `SHOPIFY_FLAG_NO_INPUT=1` (a missing login fails at once with what to do). All five page writers use it.
+- **Found while building:** the builder designs on Horizon only (Dawn: product pages only). Gymreapers runs Impact, so for such a
+  store the job asks the person to add Horizon (unpublished) first, or stops.
+- **VERIFIED:** tests: n8n/store-factory 147 OK (store job 16, bot 10 new), page builder 434 OK (9 new), install catcher 32 OK.
+  Read-only on real stores: the CLI login listed elevate's themes with no password; `store_scan` read elevate (13 products,
+  Horizon), Gymreapers (246, Impact) and Pro Effex (18, Horizon; original address 1sq0y0-3c). n8n: New Store created
+  (unpublished), table created, the bot's two new routes added (17 operations), code identical to the repo.
+- **ROLLBACK:** the bot's live version before this: `f66b6537-7710-4d2a-a327-8078df33f140`. New Store is new (unpublish to stop it).
+- **NOT VERIFIED:** a real run end to end; `theme duplicate` on a real store; the CLI login on a store where DTJ is a collaborator
+  (elevate is owned); the answers going through the live bot. The first run should be watched with Harsh at the laptop.
+- **NOT PUBLISHED YET:** after the drafts were written, n8n answered `setup_n8n.py`'s check with HTTP 429 (Too Many Requests) three
+  times in a row, so the check and the publish stopped there (CLAUDE.md self-healing). The live bot still runs `f66b6537`; New Store
+  is unpublished. When n8n answers again: `python n8n/store-factory/setup_n8n.py` (expect only the two publish lines), then
+  `--publish --only "Store Factory: New Store"` and `--publish --only "Store Factory: Telegram Bot"` (Harsh's standing rule).
+- **Open:** Harsh ticked "something else" for the scope without saying what.
+
 ## /addshop: A CLIENT SHOP FROM TELEGRAM IN ONE STEP (21 Oct 2026, branch `feature/addshop`, account A)
 Harsh: "cant we make the installation process a one step process from telegram ... i will provide the shopify domain of the store".
 - **How it works now:** an admin sends the bot `/addshop name.myshopify.com Client Name` (also `admin.shopify.com/store/<name>`).

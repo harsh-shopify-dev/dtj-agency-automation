@@ -60,10 +60,7 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
         chrome = json.loads(chrome_file.read_text(encoding="utf-8")) if chrome_file.exists() else {}
         if args.store:
             if access is None:
-                token = tt.read_token(args.store)
-                if not token:
-                    raise ThemeError(f"no Theme Access password saved as {tt.token_env_name(args.store)}")
-                access = tt.ThemeAccess(args.store, token)
+                access = tt.open_access(args.store)  # the Theme Access password, else the CLI's own (collaborator) login
             stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
             for file in (HEADER_FILE, FOOTER_FILE):
                 checks[file] = tt.check_target(access, args.theme, out / f"backup-{stamp}", file)

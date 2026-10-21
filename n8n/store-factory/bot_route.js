@@ -3,6 +3,8 @@
 // when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).
 // Output: one item with action
 //   addshop -> an admin adds a client shop (Store Factory: Add Shop: the laptop's Claude Code does it)
+//   store  -> an admin's store link (no /products/): the whole store (Store Factory: New Store: questions, apps, every page)
+//   answer -> a tap or typed reply to a store job's question: saved in dtj_bot_answers ("Save the Answer")
 //   design -> start a page (Store Factory: New Page)
 //   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list ("Pick the Shop")
 //   intake -> start a brand intake on GitHub ("Start Brand Intake")
@@ -30,6 +32,14 @@ if (!me) {
 }
 const isAdmin = roleOf(me) === 'admin';
 const myName = me.name || msg.name;
+// an answer to a store job's question or Approve button (21 Oct 2026): saved in dtj_bot_answers ("Save the Answer"), where the
+// laptop's store_job.py reads it. Anyone on the bot (an Approve tap is that person's yes, with their name: CLAUDE.md rule 2).
+if (msg.kind === 'answer') {
+  const value = String(msg.arg || '').trim();
+  if (!value) return reply('I could not read that answer. Tap the button again, or reply to the question with your answer.');
+  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: msg.job, key: msg.key, choice: String(msg.choice || ''), value,
+    by: myName, at: new Date().toISOString() } }];
+}
 // /commands: every command, one line each; the admin ones only for admins (Harsh, 19 Oct 2026: "create a command so it can show
 // all the commands in the bot available"). Keep this list in step with bot_read.js when a command is added.
 if (msg.kind === 'commands') {
@@ -53,7 +63,8 @@ if (msg.kind === 'commands') {
       '/shops: every shop on the switch and whether its DTJ apps are on',
       '/status shop: one shop\'s DTJ apps',
       '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)',
-      '/addshop name.myshopify.com Client Name: add a client shop (the seven DTJ app copies, then seven Install buttons for you)');
+      '/addshop name.myshopify.com Client Name: add a client shop (the seven DTJ app copies, then seven Install buttons for you)',
+      'a store\'s own link (https://brand.com, no /products/): design the whole store; I ask a few questions here first');
   }
   return reply(lines.join('\n'));
 }
@@ -154,6 +165,19 @@ if (msg.kind === 'command' || msg.kind === 'button') {
   }
   if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');
   return [{ json: ask }];
+}
+
+// ---- a store's own link (no /products/ in it): the whole store (21 Oct 2026, Harsh: "i just share the brand store link and it starts
+// designing the store and it asks the specific questions it needs along with the app installation"). Admins only: it makes app copies.
+if (!/\/products\//i.test(msg.product_link)) {
+  if (!isAdmin) {
+    return reply('That is a store\'s own link. For one product page, send a product link (it has /products/ in it). '
+      + 'A whole store is started by an admin.');
+  }
+  const link = msg.product_link.match(/^(?:https?:\/\/)?(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?:[/?#][^\s]*)?$/) ? msg.product_link : '';
+  if (!link) return reply('That does not look like a store\'s address. Send it like this: https://brand.com');
+  return [{ json: { action: 'store', chat_id: msg.chat_id, link: /^https?:\/\//i.test(link) ? link : 'https://' + link,
+    note: msg.note || '', requested_by: myName } }];
 }
 
 // ---- a product link: start a page

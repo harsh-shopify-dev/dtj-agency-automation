@@ -40,6 +40,12 @@ class Check(unittest.TestCase):
             with self.assertRaises(ValueError):
                 reply.check(body)
 
+    def test_a_new_store_answer(self):
+        for status in ("done", "partly done", "could not start"):
+            self.assertEqual(reply.check({"store_status": status, "shop": "royal-dosa.myshopify.com", "pages": []}), "new_store")
+        with self.assertRaises(ValueError):
+            reply.check({"store_status": "finished"})
+
     def test_unknown_or_empty_answers_are_refused(self):
         for body in ({"page_status": "done"}, {}, {"result": "written to draft"}):
             with self.assertRaises(ValueError):

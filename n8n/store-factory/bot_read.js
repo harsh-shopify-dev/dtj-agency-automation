@@ -1,6 +1,7 @@
 // n8n Code node "Read the Message" in "Store Factory: Telegram Bot" (mode: Run Once for All Items).
 // Turns one Telegram update into: who wrote, in which chat, and what they want: help, a page from a product link, an admin command
-// (/shops, /status, /on, /off, /addshop), a brand intake (/intake), /stop (running brand intakes) or a tap on one of the bot's buttons.
+// (/shops, /status, /on, /off, /addshop), a brand intake (/intake), /stop (running brand intakes), a tap on one of the bot's buttons,
+// or an answer to a store job's question (a tap or a typed reply). A store's own link (no /products/ in it) is a whole store (Who Is It).
 const update = $input.first().json || {};
 const esc = (s) => String(s == null ? '' : s);
 const cq = update.callback_query;
@@ -10,6 +11,14 @@ if (cq) {  // a tap on a button the bot sent (the confirm / cancel buttons of /o
   const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';
   const base = { chat_id: esc(chat.id), chat_type: esc(chat.type), user_id: esc(from.id), name, text: '', callback_id: esc(cq.id) };
   if (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];
+  // a store job's question or Approve button (21 Oct 2026, store_job.py / bot_ask.py): "a:<job>:<key>:<n>"; the answer is the
+  // label of the tapped button, read from the message it sits under
+  const ans = esc(cq.data).match(/^a:([a-z0-9][a-z0-9-]{1,23}):([a-z0-9_]{1,20}):(\d{1,2})$/);
+  if (ans) {
+    const keys = [].concat(...(((cq.message || {}).reply_markup || {}).inline_keyboard || []));
+    const tapped = keys.find((k) => k && k.callback_data === cq.data) || {};
+    return [{ json: { ...base, kind: 'answer', job: ans[1], key: ans[2], choice: ans[3], arg: esc(tapped.text).slice(0, 100) } }];
+  }
   return [{ json: { ...base, kind: 'button', data: esc(cq.data).slice(0, 64) } }];
 }
 const msg = update.message || update;
@@ -29,6 +38,11 @@ if (secret) return [{ json: { ...base, kind: 'secret' } }];
 
 // a reply to the bot's "Which website is the brand's own for brief N?" (19 Oct 2026): the brand's website for that brief
 const asked = msg.reply_to_message || {};
+// a typed answer to a store job's question: a reply to it, whose last line is "(job <job>, answer <key>)" (store_job.py)
+const forJob = asked.from && asked.from.is_bot ? String(asked.text || '').match(/\(job ([a-z0-9][a-z0-9-]{1,23}), answer ([a-z0-9_]{1,20})\)\s*$/) : null;
+if (forJob && text && !text.startsWith('/')) {
+  return [{ json: { ...base, kind: 'answer', job: forJob[1], key: forJob[2], choice: '', arg: text.slice(0, 500) } }];
+}
 const forBrief = asked.from && asked.from.is_bot ? String(asked.text || '').match(/brand's own for brief (\d{1,9})\?/) : null;
 if (forBrief && text && !text.startsWith('/')) return [{ json: { ...base, kind: 'site', row_id: Number(forBrief[1]), arg: text.slice(0, 200) } }];
 
