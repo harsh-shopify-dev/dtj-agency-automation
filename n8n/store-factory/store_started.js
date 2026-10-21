@@ -11,8 +11,9 @@ if (started.error) {
 }
 return [{ json: { chat_id: ask.chat_id, text:
   'Got it: the whole store ' + esc(ask.link) + '.\n\n'
-  + 'A DTJ laptop\'s Claude Code reads the store and asks you a few questions here (whose store, what to design, which products, '
-  + 'any offer). Before it makes or writes anything that needs a yes (the draft copy, the app copies, the header and footer, the '
+  + 'A DTJ laptop\'s Claude Code reads the store and asks you a few questions here (the brand\'s own link, whose store, what to '
+  + 'design, which products, any offer). Before it makes or writes anything that needs a yes (the draft copy, copying the brand\'s '
+  + 'products into this store, the app copies, the header and footer, the '
   + 'collection page) it sends an Approve button. Nothing is published.\n\n'
   + 'If no laptop is listening: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n',
 } }];

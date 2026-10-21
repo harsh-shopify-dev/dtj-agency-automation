@@ -22,6 +22,45 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## THE LINK IS THE STORE TO BUILD IN: THE BRAND IS COPIED INTO IT (21 Oct 2026, branch `feature/brand-copy`, account A)
+The first live test of "a whole store from one link" (elevate, run 891) showed the plan was the wrong way round. Harsh: "it didnt
+asked me the brand link it has to create the shopify store of it just fetching the current store products".
+- **His choices:**
+  - the store to build in is whatever store he sends;
+  - copy products with pictures and prices, collections, logo/colours/fonts and the policy pages;
+  - products ACTIVE when the store is behind a password;
+  - **one Approve tap per import** (now in CLAUDE.md rule 2).
+- **Questions now start with "which brand?":** the brand's own Shopify link, or "This store is the brand". Products are offered
+  from the brand's best sellers.
+- **`store_job.py copy`:** a read-only plan (`.work/stores/<job>/copy/plan.json`), then one Approve tap that names the counts and
+  notes, then the apply command.
+- **`services/store-builder/provision/brand_copy.py`** (API 2026-10; the CLI refuses older versions):
+  - it reads the brand's /products.json, collections and policy pages, and the target's handles, currency, empty policies and the
+    Online Store channel;
+  - it creates with `productSet` (all options and variants, pictures keeping the brand's file names, untracked stock), then
+    `collectionCreate` and `publishablePublish`, and `shopPolicyUpdate` only for empty policies;
+  - it never touches an existing handle, and nothing deletes (allowlist in `provision/gql.py` extended with these four);
+  - prices are the brand's numbers (a currency mismatch is noted, never converted);
+  - it resumes from `applied.json`, logs every write with the approver, and stops after 3 failures in a row.
+- **Fixed after the live test:**
+  - `match_products`: an exact name wins, and same-name products take the best seller (PR #24);
+  - every stop is told in Telegram;
+  - an answer counts only when given after its question (the table kept the first run's taps for the same job).
+- **VERIFIED:**
+  - tests: n8n/store-factory 155 OK, page builder 444 OK (brand copy 10, store job 24);
+  - read-only on real stores: Shopify's 2026-10 schema read through the CLI (every input field used exists);
+  - a real plan Pro Effex -> elevate: 17 products (197 pictures, 58 variants), 29 collections, as DRAFT because elevate is open to
+    the public;
+  - policies were left out, because elevate's CLI sign-in lacks `read_legal_policies`.
+- **NOT VERIFIED:**
+  - a real import: `apply` has never run, and auto mode may block `--allow-mutations` (then it is Harsh's PowerShell);
+  - picture file names after the copy matching the brand's;
+  - the product pages read from the brand's store.
+- **Before the first real import, the store's CLI sign-in needs the scopes once:**
+  `shopify store auth -s <store> --scopes read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies`
+- **Open:** the old elevate job state was moved to `.work/stores/elevate-with-harsh.before-brand-copy`; run 891 is continued with
+  the new questions.
+
 ## A WHOLE STORE FROM ONE LINK (21 Oct 2026, branch `feature/store-from-link`, account A)
 Harsh: "i just share the brand store link and it starts designing the store and it asks the specific questions it needs along with
 the app installation". His choices: every part by default; the product-page count asked per store; **Approve taps in Telegram** as
@@ -46,10 +85,8 @@ the yes (now in CLAUDE.md rule 2); **his collaborator login** instead of a Theme
 - **ROLLBACK:** the bot's live version before this: `f66b6537-7710-4d2a-a327-8078df33f140`. New Store is new (unpublish to stop it).
 - **NOT VERIFIED:** a real run end to end; `theme duplicate` on a real store; the CLI login on a store where DTJ is a collaborator
   (elevate is owned); the answers going through the live bot. The first run should be watched with Harsh at the laptop.
-- **NOT PUBLISHED YET:** after the drafts were written, n8n answered `setup_n8n.py`'s check with HTTP 429 (Too Many Requests) three
-  times in a row, so the check and the publish stopped there (CLAUDE.md self-healing). The live bot still runs `f66b6537`; New Store
-  is unpublished. When n8n answers again: `python n8n/store-factory/setup_n8n.py` (expect only the two publish lines), then
-  `--publish --only "Store Factory: New Store"` and `--publish --only "Store Factory: Telegram Bot"` (Harsh's standing rule).
+- **PUBLISHED later on 21 Oct** (after n8n's 429s passed): New Store and the bot, live = draft. Superseded the same day by the entry
+  above (the link is the store to build IN).
 - **Open:** Harsh ticked "something else" for the scope without saying what.
 
 ## /addshop: A CLIENT SHOP FROM TELEGRAM IN ONE STEP (21 Oct 2026, branch `feature/addshop`, account A)

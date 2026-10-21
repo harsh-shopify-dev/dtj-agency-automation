@@ -11,16 +11,29 @@ from __future__ import annotations
 
 import re
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Callable
 
 TABLE = "dtj_bot_answers"
 JOB_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,23}$")
 KEY_RE = re.compile(r"^[a-z0-9_]{1,20}$")
 POLL_SECONDS = 15
+SKEW_SECONDS = 120  # the bot stamps an answer with n8n's clock, the question carries this laptop's: allow them to differ a little
 APPROVE, SKIP = ("Approve", "yes"), ("Skip", "no")
 
 Send = Callable[[str, dict], dict]          # (Telegram method, data) -> the result's "result" ({} when it failed)
 Rows = Callable[[str], list]                # job -> its rows in dtj_bot_answers
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _earlier(stamp: str, seconds: int) -> str:
+    try:
+        return (datetime.strptime(stamp[:19], "%Y-%m-%dT%H:%M:%S") - timedelta(seconds=seconds)).strftime("%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return ""
 
 
 class Asker:
@@ -28,12 +41,12 @@ class Asker:
     so a job that stops and starts again never asks twice and keeps what was answered."""
 
     def __init__(self, job: str, chat: str, *, send: Send, rows: Rows, state: dict, save: Callable[[], None],
-                 sleep=time.sleep, clock=time.monotonic, poll: float = POLL_SECONDS):
+                 sleep=time.sleep, clock=time.monotonic, poll: float = POLL_SECONDS, now: Callable[[], str] = utc_now):
         if not JOB_RE.fullmatch(job):
             raise ValueError(f"job {job!r}: lowercase letters, digits and dashes, at most 24")
         self.job, self.chat = job, str(chat or "")
         self.send, self.rows, self.state, self.save = send, rows, state, save
-        self.sleep, self.clock, self.poll = sleep, clock, poll
+        self.sleep, self.clock, self.poll, self.now = sleep, clock, poll, now
         self.state.setdefault("asked", {})
         self.state.setdefault("answers", {})
 
@@ -53,7 +66,7 @@ class Asker:
             return
         rows = [[{"text": label[:60], "callback_data": f"a:{self.job}:{key}:{i}"}] for i, (label, _v) in enumerate(options)]
         mid = self._message(text, {"inline_keyboard": rows})
-        self.state["asked"][key] = {"options": [list(o) for o in options], "message_id": mid, "typed": False}
+        self.state["asked"][key] = {"options": [list(o) for o in options], "message_id": mid, "typed": False, "at": self.now()}
         self.save()
 
     def ask_text(self, key: str, text: str, placeholder: str = "") -> None:
@@ -64,7 +77,7 @@ class Asker:
             return
         markup = {"force_reply": True, "input_field_placeholder": placeholder[:60]} if placeholder else {"force_reply": True}
         mid = self._message(f"{text}\n\n(job {self.job}, answer {key})", markup)
-        self.state["asked"][key] = {"options": [], "message_id": mid, "typed": True}
+        self.state["asked"][key] = {"options": [], "message_id": mid, "typed": True, "at": self.now()}
         self.save()
 
     def tell(self, text: str) -> None:
@@ -78,7 +91,10 @@ class Asker:
         asked = self.state["asked"].get(key)
         if not asked:
             return None
-        mine = [r for r in self.rows(self.job) if str(r.get("key")) == key and str(r.get("chat_id", "")) == self.chat]
+        # only answers given after the question was sent count: an earlier run for the same store left its taps in the table
+        since = _earlier(asked["at"], SKEW_SECONDS) if asked.get("at") else ""
+        mine = [r for r in self.rows(self.job) if str(r.get("key")) == key and str(r.get("chat_id", "")) == self.chat
+                and str(r.get("at") or "")[:19] >= since]
         if not mine:
             return None
         last = sorted(mine, key=lambda r: (str(r.get("at") or ""), int(r.get("id") or 0)))[-1]

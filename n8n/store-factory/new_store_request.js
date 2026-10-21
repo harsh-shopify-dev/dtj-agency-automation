@@ -19,17 +19,20 @@ const lines = [
   'REQUEST',
   '- Store link: ' + link + (note ? ' | Note from ' + by + ': ' + note : ''),
   '- Asked by: ' + by + ' (an admin on the DTJ bot) | Telegram chat: ' + (chat || '(none: ask the person at this laptop instead)'),
-  '- Every yes comes as an Approve tap in Telegram (Harsh, 21 Oct 2026): one tap for the draft copy, one for the app copies, one '
-    + 'for the header, one for the footer, one for the collection page. Product and home pages go to the draft under Harsh\'s standing '
-    + 'rule. Nothing is published, the live theme is never written, no store or product is created.',
+  '- This link is the store to build IN. The job asks for the brand\'s own link and copies that brand into this store.',
+  '- Every yes comes as an Approve tap in Telegram (Harsh, 21 Oct 2026): one tap for the draft copy, one for the brand copy (its '
+    + 'products, collections and empty policy pages), one for the app copies, one for the header, one for the footer, one for the '
+    + 'collection page. Product and home pages go to the draft under Harsh\'s standing rule. Nothing is published, the live theme is '
+    + 'never written, no store is created, and nothing the store has is changed or deleted.',
   '',
   'DO THIS, IN ORDER (from the repo root, D:\\CODE CONTAINERR\\WEB DEV\\dtj-agency-automation)',
   '1. Read CLAUDE.md and the skill dtj-new-store; follow it step by step. Stay on the current git branch.',
   '2. Start: ' + job + ' start --link ' + q(link) + (chat ? ' --chat ' + chat : '') + ' --by ' + q(by),
   '   It reads the store and asks the questions in Telegram. Its JSON line names the job. Exit 3 = waiting for an answer: run it '
     + 'again (it never asks twice); exit 1 = stopped (it says why).',
-  '3. The skill\'s steps: the draft copy (store_job.py draft), the apps (store_job.py apps, then add_shop.py in the person\'s terminal), '
-    + 'the brand data, then each part chosen, each write after its own Approve tap (store_job.py approve).',
+  '3. The skill\'s steps: the draft copy (store_job.py draft), the brand copy (store_job.py copy, then its apply command), the apps '
+    + '(store_job.py apps, then add_shop.py in the person\'s terminal), the brand data, then each part chosen, each write after its own '
+    + 'Approve tap (store_job.py approve).',
   '4. Answer this n8n run at the end, also when it stopped or is only partly done:',
   '   ' + job + ' finish --job <job> --status "<done | partly done | could not start>" --note "<what is open, in plain words>"',
   '   python n8n/store-factory/reply.py --resume-url "' + resumeUrl + '" --body .work/stores/<job>/answer.json',
