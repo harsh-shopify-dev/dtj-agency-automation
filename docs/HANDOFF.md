@@ -22,6 +22,35 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## MAIN FOLDER SYNCED + HEADER AND FOOTER (21 Oct 2026, branch `feature/header-footer`, account A)
+- **Folder sync:** the main folder was on `feature/proeffex-product-list-block`, 17 commits behind. Every uncommitted file was saved in the
+  LOCAL branch `backup/main-folder-2026-10-21` (1000 files, never pushed; no key found by a pattern scan first), the folder moved to a fresh
+  `feature/header-footer` from `origin/chore/initial-import` (with the reel factory, PR #17), and the other sessions' unfinished work was
+  put back as uncommitted changes (806 new files: SEO, SMM, UGC/video skills...; 12 changed: landing-variants, `.claude/launch.json`,
+  `.claude/settings.json`, `.env.example`, `docs/ACCESS-AND-KEYS.md` (token expiry filled), `docs/DTJ-CONTEXT.md`). Files the latest branch
+  had newer (progress bar, reel factory, `CLAUDE.md`, `listen.py`, `reply.py`) kept the latest. Tests after: store-builder 410, n8n 113,
+  Collection 28 OK. The worktree `D:\CODE CONTAINERR\WEB DEV\dtj-pr-collection` (used for PRs #14/#15) can be removed with `git worktree remove`.
+- **Header and footer (Harsh: "the header and footer will be designed according to the color palette"):** skill `dtj-header-footer`;
+  `page_builder/assemble_chrome.py` + `run_chrome.py` build `sections/header-group.json` and `sections/footer-group.json` FROM the draft's
+  own files (every section / block / id kept): announcement bar on the palette's deep colour with lines from `chrome.json` or the home facts
+  (no line = bar off, never "Welcome to our store"), header on the page colour with a thin border and the cart count in the button colours,
+  footer + bottom strip on the deep colour, sign-up in the button colours, the theme's "exclusive deals" promise replaced, placeholder social
+  links emptied (real ones only, with a source), "Powered by Shopify" off; every setting checked against Horizon 4.2.0 (`base/horizon-chrome-parts.json`),
+  every text pair 4.5:1+. `theme_target.PAGE_FILES` now also allows exactly these two group files (Tier 2: a person's code per file).
+  Study (`references/study.md`, 23 sites, colours read from screenshot pixels): top bar on 17 (13 dark / brand colour, ~41 px), header
+  white on 21, sticky 17, footer dark / brand colour on 15, social links on 21, payment icons on 4.
+- **WRITTEN to elevate draft 188893495469 with Harsh's yes (21 Oct 2026):** header code 4e8f36e361fd (3 marked SAMPLE lines, `--allow-samples`),
+  footer code fd6f01d834b5. Live check (`check_chrome_live.py`, K1-K5) PASS on / and /collections/product-list-block-test, phone + desktop.
+  Harsh also chose to remove the home page's own announcement strip (same lines twice): `ship_home --remove announcement` switched
+  `home_announce` OFF (kept in the file). Harsh will tidy the store's menus himself ("footer-client-services", "footer-company").
+- **Frozen CLI fix:** the footer write's read-back froze (CLI idle 10+ min, as on 20 Oct); the write HAD landed (verified separately,
+  action-log row). `theme_target._run` now stops the whole process tree after a limit (pull 180 s, list 90 s, push 300 s), retries a read
+  once, never repeats a write; `push_page` reads the theme back after a stopped write before reporting. The new global CLI in
+  `%APPDATA%\npm` prints a `<claude-code-hint ...>` line under Claude (seen in its output). Tests: store-builder 425 OK (16 new).
+- **Next (Harsh said yes):** `/addshop <domain>` from Telegram: create the 7 app copies (`shopify app init --name --organization-id
+  --no-input`), deploy, read each secret (`shopify app env show`, checked) and extension uuid (`.shopify/deploy-bundle/manifest.json`
+  "uuid", checked) automatically; the custom-distribution install link (dashboard only) and the 7 Install taps stay with a person.
+
 ## PAGE DESIGN PROGRESS BAR IN TELEGRAM (20 Oct 2026, branch `feature/bot-progress-bar`)
 Harsh: "in the telegram bot also add the progress bar for page designing". A page request from the bot now gets ONE Telegram message
 that the designer's Claude Code session edits at every step (like the brand intake's bar): reading the brief 0-5 %, collecting the

@@ -239,7 +239,8 @@ class RunAndWriteTests(unittest.TestCase):
     def test_the_page_builder_writes_collection_templates_and_nothing_else_new(self):
         for ok in ("templates/collection.json", "templates/collection.sale.json", "templates/index.json", "templates/product.x.json"):
             self.assertTrue(tt.PAGE_FILES.fullmatch(ok), ok)
-        for bad in ("templates/page.json", "templates/collection.json.bak", "sections/header-group.json", "config/settings_data.json"):
+        for bad in ("templates/page.json", "templates/collection.json.bak", "sections/header-group.json.bak", "sections/overlay-group.json",
+                    "config/settings_data.json"):
             self.assertFalse(tt.PAGE_FILES.fullmatch(bad), bad)
 
     def test_learning_the_apps_address_from_a_block_placed_in_the_editor(self):

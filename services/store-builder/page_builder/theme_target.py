@@ -25,7 +25,9 @@ from provision.theme import ThemeError, assert_not_live, cli_exe, outside_git, p
 
 PRODUCT_TEMPLATE = "templates/product.json"
 HOME_TEMPLATE = "templates/index.json"  # the home page (Harsh, 13 Oct 2026: home pages follow the same draft rule)
-PAGE_FILES = re.compile(r"templates/((product|collection)(\.[a-z0-9-]+)?|index)\.json")  # the only files the page builder ever writes
+# the only files the page builder ever writes: page templates, and the header and footer groups (21 Oct 2026, run_chrome; on every page,
+# so always a person's yes)
+PAGE_FILES = re.compile(r"templates/((product|collection)(\.[a-z0-9-]+)?|index)\.json|sections/(header|footer)-group\.json")
 SCHEMA_FILE = "config/settings_schema.json"
 SUPPORTED_THEMES = ("Horizon", "Dawn")  # the layouts assemble.py knows (Dawn added 9 Oct 2026)
 THEME_DIRS = ("assets", "blocks", "config", "layout", "locales", "sections", "snippets", "templates")
@@ -61,11 +63,43 @@ def read_token(store: str, environ: Mapping[str, str] | None = None, registry: b
     return value or None
 
 
-def _run(cmd: Sequence[str], env: Mapping[str, str]) -> "subprocess.CompletedProcess[str]":
+# The CLI sometimes freezes (20 and 21 Oct 2026: a theme pull sat idle for 10+ minutes, no CPU, no child, while the same pull a minute
+# later took 10 s). subprocess.run's own timeout cannot end it on Windows: it kills the cmd.exe shim, the node process under it keeps the
+# pipes open and Python waits forever. So each call gets a limit, the WHOLE process tree is stopped when it passes, and a read is tried
+# once more. A write is never repeated here: push_page reads the theme back to see whether a stopped write landed.
+LIMITS = {"pull": 180, "list": 90, "push": 300}
+
+
+def _kill_tree(pid: int) -> None:
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True, check=False)
+    else:  # pragma: no cover - the team's laptops are Windows
+        try:
+            os.killpg(os.getpgid(pid), 9)
+        except OSError:
+            pass
+
+
+def _run(cmd: Sequence[str], env: Mapping[str, str], popen=subprocess.Popen) -> "subprocess.CompletedProcess[str]":
     cmd, cwd, extra = outside_git(cmd)  # absolute --path, no git project in sight: the CLI's "uncommitted changes, proceed?" never comes
     exe = cli_exe(cmd[0])  # the .cmd shim on PATH, or the CLI inside the Claude app's own npm folder; a list and shell=False: no shell parsing
-    return subprocess.run([exe, *cmd[1:]], capture_output=True, text=True, encoding="utf-8", errors="replace", env={**env, **extra},
-                          stdin=subprocess.DEVNULL, timeout=600, check=False, cwd=cwd)
+    kind = next((k for k in LIMITS if k in cmd[1:3]), "")
+    limit = LIMITS.get(kind, 600)
+    tries = 2 if kind in ("pull", "list") else 1
+    for attempt in range(1, tries + 1):
+        p = popen([exe, *cmd[1:]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True, encoding="utf-8",
+                  errors="replace", env={**env, **extra}, cwd=cwd)
+        try:
+            out, err = p.communicate(timeout=limit)
+            return subprocess.CompletedProcess([exe, *cmd[1:]], p.returncode, out, err)
+        except subprocess.TimeoutExpired:
+            _kill_tree(p.pid)
+            try:
+                p.communicate(timeout=15)
+            except subprocess.TimeoutExpired:
+                pass
+    raise ThemeError(f"shopify {kind or ' '.join(cmd[1:3])} did not answer within {limit} s"
+                     + (f" ({tries} tries); it was stopped" if tries > 1 else "; it was stopped (a write may still have landed: read the theme back)"))
 
 
 def sha256(data: bytes) -> str:
@@ -117,7 +151,8 @@ class ThemeAccess:
     def push_product_template(self, theme_id: str, staging: Path, file: str = PRODUCT_TEMPLATE) -> dict:
         """Write ONE page template (a product template or the home page) into the theme; nothing else, nothing deleted, never published."""
         if not PAGE_FILES.fullmatch(file):
-            raise ThemeError(f"{file!r} is not a page template the page builder writes (a product or collection template, or templates/index.json)")
+            raise ThemeError(f"{file!r} is not a file the page builder writes (a product or collection template, templates/index.json, "
+                             "or the header / footer group)")
         cmd = push_files_cmd(self.store, str(staging), str(theme_id), [file]) + ["--json"]
         assert "--allow-live" not in cmd and "--publish" not in cmd and "--live" not in cmd
         return parse_pushed_theme(self._cli(cmd))

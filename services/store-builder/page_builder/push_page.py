@@ -84,9 +84,16 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
         if approval.get("base_sha256") and check["current_product_template_sha256"] != approval["base_sha256"]:
             return refuse(f"{file} changed in the theme since this update was prepared; run it again so the change is kept")
         staging = tt.stage(out / "template.json", out / "_push", file)
-        theme = access.push_product_template(approval["theme_id"], staging, file)
+        push_error = None
+        try:
+            theme = access.push_product_template(approval["theme_id"], staging, file)
+        except ThemeError as exc:  # stopped or refused: the read-back below decides whether it landed (21 Oct 2026: a stopped write had)
+            push_error = str(exc)
+            theme = {"role": check["role"], "name": check["theme_name"]}
         after = access.pull(approval["theme_id"], [file], out / f"after-{stamp}")
         landed = (after / file).exists() and tt.same_template(body, (after / file).read_text(encoding="utf-8"))
+        if push_error and not landed:
+            raise ThemeError(push_error)
     except ThemeError as exc:
         log.record(tier=2, mode="approve", target=target, action=f"write {file} to draft theme", reason="approved page",
                    result="failed", error=str(exc), approved_by=args.approved_by, approved_at=now.isoformat(),
