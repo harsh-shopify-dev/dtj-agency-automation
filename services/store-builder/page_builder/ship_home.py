@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None, *, design=run_home.main, push=push_page.
     ap.add_argument("--list", action="store_true", help="show the plan for this brand (must / needs facts / add / skip) and stop")
     ap.add_argument("--sections", help="auto (the plan) or the sections by name, e.g. hero,best-sellers (or all)")
     ap.add_argument("--fresh", action="store_true", help="the home page becomes ONLY the chosen sections (the current page is backed up first)")
+    ap.add_argument("--remove", help="sections to switch OFF on the page as it is (names as for --sections; kept in the file)")
     ap.add_argument("--store", help="the store's ORIGINAL .myshopify.com address")
     ap.add_argument("--theme", help="the DRAFT theme's id")
     ap.add_argument("--client-registry", help="the client's app copies (page_builder/clients/<store>.json)")
@@ -65,10 +66,10 @@ def main(argv: list[str] | None = None, *, design=run_home.main, push=push_page.
         build += ["--client-registry", args.client_registry]
     if args.list:
         return design(build + ["--list"])
-    if not args.sections:
+    if not args.sections and not args.remove:
         ap.error("say which sections to build or update with --sections auto (the plan) or their names (see --list): a home page changes "
                  "only where you say")
-    build += ["--sections", args.sections] + (["--fresh"] if args.fresh else [])
+    build += (["--sections", args.sections] if args.sections else []) + (["--fresh"] if args.fresh else []) + (["--remove", args.remove] if args.remove else [])
     if not args.design_only:
         if not (args.store and args.theme):
             ap.error("--store and --theme are needed to write the draft (or use --design-only)")
@@ -103,7 +104,9 @@ def main(argv: list[str] | None = None, *, design=run_home.main, push=push_page.
                   changes=approval["changes"], lint_errors=len(lint), build_problems=len(report.get("problems", [])), samples=approval["samples"])
     result["summary"] = (f"{len(approval['sections'])} section(s) ({', '.join(approval['sections'])}), "
                          f"{sum(1 for c in approval['changes'] if c['change'] == 'replaced')} replaced, "
-                         f"{sum(1 for c in approval['changes'] if c['change'] == 'added')} added, lint errors {len(lint)}, {result['samples']} samples"
+                         f"{sum(1 for c in approval['changes'] if c['change'] == 'added')} added, "
+                         f"{sum(1 for c in approval['changes'] if c['change'] == 'switched off')} switched off, lint errors {len(lint)}, "
+                         f"{result['samples']} samples"
                          + (f"; not built: {', '.join(s['option'] for s in result['not_built'])}" if result["not_built"] else "")
                          + (f"; the plan needs facts for: {', '.join(g['option'] for g in gaps)}" if gaps else ""))
     if code != 0:

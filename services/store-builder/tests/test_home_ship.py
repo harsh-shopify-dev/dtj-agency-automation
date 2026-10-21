@@ -125,6 +125,20 @@ class StoreRunTests(Workspace):
         self.assertEqual(merged["order"], ["home_hero", "home_bestsellers", "custom_banner"])
         self.assertEqual(fake.pushed, [])  # run_home never writes
 
+    def test_a_section_is_switched_off_where_it_stands_and_kept_in_the_file(self):
+        # Harsh, 21 Oct 2026: the theme's announcement bar now carries the lines on every page, so the home page's own strip goes
+        page = {"sections": {**copy.deepcopy(CURRENT["sections"]), "home_announce": {"type": "_blocks", "blocks": {}, "settings": {}}},
+                "order": ["home_announce"] + CURRENT["order"]}
+        fake = FakeTheme(index=page)
+        code, text = self.run_home("--remove", "announcement", "--store", STORE, "--theme", THEME, access=fake)
+        self.assertEqual(code, 0, text)
+        merged = json.loads((self.out / "template.json").read_text(encoding="utf-8"))
+        self.assertTrue(merged["sections"]["home_announce"]["disabled"])
+        self.assertEqual(merged["order"], page["order"])  # nothing moved, nothing deleted
+        self.assertEqual(merged["sections"]["home_hero"], CURRENT["sections"]["home_hero"])  # every other section exactly as it was
+        self.assertEqual(json.loads((self.out / "approval.json").read_text(encoding="utf-8"))["changes"],
+                         [{"section": "home_announce", "change": "switched off"}])
+
     def test_a_fresh_page_holds_only_the_chosen_sections_and_the_old_page_is_backed_up(self):
         fake = FakeTheme()
         code, text = self.run_home("--sections", "hero,faq", "--fresh", "--store", STORE, "--theme", THEME, access=fake)
@@ -198,7 +212,8 @@ class WriteTests(Workspace):
         access = tt.ThemeAccess(STORE, "shptka_test", runner=fake_cli)
         for ok in ("templates/index.json", "templates/product.json", "templates/product.dtj-x.json"):
             access.push_product_template(THEME, self.tmp, ok)
-        for bad in ("templates/page.json", "sections/header-group.json", "layout/theme.liquid", "templates/index.alt.json"):
+        # the header and footer groups joined on 21 Oct 2026 (run_chrome, a person's yes every time); every other section file stays out
+        for bad in ("templates/page.json", "sections/main-product.json", "sections/header.liquid", "layout/theme.liquid", "templates/index.alt.json"):
             with self.assertRaises(ThemeError, msg=bad):
                 access.push_product_template(THEME, self.tmp, bad)
 

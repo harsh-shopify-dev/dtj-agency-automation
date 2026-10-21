@@ -68,8 +68,9 @@ each one while a person is at the laptop): the skill `dtj-factory-setup`.
 `/intake` in the bot): the skill `dtj-brand-intake`.
 **A client's home page** (only when someone asks; the person picks the sections to build or update): the skill `dtj-home-page`.
 **A client's collection page** (DTJ Product List on every collection, real ratings only; the write needs a person's yes): the skill
-`dtj-collection-page`. The page to share with a
-new teammate: `docs/START-HERE.md`.
+`dtj-collection-page`.
+**A client's header and footer** (the announcement bar, header and footer on every page, from the brand's palette; the write needs a
+person's yes): the skill `dtj-header-footer`. The page to share with a new teammate: `docs/START-HERE.md`.
 **A UGC ad reel** (a product + winning reels -> a finished 9:16 reel, made in ChatGPT and Google Flow in the reel VPS's browser,
 no API; n8n **Reel Factory: New Reel**, step "Request for Claude Code: Reel"): the skill `dtj-ugc-reel`. Nothing is posted.
 

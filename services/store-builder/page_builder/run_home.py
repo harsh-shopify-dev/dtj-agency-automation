@@ -56,6 +56,8 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
     ap.add_argument("--fresh", action="store_true",
                     help="the home page becomes ONLY the chosen sections (plus the theme's own product row where the recipe puts it); the "
                          "current page is backed up first. Without it the chosen sections are added to or replaced in the page as it is")
+    ap.add_argument("--remove", help="sections to switch OFF on the page as it is, by name as for --sections (kept in the file: undo = switch "
+                                     "it on in the editor). Harsh, 21 Oct 2026: the theme's announcement bar replaced the home page's own strip")
     ap.add_argument("--store", help="the store's ORIGINAL .myshopify.com address (read-only check and merge)")
     ap.add_argument("--theme", help="the DRAFT theme's id")
     ap.add_argument("--client-registry", help="a client's own app copies (handles and extension ids); without it the page uses DTJ's original apps")
@@ -72,12 +74,14 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
             return 0
         if bool(args.store) != bool(args.theme):
             raise InputError("--store and --theme go together")
-        if args.store and not args.sections:
+        if args.store and not args.sections and not args.remove:
             raise InputError("say which sections to build or update with --sections auto (the plan) or their names (see --list): a home page "
                              "changes only where you say")
         planned = home_plan.chosen(rows)
-        auto = not args.sections or args.sections.strip().lower() == "auto"
-        chosen = planned if auto else assemble_home.pick(args.sections)
+        removing = assemble_home.pick(args.remove) if args.remove else []
+        auto = not args.sections and not removing or (args.sections or "").strip().lower() == "auto"
+        chosen = planned if auto else (assemble_home.pick(args.sections) if args.sections else [])
+        chosen = [b for b in chosen if b not in removing]
         # the page as it will really be, so bands and the wave fit it: fresh = only the chosen sections; an update = the plan's page plus them
         result = build_home(brand, facts, only=set(chosen) if args.fresh else set(planned) | set(chosen))
         rep = result.report
@@ -102,7 +106,9 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
     (out / "templates").mkdir(parents=True, exist_ok=True)
     for s in skipped:
         print(f"  not built {s['option']:13} {s['reason']}")
-    if not chosen_ids:
+    remove_ids = {s["kind"]: s["id"] for s in full.report["sections_built"]}
+    remove_ids = [remove_ids[b] for b in removing if b in remove_ids]
+    if not chosen_ids and not remove_ids:
         print("could not build the home page: none of the chosen sections has its facts (see --list)", file=sys.stderr)
         (out / "home-report.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         return 1
@@ -124,6 +130,10 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
                 current = templates.load(Path(check["backup"]).read_text(encoding="utf-8"))[1]
             base_sha = check["current_product_template_sha256"]
             final, changes = assemble_home.merge(current, template, chosen_ids)
+            for sid in remove_ids:  # switched off, kept in the file
+                if sid in final.get("sections", {}) and not final["sections"][sid].get("disabled"):
+                    final["sections"][sid]["disabled"] = True
+                    changes.append({"section": sid, "change": "switched off"})
         except ThemeError as exc:
             print(f"could not check the theme: {exc}", file=sys.stderr)
             return 1
