@@ -116,9 +116,10 @@ first" if the n8n token was new in S2.
 
 ## Listen
 
-A small watcher, `n8n/store-factory/listen.py`, runs in the background and wakes this session when a page request is waiting in n8n.
-A waiting request is a "Store Factory: Page Design" run paused at "Wait for Claude Code: Page Design". This session designs the page
-exactly as CLAUDE.md's "n8n hand-offs" section says, answers n8n, and goes back to waiting.
+A small watcher, `n8n/store-factory/listen.py`, runs in the background and wakes this session when a request is waiting in n8n:
+a "Store Factory: Page Design" run paused at "Wait for Claude Code: Page Design", or (since 21 Oct 2026) a "Store Factory: Add Shop"
+run paused at "Wait for Claude Code: Add Shop" (an admin's `/addshop`). This session does it exactly as CLAUDE.md's "n8n hand-offs"
+section says, answers n8n, and goes back to waiting.
 
 **Only while a person is at this laptop.** Harsh's rule is that Claude Code answers the factory's AI steps only while a human is in
 the loop. Unattended running must use the Claude API with an API key (CLAUDE.md rule 9). So the watcher stops itself after 8 hours
@@ -130,10 +131,13 @@ L2. **Start.** Run `python n8n/store-factory/listen.py --hours 8` with the Bash 
     one line: "Listening for page requests until <time>. Keep this window open; only this laptop should listen."
 L3. **When it exits:**
     - **Exit 0 with one JSON line** (`execution_id`, ...): handle that run.
-      1. `get_workflow_execution` with that id, `includeData: true` and `nodeNames: ["Request for Claude Code: Page Design"]`.
-      2. Do everything in its `instructions`, in order; they call the factory skills and `ship_draft`.
+      1. `get_workflow_execution` with that id, `includeData: true` and `nodeNames: ["Request for Claude Code: Page Design"]`; when
+         the line says `"workflow": "Store Factory: Add Shop"`, the node is "Request for Claude Code: Add Shop".
+      2. Do everything in its `instructions`, in order; they call the factory skills and `ship_draft` (a page), or add_shop.py and
+         the skill dtj-add-shop (a shop).
       3. Answer through `n8n/store-factory/reply.py` exactly as the instructions say.
-      4. Tell the person in three lines: the shop, the product, and the result (preview link, checks, samples).
+      4. Tell the person in three lines: the shop, the product, and the result (preview link, checks, samples); for a shop: how many
+         of the 7 apps are installed and what is still open.
       5. Go back to L2, unless the person has said stop.
     - **Exit 1:** wrong arguments; fix the command.
     - **Exit 2:** n8n could not be reached 3 times in a row. Say what failed and stop. This follows CLAUDE.md's self-healing rule:
@@ -147,4 +151,6 @@ L5. **"stop listening":** stop the background watcher (TaskStop) and confirm. Re
     until someone listens again or says "handle the Claude Code trigger in n8n".
 
 Never do these in listen mode: publish anything, deploy, switch a shop's apps, touch a live theme, or message people on Telegram
-yourself (n8n does that). Handle one request at a time.
+yourself (n8n does that). The one exception is an Add Shop request: the admin's `/addshop` is the yes for exactly what its
+instructions list (add_shop.py's app releases, the install service deploy, its progress bar and Install buttons in that chat).
+Handle one request at a time.

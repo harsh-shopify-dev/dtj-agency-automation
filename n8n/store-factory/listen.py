@@ -1,16 +1,18 @@
-"""Listen for the Telegram call: wait until a NEW page request is waiting for Claude Code, print it as one JSON line and exit.
+"""Listen for the Telegram call: wait until a NEW page or add-shop request is waiting for Claude Code, print it as one JSON line and exit.
 
 A designer's Claude Code session starts this in the background. When it exits with a request, Claude handles it (CLAUDE.md,
 "n8n hand-offs": read the run, do its instructions, answer through reply.py) and then starts listening again.
 
-    python n8n/store-factory/listen.py                     check "Store Factory: Page Design" every 30 s, for up to 8 hours
+    python n8n/store-factory/listen.py                     check "Store Factory: Page Design" and "Store Factory: Add Shop"
+                                                           every 30 s, for up to 8 hours (Add Shop is skipped if not on n8n)
     python n8n/store-factory/listen.py --interval 60 --hours 4
     python n8n/store-factory/listen.py --once              check once: exit 0 = printed one, 3 = nothing new is waiting
     python n8n/store-factory/listen.py --status            how many requests are waiting, and how many of those were offered already
     python n8n/store-factory/listen.py --forget 345        offer run 345 again (for a request that failed)
     python n8n/store-factory/listen.py --workflow "Reel Factory: New Reel"   listen for reel requests instead (on the reel VPS)
 
-On a hit, stdout is ONE line: {"execution_id": "...", "workflow_id": "...", "started_at": "...", "waiting": <new ones still waiting>}.
+On a hit, stdout is ONE line: {"execution_id": "...", "workflow_id": "...", "started_at": "...", "waiting": <new ones still waiting>},
+plus "workflow": "<its name>" when more than one workflow is watched (Add Shop's step is "Request for Claude Code: Add Shop").
 The oldest request is offered first and each run only once: offered ids are kept in .work/listen/offered.json (not in git).
 Exit codes: 0 found (or --status / --forget done), 1 bad arguments, 2 n8n failed 3 times in a row or the workflow is missing,
 3 nothing came in.
@@ -33,6 +35,8 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]  # the repo root (this file is <root>/n8n/store-factory/listen.py)
 OFFERED = ROOT / ".work" / "listen" / "offered.json"
 WORKFLOW = "Store Factory: Page Design"
+ADD_SHOP = "Store Factory: Add Shop"  # /addshop (21 Oct 2026): the same laptop takes both kinds of request, oldest first
+DEFAULT_WORKFLOWS = (WORKFLOW, ADD_SHOP)
 KEEP = 500                # offered ids remembered (oldest dropped first)
 RETRY_DELAYS = (5, 15)    # seconds before the 2nd and the 3rd try; a 3rd failure in a row stops the listener
 
@@ -111,21 +115,30 @@ def pick(runs: list[dict], offered: list[str]) -> tuple[dict | None, int]:
     return (fresh[0], len(fresh) - 1) if fresh else (None, 0)
 
 
-def offer_next(call, workflow_id: str, path: Path, sleep=time.sleep) -> dict | None:
-    runs = with_retry(lambda: waiting(call, workflow_id), sleep)
+def offer_next(call, workflow_id, path: Path, sleep=time.sleep, names: dict | None = None) -> dict | None:
+    """workflow_id: one id or several (Page Design and Add Shop): their waiting runs together, the oldest first."""
+    ids = [workflow_id] if isinstance(workflow_id, str) else list(workflow_id)
+    runs = []
+    for wid in ids:
+        runs += [dict(r, _workflow=wid) for r in with_retry(lambda wid=wid: waiting(call, wid), sleep)]
+    runs.sort(key=lambda r: (r.get("startedAt") or "", len(str(r["id"])), str(r["id"])))
     offered = load_offered(path)
     hit, left = pick(runs, offered)
     if hit is None:
         return None
     save_offered(path, offered + [str(hit["id"])])  # recorded before it is printed: never offered twice
-    return {"execution_id": str(hit["id"]), "workflow_id": workflow_id, "started_at": hit.get("startedAt"), "waiting": left}
+    out = {"execution_id": str(hit["id"]), "workflow_id": hit["_workflow"], "started_at": hit.get("startedAt"), "waiting": left}
+    if names and len(ids) > 1:
+        out["workflow"] = names.get(hit["_workflow"], "")
+    return out
 
 
-def listen(call, workflow_id: str, path: Path, interval: int, hours: float, sleep=time.sleep, clock=time.monotonic) -> dict | None:
+def listen(call, workflow_id, path: Path, interval: int, hours: float, sleep=time.sleep, clock=time.monotonic,
+           names: dict | None = None) -> dict | None:
     """Check every `interval` seconds until a new request waits (returned) or `hours` have passed (None)."""
     end = clock() + hours * 3600
     while True:
-        hit = offer_next(call, workflow_id, path, sleep)
+        hit = offer_next(call, workflow_id, path, sleep, names)
         if hit:
             return hit
         if clock() + interval > end:
@@ -134,7 +147,7 @@ def listen(call, workflow_id: str, path: Path, interval: int, hours: float, slee
 
 
 def kind(name: str) -> str:
-    return "page requests" if name == WORKFLOW else "requests"
+    return {WORKFLOW: "page requests", ADD_SHOP: "add-shop requests"}.get(name, "requests")
 
 
 def status(call, workflow_id: str, path: Path, sleep=time.sleep, name: str = WORKFLOW) -> str:
@@ -151,7 +164,8 @@ def main(argv=None, *, call=None, sleep=time.sleep, clock=time.monotonic, offere
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--interval", type=int, default=30, help="seconds between checks (at least 10; default 30)")
     ap.add_argument("--hours", type=float, default=8, help="stop after this many hours (at most 12; default 8)")
-    ap.add_argument("--workflow", default=WORKFLOW, help=f'the n8n workflow to watch (default "{WORKFLOW}"; reels: "Reel Factory: New Reel")')
+    ap.add_argument("--workflow", action="append", help=f'an n8n workflow to watch, repeatable (default "{WORKFLOW}" and "{ADD_SHOP}"; '
+                                                        'reels: "Reel Factory: New Reel")')
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="check once: exit 0 = printed one, 3 = nothing waiting")
     mode.add_argument("--status", action="store_true", help="how many are waiting and how many of those were offered")
@@ -182,16 +196,26 @@ def main(argv=None, *, call=None, sleep=time.sleep, clock=time.monotonic, offere
         if secrets is None:
             from setup_n8n import _live_secrets as secrets
     try:
-        workflow_id = with_retry(lambda: find_workflow(call, args.workflow), sleep)
+        wanted = args.workflow or list(DEFAULT_WORKFLOWS)
+        names = {}
+        for name in wanted:
+            try:
+                names[with_retry(lambda name=name: find_workflow(call, name), sleep)] = name
+            except NotFound:
+                if args.workflow or name == WORKFLOW:  # asked for by name, or the page workflow itself: a real problem
+                    raise
+                print(f'note: "{name}" is not on n8n yet, so only the other requests are watched', file=sys.stderr)
+        ids = list(names)
         if args.status:
-            print(status(call, workflow_id, offered_path, sleep, args.workflow))
+            for wid, name in names.items():
+                print(status(call, wid, offered_path, sleep, name))
             return 0
         if args.once:
-            hit = offer_next(call, workflow_id, offered_path, sleep)
+            hit = offer_next(call, ids, offered_path, sleep, names)
         else:
-            print(f"Listening for {kind(args.workflow)} ({args.workflow}) every {args.interval} s, up to {args.hours:g} h. "
-                  "Only one laptop should listen at a time.", file=sys.stderr, flush=True)
-            hit = listen(call, workflow_id, offered_path, args.interval, args.hours, sleep, clock)
+            print(f"Listening for {', '.join(kind(n) + ' (' + n + ')' for n in names.values())} every {args.interval} s, up to "
+                  f"{args.hours:g} h. Only one laptop should listen at a time.", file=sys.stderr, flush=True)
+            hit = listen(call, ids, offered_path, args.interval, args.hours, sleep, clock, names)
     except NotFound as exc:
         print(f"Stopped: {exc}", file=sys.stderr)
         return 2

@@ -176,8 +176,10 @@ class PageProgress:
     """The page-design bar. Each command is its own process, so the message id, the chat and the start time live in a state file
     (no secret in it: the token comes from DTJ_TELEGRAM_BOT_TOKEN only)."""
 
-    def __init__(self, state: str | os.PathLike, token: str | None = None, post: Post = _post, clock: Callable[[], float] = time.time):
+    def __init__(self, state: str | os.PathLike, token: str | None = None, post: Post = _post, clock: Callable[[], float] = time.time,
+                 stages: dict | None = None, units: dict | None = None):
         self.path, self.post, self.clock = os.fspath(state), post, clock
+        self.stages, self.units = stages or PAGE_STAGES, units if units is not None else ROUND_UNITS  # another job (add_shop) brings its own steps
         self.token = token if token is not None else os.environ.get("DTJ_TELEGRAM_BOT_TOKEN", "")
         try:
             with open(self.path, encoding="utf-8") as fh:
@@ -222,14 +224,14 @@ class PageProgress:
         return "progress bar: started" if sent.get("message_id") else "progress bar: Telegram did not take the message (the design goes on)"
 
     def step(self, stage: str, done: int = 0, total: int = 0) -> str:
-        if stage not in PAGE_STAGES:
-            return f"progress bar: unknown step {stage!r}; use one of {', '.join(PAGE_STAGES)}"
+        if stage not in self.stages:
+            return f"progress bar: unknown step {stage!r}; use one of {', '.join(self.stages)}"
         if not self.s.get("message_id"):
             return "progress bar: off"
-        label, lo, hi = PAGE_STAGES[stage]
+        label, lo, hi = self.stages[stage]
         share = min(1.0, done / total) if total else 0.0
         percent = int(lo + (hi - lo) * share)
-        unit = ROUND_UNITS.get(stage)
+        unit = self.units.get(stage)
         line = f"{label}: {unit} {done} of {total}" if unit and total else label
         self._edit(f"{self.s['title']}\n{bar(percent)}\n{line}\nTime so far: {self._time()}")
         return f"progress bar: {percent}%"

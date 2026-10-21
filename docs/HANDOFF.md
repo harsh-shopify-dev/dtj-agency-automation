@@ -22,6 +22,40 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## /addshop: A CLIENT SHOP FROM TELEGRAM IN ONE STEP (21 Oct 2026, branch `feature/addshop`, account A)
+Harsh: "cant we make the installation process a one step process from telegram ... i will provide the shopify domain of the store".
+- **How it works now:** an admin sends the bot `/addshop name.myshopify.com Client Name` (also `admin.shopify.com/store/<name>`).
+  The bot starts n8n **Store Factory: Add Shop** (id `W7Aiz9aup2OfAkmR`) without waiting and answers "Got it". That workflow pauses
+  at "Wait for Claude Code: Add Shop" (3 days). A DTJ laptop's Claude Code picks it up (`listen.py` now watches Page Design AND Add
+  Shop by default, oldest first; the reel VPS keeps `--workflow "Reel Factory: New Reel"`) and runs, in the person's terminal:
+  `python services/install-catcher/tools/add_shop.py --shop <x>.myshopify.com --label "<Name>" --chat <id> --approved-by "<who> (Telegram /addshop)"`.
+  It creates the 7 app copies in DTJ's organization 141167028 (Blocks, Sections, Sections 2, Heroes, Commerce, Shop, Collection),
+  writes + links their files (`add_client.py`, now 7 parts), moves each client secret into the Windows user variable
+  `DTJ_SECRET_<CLIENT>_<PART>` (never printed), releases them, deploys the install service, and runs a progress bar in the chat.
+  Then the ONE manual step: each copy's install link is made only in the Dev Dashboard (Distribution, Custom distribution, Generate
+  link; no API, no CLI), recorded with `--link <part>=<url>` (refused unless the link carries that copy's client id). The next run
+  sends 7 Install buttons for the STORE OWNER (the skill's 9 Oct finding: a collaborator login gets "installation link is invalid"),
+  waits up to 30 min reporting each install, fills `page_builder/clients/<client>.json` (`client_registry.py`) and adds a dtj_stores
+  row (active only with `--theme`). Every run writes `.work/add-shop/<client>.answer.json`; `reply.py` (new stage `add_shop`, "done"
+  needs installed = 7) answers n8n, which tells the admin. A rerun continues where it stopped; app files already in the repo are
+  reused, so a second laptop never makes duplicate apps.
+- **Code:** `services/install-catcher/tools/add_shop.py` (+ `test/test_add_shop.py`, 10 tests), `add_client.py`, `client_registry.py`,
+  `src/worker.js` (7 parts); n8n `add_shop_request.js`, `add_shop_reply.js`, `add_shop_notify.js`, `add_shop_started.js`,
+  `deploy_add_shop.py`, `add_shop.workflow.json`; `bot_read.js` / `bot_route.js` (`/addshop`, admins only, on `/commands`);
+  `deploy_telegram_bot.py` (`addshop_ops`: 8th "What to Do" rule -> "Start Add Shop" -> "Add Shop Started" -> Send);
+  `setup_n8n.py` (Add Shop in the workflow list, before the bot); skills `dtj-add-shop` ("One command: add_shop.py") and
+  `dtj-factory-setup` (listen handles Add Shop requests); `CLAUDE.md` n8n hand-offs line.
+- **VERIFIED:** tests: install catcher Python 32 OK + worker JS 15 OK; n8n/store-factory 123 OK. n8n: the Add Shop workflow validated
+  and created (unpublished), the bot's /addshop branch added (11 operations); `setup_n8n.py` check: every code node equals the repo,
+  credentials attached; only "Add Shop not published" and "bot draft ahead of live" left (published after the merge, see below).
+- **ROLLBACK:** the bot's live version before /addshop: `3909c9d4-36ec-4e98-a2f7-d8b587aa1c23` (n8n workflow history > restore).
+  Add Shop is new (unpublish it to switch it off).
+- **NOT VERIFIED:** a real `/addshop` on a client store end to end (the CLI steps `app init --organization-id --no-input`, `env show`,
+  `config link`, `deploy` were each checked by hand on 21 Oct, never chained on a client); making the install links in the Dev
+  Dashboard from the built-in browser; the store owner's taps. The first real run should be watched, with Harsh at the laptop.
+- **Open:** after the 7 installs, the shop still needs its draft theme id in dtj_stores and the Theme Access password (dtj-add-shop
+  "Both paths"); the 7 new `shopify.app.<client>.toml` files and `wrangler.toml` must be committed on a branch.
+
 ## MAIN FOLDER SYNCED + HEADER AND FOOTER (21 Oct 2026, branch `feature/header-footer`, account A)
 - **Folder sync:** the main folder was on `feature/proeffex-product-list-block`, 17 commits behind. Every uncommitted file was saved in the
   LOCAL branch `backup/main-folder-2026-10-21` (1000 files, never pushed; no key found by a pattern scan first), the folder moved to a fresh

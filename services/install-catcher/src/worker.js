@@ -11,7 +11,8 @@
 //
 // Configuration (wrangler.toml / Cloudflare dashboard):
 //   vars.APPS           JSON {"<app key>": {"client_id": "...", "shop": "<store>.myshopify.com", "label": "DTJ Blocks - X"}}   (not secret)
-//                       a DTJ app on an organization store adds "grant": "org", "org_app": "dtj-blocks" (dtj-sections, dtj-sections2)
+//                       a DTJ app on an organization store adds "grant": "org", "org_app": "dtj-blocks" (dtj-sections, dtj-sections2,
+//                       dtj-heroes, dtj-commerce, dtj-shop, dtj-collection)
 //   secret SECRET_<APP KEY IN CAPITALS>   each app copy's client secret (app key: letters, digits, dashes -> underscores)
 //   secret ORG_SECRET_<ORG APP>           the client secret of DTJ's original app (ORG_SECRET_DTJ_BLOCKS ...), shared by its org stores
 //   secret VAULT_KEY    32 random bytes, base64: encrypts the stored tokens (AES-GCM) and signs the OAuth state
@@ -91,7 +92,7 @@ export function listShops(env) {
   const shops = new Map();
   for (const app of Object.keys(apps(env)).sort()) {
     const cfg = apps(env)[app];
-    const m = app.match(/^(.+)-(blocks|sections|sections2)$/);
+    const m = app.match(/^(.+)-(blocks|sections|sections2|heroes|commerce|shop|collection)$/);  // seven apps since 21 Oct 2026
     const client = m ? m[1] : app;
     if (!shops.has(client)) {
       const name = String(cfg.label || "").split(" - ").slice(1).join(" - ").trim() || client;
