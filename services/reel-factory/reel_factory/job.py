@@ -94,6 +94,11 @@ def check_request(req: dict) -> list[str]:
     return bad
 
 
+def animation(script: dict) -> bool:
+    """A 3D-character reel (Blue Tea's ingredient characters): no phone camera, so no phone-setup words, wobble or realism gate."""
+    return script.get("style") == "animation"
+
+
 def lint_script(script: dict, facts: str) -> list[str]:
     """Rules from book-01 and senso-01: real numbers only, lines Omni can say in the clip, one product state per clip."""
     from .checks import claims_in
@@ -124,7 +129,7 @@ def lint_script(script: dict, facts: str) -> list[str]:
             slop = [w for w in SLOP_WORDS if w in str(s.get(field, "")).lower()]
             if slop:
                 bad.append(f"{sid}: {field} uses AI-ad words {slop}: describe a real phone video instead")
-        if not CAMERA_WORDS.search(str(s.get("video_prompt", ""))):
+        if not animation(script) and not CAMERA_WORDS.search(str(s.get("video_prompt", ""))):
             bad.append(f"{sid}: video_prompt must say how the phone films it (handheld selfie, propped phone, a friend holding it)")
         if s.get("product") and not re.search(r"\b(same|steady|keeps?|holds?|still)\b", s.get("video_prompt", ""), re.I):
             bad.append(f"{sid}: a product shot's video prompt must say how the product stays (e.g. 'holds the same box steady, "
@@ -407,7 +412,8 @@ def stage_edit(job: Job) -> int:
         sp = (heard[0][1], heard[-1][2]) if heard else None
         start = p.get("start", max(0.0, sp[0] - 0.25) if sp else 0.0)
         end = p.get("end", min(dur, sp[1] + 0.35) if sp else dur)
-        place = caption_place(p["take"], tracker if s.get("product") else None)
+        # "caption": "top" | "bottom" in the script overrides the tracker (it cannot find a 3D-rendered box on an animated reel)
+        place = s.get("caption") or caption_place(p["take"], tracker if s.get("product") else None)
         plan_clips.append({"file": p["take"], "start": round(start, 2), "end": round(min(end, dur), 2), "max_end": round(dur, 3),
                            "cap_margin": -1 if s.get("no_captions") else (TOP_MARK if place == "top" else BOTTOM_MARK)})
         speech.append(sp); heard_by_shot.append(heard)
@@ -421,9 +427,10 @@ def stage_edit(job: Job) -> int:
         if i % 2 == 1 and len([w for w in heard_by_shot[i] if w[1] >= c["start"]]) >= 4:
             c["punch"] = beats.punch_window(heard_by_shot[i], c["start"], c["end"])
     plan = {"clips": plan_clips, "music": music, "music_db": script.get("music_db", -13), "language": script.get("language", "en"),
-            "script": " ".join(s["line"] for s in script["shots"]), "keywords": script.get("keywords", []),
+            "script": " ".join(s["line"] for s in script["shots"]), "lines": [s["line"] for s in script["shots"]],
+            "keywords": script.get("keywords", []),
             "phrases": script.get("phrases", [req["product_name"]]), "spelling": script.get("spelling", {}),
-            "out_dir": str(job.path("final")), "name": "reel"}
+            "out_dir": str(job.path("final")), "name": "reel", "phone_look": not animation(script)}
     _save(job.path("final", "edit-plan.json"), plan)
     out = render(plan)
     final = str(job.path("final", "reel_final.mp4"))
@@ -446,7 +453,7 @@ def stage_edit(job: Job) -> int:
     from .realism import measure
     real = measure(out["nocap"])
     off = {k: real[k] for k, (lo, hi) in REAL_RANGES.items() if real.get(k) is None or not lo <= real[k] <= hi}
-    if off:
+    if off and not animation(script):
         note.append(f"does not read as phone footage: {off} (phone range {REAL_RANGES})")
         marks.append("realism")
     shots_ok = all(picks[s["id"]].get("by_hand") or

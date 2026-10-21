@@ -71,6 +71,38 @@ def align_to_script(words: list[Word], script: str, lookahead: int = 4) -> list[
     return aligned
 
 
+DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+
+
+def retime_script(words: list[Word], lines: list[str], spans: list[tuple[float, float]]) -> list[Word]:
+    """Roman-script lines (Hinglish written in English letters) under speech Whisper wrote in Devanagari: the words never match
+    letter by letter, so each line's words take the timing of the same share of the speech heard inside its clip
+    (senso-02, 21 Oct 2026: captions came out as Whisper's Devanagari spelling)."""
+    out: list[Word] = []
+    for line, (t0, t1) in zip(lines, spans):
+        toks = line.split()
+        heard = [w for w in words if t0 <= (w[1] + w[2]) / 2 < t1]
+        if not toks:
+            continue
+        if not heard:
+            step = (t1 - t0) / len(toks)
+            out += [(t, t0 + i * step, t0 + (i + 1) * step) for i, t in enumerate(toks)]
+            continue
+
+        def at(x: float) -> float:
+            k = min(int(x), len(heard) - 1)
+            a, b = heard[k][1], heard[k][2]
+            return a + (min(x, len(heard)) - k) * (b - a)
+        r = len(heard) / len(toks)
+        out += [(t, at(i * r), at((i + 1) * r)) for i, t in enumerate(toks)]
+    return out
+
+
+def needs_retime(words: list[Word], script: str) -> bool:
+    heard = " ".join(w for w, _, _ in words)
+    return bool(script) and not DEVANAGARI.search(script) and len(DEVANAGARI.findall(heard)) > len(heard) // 3
+
+
 @dataclass
 class ClipSpan:
     start: float        # where the clip starts in the joined reel (s)

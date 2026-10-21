@@ -71,8 +71,13 @@ def render(plan: dict) -> dict:
     dur = duration(joined)
 
     heard = words(joined, plan.get("language", "en"), prompt=" ".join(plan.get("phrases", [])) or None)
-    w = cap.align_to_script(cap.apply_spelling(heard, plan.get("spelling", {})), plan.get("script", ""))
-    pages = cap.build_pages(w, cap.clip_spans(plan["clips"]), dur, plan.get("keywords", []), plan.get("phrases", []))
+    spans = cap.clip_spans(plan["clips"])
+    if plan.get("lines") and cap.needs_retime(heard, plan.get("script", "")):
+        starts = [s.start for s in spans] + [dur]
+        w = cap.retime_script(heard, plan["lines"], list(zip(starts, starts[1:])))
+    else:
+        w = cap.align_to_script(cap.apply_spelling(heard, plan.get("spelling", {})), plan.get("script", ""))
+    pages = cap.build_pages(w, spans, dur, plan.get("keywords", []), plan.get("phrases", []))
     pages_path = os.path.join(out_dir, f"{name}_pages.json")
     with open(pages_path, "w", encoding="utf-8") as f:
         json.dump(pages, f, indent=1, ensure_ascii=False)

@@ -45,5 +45,18 @@ class Features(unittest.TestCase):
         self.assertGreater(f["you_per_100w"], 0)
 
 
+class RomanCaptions(unittest.TestCase):
+    def test_roman_line_takes_devanagari_timing(self):
+        from reel_factory.captions import needs_retime, retime_script
+        heard = [("मैं", 0.2, 0.4), ("हलदी", 0.4, 0.8), ("हूं", 0.8, 1.0), ("तो", 5.0, 5.2), ("सुनो", 5.2, 5.6)]
+        lines = ["Main haldi hoon", "Toh suno"]
+        self.assertTrue(needs_retime(heard, " ".join(lines)))
+        out = retime_script(heard, lines, [(0.0, 4.0), (4.0, 8.0)])
+        self.assertEqual([w for w, _, _ in out], ["Main", "haldi", "hoon", "Toh", "suno"])
+        self.assertAlmostEqual(out[1][1], 0.4)
+        self.assertAlmostEqual(out[3][1], 5.0)
+        self.assertFalse(needs_retime([("hello", 0, 1)], "hello"))
+
+
 if __name__ == "__main__":
     unittest.main()
