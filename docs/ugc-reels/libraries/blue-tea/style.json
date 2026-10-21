@@ -1,0 +1,61 @@
+{
+ "reels": 25,
+ "speaking_reels": 20,
+ "ranges": {
+  "first_word_s": {
+   "p20": 0.0,
+   "median": 0.0,
+   "p80": 0.0
+  },
+  "words_first_3s": {
+   "p20": 8.0,
+   "median": 9.5,
+   "p80": 11.0
+  },
+  "words_per_s": {
+   "p20": 1.71,
+   "median": 2.77,
+   "p80": 3.47
+  },
+  "sentence_words": {
+   "p20": 9.98,
+   "median": 16.6,
+   "p80": 42.8
+  },
+  "questions_per_30s": {
+   "p20": 0.15,
+   "median": 0.94,
+   "p80": 1.64
+  },
+  "you_per_100w": {
+   "p20": 0.46,
+   "median": 4.1,
+   "p80": 6.88
+  },
+  "fillers_per_100w": {
+   "p20": 0.0,
+   "median": 0.0,
+   "p80": 0.0
+  },
+  "hindi_share": {
+   "p20": 0.84,
+   "median": 0.99,
+   "p80": 1.0
+  },
+  "pauses_per_30s": {
+   "p20": 0.12,
+   "median": 0.95,
+   "p80": 2.43
+  },
+  "cuts_per_10s": {
+   "p20": 1.38,
+   "median": 2.45,
+   "p80": 5.78
+  },
+  "duration_s": {
+   "p20": 28.58,
+   "median": 36.2,
+   "p80": 51.02
+  }
+ }
+}
