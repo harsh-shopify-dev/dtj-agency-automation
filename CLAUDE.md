@@ -72,6 +72,8 @@ each one while a person is at the laptop): the skill `dtj-factory-setup`.
 new teammate: `docs/START-HERE.md`.
 **A UGC ad reel** (a product + winning reels -> a finished 9:16 reel, made in ChatGPT and Google Flow in the reel VPS's browser,
 no API; n8n **Reel Factory: New Reel**, step "Request for Claude Code: Reel"): the skill `dtj-ugc-reel`. Nothing is posted.
+**Ads for the book "We Are There For Each Other"** (WATFEO; scripts, prompts or a full reel; n8n **WATFEO Ads: New Ad**, step
+"Request for Claude Code: WATFEO Ad"): the skill `watfeo-ugc-ads` (the whole book, the angle bank and every past script inside).
 
 ## `/start-dtj-engine`
 When Harsh types this: confirm you have read `CLAUDE.md` and `RUNBOOK.md`; list which MCP servers and tools are actually connected (do not guess); state the current mode of each automation (shadow, approve or auto) from the config; then wait for the first instruction. If something needed is not connected, tell Harsh what and why, and do not proceed with it.

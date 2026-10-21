@@ -1,0 +1,20 @@
+{
+ "dtj_watfeo_ads": {"columns": [
+  {"name": "submitted_at", "type": "string"},
+  {"name": "status", "type": "string"},
+  {"name": "kind", "type": "string"},
+  {"name": "language", "type": "string"},
+  {"name": "angle_asked", "type": "number"},
+  {"name": "count", "type": "number"},
+  {"name": "reference", "type": "string"},
+  {"name": "notes", "type": "string"},
+  {"name": "requested_by", "type": "string"},
+  {"name": "telegram_chat_id", "type": "string"},
+  {"name": "raw_json", "type": "string"},
+  {"name": "ad_status", "type": "string"},
+  {"name": "final_path", "type": "string"},
+  {"name": "angle_used", "type": "number"},
+  {"name": "ad_note", "type": "string"},
+  {"name": "ad_updated_at", "type": "string"}
+ ]}
+}

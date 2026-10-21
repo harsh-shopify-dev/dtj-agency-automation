@@ -46,8 +46,13 @@ def check(body: dict) -> str:
                     raise ValueError(f"a page that is {body[key]} needs its 12-character approve_code from the build")
                 if stage == "page_design" and body[key] == "written to draft" and not PREVIEW.match(str(body.get("preview_url", ""))):
                     raise ValueError("a page written to the draft needs its preview_url (https://<store>.myshopify.com/...preview_theme_id=...)")
-                if stage == "reel" and body[key] == "reel ready" and not str(body.get("final_path", "")).lower().endswith(".mp4"):
-                    raise ValueError("a reel that is ready needs its final_path (the .mp4 on the reel VPS)")
+                if stage == "reel" and body[key] == "reel ready":
+                    # WATFEO writing jobs ("kind": scripts / prompts) deliver a saved .md; reels deliver the final .mp4
+                    want = (".md", ".json", ".txt") if body.get("kind") in ("scripts", "prompts") else (".mp4",)
+                    if not str(body.get("final_path", "")).lower().endswith(want):
+                        raise ValueError(f"a finished {body.get('kind') or 'reel'} needs its final_path (a {' / '.join(want)} file)")
+                if stage == "reel" and "angle" in body and not (isinstance(body["angle"], int) and 1 <= body["angle"] <= 58):
+                    raise ValueError("angle must be the angle-bank number, 1-58")
                 if stage == "write_to_draft" and body[key] == "written to draft" and not body.get("approved_by"):
                     raise ValueError("a write to the draft theme needs approved_by (who said yes)")
                 return stage

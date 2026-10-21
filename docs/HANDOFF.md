@@ -3,6 +3,23 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+**UPDATE 21 Oct 2026 (WATFEO AD FACTORY, branch `feature/watfeo-ad-factory`): a dedicated automation for ONE product, the book
+"We Are There For Each Other".** Harsh asked for a separate workflow and a portable skill built from his script chat.
+- Skill `watfeo-ugc-ads` (.claude/skills/): the whole manuscript (cleaned, searchable), the 58-angle bank + a ledger, every past
+  script and opener, Harsh's 16 house rules with reasons, a 10-persona creator bank (real faces, from his 7 references), prompt
+  templates, production steps, and scripts: book_search, lint_script (refuses invented names/numbers, stale openers, no CTA,
+  "link in bio", the reserved scene, AI-ad words, multi-setup), angles, phone_look (measures first), realism.
+  Installable file: `.work/watfeo-ugc-ads.skill` (main checkout). Source of the script chat: Claude Code session 9589b6f2 in
+  project "we-are-there-for-each-other" (22 Sep) + Downloads/SV/ads; book text from the desktop app's "Film trailer planning" task.
+- Tested with skill-creator: 2 requests x (with / without skill): 100 % vs 61.5 % of the house-rule checks. Fixes from the test:
+  the ledger was missing #52 and #56 (two runs both picked #14), Hinglish words were flagged as names, "not symmetrical" was
+  flagged. Review page: `.work/watfeo-skill-review.html` (main checkout).
+- n8n: **WATFEO Ads: New Ad** (id `Z9HP8BX82CbAhpPV`, UNPUBLISHED; form: full reel / scripts / prompts, language, count, angle;
+  table **dtj_watfeo_ads** `ZysESPWCLVTcNa30` = the team's shared record of angles used). Live test run 603: saved, paused with a
+  complete task, listener saw it, answered as a test (no angle used). reply.py now takes "kind" (writing jobs end in a .md).
+- book-02 (angle #56 "which friend are you", persona C2) is scripted and lint-clean; not generated: the browser pane was signed
+  out of Google Flow and ChatGPT. OPEN: sign in, then make book-02; publish the WATFEO workflow if Harsh wants the form link.
+
 **UPDATE 21 Oct 2026 (REEL FACTORY BUILT, branch `feature/reel-factory`): UGC ad reels from n8n, made in the browser (no API, Harsh's decision).**
 - n8n: **Reel Factory: New Reel** (id `dS36LVeRXLuIuajm`, PUBLISHED 21 Oct 2026 on Harsh's yes; live form
   https://n8n.srv2048145.hstgr.cloud/form/dtj-new-reel, opens only after an n8n login; PR #16 merged; table **dtj_reel_jobs** id

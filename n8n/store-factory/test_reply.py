@@ -31,6 +31,13 @@ class Check(unittest.TestCase):
             with self.assertRaises(ValueError):
                 reply.check(body)
 
+    def test_a_watfeo_writing_job_delivers_a_text_file_and_a_real_angle(self):
+        self.assertEqual(reply.check({"reel_status": "reel ready", "kind": "scripts", "final_path": "D:/w/scripts.md", "angle": 13}), "reel")
+        for body in ({"reel_status": "reel ready", "kind": "scripts", "final_path": "D:/w/x.mp4"},
+                     {"reel_status": "reel ready", "kind": "reel", "final_path": "D:/w/x.mp4", "angle": 99}):
+            with self.assertRaises(ValueError):
+                reply.check(body)
+
     def test_unknown_or_empty_answers_are_refused(self):
         for body in ({"page_status": "done"}, {}, {"result": "written to draft"}):
             with self.assertRaises(ValueError):
