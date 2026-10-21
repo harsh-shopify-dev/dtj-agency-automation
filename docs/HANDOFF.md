@@ -53,12 +53,19 @@ So the copy no longer uses the laptop's CLI sign-in (a short-lived token that ne
   - n8n: Brand Copy created (unpublished, both credentials attached, the loop wiring read back); the bot's draft got the trigger
     (5 operations).
 - **ROLLBACK:** the bot's live version before this: `2ca24237-c6c7-463e-ab96-924109237e8a`.
-- **WAITING FOR HARSH'S YES** (Tier 2, one each):
-  1. `store_builder.py create --approved-by "<name>"` (make + release the app);
-  2. deploy the install service with `/copy` (`tools/deploy.py`).
+- **DONE with Harsh's two yeses** (chat, 21 Oct 2026: "yes, create Store Builder — yes, deploy"):
+  1. **DTJ Store Builder** was created and released in DTJ's organization (client id `5704872b2f8cb791487ab19c51530cca`, config
+     `services/store-builder-app/shopify.app.toml`, secret in the Windows variable only).
+  2. **The install service was deployed** (`/health` 200, 9 apps).
 
-  Then he installs Store Builder once on his new dev store (Dev Dashboard), and the test continues in Telegram.
-- **NOT VERIFIED:** any real copy; the install service's `/copy` on Cloudflare; Store Builder's install on a dev store; whether
+  Live read-only checks:
+  - `/copy` status of an unknown job gives 404 "no copy plan";
+  - `/copy` target on elevate gives "not installed", which is Shopify's own answer to Store Builder's key request, so that path is
+    wired.
+
+  Next: Harsh installs Store Builder once on his new dev store (Dev Dashboard > Apps > DTJ Store Builder > Install app), then sends
+  the dev store's link to the bot.
+- **NOT VERIFIED:** any real copy; Store Builder's install on a dev store; whether
   the client credentials grant gives a key with the app's permissions.
 
 ## THE LINK IS THE STORE TO BUILD IN: THE BRAND IS COPIED INTO IT (21 Oct 2026, branch `feature/brand-copy`, account A)
