@@ -70,9 +70,13 @@ def theme_support(schema: str | None) -> str:
     return {"horizon": "horizon", "dawn": "dawn"}.get(str(schema or "").strip().lower(), "none")
 
 
-def match_products(lines: list[str], sellers: list[dict]) -> tuple[list[dict], list[str]]:
-    """Typed product links or names -> the store's products (by the handle in a link, else a name that contains the words)."""
-    picked, unknown = [], []
+def match_products(lines: list[str], sellers: list[dict]) -> tuple[list[dict], list[str], list[str]]:
+    """Typed product links or names -> (the store's products, lines left out with why, notes on what was chosen). A link counts by its
+    handle; a name that is exactly a product's title wins over names that only contain the words (21 Oct 2026, first live run:
+    "TOILOVA" on a store that also has three "TOILOVA (Copy)" products); several products with that exact title: the best seller
+    (`sellers` is in the store's best-selling order), and the note says which."""
+    norm = lambda s: re.sub(r"\s+", " ", str(s)).strip().lower()  # noqa: E731
+    picked, left, notes = [], [], []
     for line in (ln.strip() for ln in lines):
         if not line:
             continue
@@ -80,15 +84,25 @@ def match_products(lines: list[str], sellers: list[dict]) -> tuple[list[dict], l
         hit = None
         if m:
             hit = next((p for p in sellers if p["handle"] == m.group(1).lower()), None)
+            if not hit:
+                left.append(f"{line[:80]}: not a product of this store")
         else:
+            exact = [p for p in sellers if norm(p["title"]) == norm(line)]
             words = [w for w in re.findall(r"[a-z0-9]+", line.lower()) if len(w) > 1]
-            hits = [p for p in sellers if words and all(w in p["title"].lower() for w in words)]
-            hit = hits[0] if len(hits) == 1 else None
+            loose = [p for p in sellers if words and all(w in p["title"].lower() for w in words)]
+            if exact:
+                hit = exact[0]
+                if len(exact) > 1:
+                    notes.append(f"{len(exact)} products are called \"{hit['title']}\": took the best seller, {hit['url']}")
+            elif len(loose) == 1:
+                hit = loose[0]
+            elif loose:
+                left.append(f"{line[:80]}: matches {len(loose)} products ({', '.join(p['title'] for p in loose[:4])}): send its link")
+            else:
+                left.append(f"{line[:80]}: not found in the store")
         if hit and hit not in picked:
             picked.append(hit)
-        elif not hit:
-            unknown.append(line[:80])
-    return picked, unknown
+    return picked, left, notes
 
 
 class Job:
@@ -205,9 +219,11 @@ class Job:
                                 minutes, "https://brand.com/products/...")
                 if not got:
                     return WAITING
-                picked, unknown = match_products(got["value"].splitlines(), sellers)
-                if unknown:
-                    a.tell("Not found in the store, left out: " + "; ".join(esc(u) for u in unknown))
+                picked, left, notes = match_products(got["value"].splitlines(), sellers)
+                if notes:
+                    a.tell("Picked: " + "\n".join(esc(n) for n in notes))
+                if left:
+                    a.tell("Left out:\n" + "\n".join(esc(x) for x in left))
                 if not picked:
                     return self.stop("none of the products sent was found in the store")
             elif got["value"] == "none":
@@ -232,6 +248,7 @@ class Job:
         p["asked_by"] = sorted({v["by"] for v in s["answers"].values()})
         self.bar("questions", 5, 5)
         s["planned"] = True
+        s.pop("stopped", None)
         self.save()
         products = "; ".join(x["title"] for x in p.get("products", [])) or "none"
         a.tell(f"Plan for <b>{esc(s['name'])}</b>: {esc(', '.join(PARTS[x] for x in p['parts']))}. Product pages: {esc(products)}. "
@@ -244,6 +261,7 @@ class Job:
     def stop(self, why: str) -> int:
         self.s["stopped"] = why
         self.save()
+        self.ask.tell(f"Stopped: {esc(why)}.")  # the person hears why, not only the laptop (first live run, 21 Oct 2026)
         self.out(f"stopped: {why}")
         return 1
 
