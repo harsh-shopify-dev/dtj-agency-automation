@@ -32,11 +32,11 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 - Product and home pages go to the draft without a tap (Harsh's standing draft rule): `ship_draft` and `ship_home`.
 - Draft only. Never the live theme, never publish, never create a store, never assign a template to a product.
 - The offer is exactly what the person typed, or none. Never invent prices, offers, claims, reviews or policies; mark samples SAMPLE.
-- **The Shopify CLI runs with the laptop's login.**
-  - If a command answers that it has no access, stop that step and tell the person: the store owner accepts DTJ's collaborator request
-    (with Themes), then they run `shopify theme list --store <store>` once in their own terminal and log in.
-  - A store change through `shopify store execute --allow-mutations` may be blocked here (auto mode): give the person the exact
-    command for their own PowerShell; never work around it.
+- **Everything the person does happens in Telegram** (Harsh, 21 Oct 2026): taps, typed answers, the Install buttons. Never ask
+  them to type a command on the laptop.
+- **Themes use the laptop's Shopify CLI login.** If a command answers that it has no access, stop that step and tell the person in
+  Telegram: the store owner accepts DTJ's collaborator request (with Themes). If the system blocks a command, say so in Telegram and
+  in the answer; never work around it.
 - Never print, paste or store a secret.
 
 ## Steps (from the repo root; `J` = the job name, the store's handle)
@@ -55,17 +55,21 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
    - `store_job.py status --job J` shows the plan.
 2. **Draft copy.** `python n8n/store-factory/store_job.py draft --job J`. One Approve tap, then the live theme is duplicated as
    "DTJ Draft <date>" (unpublished; read back to check). When the person added Horizon instead, that theme is used.
-3. **Brand copy** (skipped when the store is the brand).
-   - The store's CLI sign-in needs these permissions once: `shopify store auth -s <store> --scopes
-     read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies`. That opens a browser
-     page the person approves; run it in their terminal.
-   - `python n8n/store-factory/store_job.py copy --job J` reads the brand and the store (read only) and writes
-     `.work/stores/J/copy/plan.json`. It then sends the Approve tap with what will be created, e.g. "17 products (197 pictures, 58
-     variants), 29 collections, 2 policy pages, as ACTIVE", plus the notes (currency, an open store, policies it cannot read yet).
-   - After the tap it prints the apply command:
-     `cd services/store-builder && python -m provision.brand_copy apply --out ../../.work/stores/J/copy --approved-by "<name> (Telegram Approve)"`.
-     Run it; if the system blocks it, give the person that exact line for their PowerShell. It resumes where it stopped; failures are
-     listed in its answer and in `applied.json`.
+3. **Brand copy** (skipped when the store is the brand). It runs in Telegram and n8n only (Harsh, 21 Oct 2026: "all this steps must
+   be done in the telegram bot"); the laptop never writes to the store here.
+   - It goes through **DTJ Store Builder**, the one DTJ app that may add products, collections and policy pages; the block apps
+     never can. A store needs it installed once: Dev Dashboard > Apps > DTJ Store Builder > Install app > the store. The job asks
+     the person in Telegram the first time and goes on by itself once it is installed.
+   - Run `python n8n/store-factory/store_job.py copy --job J`. It does three things:
+     1. It reads the brand's public store, and what the store has through the install service (read only). It writes
+        `.work/stores/J/copy/plan.json` and keeps the plan on the install service for this job.
+     2. It sends the Approve tap with what will be created, e.g. "17 products (197 pictures, 58 variants), 29 collections, 2 policy
+        pages, as ACTIVE", plus the notes (currency, an open store).
+     3. **The tap itself starts n8n's Store Factory: Brand Copy**, which calls the install service step by step (`POST /copy`,
+        `src/copy.js`) and tells the person when it is done. The job only watches the progress and returns when n8n says finished:
+        exit 0 done, 1 stopped, 3 still going (run the same command again to keep watching).
+   - What it never does: change or delete anything the store has (existing handles are skipped, a policy is written only where the
+     store's own is empty), convert or guess a price, publish products on an open store (they go in as drafts there).
 4. **Apps.** `python n8n/store-factory/store_job.py apps --job J`. One Approve tap, then it prints the command:
    - a client's store: `add_shop.py ... --approved-by "<name> (Telegram Approve)" --theme <draft id>`. Run it in the person's
      terminal (`run_in_terminal`, read with `read_terminal`) and follow the skill dtj-add-shop, "One command" (the install links from
@@ -114,7 +118,8 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 | "could not be read as a Shopify store" | the brand's site is not Shopify, or hides its catalogue | ask for its Shopify address; other platforms are not copied yet |
 | the theme question | the live theme is not Horizon (Dawn: product pages only) | the person adds Horizon, or product pages only |
 | draft: "no access to ... themes" | the CLI login is not a collaborator of the store yet | the owner accepts DTJ's collaborator request; log in once |
-| copy: ACCESS_DENIED / "cannot read policies yet" | the store's CLI sign-in lacks the scopes in step 3 | `shopify store auth -s <store> --scopes ...` once, then `copy` again |
+| copy: "install DTJ Store Builder" | the app is not on the store yet | the person installs it once (Dev Dashboard); the job goes on by itself |
+| copy: "DTJ Store Builder is not set up" | the install service has no Store Builder key yet | `tools/store_builder.py create`, then deploy the install service (Harsh's yes) |
 | copy note: "products go in as DRAFT" | the store has no password page (open to the public) | expected for a live store; a dev store keeps them ACTIVE |
 | a write refused: app block missing | the DTJ apps are not installed yet | wait for the installs (step 6) |
 | exit 3 again and again | nobody answers in Telegram | tell the person at the laptop which question waits |

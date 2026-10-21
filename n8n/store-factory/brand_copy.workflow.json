@@ -1,0 +1,281 @@
+{
+ "id": "ioaho57x1Ji0fEnb",
+ "name": "Store Factory: Brand Copy",
+ "description": "Store factory: a brand copy's Approve tap in Telegram runs the copy through the install service (DTJ Store Builder), step by step, then tells the person who tapped.",
+ "nodes": [
+  {
+   "id": "9dd0289a-197c-4d33-91cf-c27ed70222b6",
+   "name": "From the Telegram Bot",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "job",
+       "type": "string"
+      },
+      {
+       "name": "approved_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "c2716d2b-4a22-4a62-9804-f2d0a782e18d",
+   "name": "Copy Step Body",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Copy Step Body\" in \"Store Factory: Brand Copy\" (mode: Run Once for All Items).\n// One request for the install service's POST /copy (op \"step\": the next few products, collections or policy pages). The run comes\n// back here after every step until \"Copy Progress\" says finished; `round` counts the steps (a guard against a loop that never ends).\nconst start = $('From the Telegram Bot').first().json;\nconst prev = $input.first().json || {};\nconst round = Number.isInteger(prev.round) ? prev.round : 0;\nconst job = String(start.job || '');\nif (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(job)) throw new Error('No copy job reached this step');\nconst by = String(start.approved_by || '').trim();\nif (!by) throw new Error('No approver reached this step: a copy writes to the store');\nreturn [{ json: { round, body: { ts: Math.floor(Date.now() / 1000), op: 'step', job, approved_by: by.slice(0, 100) } } }];\n"
+   }
+  },
+  {
+   "id": "ffa67faf-77b9-4b29-b941-e9d86a9a77a3",
+   "name": "Copy Step",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    0
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/copy",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "User-Agent",
+       "value": "dtj-n8n-bot/1"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "json",
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.body) }}",
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     },
+     "timeout": 60000
+    }
+   },
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "I32lgulR9ZPulvwb",
+     "name": "DTJ Catcher Bot Key"
+    }
+   }
+  },
+  {
+   "id": "a4a0f7cb-e433-48db-97f6-a88fb922cb39",
+   "name": "Copy Progress",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Copy Progress\" in \"Store Factory: Brand Copy\" (mode: Run Once for All Items).\n// After one /copy step: finished (the message for the person who tapped Approve) or not (back to \"Copy Step Body\" after a short wait).\n// The install service answers with done / total counts; a refusal (not 200) ends the run with the reason, so it never loops on an error.\nconst MAX_ROUNDS = 400;  // 400 steps of up to 8 items: far more than the 2,500 products a plan may hold\nconst start = $('From the Telegram Bot').first().json;\nconst round = Number($('Copy Step Body').first().json.round || 0) + 1;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst ok = res.statusCode === 200 && res.body && typeof res.body === 'object';\nconst b = ok ? res.body : {};\nconst d = b.done || {};\nconst t = b.total || {};\nconst finished = !ok || Boolean(b.finished) || round >= MAX_ROUNDS;\nlet text = '';\nif (!ok) {\n  const why = (res.body && res.body.error) || res.error || ('HTTP ' + (res.statusCode || 'no answer'));\n  text = 'The brand copy stopped: ' + esc(String(why).slice(0, 300)) + '\\nWhat was copied so far stays. Harsh will take a look.';\n} else if (finished) {\n  text = (b.stopped ? 'The brand copy stopped: ' + esc(b.stopped) + '\\n' : 'Brand copy done')\n    + ' (' + esc(b.status === 'ACTIVE' ? 'products are live behind the store password' : 'products are drafts') + '):\\n'\n    + '- products: ' + (d.products || 0) + ' of ' + (t.products || 0) + '\\n'\n    + '- collections: ' + (d.collections || 0) + ' of ' + (t.collections || 0) + '\\n'\n    + '- policy pages: ' + (d.policies || 0) + ' of ' + (t.policies || 0)\n    + (d.skipped ? '\\n- left alone (the store has them already): ' + d.skipped : '')\n    + (d.failed ? '\\n- failed: ' + d.failed + ' (listed for Harsh)' : '')\n    + (round >= MAX_ROUNDS && !b.finished ? '\\nIt took too many steps and was stopped; send the copy again to go on.' : '');\n}\nreturn [{ json: { finished, chat_id: start.chat_id, text, round } }];\n"
+   }
+  },
+  {
+   "id": "56ba72e9-d1c4-4e76-b1f6-6dd5b7a3268c",
+   "name": "Copy Finished?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    960,
+    0
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.finished }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "2c0be4e7-41f6-4704-b01c-69cd773f17ad",
+   "name": "Send Result",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1200,
+    -120
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "83976a82-f502-4149-b951-cc2350300726",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "3f4a7b8b-2398-4d4b-aea6-66f89734523c",
+   "name": "Pause",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    1200,
+    120
+   ],
+   "parameters": {
+    "resume": "timeInterval",
+    "amount": 2,
+    "unit": "seconds"
+   },
+   "webhookId": "8af1e15c-4134-4377-9d4e-5bd7f9fb0105"
+  },
+  {
+   "id": "f12e609d-8efa-4a41-8560-9f7c952a4748",
+   "name": "Sticky Note f65d1f04",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -360
+   ],
+   "parameters": {
+    "content": "## Brand copy (one Approve tap per import)\nStarted by the Telegram bot when someone taps **Approve** under a store job's brand copy. Every step asks the install service to copy the next few products, collections or policy pages from the plan the store job kept there; the person's name goes with every step. Nothing the store has is changed or deleted (src/copy.js). Source in git: `n8n/store-factory/`.",
+    "color": 5,
+    "width": 760,
+    "height": 300
+   }
+  }
+ ],
+ "connections": {
+  "From the Telegram Bot": {
+   "main": [
+    [
+     {
+      "node": "Copy Step Body",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Copy Step Body": {
+   "main": [
+    [
+     {
+      "node": "Copy Step",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Copy Step": {
+   "main": [
+    [
+     {
+      "node": "Copy Progress",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Copy Progress": {
+   "main": [
+    [
+     {
+      "node": "Copy Finished?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Copy Finished?": {
+   "main": [
+    [
+     {
+      "node": "Send Result",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Pause",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pause": {
+   "main": [
+    [
+     {
+      "node": "Copy Step Body",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

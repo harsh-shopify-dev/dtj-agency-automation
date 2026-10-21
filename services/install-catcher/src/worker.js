@@ -19,9 +19,13 @@
 //   secret CONTROL_KEY  shared key that signs /licence requests (HMAC-SHA256, hex): tools/licence_call.py
 //   secret BOT_KEY      optional, 32+ characters: the Telegram bot in n8n sends it as X-DTJ-Bot-Key (see licenceCaller)
 //   secret ALERT_URL    optional: where to POST a short alert when the scheduled refresh fails (no secrets in it)
+//   vars.BUILDER_CLIENT_ID + secret ORG_SECRET_DTJ_STORE_BUILDER   DTJ Store Builder, the app behind POST /copy (the brand copy,
+//                       src/copy.js); unset = /copy answers "not set up yet"
 //   kv     VAULT        token records, used-state marks, audit rows
 // Facts (shopify.dev, 9 Oct 2026): hmac = HMAC-SHA256 hex of the sorted query without hmac, keyed with the client secret; the token
 // request is form-encoded with expiring=1; a refresh (grant_type=refresh_token) returns a NEW access token AND a NEW refresh token.
+
+import { copyRoute } from "./copy.js";  // the brand copy through DTJ Store Builder (21 Oct 2026): src/copy.js
 
 export const API_VERSION = "2026-07";
 const SHOP_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/;
@@ -34,7 +38,7 @@ const WRITE = `mutation SetLicence($metafields: [MetafieldsSetInput!]!) {
 }`;
 const STATES = new Set(["active", "inactive"]);
 
-class Refuse extends Error {
+export class Refuse extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
@@ -228,7 +232,7 @@ async function saveTokens(env, cfg, tokens) {
 
 // DTJ's original app on a store in DTJ's organization: the client credentials grant (JSON body, as tools/licence.py sends it; the
 // token lives 24 h and is used once, nothing is stored). A store outside the organization, or without the app, is refused by Shopify.
-async function orgAccess(cfg) {
+export async function orgAccess(cfg) {
   const res = await call(`https://${cfg.shop}/admin/oauth/access_token`, {
     method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ client_id: cfg.client_id, client_secret: cfg.secret, grant_type: "client_credentials" }),
@@ -377,7 +381,11 @@ export default {
       if (request.method === "GET" && route === "callback") return await callback(url, env, app);
       if (request.method === "POST" && route === "webhooks") return await webhook(request, env, app);
       if (request.method === "POST" && route === "licence") return await licence(request, env);
+      if (request.method === "POST" && route === "copy") return json(200, await copyRoute(request, env, licenceCaller, now));
       if (request.method === "GET" && route === "health") return json(200, { ok: true, apps: Object.keys(apps(env)).length });
+      if (request.method === "GET" && route === "builder") {  // where Shopify sends the person after installing DTJ Store Builder
+        return html(200, "DTJ Store Builder is installed", "You can close this tab. DTJ copies a brand into this store only after an Approve tap in Telegram.");
+      }
       return json(404, { error: "not found" });
     } catch (err) {
       const status = err instanceof Refuse ? err.status : 500;

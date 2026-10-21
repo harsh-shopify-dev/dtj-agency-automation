@@ -162,6 +162,16 @@ class Deployment(unittest.TestCase):
         self.assertEqual(fake.calls[-1][0][3], "deploy")
         self.assertEqual(fake.calls[0][2]["CLOUDFLARE_API_TOKEN"], "cf-token-SECRET")  # the login goes by environment only
 
+    def test_store_builders_secret_goes_up_only_when_this_laptop_has_it(self):
+        fake = FakeWrangler()
+        self.deployer(fake).run()
+        self.assertNotIn("ORG_SECRET_DTJ_STORE_BUILDER", [c[0][5] for c in fake.calls if c[0][3:5] == ["secret", "put"]])
+        fake = FakeWrangler()
+        self.deployer(fake, {**self.env, deploy.BUILDER_VAR: "shpss_builder_secret"}).run()
+        puts = {cmd[5]: stdin for cmd, stdin, _ in fake.calls if cmd[3:5] == ["secret", "put"]}
+        self.assertEqual(puts["ORG_SECRET_DTJ_STORE_BUILDER"], "shpss_builder_secret")
+        self.assertFalse(any("shpss_builder_secret" in " ".join(cmd) for cmd, _, _ in fake.calls))  # by stdin only
+
     def test_a_new_worker_is_deployed_before_its_secrets_are_set(self):
         fake = FakeWrangler(new_worker=True)
         url = self.deployer(fake).run()

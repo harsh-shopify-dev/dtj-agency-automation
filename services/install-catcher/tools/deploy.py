@@ -35,6 +35,9 @@ from add_client import APPS as PARTS, ORG_APPS, current_apps, org_secret_name, s
 Runner = Callable[[Sequence[str], Mapping[str, str], str | None], "subprocess.CompletedProcess[str]"]
 
 
+BUILDER_VAR = "DTJ_STORE_BUILDER_CLIENT_SECRET"  # DTJ Store Builder's client secret (Windows user variable, never printed)
+
+
 def read_var(name: str, environ: Mapping[str, str] | None = None) -> str | None:
     value = (environ if environ is not None else os.environ).get(name)
     if not value and environ is None and os.name == "nt":
@@ -154,6 +157,10 @@ class Deploy:
             if not value:
                 raise SystemExit(f"missing Windows variable {var} (the client secret of {cfg['label']}); nothing was deployed")
             wanted.append(("SECRET_" + re.sub(r"[^A-Z0-9]", "_", app.upper()), value, var))
+        # DTJ Store Builder (the brand copy, src/copy.js, 21 Oct 2026): its client secret, when this laptop has it (store_builder.py)
+        builder = read_var(BUILDER_VAR, self.environ)
+        if builder:
+            wanted.append(("ORG_SECRET_DTJ_STORE_BUILDER", builder, BUILDER_VAR))
         self.ensure_kv()
         existing = self.existing_secrets()
         self.catcher_key("VAULT_KEY", "DTJ_CATCHER_VAULT_KEY", lambda: base64.b64encode(secrets.token_bytes(32)).decode(), existing)

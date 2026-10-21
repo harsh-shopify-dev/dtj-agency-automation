@@ -304,15 +304,21 @@ PLAN = {"brand": "https://glowco.com", "status": "ACTIVE", "notes": ["prices are
 class BrandCopy(Base):
     """The link sent is the store to build in; the bot asks for the brand's own link and copies the brand into it (21 Oct 2026)."""
 
-    def job(self, access=None, scan=SCAN, planner=None, scanner=None):
-        self.planned_with = []
+    def job(self, access=None, scan=SCAN, planner=None, scanner=None, statuses=None):
+        self.planned_with, self.looked = [], 0
+        self.statuses = list(statuses or [{"done": {"products": 1}, "total": {"products": 2}, "finished": False},
+                                          {"done": {"products": 2, "collections": 1}, "total": {"products": 2}, "finished": True, "stopped": None}])
 
-        def plan(link, store, currency, out):
-            self.planned_with.append((link, store, currency))
+        def plan(link, store, currency, out, job):
+            self.planned_with.append((link, store, currency, job))
             return PLAN
+
+        def status(job):
+            self.looked += 1
+            return self.statuses.pop(0) if self.statuses else {"finished": True}
         j = store_job.Job(store_job.job_id(scan["myshopify_domain"]), send=self.tg, rows=self.answers, access=access, log=self.log,
                           state_dir=self.tmp, out=self.printed.append, sleep=self.clock.sleep, clock=self.clock,
-                          today=lambda: "21 Oct 2026", scanner=scanner or (lambda link: BRAND), planner=planner or plan)
+                          today=lambda: "21 Oct 2026", scanner=scanner or (lambda link: BRAND), planner=planner or plan, copy_status=status)
         j.begin(scan, CHAT, "Harsh")
         return j
 
@@ -353,20 +359,44 @@ class BrandCopy(Base):
     def test_the_copy_is_planned_read_only_then_waits_for_its_own_tap(self):
         j = self.planned()
         self.assertEqual(j.copy(minutes=1), store_job.WAITING)
-        self.assertEqual(self.planned_with, [("https://glowco.com", "royal-dosa.myshopify.com", "USD")])
+        self.assertEqual(self.planned_with, [("https://glowco.com", "royal-dosa.myshopify.com", "USD", "royal-dosa")])
+        self.assertEqual(self.looked, 0)  # nothing is copied before the tap
         ask = self.tg.questions()[-1]["text"]
         self.assertIn("Copy <b>GlowCo</b> into <b>Royal Dosa</b>: 2 products (3 pictures, 3 variants), 1 collections, 1 policy pages, "
                       "as ACTIVE", ask)
         self.assertIn("sells in INR (not converted)", ask)
         self.assertIn("Nothing the store has is changed or deleted", ask)
         self.answers.tap(self.tg, "Approve", by="Riya")
-        self.assertEqual(j.copy(minutes=1), 0)
-        self.assertEqual(self.printed[-1], 'cd services/store-builder && python -m provision.brand_copy apply --out '
-                                           '../../.work/stores/royal-dosa/copy --approved-by "Riya (Telegram Approve)"')
+        self.assertEqual(j.copy(minutes=5), 0)  # the tap starts n8n's copy; this only waits until it says finished
+        self.assertEqual(self.looked, 2)
+        self.assertEqual(json.loads(self.printed[-1])["done"]["products"], 2)
+        self.assertEqual(j.s["copy_approved_by"], "Riya (Telegram Approve)")
         self.assertEqual(self.log.rows[-1]["approver"], "Riya (Telegram Approve)")
         self.assertEqual(len(self.planned_with), 1)  # planned once
+        self.assertEqual(j.copy(minutes=1), 0)
+        self.assertEqual((len(self.planned_with), self.looked), (1, 2))  # finished: nothing asked again
+
+    def test_store_builder_not_installed_asks_once_then_goes_on(self):
+        tries = []
+
+        def plan(link, store, currency, out, job):
+            tries.append(1)
+            if len(tries) < 3:
+                raise store_job.NotInstalled("DTJ's app is not installed on royal-dosa.myshopify.com")
+            return PLAN
+        j = self.planned(planner=plan)
+        self.assertEqual(j.copy(minutes=10), store_job.WAITING)  # planned on the third look, then waits for the tap
+        asked = [d["text"] for _, d in self.tg.sent if "install <b>DTJ Store Builder</b>" in d["text"]]
+        self.assertEqual(len(asked), 1)
+        self.assertIn("Copy <b>GlowCo</b>", self.tg.questions()[-1]["text"])
+
+    def test_a_copy_that_stops_in_n8n_says_so(self):
+        j = self.planned(statuses=[{"done": {"products": 1, "failed": 3}, "total": {"products": 4}, "finished": True,
+                                    "stopped": "3 product copies failed in a row"}])
         j.copy(minutes=1)
-        self.assertEqual(len(self.planned_with), 1)
+        self.answers.tap(self.tg, "Approve")
+        self.assertEqual(j.copy(minutes=1), 1)
+        self.assertIn("stopped", j.s["copy_result"])
 
     def test_skip_and_a_plan_that_fails(self):
         j = self.planned()
@@ -374,7 +404,7 @@ class BrandCopy(Base):
         self.answers.tap(self.tg, "Skip")
         self.assertEqual(j.copy(minutes=1), store_job.SKIPPED)
 
-        def no_scope(*_):
+        def no_scope(*_, **__):
             raise RuntimeError("ACCESS_DENIED: read_products")
         k = self.planned(scan={**SCAN, "myshopify_domain": "other.myshopify.com"}, planner=no_scope)
         self.assertEqual(k.copy(minutes=1), 1)
