@@ -13,3 +13,6 @@ output/
 .shopify/
 .claude/settings.local.json
 .mcp.json
+
+# skill-creator test runs (outputs of eval agents)
+.claude/skills/*-workspace/

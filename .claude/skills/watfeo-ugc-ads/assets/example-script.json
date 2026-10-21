@@ -1,0 +1,30 @@
+{
+ "ad": "book-02",
+ "angle": 56,
+ "language": "en",
+ "creator": "C2",
+ "setup": "She sits cross-legged on her bed in front of a tall white bookshelf packed unevenly with paperbacks (some lying sideways, a small money plant, a string of warm fairy lights). A warm table lamp on the left, soft late-afternoon window light from the right. Phone on a small stand at chest height, slightly below her eye line; she sits a little left of centre. Same room, light and clothes in every clip.",
+ "character": "Candid front-camera phone photo of an Indian woman, about 27, a book creator. Dusky wheatish skin with natural uneven tone and visible pores, a slightly round face, a wide nose with a small gold nose pin, thick natural unshaped eyebrows, a few faint acne marks on her left cheek, light under-eye shadows. Thick wavy shoulder-length black hair, a little frizzy, middle part, tucked behind one ear. Thin black rectangular glasses. Faded mustard cotton kurta with a small block print, slightly creased; small silver jhumkas. Not a model, not symmetrical, no retouching, everyday look. She sits on her bed in front of a tall white bookshelf packed unevenly with paperbacks, a warm table lamp on the left, late-afternoon window light from the right. Shot on a mid-range Android phone's front camera on a stand at chest height, slightly soft focus, mild noise in the shadows, off-centre framing.",
+ "shots": [
+  {"id": "s1", "seconds": 8, "book": "held up next to her face, front cover to camera",
+   "line": "Every friend group has these four people. This book has all four. Tell me which one you are.",
+   "image_prompt": "Same woman, same room, same light, same clothes. She holds the paperback 'We Are There For Each Other' (exact cover from the reference photo) up next to her right cheek, front cover to the camera, fingers over the bottom edge, tilted slightly. Eyebrows up, a playful half-smile. Front phone camera on a stand at chest height, off-centre framing, slight phone softness.",
+   "video_prompt": "Phone on a stand at chest height filming her, natural slight shake. She holds the same book steadily next to her face for the whole clip, cover to the camera; it never drops or leaves her hand. Playful challenge: eyebrows up, a small head tilt on 'which one you are'. She says, in a light Indian accent: \"Every friend group has these four people. This book has all four. Tell me which one you are.\" No camera moves, no zoom."},
+  {"id": "s2", "seconds": 8, "book": "resting flat on her lap under both hands",
+   "line": "Harsh. Six-pack, shirtless gym videos, shayari on his stories... and he's scared to cross an empty road. Like, actually scared.",
+   "image_prompt": "Same woman, same room, same light, same clothes. The paperback rests flat on her lap under both hands. She is mid-laugh, eyes crinkled, looking at the phone. Front phone camera on a stand at chest height, off-centre framing.",
+   "video_prompt": "Phone on a stand at chest height, natural slight shake. The book stays flat on her lap under both hands for the whole clip and never moves. Amused: she laughs on 'shayari', then goes deadpan on 'actually scared'. She says: \"Harsh. Six-pack, shirtless gym videos, shayari on his stories... and he's scared to cross an empty road. Like, actually scared.\" No camera moves."},
+  {"id": "s3", "seconds": 8, "book": "held against her chest with both arms",
+   "line": "Sagar. Sends a love letter way too early. Gets rejected. And writes all of it in his diary. Yes, that friend.",
+   "image_prompt": "Same woman, same room, same light, same clothes. She holds the paperback against her chest with both arms crossed over it, cover facing out. A fond eye-roll. Front phone camera on a stand at chest height, off-centre framing.",
+   "video_prompt": "Phone on a stand at chest height, natural slight shake. She keeps the same book held steadily against her chest with both arms for the whole clip; it never slips. Fond, teasing: a small eye-roll and a sigh on 'that friend'. She says: \"Sagar. Sends a love letter way too early. Gets rejected. And writes all of it in his diary. Yes, that friend.\" No camera moves."},
+  {"id": "s4", "seconds": 8, "book": "in her left hand at chest height",
+   "line": "Malar, the topper, ninety-six percent. And Sai, the girl playing the dhol, who wants to take everyone to Hampi.",
+   "image_prompt": "Same woman, same room, same light, same clothes. The paperback in her left hand at chest height, spine toward the camera; her right hand raised, counting on her fingers. Warm smile. Front phone camera on a stand at chest height, off-centre framing.",
+   "video_prompt": "Phone on a stand at chest height, natural slight shake. The book stays in her left hand at chest height, held steadily the whole clip. Her right hand counts slowly on her fingers, small and relaxed. Warm: a smile on 'Hampi'. She says: \"Malar, the topper, ninety-six percent. And Sai, the girl playing the dhol, who wants to take everyone to Hampi.\" No camera moves."},
+  {"id": "s5", "seconds": 8, "book": "front cover to camera, held steady in both hands",
+   "line": "It's called We Are There For Each Other, by Sagar Chudesara. Comment which one you are... and Read Now.",
+   "image_prompt": "Same woman, same room, same light, same clothes. She holds the paperback in both hands at chest height, front cover flat to the camera and readable, leaning a little toward the phone, smiling. Front phone camera on a stand at chest height, off-centre framing.",
+   "video_prompt": "Phone on a stand at chest height, natural slight shake. She holds the same book in both hands, front cover to the camera, steady for the whole clip; it never moves fast or leaves the frame. Warm, leans a little toward the phone and holds. She says: \"It's called We Are There For Each Other, by Sagar Chudesara. Comment which one you are... and Read Now.\" Nothing new in the last second: she finishes and smiles. No camera moves."}
+ ]
+}

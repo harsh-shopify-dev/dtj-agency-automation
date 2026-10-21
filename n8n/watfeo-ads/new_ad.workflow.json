@@ -1,0 +1,697 @@
+{
+ "id": "Z9HP8BX82CbAhpPV",
+ "name": "WATFEO Ads: New Ad",
+ "description": "WATFEO ad factory: UGC ads for the book 'We Are There For Each Other' only. A form -> a job -> Claude Code with the skill watfeo-ugc-ads makes scripts, prompts or a finished reel -> the result and the angle used are recorded.",
+ "nodes": [
+  {
+   "id": "6e51448a-629f-4a42-86e5-7a12b1817558",
+   "name": "New WATFEO Ad",
+   "type": "n8n-nodes-base.formTrigger",
+   "typeVersion": 2.6,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "authentication": "n8nUserAuth",
+    "formTitle": "New WATFEO ad",
+    "formDescription": "UGC ads for We Are There For Each Other by Sagar Chudesara. Claude makes them while someone is on duty on a DTJ laptop; nothing is posted.",
+    "formFields": {
+     "values": [
+      {
+       "fieldName": "kind",
+       "fieldLabel": "What do you need?",
+       "fieldType": "dropdown",
+       "requiredField": true,
+       "fieldOptions": {
+        "values": [
+         {
+          "option": "Full reel"
+         },
+         {
+          "option": "Scripts only"
+         },
+         {
+          "option": "Prompts only"
+         }
+        ]
+       }
+      },
+      {
+       "fieldName": "language",
+       "fieldLabel": "Language",
+       "fieldType": "dropdown",
+       "requiredField": true,
+       "fieldOptions": {
+        "values": [
+         {
+          "option": "English"
+         },
+         {
+          "option": "Hindi"
+         },
+         {
+          "option": "Hinglish"
+         }
+        ]
+       }
+      },
+      {
+       "fieldName": "count",
+       "fieldLabel": "How many ads",
+       "fieldType": "number",
+       "requiredField": true
+      },
+      {
+       "fieldName": "angle",
+       "fieldLabel": "Angle number (optional, 1-58)",
+       "fieldType": "number",
+       "requiredField": false
+      },
+      {
+       "fieldName": "reference",
+       "fieldLabel": "Reference reel to copy (optional link)",
+       "fieldType": "text",
+       "requiredField": false
+      },
+      {
+       "fieldName": "notes",
+       "fieldLabel": "Notes",
+       "fieldType": "textarea",
+       "requiredField": false
+      },
+      {
+       "fieldName": "requested_by",
+       "fieldLabel": "Your name",
+       "fieldType": "text",
+       "requiredField": true
+      }
+     ]
+    },
+    "responseMode": "onReceived",
+    "options": {
+     "appendAttribution": false,
+     "path": "dtj-watfeo-ad",
+     "respondWithOptions": {
+      "values": {
+       "respondWith": "text",
+       "formSubmittedText": "Saved. Claude makes it while someone is on duty; the result is recorded in dtj_watfeo_ads."
+      }
+     }
+    }
+   },
+   "webhookId": "bc4f12b7-b9a3-4d70-ba9d-104d41cf226d"
+  },
+  {
+   "id": "dd1abd40-1b25-4c10-b1ae-1fbc399cf96f",
+   "name": "Take the WATFEO Ad Request",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Take the WATFEO Ad Request\" in \"WATFEO Ads: New Ad\" (mode: Run Once for All Items).\n// Input: the form (\"New WATFEO ad\") or another workflow (later: the Telegram bot). Output: { ok, problems, row } for dtj_watfeo_ads.\n// The product is fixed (the book \"We Are There For Each Other\"), so a person only chooses the language, how many ads, and,\n// if they want, the angle number from the skill's angle bank (1-58). Everything else comes from the skill watfeo-ugc-ads.\nconst j = $input.first().json || {};\nconst pick = (...keys) => { for (const k of keys) { if (j[k] != null && String(j[k]).trim()) return String(j[k]).trim(); } return ''; };\nconst langs = { english: 'en', en: 'en', hindi: 'hi', hi: 'hi', hinglish: 'hinglish' };\nconst kinds = { 'full reel': 'reel', reel: 'reel', 'scripts only': 'scripts', scripts: 'scripts', 'prompts only': 'prompts', prompts: 'prompts' };\n\nconst language = langs[pick('language', 'Language').toLowerCase()] || '';\nconst kind = kinds[pick('kind', 'What do you need?').toLowerCase()] || '';\nconst angleText = pick('angle', 'Angle number (optional, 1-58)');\nconst angle = angleText ? Number(angleText) : 0;\nconst count = Number(pick('count', 'How many ads') || '1');\nconst problems = [];\nif (!language) problems.push('language must be English, Hindi or Hinglish');\nif (!kind) problems.push('choose: full reel, scripts only or prompts only');\nif (angleText && !(Number.isInteger(angle) && angle >= 1 && angle <= 58)) problems.push('the angle must be a number from 1 to 58');\nif (!(Number.isInteger(count) && count >= 1 && count <= (kind === 'reel' ? 2 : 5))) {\n  problems.push(kind === 'reel' ? 'at most 2 full reels per request' : 'between 1 and 5 per request');\n}\nconst reference = pick('reference', 'Reference reel to copy (optional link)');\nif (reference && !/^https:\\/\\/\\S+$/.test(reference) && !/^([A-Za-z]:[\\\\/]|\\/)\\S/.test(reference)) problems.push('the reference must be a https link or a path on the laptop');\n\nreturn [{ json: {\n  ok: problems.length === 0,\n  problems: problems.join('; '),\n  row: {\n    submitted_at: new Date().toISOString(),\n    status: problems.length ? 'refused' : 'new',\n    kind,\n    language,\n    angle_asked: angle || null,\n    count,\n    reference,\n    notes: pick('notes', 'Notes').slice(0, 2000),\n    requested_by: pick('requested_by', 'Your name') || 'form',\n    telegram_chat_id: pick('chat_id'),\n    raw_json: JSON.stringify(j).slice(0, 8000),\n    ad_status: problems.length ? 'refused: ' + problems.join('; ') : 'waiting for Claude Code',\n  },\n} }];\n"
+   }
+  },
+  {
+   "id": "360b2fb6-0593-43fd-941e-158ba08a6a35",
+   "name": "From Another Workflow",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    240
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "kind",
+       "type": "string"
+      },
+      {
+       "name": "language",
+       "type": "string"
+      },
+      {
+       "name": "count",
+       "type": "string"
+      },
+      {
+       "name": "angle",
+       "type": "string"
+      },
+      {
+       "name": "reference",
+       "type": "string"
+      },
+      {
+       "name": "notes",
+       "type": "string"
+      },
+      {
+       "name": "requested_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "65549439-b750-405c-966d-16ef90cd4285",
+   "name": "Save WATFEO Ad",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "ZysESPWCLVTcNa30",
+     "cachedResultName": "dtj_watfeo_ads"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "submitted_at": "={{ $json.row.submitted_at }}",
+      "status": "={{ $json.row.status }}",
+      "kind": "={{ $json.row.kind }}",
+      "language": "={{ $json.row.language }}",
+      "angle_asked": "={{ $json.row.angle_asked }}",
+      "count": "={{ $json.row.count }}",
+      "reference": "={{ $json.row.reference }}",
+      "notes": "={{ $json.row.notes }}",
+      "requested_by": "={{ $json.row.requested_by }}",
+      "telegram_chat_id": "={{ $json.row.telegram_chat_id }}",
+      "raw_json": "={{ $json.row.raw_json }}",
+      "ad_status": "={{ $json.row.ad_status }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "submitted_at",
+       "displayName": "submitted_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "status",
+       "displayName": "status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "kind",
+       "displayName": "kind",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "language",
+       "displayName": "language",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "angle_asked",
+       "displayName": "angle_asked",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "count",
+       "displayName": "count",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reference",
+       "displayName": "reference",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "notes",
+       "displayName": "notes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "telegram_chat_id",
+       "displayName": "telegram_chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "raw_json",
+       "displayName": "raw_json",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "ad_status",
+       "displayName": "ad_status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "c43370a9-9bca-4548-b6b4-22dc40a16885",
+   "name": "Accepted?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    720,
+    120
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.status }}",
+       "rightValue": "new",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "da96f544-5e0b-44ba-bd01-b3d36691eed7",
+   "name": "Load Earlier Ads",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    960,
+    0
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "ZysESPWCLVTcNa30",
+     "cachedResultName": "dtj_watfeo_ads"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "submitted_at",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "executeOnce": true
+  },
+  {
+   "id": "b25fc4e8-30d9-46e5-90ef-4763415c2c96",
+   "name": "Request for Claude Code: WATFEO Ad",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Request for Claude Code: WATFEO Ad\" in \"WATFEO Ads: New Ad\" (mode: Run Once for All Items).\n// Inputs: this job (from \"Save WATFEO Ad\") and every earlier job (from \"Load Earlier Ads\"), so the request carries the angles the\n// whole team has already used. The run pauses at the Wait node after this one; a Claude Code session with the skill\n// watfeo-ugc-ads does the task and answers resume_url. CLAUDE.md rule 9: a subscription session is the AI step only while a\n// person is on duty.\nconst job = $('Save WATFEO Ad').first().json;\nif (!job || !job.id) throw new Error('No job row (dtj_watfeo_ads id) reached this step');\nconst resumeUrl = $execution.resumeUrl;\nconst earlier = $input.all().map((i) => i.json).filter((r) => r && r.id && r.id !== job.id);\nconst used = [...new Set(earlier.map((r) => Number(r.angle_used)).filter((n) => Number.isInteger(n) && n > 0))].sort((a, b) => a - b);\nconst folder = 'watfeo-' + job.id;\nconst langName = { en: 'English', hi: 'Hindi (casual, spoken)', hinglish: 'Hinglish (casual, spoken)' }[job.language] || job.language;\nconst what = { reel: 'finished reel(s)', scripts: 'script(s) only, in chat and saved', prompts: 'script(s) + every generation prompt, in chat and saved' }[job.kind];\n\nconst lines = [\n  'WATFEO AD FACTORY - make ' + job.count + ' ' + what + ' for the book \"We Are There For Each Other\" by Sagar Chudesara.',\n  'You are the AI step: a Claude Code session on a DTJ laptop. Nobody has briefed you; the skill has everything.',\n  '',\n  'JOB',\n  '- Job row: id ' + job.id + ' in the n8n data table dtj_watfeo_ads | Asked by: ' + (job.requested_by || '?'),\n  '- Language: ' + langName + ' | Count: ' + job.count,\n  '- Angle: ' + (job.angle_asked ? '#' + job.angle_asked + ' (asked for; if it is already used, say so and pick the closest fresh one)' : 'your choice: a fresh one'),\n  '- Angles the team already used (count them as used): ' + (used.length ? used.join(', ') : 'none recorded in n8n yet'),\n  '- Reference reel: ' + (job.reference || 'none: use the skill\\'s ad shapes'),\n  '- Notes: ' + (job.notes || '(none)'),\n  '',\n  'DO THIS, IN ORDER',\n  '1. In the dtj-agency-automation repo, read CLAUDE.md, then load the skill watfeo-ugc-ads and follow its steps 1-8. Stay on the current branch; do not commit.',\n  '2. Work in .work/watfeo/' + folder + '/ (one sub-folder per ad: script.json, prompts.md, and for reels the clips and finals).',\n  '3. Every script must pass: python .claude/skills/watfeo-ugc-ads/scripts/lint_script.py <script.json>',\n  job.kind === 'reel'\n    ? '4. Produce each reel as the skill says (Flow in the signed-in browser, takes checked at 4 fps, sparkle removed, phone look, captions, -14 LUFS, score 80+).'\n    : '4. Give the ' + (job.kind === 'scripts' ? 'scripts' : 'scripts and prompts') + ' in chat as the skill says, and save them in the folder.',\n  '5. Write .work/watfeo/' + folder + '/result.json: {\"reel_status\": \"reel ready\" | \"needs a look\" | \"could not make\", \"kind\": \"' + job.kind + '\", \"final_path\": \"<' + (job.kind === 'reel' ? 'the final .mp4' : 'the saved .md file') + '>\", \"angle\": <angle number of the first ad>, \"note\": \"<plain words: what was made, the score, what to look at>\"}',\n  '6. Answer this n8n run, from the repo root, also when nothing could be made:',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body .work/watfeo/' + folder + '/result.json',\n  '7. Record the angle(s) in the skill (scripts/angles.py use N --ad ' + folder + '), add a dated line to docs/HANDOFF.md, and tell the person on duty in plain words.',\n  '',\n  'RULES',\n  '- Only what the book says (search it with the skill\\'s book_search.py). No invented names, numbers, reviews or personal stories.',\n  '- The terrace rescue scene is reserved. One setup per ad. The last clip says Read Now / Shop Now / Abhi padhe.',\n  '- A new, real-looking creator every time (the skill\\'s creators.md); never the generic AI face.',\n  '- No password or token in any file or chat. A sign-in or human check = stop and answer \"could not make\" with \"needs a person: <what>\".',\n  '- Nothing is posted and no ad is started: a person decides.',\n];\n\nreturn [{ json: { claude_code_stage: 'watfeo_ad', resume_url: resumeUrl, instructions: lines.join('\\n'),\n  request: { job_id: job.id, kind: job.kind, language: job.language, count: job.count, angle_asked: job.angle_asked || null,\n             angles_used: used, reference: job.reference || '', notes: job.notes || '', requested_by: job.requested_by || '' },\n  job_folder: '.work/watfeo/' + folder } }];\n"
+   }
+  },
+  {
+   "id": "1417eb38-51f9-4cf6-a6a3-1f2b981f1677",
+   "name": "Wait for Claude Code: WATFEO Ad",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    1440,
+    0
+   ],
+   "parameters": {
+    "resume": "webhook",
+    "httpMethod": "POST",
+    "limitWaitTime": true,
+    "limitType": "afterTimeInterval",
+    "resumeAmount": 3,
+    "resumeUnit": "days",
+    "options": {}
+   },
+   "webhookId": "acba3607-925c-4b77-8561-02644136c743"
+  },
+  {
+   "id": "a78a2a37-218c-45ce-a799-97e488612aa2",
+   "name": "Claude Code Reply: WATFEO Ad",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1680,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Claude Code Reply: WATFEO Ad\" in \"WATFEO Ads: New Ad\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same\n// rules as n8n/store-factory/reply.py (stage \"reel\" with \"kind\"), which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['reel ready', 'needs a look', 'could not make'];\nlet status = allowed.includes(b.reel_status) ? b.reel_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst kind = ['reel', 'scripts', 'prompts'].includes(b.kind) ? b.kind : 'reel';\nconst path = String(b.final_path || '');\nconst pathOk = (kind === 'reel' ? /\\.mp4$/i : /\\.(md|json|txt)$/i).test(path) && !/[\\r\\n]/.test(path);\nif (status === 'reel ready' && !pathOk) status = 'reply not understood (no final file)';\nconst angle = Number.isInteger(b.angle) && b.angle >= 1 && b.angle <= 58 ? b.angle : null;\nreturn [{ json: {\n  row_id: $('Request for Claude Code: WATFEO Ad').first().json.request.job_id,\n  ad_status: status,\n  final_path: pathOk ? path.slice(0, 400) : '',\n  angle_used: status === 'reel ready' ? angle : null,\n  ad_note: String(b.note || '').slice(0, 1000),\n} }];\n"
+   }
+  },
+  {
+   "id": "b8ff4a7f-03a9-4118-95dc-53d722d47fa7",
+   "name": "Record WATFEO Ad",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1920,
+    -120
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "update",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "ZysESPWCLVTcNa30",
+     "cachedResultName": "dtj_watfeo_ads"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "id",
+       "condition": "eq",
+       "keyValue": "={{ $json.row_id }}"
+      }
+     ]
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "ad_status": "={{ $json.ad_status }}",
+      "final_path": "={{ $json.final_path }}",
+      "angle_used": "={{ $json.angle_used }}",
+      "ad_note": "={{ $json.ad_note }}",
+      "ad_updated_at": "={{ $now.toISO() }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "ad_status",
+       "displayName": "ad_status",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "final_path",
+       "displayName": "final_path",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "angle_used",
+       "displayName": "angle_used",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "ad_note",
+       "displayName": "ad_note",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "ad_updated_at",
+       "displayName": "ad_updated_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "c37a6085-95dc-48f8-916e-b1207ac3eb5f",
+   "name": "Tell the Requester",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1920,
+    120
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Tell the Requester\" in \"WATFEO Ads: New Ad\" (mode: Run Once for All Items).\n// When the ad was asked for from Telegram (the job has a telegram_chat_id), send the result back. Output: [] or one { chat_id, text }.\nconst job = $('Save WATFEO Ad').first().json || {};\nconst chat = String(job.telegram_chat_id || '').trim();\nif (!chat) return [];\nconst r = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst what = { reel: 'reel', scripts: 'scripts', prompts: 'scripts and prompts' }[job.kind] || 'ad';\nlet text;\nif (r.ad_status === 'reel ready') {\n  text = 'Your WATFEO ' + what + ' ' + (what.endsWith('s') ? 'are' : 'is') + ' ready' + (r.angle_used ? ' (angle #' + r.angle_used + ')' : '')\n    + '. File on the laptop:\\n' + esc(r.final_path) + (r.ad_note ? '\\n\\n' + esc(String(r.ad_note).slice(0, 600)) : '')\n    + '\\nNothing was posted. A person watches it and decides.';\n} else {\n  text = 'The WATFEO ' + what + ' is not finished (' + esc(r.ad_status || 'no answer') + ')'\n    + (r.ad_note ? ': ' + esc(String(r.ad_note).slice(0, 600)) : '.');\n}\nreturn [{ json: { chat_id: chat, text } }];\n"
+   }
+  },
+  {
+   "id": "ce15d2cf-729f-4a70-98d0-99f13fcd213f",
+   "name": "Send Result",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2160,
+    120
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "webhookId": "4b9f86ef-f05a-42aa-a395-78b4c6669de7",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "f806aa18-fed5-4f78-81e5-3b79160105e0",
+   "name": "Sticky Note 57d4758a",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -440
+   ],
+   "parameters": {
+    "content": "## WATFEO ads: one book, endless fresh ads\nFill **New WATFEO ad**: the language, what you need (a full reel, scripts only, or scripts + prompts), how many, and an angle number if you want one (1-58 from the skill's angle bank). The job is saved in **dtj_watfeo_ads**, which is also the team's record of angles already used.\n\nThe run pauses at **Wait for Claude Code: WATFEO Ad**. On a DTJ laptop the person on duty opens Claude Code in the dtj-agency-automation folder and says \"handle the WATFEO ad request\" (or listens for it). Claude uses the skill **watfeo-ugc-ads** and answers here. Nothing is posted.\n\nSource in git: `n8n/watfeo-ads/` and `.claude/skills/watfeo-ugc-ads/`.",
+    "color": 6,
+    "width": 780,
+    "height": 400
+   }
+  }
+ ],
+ "connections": {
+  "New WATFEO Ad": {
+   "main": [
+    [
+     {
+      "node": "Take the WATFEO Ad Request",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Take the WATFEO Ad Request": {
+   "main": [
+    [
+     {
+      "node": "Save WATFEO Ad",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "From Another Workflow": {
+   "main": [
+    [
+     {
+      "node": "Take the WATFEO Ad Request",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save WATFEO Ad": {
+   "main": [
+    [
+     {
+      "node": "Accepted?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Accepted?": {
+   "main": [
+    [
+     {
+      "node": "Load Earlier Ads",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Earlier Ads": {
+   "main": [
+    [
+     {
+      "node": "Request for Claude Code: WATFEO Ad",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Request for Claude Code: WATFEO Ad": {
+   "main": [
+    [
+     {
+      "node": "Wait for Claude Code: WATFEO Ad",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait for Claude Code: WATFEO Ad": {
+   "main": [
+    [
+     {
+      "node": "Claude Code Reply: WATFEO Ad",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Claude Code Reply: WATFEO Ad": {
+   "main": [
+    [
+     {
+      "node": "Record WATFEO Ad",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Tell the Requester",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tell the Requester": {
+   "main": [
+    [
+     {
+      "node": "Send Result",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}
