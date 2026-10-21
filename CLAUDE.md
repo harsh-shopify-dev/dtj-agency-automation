@@ -22,9 +22,11 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
      or "ask Harsh", it means this. Tier 3 stays never, whoever asks.
      **Approve in Telegram (Harsh, 21 Oct 2026, for a whole store started from the bot):** the yes may be a tap on the Approve button
      that the store job (`n8n/store-factory/store_job.py`) sends for that one action, by an active person in `dtj_bot_users`; the tap
-     carries their name, recorded as approved_by "<name> (Telegram Approve)". One tap, one action (the draft copy, the app copies, the
-     header, the footer, the collection page); Skip leaves it undone. It never covers a live theme, publishing, or creating a store
-     or product.
+     carries their name, recorded as approved_by "<name> (Telegram Approve)". One tap, one action (the draft copy, the brand copy,
+     the app copies, the header, the footer, the collection page); Skip leaves it undone. The brand copy (Harsh, 21 Oct 2026: "One
+     Approve tap per import") is the one way a tap creates products: one tap covers that one import of a brand's products,
+     collections and empty policy pages into the store (`provision/brand_copy.py`), which never changes or deletes what the store
+     has. A tap never covers a live theme, publishing, creating a store, or any other product change.
    - Tier 3 destructive (delete, truncate, drop, force-push, remove access): never.
 3. **Shadow first.** New automations only recommend until Harsh moves them up.
 4. **Numbers come from code.** Never invent or estimate a metric. Every figure must come from a stored query or file and name its source. If you do not have it, say "not available".
@@ -70,8 +72,8 @@ with `python tools/team-setup/check_setup.py`.
 **Setting everything up** (laptop, n8n, the app switch) and **"listen for the telegram call"** (wait for bot requests and design
 each one while a person is at the laptop): the skill `dtj-factory-setup`.
 **A new shop** (a client's store or one in DTJ's own Shopify organization; `/addshop` in the bot): the skill `dtj-add-shop`.
-**A whole store from one link** (an admin sends the bot a store's own link; questions and Approve taps in Telegram, then the draft
-copy, the apps and every page): the skill `dtj-new-store`.
+**A whole store from one link** (an admin sends the bot the store to build in; the bot asks for the brand's own link and copies the
+brand into it; questions and Approve taps in Telegram, then the draft copy, the apps and every page): the skill `dtj-new-store`.
 **A brand intake before a redesign** (the client's public pictures, videos, colours and details into DTJ's Google Drive; also
 `/intake` in the bot): the skill `dtj-brand-intake`.
 **A client's home page** (only when someone asks; the person picks the sections to build or update): the skill `dtj-home-page`.

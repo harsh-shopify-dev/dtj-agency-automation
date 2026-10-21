@@ -2,9 +2,12 @@
 and it starts designing the store and it asks the specific questions it needs along with the app installation"). The laptop side of
 n8n's "Store Factory: New Store"; the runbook is the skill dtj-new-store.
 
-    python n8n/store-factory/store_job.py start --link https://brand.com --chat <telegram id> --by "<name>"
-        read the store and ask the questions in Telegram (whose store, the client's name, what to design, which products, an offer)
+    python n8n/store-factory/store_job.py start --link https://store.myshopify.com --chat <telegram id> --by "<name>"
+        read the store and ask the questions in Telegram (the brand's link, whose store, the client's name, what to design, which
+        products, an offer)
     python n8n/store-factory/store_job.py draft --job <job>       Approve tap, then the live theme duplicated as an UNPUBLISHED copy
+    python n8n/store-factory/store_job.py copy --job <job>        the brand's products, collections and empty policy pages: a read-only
+                                                                   plan, an Approve tap, then the provision.brand_copy apply command
     python n8n/store-factory/store_job.py apps --job <job>        Approve tap for the app copies; prints the add_shop.py command
     python n8n/store-factory/store_job.py approve --job <job> --key <key> --text "<what will be written>"   one write's Approve tap
     python n8n/store-factory/store_job.py step --job <job> <stage> [--done N --total M]                      the progress bar
@@ -45,8 +48,9 @@ FULL, PRODUCTS_ONLY = ("chrome", "home", "collection", "products"), ("products",
 STORE_STAGES = {
     "questions": ("Your answers", 0, 8),
     "draft": ("The draft copy of the theme", 8, 12),
-    "apps": ("The DTJ apps: made, released, installed", 12, 35),
-    "intake": ("Collecting the brand's pictures and details", 35, 45),
+    "copy": ("Copying the brand's products and collections", 12, 25),
+    "apps": ("The DTJ apps: made, released, installed", 25, 38),
+    "intake": ("Collecting the brand's pictures and details", 38, 45),
     "chrome": ("Header and footer", 45, 53),
     "home": ("Home page", 53, 63),
     "collection": ("Collection page", 63, 70),
@@ -108,7 +112,8 @@ def match_products(lines: list[str], sellers: list[dict]) -> tuple[list[dict], l
 class Job:
     def __init__(self, job: str, *, send: Callable[[str, dict], dict], rows: Callable[[str], list], progress=None, access=None,
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
-                 today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y")):
+                 today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None):
+        self.scanner, self.planner = scanner or _scan, planner or _copy_plan
         self.job, self.dir = job, state_dir / job
         self.path = self.dir / "job.json"
         self.s = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
@@ -144,16 +149,42 @@ class Job:
         intro = (f"<b>{esc(sc['name'])}</b> ({esc(sc['myshopify_domain'])})\n{sc['product_count']}{'+' if sc.get('more_products') else ''} "
                  f"products, {sc['collection_count']} collections, live theme {esc(theme.get('name') or '?')} "
                  f"({esc(theme.get('schema_name') or 'unknown')}).")
-        got = a.choose("whose", intro + "\n\nWhose store is it?",
-                       [("A client's store", "client"), ("DTJ's own store", "dtj"), ("Wrong store: stop", "stop")], minutes)
+        # the brand comes first (Harsh, 21 Oct 2026: "it didnt asked me the brand link it has to create the shopify store of it"):
+        # the link sent is the store to build in; the brand's own store is where the products, collections and policies come from
+        got = a.choose("brand_src", intro + "\n\nWhich brand should I build in this store?",
+                       [("I'll send the brand's link", "send"), ("This store is the brand", "self"), ("Wrong store: stop", "stop")],
+                       minutes)
         if not got:
             return WAITING
         if got["value"] == "stop":
             return self.stop("the person said it is the wrong store")
+        if got["value"] == "send" and not s.get("brand"):
+            link = a.type_in("brand_link", "Send the brand's website link: its own Shopify store, for example https://brand.com",
+                             minutes, "https://brand.com")
+            if not link:
+                return WAITING
+            try:
+                s["brand"] = self.scanner(link["value"])
+            except Exception as exc:  # noqa: BLE001 - any reason the brand cannot be read stops here, said plainly
+                return self.stop(f"the brand's link could not be read as a Shopify store ({str(exc)[:200]})")
+            self.save()
+            br = s["brand"]
+            a.tell(f"Brand: <b>{esc(br['name'])}</b> ({esc(br['base'])}): {br['product_count']} products, {br['collection_count']} "
+                   f"collections. They are copied into {esc(sc['name'])} only after your Approve tap.")
+        elif got["value"] == "self":
+            s["brand"] = sc
+        br = s["brand"]
+        p["brand"] = {"link": br["base"], "name": br["name"], "store": br["myshopify_domain"], "currency": br.get("currency"),
+                      "product_count": br["product_count"]}
+        p["copy"] = br["myshopify_domain"] != sc["myshopify_domain"]
+        got = a.choose("whose", f"Whose store is <b>{esc(sc['name'])}</b> ({esc(sc['myshopify_domain'])})?",
+                       [("A client's store", "client"), ("DTJ's own store", "dtj")], minutes)
+        if not got:
+            return WAITING
         p["whose"] = got["value"]
         if p["whose"] == "client":
-            got = a.choose("label", f"The client's name for the app names: <b>{esc(sc['name'])}</b>?",
-                           [(f"Use \"{sc['name'][:40]}\"", "use"), ("I'll type it", "type")], minutes)
+            got = a.choose("label", f"The client's name for the app names: <b>{esc(br['name'])}</b>?",
+                           [(f"Use \"{br['name'][:40]}\"", "use"), ("I'll type it", "type")], minutes)
             if not got:
                 return WAITING
             if got["value"] == "type":
@@ -162,7 +193,7 @@ class Job:
                     return WAITING
                 p["label"] = re.sub(r"\s+", " ", got["value"]).strip()[:40]
             else:
-                p["label"] = sc["name"][:40]
+                p["label"] = br["name"][:40]
         self.bar("questions", 1, 5)
         support = theme_support(theme.get("schema_name"))
         if support == "dawn":
@@ -208,9 +239,9 @@ class Job:
         self.bar("questions", 3, 5)
         if "products" in p["parts"]:
             from page_builder.store_scan import product_choices  # noqa: PLC0415
-            sellers = sc["best_sellers"]
+            sellers = br["best_sellers"]  # the brand's products (copied with the same handles)
             top = "\n".join(f"{i}. {esc(x['title'])}" for i, x in enumerate(sellers[:5], 1))
-            got = a.choose("products", f"Which product pages? Best sellers first ({esc(sc['best_sellers_from'])}):\n{top}",
+            got = a.choose("products", f"Which product pages? Best sellers first ({esc(br['best_sellers_from'])}):\n{top}",
                            [(lbl, v) for lbl, v in product_choices(len(sellers))], minutes)
             if not got:
                 return WAITING
@@ -251,10 +282,11 @@ class Job:
         s.pop("stopped", None)
         self.save()
         products = "; ".join(x["title"] for x in p.get("products", [])) or "none"
-        a.tell(f"Plan for <b>{esc(s['name'])}</b>: {esc(', '.join(PARTS[x] for x in p['parts']))}. Product pages: {esc(products)}. "
-               f"Offer: {esc(p['offer'] or 'none')}.\nBefore anything is made or written I send an Approve button: the draft copy, "
-               "the app copies, the header and footer, the collection page. Product and home pages go to the draft without one "
-               "(Harsh's standing rule). Nothing is published.")
+        copying = f"Copy <b>{esc(br['name'])}</b> into it, then design: " if p["copy"] else ""
+        a.tell(f"Plan for <b>{esc(s['name'])}</b>: {copying}{esc(', '.join(PARTS[x] for x in p['parts']))}. Product pages: "
+               f"{esc(products)}. Offer: {esc(p['offer'] or 'none')}.\nBefore anything is made or written I send an Approve button: "
+               "the draft copy, " + ("the brand copy, " if p["copy"] else "") + "the app copies, the header and footer, the collection "
+               "page. Product and home pages go to the draft without one (Harsh's standing rule). Nothing is published.")
         self.out(json.dumps({"job": self.job, "plan": p}, ensure_ascii=False))
         return 0
 
@@ -307,6 +339,49 @@ class Job:
         self.ask.tell(f"Draft copy made: <b>{esc(name)}</b> (theme {esc(made['id'])}, unpublished).")
         self.out(json.dumps(made))
         return 0
+
+    # ---- the brand copy
+    def copy(self, minutes: float = APPROVE_MINUTES) -> int:
+        """A read-only plan of what the copy creates, its Approve tap, then the apply command (one tap = this one import)."""
+        self.need_plan()
+        s, p = self.s, self.s["plan"]
+        if not p.get("copy"):
+            self.out("nothing to copy: this store is the brand")
+            return 0
+        if s.get("copy_approved_by"):
+            self.out(self.copy_command())
+            return 0
+        self.bar("copy")
+        if not s.get("copy_plan"):
+            try:
+                plan = self.planner(p["brand"]["link"], s["shop"], p["brand"].get("currency"), self.dir / "copy")
+            except Exception as exc:  # noqa: BLE001 - a store sign-in without the scopes, or the brand stopped answering
+                self.ask.tell(f"I could not plan the copy: {esc(str(exc)[:300])}")
+                return self.stop(f"the copy could not be planned: {str(exc)[:200]}")
+            from provision.brand_copy import summary  # noqa: PLC0415
+            s["copy_plan"] = {"summary": summary(plan), "notes": plan["notes"], "status": plan["status"],
+                              "products": len(plan["products"])}
+            self.save()
+        cp = s["copy_plan"]
+        notes = "".join(f"\n- {esc(n)}" for n in cp["notes"])
+        ok, by = self.ask.approve("ok_copy", f"Copy <b>{esc(p['brand']['name'])}</b> into <b>{esc(s['name'])}</b>: {esc(cp['summary'])}. "
+                                             "Nothing the store has is changed or deleted." + notes, minutes)
+        if ok is None:
+            return WAITING
+        if not ok:
+            self.logged("brand copy into the store", "skipped in Telegram", by, result="skipped")
+            self.out(f"skipped by {by}")
+            return SKIPPED
+        s["copy_approved_by"] = f"{by} (Telegram Approve)"
+        self.save()
+        self.logged("brand copy into the store (products, collections, empty policy pages)", "the store is built from the brand",
+                    s["copy_approved_by"], evidence={"plan": cp})
+        self.out(self.copy_command())
+        return 0
+
+    def copy_command(self) -> str:
+        return (f'cd services/store-builder && python -m provision.brand_copy apply --out ../../.work/stores/{self.job}/copy '
+                f'--approved-by "{self.s["copy_approved_by"]}"')
 
     # ---- the apps
     def apps(self, minutes: float = APPROVE_MINUTES) -> int:
@@ -375,6 +450,20 @@ class Job:
         return 0
 
 
+def _scan(link: str) -> dict:
+    from page_builder.store_scan import scan  # noqa: PLC0415
+    return scan(link)
+
+
+def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path) -> dict:
+    """Read only: the brand's public catalogue and the target's handles, currency and policies (the CLI's sign-in for the store)."""
+    from provision import brand_copy  # noqa: PLC0415
+    plan = brand_copy.make_plan(brand_copy.read_brand(brand_link), brand_copy.read_target(brand_copy.cli_client(store)), currency)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "plan.json").write_text(json.dumps(plan, indent=1, ensure_ascii=False), encoding="utf-8")
+    return plan
+
+
 def _token() -> str:
     from setup_n8n import user_var  # noqa: PLC0415
     return os.environ.get("DTJ_TELEGRAM_BOT_TOKEN") or user_var("DTJ_TELEGRAM_BOT_TOKEN") or ""
@@ -412,7 +501,7 @@ def main(argv=None) -> int:
     st.add_argument("--chat", default="")
     st.add_argument("--by", default="")
     st.add_argument("--minutes", type=float, default=QUESTION_MINUTES)
-    for name in ("draft", "apps", "status"):
+    for name in ("draft", "copy", "apps", "status"):
         x = sub.add_parser(name)
         x.add_argument("--job", required=True)
         x.add_argument("--minutes", type=float, default=APPROVE_MINUTES)
@@ -466,7 +555,8 @@ def main(argv=None) -> int:
             progress.start(a.chat, f"Designing the store: {sc['name']}")
         return job.plan(a.minutes)
     if a.cmd == "status":
-        print(json.dumps({k: job.s.get(k) for k in ("shop", "name", "plan", "draft", "apps_approved_by", "written", "stopped")},
+        print(json.dumps({k: job.s.get(k) for k in ("shop", "name", "plan", "draft", "copy_plan", "copy_approved_by", "apps_approved_by",
+                                                     "written", "stopped")},
                          indent=1, ensure_ascii=False))
         return 0
     if a.cmd == "draft":
@@ -476,6 +566,8 @@ def main(argv=None) -> int:
         except ThemeError as exc:
             print(f"stopped: {exc}")
             return 1
+    if a.cmd == "copy":
+        return job.copy(a.minutes)
     if a.cmd == "apps":
         return job.apps(a.minutes)
     if a.cmd == "approve":

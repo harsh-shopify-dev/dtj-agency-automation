@@ -801,7 +801,8 @@ class NewStoreWorkflow(unittest.TestCase):
         text = out["instructions"]
         for must in ('store_job.py start --link "https://royaldosa.com" --chat 333 --by "Harsh"', "skill dtj-new-store",
                      f'reply.py --resume-url "{self.RESUME}" --body .work/stores/<job>/answer.json', "Approve tap", "Nothing is published",
-                     "Never invent an offer", "docs/HANDOFF.md", "Note from Harsh: premium"):
+                     "Never invent an offer", "docs/HANDOFF.md", "Note from Harsh: premium", "store_job.py copy",
+                     "This link is the store to build IN", "one for the brand copy"):
             self.assertIn(must, text)
         self.assertFalse(run_node("new_store_request.js", {"link": "javascript:alert(1)"}, {"__resume": self.RESUME})["ok"])
 

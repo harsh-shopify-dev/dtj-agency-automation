@@ -52,7 +52,7 @@ class Answers:
                 if row[0]["text"] == label:
                     _, job, key, n = row[0]["callback_data"].split(":")
                     self.rows.append({"id": len(self.rows) + 1, "job": job, "key": key, "value": label, "choice": n, "by": by,
-                                      "chat_id": chat, "at": f"2026-10-21T10:{len(self.rows):02d}:00Z"})
+                                      "chat_id": chat, "at": f"2099-10-21T10:{len(self.rows):02d}:00Z"})
                     return
         raise AssertionError(f"no button {label!r}")
 
@@ -61,7 +61,7 @@ class Answers:
         key = asked.rsplit("answer ", 1)[1].rstrip(")")
         job = asked.rsplit("(job ", 1)[1].split(",")[0]
         self.rows.append({"id": len(self.rows) + 1, "job": job, "key": key, "value": text, "choice": "", "by": by, "chat_id": CHAT,
-                          "at": f"2026-10-21T10:{len(self.rows):02d}:00Z"})
+                          "at": f"2099-10-21T10:{len(self.rows):02d}:00Z"})
 
 
 class Clock:
@@ -113,8 +113,11 @@ class Questions(Base):
     def test_a_client_store_is_planned_in_five_taps_and_a_typed_offer(self):
         j = self.job()
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)  # nobody tapped yet
-        self.assertIn("Whose store is it?", self.tg.questions()[0]["text"])
+        self.assertIn("Which brand should I build in this store?", self.tg.questions()[0]["text"])
         self.assertIn("4 products, 2 collections, live theme Horizon (Horizon)", self.tg.questions()[0]["text"])
+        self.answers.tap(self.tg, "This store is the brand")
+        self.assertEqual(j.plan(minutes=1), store_job.WAITING)
+        self.assertIn("Whose store is <b>Royal Dosa</b>", self.tg.questions()[-1]["text"])
         self.answers.tap(self.tg, "A client's store")
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)
         self.answers.tap(self.tg, 'Use "Royal Dosa"')
@@ -146,19 +149,29 @@ class Questions(Base):
         j = self.job()
         j.plan(minutes=1)
         data = self.tg.questions()[0]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
-        self.assertEqual(data, "a:royal-dosa:whose:0")
+        self.assertEqual(data, "a:royal-dosa:brand_src:0")
         self.assertLessEqual(len(store_job.job_id("a" * 60 + ".myshopify.com")), 24)
         self.assertLessEqual(len(f"a:{store_job.job_id('a' * 60 + '.myshopify.com')}:{'x' * 20}:9".encode()), 64)
 
     def test_answers_from_another_chat_do_not_count_and_the_last_answer_wins(self):
         j = self.job()
         j.plan(minutes=1)
-        self.answers.tap(self.tg, "A client's store", chat="999")
+        self.answers.tap(self.tg, "This store is the brand", chat="999")
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)
         self.answers.tap(self.tg, "Wrong store: stop")
-        self.answers.tap(self.tg, "A client's store")
+        self.answers.tap(self.tg, "This store is the brand")
         j.plan(minutes=1)
-        self.assertEqual(j.s["plan"]["whose"], "client")
+        self.assertFalse(j.s["plan"]["copy"])
+        self.assertIn("Whose store is", self.tg.questions()[-1]["text"])
+
+    def test_an_old_tap_left_in_the_table_does_not_answer_a_new_question(self):
+        # the second run for elevate (21 Oct 2026): the table still held the first run's taps for the same job and keys
+        self.answers.rows.append({"id": 1, "job": "royal-dosa", "key": "brand_src", "value": "This store is the brand", "choice": "1",
+                                  "by": "Harsh", "chat_id": CHAT, "at": "2020-01-01T10:00:00.000Z"})
+        j = self.job()
+        self.assertEqual(j.plan(minutes=1), store_job.WAITING)
+        self.assertNotIn("brand_src", j.s["answers"])
+        self.assertIn("at", j.s["asked"]["brand_src"])
 
     def test_wrong_store_stops(self):
         j = self.job()
@@ -170,8 +183,9 @@ class Questions(Base):
     def test_a_theme_the_builder_does_not_know_asks_for_horizon_first(self):
         j = self.job(scan={**SCAN, "live_theme": {"name": "Impact", "schema_name": "Impact"}})
         j.plan(minutes=1)
-        self.answers.tap(self.tg, "DTJ's own store")
-        j.plan(minutes=1)
+        for label in ("This store is the brand", "DTJ's own store"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
         self.assertIn("Add theme > Horizon (do NOT publish it)", self.tg.questions()[-1]["text"])
         self.answers.tap(self.tg, "Stop")
         self.assertEqual(j.plan(minutes=1), 1)
@@ -179,8 +193,9 @@ class Questions(Base):
     def test_a_dawn_store_gets_product_pages_only(self):
         j = self.job(scan={**SCAN, "live_theme": {"name": "Dawn", "schema_name": "Dawn"}})
         j.plan(minutes=1)
-        self.answers.tap(self.tg, "DTJ's own store")
-        j.plan(minutes=1)
+        for label in ("This store is the brand", "DTJ's own store"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
         self.answers.tap(self.tg, "Product pages only, on Dawn")
         j.plan(minutes=1)
         self.assertIn("Which product pages?", self.tg.questions()[-1]["text"])  # no "what to design" question
@@ -189,7 +204,7 @@ class Questions(Base):
     def test_picked_products_by_link_or_name_and_unknown_ones_are_said(self):
         j = self.job()
         j.plan(minutes=1)
-        for label in ("DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "I'll pick them"):
+        for label in ("This store is the brand", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "I'll pick them"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.answers.type(self.tg, "https://royaldosa.com/products/sambar?variant=1\nidli mix\nchocolate cake")
@@ -203,7 +218,7 @@ class Approvals(Base):
     def planned(self, access=None):
         j = self.job(access)
         j.plan(minutes=1)
-        for label in ("A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
+        for label in ("This store is the brand", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertTrue(j.s.get("planned"))
@@ -236,7 +251,8 @@ class Approvals(Base):
         access = FakeAccess(added=[{"id": 700, "name": "Horizon", "role": "unpublished"}])
         j = self.job(access, scan={**SCAN, "live_theme": {"name": "Impact", "schema_name": "Impact"}})
         j.plan(minutes=1)
-        for label in ("DTJ's own store", "Done: Horizon is added", "Only product pages", "Top 3 best sellers", "No offer"):
+        for label in ("This store is the brand", "DTJ's own store", "Done: Horizon is added", "Only product pages", "Top 3 best sellers",
+                      "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertEqual(j.draft(minutes=1), 0)
@@ -272,6 +288,107 @@ class Approvals(Base):
         j = self.job(FakeAccess())
         with self.assertRaises(SystemExit):
             j.draft(minutes=1)
+
+
+BRAND = {**SCAN, "link": "https://glowco.com", "base": "https://glowco.com", "myshopify_domain": "glowco.myshopify.com", "name": "GlowCo",
+         "currency": "USD", "product_count": 2, "collection_count": 1,
+         "best_sellers": [{"handle": "glow-serum", "title": "Glow Serum", "url": "https://glowco.com/products/glow-serum"},
+                          {"handle": "night-cream", "title": "Night Cream", "url": "https://glowco.com/products/night-cream"}]}
+PLAN = {"brand": "https://glowco.com", "status": "ACTIVE", "notes": ["prices are the brand's numbers in USD; royal-dosa.myshopify.com "
+                                                                   "sells in INR (not converted)"],
+        "products": [{"handle": "glow-serum", "files": [1, 2], "variants": [1]}, {"handle": "night-cream", "files": [1], "variants": [1, 2]}],
+        "collections": [{"handle": "skin"}], "policies": [{"type": "REFUND_POLICY"}],
+        "target": {"store": "royal-dosa.myshopify.com"}, "skipped": {}}
+
+
+class BrandCopy(Base):
+    """The link sent is the store to build in; the bot asks for the brand's own link and copies the brand into it (21 Oct 2026)."""
+
+    def job(self, access=None, scan=SCAN, planner=None, scanner=None):
+        self.planned_with = []
+
+        def plan(link, store, currency, out):
+            self.planned_with.append((link, store, currency))
+            return PLAN
+        j = store_job.Job(store_job.job_id(scan["myshopify_domain"]), send=self.tg, rows=self.answers, access=access, log=self.log,
+                          state_dir=self.tmp, out=self.printed.append, sleep=self.clock.sleep, clock=self.clock,
+                          today=lambda: "21 Oct 2026", scanner=scanner or (lambda link: BRAND), planner=planner or plan)
+        j.begin(scan, CHAT, "Harsh")
+        return j
+
+    def planned(self, **kw):
+        j = self.job(**kw)
+        j.plan(minutes=1)
+        self.answers.tap(self.tg, "I'll send the brand's link")
+        j.plan(minutes=1)
+        self.answers.type(self.tg, "https://glowco.com")
+        j.plan(minutes=1)
+        for label in ("DTJ's own store", "Everything", "All 2 products", "No offer"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        return j
+
+    def test_the_bot_asks_for_the_brand_and_plans_from_the_brands_products(self):
+        j = self.planned()
+        told = [d["text"] for _, d in self.tg.sent]
+        self.assertTrue(any("Brand: <b>GlowCo</b> (https://glowco.com): 2 products" in x for x in told))
+        p = j.s["plan"]
+        self.assertTrue(p["copy"])
+        self.assertEqual((p["brand"]["store"], p["brand"]["currency"]), ("glowco.myshopify.com", "USD"))
+        self.assertEqual([x["handle"] for x in p["products"]], ["glow-serum", "night-cream"])  # the BRAND's products
+        self.assertIn("Copy <b>GlowCo</b> into it", self.tg.last()["text"])
+        self.assertIn("the brand copy", self.tg.last()["text"])
+
+    def test_a_brand_that_cannot_be_read_stops_and_says_why(self):
+        def bad(link):
+            raise ValueError("no Shopify.shop in its page")
+        j = self.job(scanner=bad)
+        j.plan(minutes=1)
+        self.answers.tap(self.tg, "I'll send the brand's link")
+        j.plan(minutes=1)
+        self.answers.type(self.tg, "https://wordpress-brand.com")
+        self.assertEqual(j.plan(minutes=1), 1)
+        self.assertIn("could not be read as a Shopify store", self.tg.last()["text"])
+
+    def test_the_copy_is_planned_read_only_then_waits_for_its_own_tap(self):
+        j = self.planned()
+        self.assertEqual(j.copy(minutes=1), store_job.WAITING)
+        self.assertEqual(self.planned_with, [("https://glowco.com", "royal-dosa.myshopify.com", "USD")])
+        ask = self.tg.questions()[-1]["text"]
+        self.assertIn("Copy <b>GlowCo</b> into <b>Royal Dosa</b>: 2 products (3 pictures, 3 variants), 1 collections, 1 policy pages, "
+                      "as ACTIVE", ask)
+        self.assertIn("sells in INR (not converted)", ask)
+        self.assertIn("Nothing the store has is changed or deleted", ask)
+        self.answers.tap(self.tg, "Approve", by="Riya")
+        self.assertEqual(j.copy(minutes=1), 0)
+        self.assertEqual(self.printed[-1], 'cd services/store-builder && python -m provision.brand_copy apply --out '
+                                           '../../.work/stores/royal-dosa/copy --approved-by "Riya (Telegram Approve)"')
+        self.assertEqual(self.log.rows[-1]["approver"], "Riya (Telegram Approve)")
+        self.assertEqual(len(self.planned_with), 1)  # planned once
+        j.copy(minutes=1)
+        self.assertEqual(len(self.planned_with), 1)
+
+    def test_skip_and_a_plan_that_fails(self):
+        j = self.planned()
+        j.copy(minutes=1)
+        self.answers.tap(self.tg, "Skip")
+        self.assertEqual(j.copy(minutes=1), store_job.SKIPPED)
+
+        def no_scope(*_):
+            raise RuntimeError("ACCESS_DENIED: read_products")
+        k = self.planned(scan={**SCAN, "myshopify_domain": "other.myshopify.com"}, planner=no_scope)
+        self.assertEqual(k.copy(minutes=1), 1)
+        self.assertIn("I could not plan the copy: ACCESS_DENIED", [d["text"] for _, d in self.tg.sent][-2])
+
+    def test_nothing_to_copy_when_the_store_is_the_brand(self):
+        j = self.job()
+        j.plan(minutes=1)
+        for label in ("This store is the brand", "DTJ's own store", "Only product pages", "Top 3 best sellers", "No offer"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        self.assertEqual(j.copy(minutes=1), 0)
+        self.assertEqual(self.printed[-1], "nothing to copy: this store is the brand")
+        self.assertEqual(self.planned_with, [])
 
 
 class Pieces(unittest.TestCase):
