@@ -31,6 +31,15 @@ class Check(unittest.TestCase):
             with self.assertRaises(ValueError):
                 reply.check(body)
 
+    def test_an_add_shop_answer_is_done_only_with_all_seven_installed(self):
+        shop = {"shop": "royal-dosa.myshopify.com", "label": "Royal Dosa", "note": ""}
+        self.assertEqual(reply.check({**shop, "shop_status": "done", "installed": 7}), "add_shop")
+        self.assertEqual(reply.check({**shop, "shop_status": "waiting for installs", "installed": 2}), "add_shop")
+        self.assertEqual(reply.check({**shop, "shop_status": "could not add", "installed": 0, "note": "CLI not signed in"}), "add_shop")
+        for body in ({**shop, "shop_status": "done", "installed": 6}, {**shop, "shop_status": "done"}, {**shop, "shop_status": "added"}):
+            with self.assertRaises(ValueError):
+                reply.check(body)
+
     def test_unknown_or_empty_answers_are_refused(self):
         for body in ({"page_status": "done"}, {}, {"result": "written to draft"}):
             with self.assertRaises(ValueError):

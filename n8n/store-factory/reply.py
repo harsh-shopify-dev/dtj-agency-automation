@@ -1,4 +1,4 @@
-"""Claude Code's answer to a paused "Store Factory: Page Design" or "Reel Factory: New Reel" run: POST a JSON body to the run's resume URL.
+"""Claude Code's answer to a paused "Store Factory: Page Design", "Store Factory: Add Shop" or "Reel Factory: New Reel" run: POST a JSON body to the run's resume URL.
 
     python n8n/store-factory/reply.py --resume-url "<resume_url from the Request for Claude Code node>" --body answer.json
 
@@ -24,6 +24,8 @@ STAGES = {
     "write_to_draft": {"result": ("written to draft", "not written")},
     # "Reel Factory: New Reel" (n8n/reel-factory): the body is the job's result.json (python -m reel_factory.job result)
     "reel": {"reel_status": ("reel ready", "needs a look", "could not make")},
+    # "Store Factory: Add Shop" (21 Oct 2026, /addshop): the body is add_shop.py's .work/add-shop/<client>.answer.json
+    "add_shop": {"shop_status": ("done", "waiting for installs", "could not add")},
 }
 
 
@@ -48,10 +50,13 @@ def check(body: dict) -> str:
                     raise ValueError("a page written to the draft needs its preview_url (https://<store>.myshopify.com/...preview_theme_id=...)")
                 if stage == "reel" and body[key] == "reel ready" and not str(body.get("final_path", "")).lower().endswith(".mp4"):
                     raise ValueError("a reel that is ready needs its final_path (the .mp4 on the reel VPS)")
+                if stage == "add_shop" and body[key] == "done" and body.get("installed") != 7:
+                    raise ValueError("a shop that is done has all 7 apps installed (installed: 7)")
                 if stage == "write_to_draft" and body[key] == "written to draft" and not body.get("approved_by"):
                     raise ValueError("a write to the draft theme needs approved_by (who said yes)")
                 return stage
-    raise ValueError("the body answers no stage: give page_status (page design), result (write to draft) or reel_status (reel)")
+    raise ValueError("the body answers no stage: give page_status (page design), result (write to draft), reel_status (reel) "
+                     "or shop_status (add shop)")
 
 
 def main(argv=None) -> int:

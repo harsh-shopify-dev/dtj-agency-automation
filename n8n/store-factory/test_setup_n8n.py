@@ -485,7 +485,7 @@ class Apply(unittest.TestCase):
         left, text = run(setup.apply, fake)
         self.assertEqual(left, 0, text)
         made = [(t, a) for t, a in fake.calls if t in ("create_data_table", "create_workflow_from_code")]
-        self.assertEqual([a["name"] for _, a in made], [*SPEC, *setup.WORKFLOWS])
+        self.assertEqual([a["name"] for _, a in made], [*SPEC, *(w for w in setup.WORKFLOWS if w in EXPORTS)])  # in creation order
         self.assertEqual({a["projectId"] for _, a in made}, {"P-me"})  # nothing holds them yet: the personal project
         self.assertEqual(made[0][1]["columns"], SPEC["dtj_client_intake"]["columns"])
         by_name = {w["name"]: w for w in fake.workflows.values()}

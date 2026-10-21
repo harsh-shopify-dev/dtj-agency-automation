@@ -151,6 +151,28 @@ class Listen(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn('no workflow named "Store Factory: Page Design"', err)
 
+    def test_page_and_add_shop_requests_are_watched_together_oldest_first(self):
+        add = "WF-AS"
+        shop_run = dict(run_("700", "2026-10-21T06:00:00.000Z"), workflowId=add)
+        page_run = run_("701", "2026-10-21T07:00:00.000Z")
+
+        def call(tool, args):
+            if tool == "search_workflows":
+                return {"data": [{"id": PD, "name": "Store Factory: Page Design"}, {"id": add, "name": "Store Factory: Add Shop"}]}
+            if tool == "search_workflow_executions":
+                return {"data": [r for r in (shop_run, page_run) if r["workflowId"] == args["workflowId"]]}
+            raise AssertionError(tool)
+        code, out, err = self.main(["--once"], call)
+        self.assertEqual(json.loads(out), {"execution_id": "700", "workflow_id": add, "started_at": "2026-10-21T06:00:00.000Z",
+                                           "waiting": 1, "workflow": "Store Factory: Add Shop"})
+        code, out, err = self.main(["--once"], call)
+        self.assertEqual((json.loads(out)["execution_id"], json.loads(out)["workflow"]), ("701", "Store Factory: Page Design"))
+        code, out, _ = self.main(["--status"], call)
+        self.assertIn("add-shop request(s) waiting", out)
+        # one workflow named by hand (the reel VPS): only that one, and missing means exit 2
+        code, out, err = self.main(["--once", "--workflow", "Reel Factory: New Reel"], call)
+        self.assertEqual(code, 2)
+
     def test_status_counts_waiting_and_offered(self):
         fake = FakeN8n([run_("350", "2026-10-12T07:00:00.000Z"), run_("351", "2026-10-12T07:10:00.000Z")])
         self.main(["--once"], fake)

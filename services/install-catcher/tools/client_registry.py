@@ -5,7 +5,7 @@ adding blocks in a theme editor.
 
 A DTJ block in a theme is `shopify://apps/<app handle>/blocks/<block>/<extension uuid>`, and every per-client app copy has its own
 handle and uuid. The uuid is in the Shopify CLI's release record `services/<app>/.shopify/deploy-bundle/manifest.json`
-(modules[type=theme_app_extension].uuid), which the NEXT release overwrites: run this right after releasing the client's 3 copies.
+(modules[type=theme_app_extension].uuid), which the NEXT release overwrites: run this right after releasing the client's copies.
 The handle is what the store reports for the installed app (catcher /licence status, app_handle): before the client installs, the
 handle stays "pending" and the page builder refuses the registry. Run again after the install to fill it in.
 The manifest's app name must match the copy's label in wrangler.toml, so a release record from another client is never used.
@@ -22,9 +22,10 @@ from typing import Callable
 HERE = Path(__file__).resolve().parents[1]
 SERVICES = HERE.parent
 sys.path.insert(0, str(HERE / "tools"))
-from add_client import APPS, current_apps  # noqa: E402
+from add_client import APPS, FIRST_THREE, current_apps  # noqa: E402
 
-PAGE_APP = {"blocks": "dtj-blocks", "sections": "dtj-sections", "sections2": "dtj-sections-2"}  # names in page_builder/registry.json
+PAGE_APP = {"blocks": "dtj-blocks", "sections": "dtj-sections", "sections2": "dtj-sections-2", "heroes": "dtj-heroes",
+            "commerce": "dtj-commerce", "shop": "dtj-shop", "collection": "dtj-collection"}  # names in page_builder/registry.json
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
@@ -51,7 +52,9 @@ def build(client: str, status: Callable[[str], dict], services: Path = SERVICES,
     for part, (folder, _display) in APPS.items():
         key = f"{client}-{part}"
         if key not in apps:
-            raise SystemExit(f"{key} is not registered with the catcher (add_client.py first)")
+            if part in FIRST_THREE:  # every client has these; the other four only from 21 Oct 2026 (/addshop)
+                raise SystemExit(f"{key} is not registered with the catcher (add_client.py first)")
+            continue
         cfg = apps[key]
         shop = cfg["shop"]
         uuid = extension_uuid(services / folder, cfg["label"])

@@ -16,7 +16,8 @@ import deploy  # noqa: E402
 import client_registry  # noqa: E402
 import licence_call  # noqa: E402
 
-IDS = {"blocks": "a" * 32, "sections": "b" * 32, "sections2": "c" * 32}
+IDS = {"blocks": "a" * 32, "sections": "b" * 32, "sections2": "c" * 32, "heroes": "d" * 32, "commerce": "e" * 32, "shop": "f" * 32,
+       "collection": "0" * 32}  # all seven since 21 Oct 2026
 
 
 def blank_wrangler() -> str:
@@ -43,7 +44,7 @@ class AddClient(unittest.TestCase):
         args = {"--shop": SHOP, "--label": "Royal Dosa", "--worker": WORKER, **{f"--{p}-id": v for p, v in IDS.items()}, **over}
         return add_client.main([x for kv in args.items() for x in kv], services=self.tmp, wrangler=self.wrangler)
 
-    def test_three_copies_point_at_the_catcher_and_ask_for_no_data(self):
+    def test_seven_copies_point_at_the_catcher_and_ask_for_no_data(self):
         self.add()
         text = (self.tmp / "block-library" / "shopify.app.royal-dosa.toml").read_text(encoding="utf-8")
         for expected in (f'client_id = "{"a" * 32}"', 'name = "DTJ Blocks - Royal Dosa"', f'application_url = "{WORKER}/start/royal-dosa-blocks"',
@@ -54,11 +55,13 @@ class AddClient(unittest.TestCase):
         for folder, _ in add_client.APPS.values():  # our current apps are never touched
             self.assertEqual((self.tmp / folder / "shopify.app.toml").read_text(encoding="utf-8"), "ours, untouched")
         apps = add_client.current_apps(self.wrangler.read_text(encoding="utf-8"))
-        self.assertEqual(sorted(apps), ["royal-dosa-blocks", "royal-dosa-sections", "royal-dosa-sections2"])
+        self.assertEqual(sorted(apps), sorted(f"royal-dosa-{p}" for p in add_client.APPS))
+        self.assertIn("/start/royal-dosa-collection", (self.tmp / "block-library-collection" / "shopify.app.royal-dosa.toml").read_text(encoding="utf-8"))
         self.assertEqual(apps["royal-dosa-sections"], {"client_id": "b" * 32, "shop": SHOP, "label": "DTJ Sections - Royal Dosa"})
 
     def test_an_organization_store_uses_dtjs_original_apps_and_writes_no_app_files(self):
-        originals = {"blocks": "1" * 32, "sections": "2" * 32, "sections2": "3" * 32}
+        originals = {"blocks": "1" * 32, "sections": "2" * 32, "sections2": "3" * 32, "heroes": "4" * 32, "commerce": "5" * 32, "shop": "6" * 32,
+                     "collection": "7" * 32}
         for part, (folder, _) in add_client.APPS.items():
             (self.tmp / folder / "shopify.app.toml").write_text(f'client_id = "{originals[part]}"\nname = "x"\n', encoding="utf-8")
         add_client.main(["--org", "--shop", "elevate-with-harsh.myshopify.com", "--label", "Elevate with Harsh"],
@@ -67,11 +70,22 @@ class AddClient(unittest.TestCase):
         self.assertEqual(apps["elevate-with-harsh-sections2"], {"client_id": "3" * 32, "shop": "elevate-with-harsh.myshopify.com",
                                                                 "label": "DTJ Sections 2 - Elevate with Harsh", "grant": "org",
                                                                 "org_app": "dtj-sections2"})
-        self.assertEqual(sorted(a["org_app"] for a in apps.values()), ["dtj-blocks", "dtj-sections", "dtj-sections2"])
+        self.assertEqual(sorted(a["org_app"] for a in apps.values()), sorted(o for o, _v in add_client.ORG_APPS.values()))
         for folder, _ in add_client.APPS.values():  # no per-client app file: nothing is installed through the catcher
             self.assertEqual([f.name for f in (self.tmp / folder).iterdir()], ["shopify.app.toml"])
         with self.assertRaises(SystemExit):  # app copies still need their address and client ids
             add_client.main(["--shop", SHOP, "--label", "Royal Dosa"], services=self.tmp, wrangler=self.wrangler)
+
+    def test_a_client_set_up_before_keeps_its_three_apps(self):
+        three = {f"--{p}-id": IDS[p] for p in add_client.FIRST_THREE}
+        args = {"--shop": SHOP, "--label": "Royal Dosa", "--worker": WORKER, "--parts": ",".join(add_client.FIRST_THREE), **three}
+        add_client.main([x for kv in args.items() for x in kv], services=self.tmp, wrangler=self.wrangler)
+        self.assertEqual(sorted(add_client.current_apps(self.wrangler.read_text(encoding="utf-8"))),
+                         ["royal-dosa-blocks", "royal-dosa-sections", "royal-dosa-sections2"])
+        self.assertFalse((self.tmp / "block-library-heroes" / "shopify.app.royal-dosa.toml").exists())
+        with self.assertRaises(SystemExit):  # all seven by default: a missing client id stops it
+            add_client.main(["--shop", SHOP, "--label", "R", "--worker", WORKER, *[x for kv in three.items() for x in kv]],
+                            services=self.tmp, wrangler=self.wrangler)
 
     def test_bad_inputs_are_refused(self):
         with self.assertRaises(SystemExit):
@@ -140,7 +154,7 @@ class Deployment(unittest.TestCase):
                 self.assertNotIn(value, " ".join(cmd))
         puts = {cmd[5]: stdin for cmd, stdin, _ in fake.calls if cmd[3:5] == ["secret", "put"]}
         self.assertEqual(puts["SECRET_ROYAL_DOSA_BLOCKS"], "shpss_client_secret_blocks")
-        self.assertEqual(set(puts), {"VAULT_KEY", "CONTROL_KEY", "BOT_KEY", "SECRET_ROYAL_DOSA_BLOCKS", "SECRET_ROYAL_DOSA_SECTIONS", "SECRET_ROYAL_DOSA_SECTIONS2"})
+        self.assertEqual(set(puts), {"VAULT_KEY", "CONTROL_KEY", "BOT_KEY", *(f"SECRET_ROYAL_DOSA_{p.upper()}" for p in IDS)})  # one per app copy
         self.assertEqual(puts["BOT_KEY"], self.saved["DTJ_CATCHER_BOT_KEY"])
         self.assertEqual(len(puts["BOT_KEY"]), 64)  # 32 random bytes as hex: the catcher wants 32+ characters
         self.assertEqual(puts["VAULT_KEY"], self.saved["DTJ_CATCHER_VAULT_KEY"])
@@ -155,7 +169,7 @@ class Deployment(unittest.TestCase):
         steps = [c[0][3] if c[0][3] != "secret" else f"secret {c[0][4]}" for c in fake.calls]
         self.assertEqual(steps[:3], ["kv", "secret list", "deploy"])  # first deploy creates the Worker
         self.assertEqual(steps[-1], "deploy")  # and the last one ships code and secrets together
-        self.assertEqual(steps.count("secret put"), 6)
+        self.assertEqual(steps.count("secret put"), 3 + len(IDS))  # the 3 catcher keys + one per app copy
 
     def test_other_wrangler_errors_still_stop(self):
         class Broken(FakeWrangler):

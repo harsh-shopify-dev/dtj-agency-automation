@@ -2,6 +2,7 @@
 // Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told
 // when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).
 // Output: one item with action
+//   addshop -> an admin adds a client shop (Store Factory: Add Shop: the laptop's Claude Code does it)
 //   design -> start a page (Store Factory: New Page)
 //   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list ("Pick the Shop")
 //   intake -> start a brand intake on GitHub ("Start Brand Intake")
@@ -51,7 +52,8 @@ if (msg.kind === 'commands') {
     lines.push('', '<b>Admin: the DTJ apps on each shop</b>',
       '/shops: every shop on the switch and whether its DTJ apps are on',
       '/status shop: one shop\'s DTJ apps',
-      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)');
+      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)',
+      '/addshop name.myshopify.com Client Name: add a client shop (the seven DTJ app copies, then seven Install buttons for you)');
   }
   return reply(lines.join('\n'));
 }
@@ -115,6 +117,21 @@ if (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {
   const s = String(msg.data).match(/^stop:intake:(\d{1,20})$/);
   if (!s) return reply('That button is not valid any more.');
   return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];
+}
+// adding a client shop (21 Oct 2026, Harsh: "one step process from telegram"): admins only. The laptop's Claude Code makes, links and
+// releases the seven app copies and the install links (Store Factory: Add Shop); the person then taps seven Install buttons here.
+if (msg.kind === 'addshop') {
+  if (!isAdmin) return reply('Only an admin can add a shop.');
+  const a = String(msg.arg || '').match(/^(?:https?:\/\/)?(?:admin\.shopify\.com\/store\/([a-z0-9][a-z0-9-]*)|([a-z0-9][a-z0-9-]*)\.myshopify\.com)\/?(?:\s+([\s\S]+))?$/i);
+  if (!a) {
+    return reply('Send the shop\'s ORIGINAL Shopify address and the client\'s name, for example:\n/addshop royal-dosa.myshopify.com Royal Dosa\n\n'
+      + 'The address is in the shop\'s admin: admin.shopify.com/store/&lt;name&gt; means &lt;name&gt;.myshopify.com. I make, link and release the '
+      + 'seven DTJ app copies, then send you seven Install buttons for the store owner to tap.');
+  }
+  const shop = ((a[1] || a[2]) + '.myshopify.com').toLowerCase();
+  const label = String(a[3] || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!label) return reply('And the client\'s name, for the app names. For example:\n/addshop ' + esc(shop) + ' Royal Dosa');
+  return [{ json: { action: 'addshop', chat_id: msg.chat_id, shop, label, requested_by: myName } }];
 }
 if (msg.kind === 'nolink') {
   return reply('Please send a product link from the shop\'s website (it has /products/ in it). You can add a note after the link.');
