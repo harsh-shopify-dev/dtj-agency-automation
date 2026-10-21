@@ -194,7 +194,7 @@ class Questions(Base):
             j.plan(minutes=1)
         self.answers.type(self.tg, "https://royaldosa.com/products/sambar?variant=1\nidli mix\nchocolate cake")
         j.plan(minutes=1)
-        self.assertIn("Not found in the store, left out: chocolate cake", [d["text"] for _, d in self.tg.sent][-2])
+        self.assertIn("chocolate cake: not found in the store", [d["text"] for _, d in self.tg.sent][-2])
         self.assertEqual([x["handle"] for x in j.s["plan"]["products"]], ["sambar", "idli-mix"])
         self.assertEqual(j.s["plan"]["parts"], ["products"])
 
@@ -277,9 +277,33 @@ class Approvals(Base):
 class Pieces(unittest.TestCase):
     def test_typed_products_match_by_link_or_unique_name(self):
         sellers = SCAN["best_sellers"]
-        picked, unknown = store_job.match_products(["Mix", "PODI", "/products/sambar", "", "/products/none"], sellers)
+        picked, left, notes = store_job.match_products(["Mix", "PODI", "/products/sambar", "", "/products/none", "cake"], sellers)
         self.assertEqual([p["handle"] for p in picked], ["podi", "sambar"])  # "Mix" matches two products: not guessed
-        self.assertEqual(unknown, ["Mix", "/products/none"])
+        self.assertEqual(left, ["Mix: matches 2 products (Idli Mix, Masala Dosa Mix): send its link",
+                                "/products/none: not a product of this store", "cake: not found in the store"])
+        self.assertEqual(notes, [])
+
+    def test_an_exact_name_wins_and_same_name_products_take_the_best_seller(self):
+        # the first live run (21 Oct 2026, elevate): "TOILOVA" next to three "TOILOVA (Copy)" products, and two products called
+        # "We are there for each other"; the old matcher refused both and the job stopped
+        sellers = [{"handle": h, "title": t, "url": f"https://x/products/{h}"} for h, t in (
+            ("toilova-copy-copy", "TOILOVA (Copy) (Copy)"), ("we-are-there-for-each-other-2", "We are there for each other"),
+            ("toilova", "TOILOVA"), ("toilova-copy", "TOILOVA (Copy)"), ("we-are-there-for-each-other", "We are there for each other"))]
+        picked, left, notes = store_job.match_products(["TOILOVA", " We are there for each other"], sellers)
+        self.assertEqual([p["handle"] for p in picked], ["toilova", "we-are-there-for-each-other-2"])
+        self.assertEqual(left, [])
+        self.assertEqual(notes, ['2 products are called "We are there for each other": took the best seller, '
+                                 "https://x/products/we-are-there-for-each-other-2"])
+
+    def test_a_stop_is_told_in_telegram(self):
+        tg, answers = Telegram(), Answers()
+        with tempfile.TemporaryDirectory() as tmp:
+            j = store_job.Job("royal-dosa", send=tg, rows=answers, state_dir=Path(tmp), out=lambda *_: None)
+            j.begin(SCAN, CHAT, "Harsh")
+            j.plan(minutes=0)
+            answers.tap(tg, "Wrong store: stop")
+            self.assertEqual(j.plan(minutes=0), 1)
+        self.assertEqual(tg.last()["text"], "Stopped: the person said it is the wrong store.")
 
     def test_theme_support(self):
         self.assertEqual([store_job.theme_support(x) for x in ("Horizon", "dawn", "Impact", None)], ["horizon", "dawn", "none", "none"])
