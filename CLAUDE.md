@@ -25,8 +25,9 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
      carries their name, recorded as approved_by "<name> (Telegram Approve)". One tap, one action (the draft copy, the brand copy,
      the app copies, the header, the footer, the collection page); Skip leaves it undone. The brand copy (Harsh, 21 Oct 2026: "One
      Approve tap per import") is the one way a tap creates products: one tap covers that one import of a brand's products,
-     collections and empty policy pages into the store (`provision/brand_copy.py`), which never changes or deletes what the store
-     has. A tap never covers a live theme, publishing, creating a store, or any other product change.
+     collections and empty policy pages into the store. The tap itself starts n8n's "Store Factory: Brand Copy", which writes through
+     DTJ Store Builder on the install service (`services/install-catcher/src/copy.js`; never changes or deletes what the store
+     has). A tap never covers a live theme, publishing, creating a store, or any other product change.
    - Tier 3 destructive (delete, truncate, drop, force-push, remove access): never.
 3. **Shadow first.** New automations only recommend until Harsh moves them up.
 4. **Numbers come from code.** Never invent or estimate a metric. Every figure must come from a stored query or file and name its source. If you do not have it, say "not available".

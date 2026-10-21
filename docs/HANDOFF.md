@@ -22,6 +22,45 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## THE BRAND COPY RUNS FROM TELEGRAM ONLY: DTJ STORE BUILDER (21 Oct 2026, branch `feature/copy-from-telegram`, account A)
+Harsh: "all this steps must be done in the telegram bot nothing will be kept here", then he chose "A new DTJ Store Builder app".
+So the copy no longer uses the laptop's CLI sign-in (a short-lived token that needs a browser approval) or a PowerShell command.
+- **DTJ Store Builder** (`services/install-catcher/tools/store_builder.py create`) is a separate app in DTJ's organization.
+  - Permissions: read/write products, publications and legal policies only. The 7 block apps keep none.
+  - It has no blocks. After install, Shopify shows the install service's `/builder` page.
+  - Its secret goes into the Windows variable `DTJ_STORE_BUILDER_CLIENT_SECRET` and its client id into `wrangler.toml`
+    (`BUILDER_CLIENT_ID`). `deploy.py` puts the secret up as `ORG_SECRET_DTJ_STORE_BUILDER`.
+  - On an organization store the install service gets a fresh key per call (client credentials) and keeps none.
+- **Install service `POST /copy`** (`src/copy.js`, signed like `/licence`: the laptop's CONTROL_KEY or the bot's BOT_KEY) has four
+  operations:
+  - `target`: read only;
+  - `plan`: keep the laptop's plan per job in KV; fixed once the copy starts;
+  - `step`: up to 8 items, collections first, needs `approved_by`;
+  - `status`.
+
+  Only its own four mutations, with every input rebuilt from allowed fields: no product id, a price required, https pictures only.
+  An existing handle or a non-empty policy is skipped, it stops after 3 failures in a row, and every step is an audit row with the
+  approver.
+- **n8n "Store Factory: Brand Copy"** (id `ioaho57x1Ji0fEnb`) loops step, then progress, then a 2 s pause, until finished, then
+  Telegram. The bot starts it after "Save the Answer" when the tap is Approve under `ok_copy` ("Copy Approved?" -> "Start Brand
+  Copy").
+- **`store_job.py copy`:** plans through the install service, asks the Approve tap, then only watches the status. If Store Builder
+  is not installed yet, it tells the person once in Telegram and retries every minute.
+- **VERIFIED:**
+  - tests: install service JS 20 OK (5 new for `/copy`);
+  - install service Python 35 OK (deploy secret, store_builder 2);
+  - n8n/store-factory 162 OK; page builder 444 OK;
+  - n8n: Brand Copy created (unpublished, both credentials attached, the loop wiring read back); the bot's draft got the trigger
+    (5 operations).
+- **ROLLBACK:** the bot's live version before this: `2ca24237-c6c7-463e-ab96-924109237e8a`.
+- **WAITING FOR HARSH'S YES** (Tier 2, one each):
+  1. `store_builder.py create --approved-by "<name>"` (make + release the app);
+  2. deploy the install service with `/copy` (`tools/deploy.py`).
+
+  Then he installs Store Builder once on his new dev store (Dev Dashboard), and the test continues in Telegram.
+- **NOT VERIFIED:** any real copy; the install service's `/copy` on Cloudflare; Store Builder's install on a dev store; whether
+  the client credentials grant gives a key with the app's permissions.
+
 ## THE LINK IS THE STORE TO BUILD IN: THE BRAND IS COPIED INTO IT (21 Oct 2026, branch `feature/brand-copy`, account A)
 The first live test of "a whole store from one link" (elevate, run 891) showed the plan was the wrong way round. Harsh: "it didnt
 asked me the brand link it has to create the shopify store of it just fetching the current store products".

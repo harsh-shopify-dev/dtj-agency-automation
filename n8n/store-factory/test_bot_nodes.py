@@ -829,5 +829,68 @@ class NewStoreWorkflow(unittest.TestCase):
         self.assertEqual(run_node("new_store_notify.js", {**r, "chat_id": ""})["out"], [])
 
 
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class BrandCopyWorkflow(unittest.TestCase):
+    """The brand copy's Approve tap runs the copy in n8n, step by step through the install service (21 Oct 2026)."""
+    START = {"job": "royal-demo", "approved_by": "Riya (Telegram Approve)", "chat_id": "333"}
+
+    def test_each_step_carries_the_job_the_approver_and_a_fresh_time(self):
+        out = run_node("brand_copy_step.js", self.START, {"From the Telegram Bot": self.START})["out"][0]["json"]
+        self.assertEqual(out["round"], 0)
+        self.assertEqual({k: out["body"][k] for k in ("op", "job", "approved_by")}, {"op": "step", "job": "royal-demo",
+                                                                                    "approved_by": "Riya (Telegram Approve)"})
+        self.assertIsInstance(out["body"]["ts"], int)
+        again = run_node("brand_copy_step.js", {"round": 4, "finished": False}, {"From the Telegram Bot": self.START})["out"][0]["json"]
+        self.assertEqual(again["round"], 4)
+        for bad in ({**self.START, "approved_by": " "}, {**self.START, "job": "Bad Job"}):
+            self.assertFalse(run_node("brand_copy_step.js", bad, {"From the Telegram Bot": bad})["ok"], bad)
+
+    def progress(self, res, round_=0):
+        refs = {"From the Telegram Bot": self.START, "Copy Step Body": {"round": round_}}
+        return run_node("brand_copy_progress.js", res, refs)["out"][0]["json"]
+
+    def test_not_finished_goes_round_again_and_finished_tells_the_person(self):
+        mid = self.progress({"statusCode": 200, "body": {"finished": False, "done": {"products": 3}, "total": {"products": 17}}})
+        self.assertEqual((mid["finished"], mid["round"], mid["text"]), (False, 1, ""))
+        end = self.progress({"statusCode": 200, "body": {"finished": True, "status": "ACTIVE", "stopped": None,
+                                                         "done": {"products": 16, "collections": 29, "policies": 2, "skipped": 1, "failed": 1},
+                                                         "total": {"products": 17, "collections": 29, "policies": 2}}}, 5)
+        self.assertTrue(end["finished"])
+        for must in ("Brand copy done (products are live behind the store password)", "- products: 16 of 17", "- collections: 29 of 29",
+                     "- left alone (the store has them already): 1", "- failed: 1"):
+            self.assertIn(must, end["text"])
+        self.assertEqual(end["chat_id"], "333")
+
+    def test_a_refusal_or_too_many_rounds_ends_the_run(self):
+        no = self.progress({"statusCode": 404, "body": {"error": "no copy plan for this job"}})
+        self.assertTrue(no["finished"])
+        self.assertIn("The brand copy stopped: no copy plan for this job", no["text"])
+        long = self.progress({"statusCode": 200, "body": {"finished": False, "done": {}, "total": {}}}, 399)
+        self.assertTrue(long["finished"])
+        self.assertIn("too many steps", long["text"])
+
+
+class BrandCopyDeploy(unittest.TestCase):
+    def test_only_an_approve_under_the_copy_starts_it_without_waiting(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.copy_ops("WF-BC")
+        nodes = {o["node"]["name"]: o["node"]["parameters"] for o in ops if o["type"] == "addNode"}
+        cond = nodes["Copy Approved?"]["conditions"]["conditions"][0]["leftValue"]
+        self.assertIn(".key === 'ok_copy'", cond)
+        self.assertIn(".value === 'Approve'", cond)
+        start = nodes["Start Brand Copy"]
+        self.assertEqual((start["workflowId"]["value"], start["options"]["waitForSubWorkflow"]), ("WF-BC", False))
+        self.assertIn("(Telegram Approve)", start["workflowInputs"]["value"]["approved_by"])
+        links = [(o["source"], o.get("sourceIndex", -1), o["target"]) for o in ops if o["type"] == "addConnection"]
+        self.assertEqual(links, [("Save the Answer", -1, "Copy Approved?"), ("Copy Approved?", 0, "Start Brand Copy")])
+
+    def test_the_workflow_loops_until_finished(self):
+        import deploy_brand_copy as b  # noqa: PLC0415
+        code = b.sdk_code()
+        self.assertIn(".to(finished.onTrue(send).onFalse(pause.to(stepBody)))", code)
+        self.assertIn(b.COPY_URL, code)
+        self.assertTrue(b.COPY_URL.endswith("/copy"))
+
+
 if __name__ == "__main__":
     unittest.main()

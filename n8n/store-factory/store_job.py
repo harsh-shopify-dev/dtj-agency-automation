@@ -7,7 +7,8 @@ n8n's "Store Factory: New Store"; the runbook is the skill dtj-new-store.
         products, an offer)
     python n8n/store-factory/store_job.py draft --job <job>       Approve tap, then the live theme duplicated as an UNPUBLISHED copy
     python n8n/store-factory/store_job.py copy --job <job>        the brand's products, collections and empty policy pages: a read-only
-                                                                   plan, an Approve tap, then the provision.brand_copy apply command
+                                                                   plan kept on the install service, an Approve tap (it starts n8n's
+                                                                   Store Factory: Brand Copy, which does the writes), then it waits
     python n8n/store-factory/store_job.py apps --job <job>        Approve tap for the app copies; prints the add_shop.py command
     python n8n/store-factory/store_job.py approve --job <job> --key <key> --text "<what will be written>"   one write's Approve tap
     python n8n/store-factory/store_job.py step --job <job> <stage> [--done N --total M]                      the progress bar
@@ -23,12 +24,15 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import html
 import json
 import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -40,6 +44,7 @@ sys.path.insert(0, str(ROOT / "services" / "store-builder"))
 from bot_ask import TABLE, Asker  # noqa: E402
 
 STATE_DIR = ROOT / ".work" / "stores"
+CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev"  # the install service: POST /copy (src/copy.js)
 WAITING, SKIPPED = 3, 4
 QUESTION_MINUTES = 60   # each question waits this long, then the job says "waiting" (exit 3) and a rerun keeps waiting
 APPROVE_MINUTES = 120
@@ -112,8 +117,9 @@ def match_products(lines: list[str], sellers: list[dict]) -> tuple[list[dict], l
 class Job:
     def __init__(self, job: str, *, send: Callable[[str, dict], dict], rows: Callable[[str], list], progress=None, access=None,
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
-                 today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None):
-        self.scanner, self.planner = scanner or _scan, planner or _copy_plan
+                 today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None,
+                 copy_status=None):
+        self.scanner, self.planner, self.copy_status = scanner or _scan, planner or _copy_plan, copy_status or _copy_status
         self.job, self.dir = job, state_dir / job
         self.path = self.dir / "job.json"
         self.s = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
@@ -340,27 +346,39 @@ class Job:
         self.out(json.dumps(made))
         return 0
 
-    # ---- the brand copy
+    # ---- the brand copy (every store write runs in n8n after the Approve tap: no laptop step, Harsh 21 Oct 2026)
     def copy(self, minutes: float = APPROVE_MINUTES) -> int:
-        """A read-only plan of what the copy creates, its Approve tap, then the apply command (one tap = this one import)."""
+        """A read-only plan through the install service (DTJ Store Builder), kept there for this job; its Approve tap, which itself
+        starts "Store Factory: Brand Copy" in n8n; then waits until the install service says the copy is finished."""
         self.need_plan()
         s, p = self.s, self.s["plan"]
         if not p.get("copy"):
             self.out("nothing to copy: this store is the brand")
             return 0
-        if s.get("copy_approved_by"):
-            self.out(self.copy_command())
+        if s.get("copy_result"):
+            self.out(json.dumps(s["copy_result"]))
             return 0
         self.bar("copy")
-        if not s.get("copy_plan"):
+        end = self.ask.clock() + minutes * 60
+        while not s.get("copy_plan"):
             try:
-                plan = self.planner(p["brand"]["link"], s["shop"], p["brand"].get("currency"), self.dir / "copy")
-            except Exception as exc:  # noqa: BLE001 - a store sign-in without the scopes, or the brand stopped answering
+                plan = self.planner(p["brand"]["link"], s["shop"], p["brand"].get("currency"), self.dir / "copy", job=self.job)
+            except NotInstalled:
+                if not s.get("builder_asked"):
+                    self.ask.tell(f"One tap first: install <b>DTJ Store Builder</b> on <b>{esc(s['name'])}</b>. It is the DTJ app that may "
+                                  "add the brand's products, collections and policy pages; the block apps never can. Dev Dashboard > Apps > "
+                                  f"DTJ Store Builder > Install app > {esc(s['shop'])}. I go on by myself once it is installed.")
+                    s["builder_asked"] = True
+                    self.save()
+                if self.ask.clock() >= end:
+                    return WAITING
+                self.ask.sleep(60)
+                continue
+            except Exception as exc:  # noqa: BLE001 - the brand stopped answering, the install service refused: said plainly
                 self.ask.tell(f"I could not plan the copy: {esc(str(exc)[:300])}")
                 return self.stop(f"the copy could not be planned: {str(exc)[:200]}")
             from provision.brand_copy import summary  # noqa: PLC0415
-            s["copy_plan"] = {"summary": summary(plan), "notes": plan["notes"], "status": plan["status"],
-                              "products": len(plan["products"])}
+            s["copy_plan"] = {"summary": summary(plan), "notes": plan["notes"], "status": plan["status"], "products": len(plan["products"])}
             self.save()
         cp = s["copy_plan"]
         notes = "".join(f"\n- {esc(n)}" for n in cp["notes"])
@@ -372,16 +390,27 @@ class Job:
             self.logged("brand copy into the store", "skipped in Telegram", by, result="skipped")
             self.out(f"skipped by {by}")
             return SKIPPED
-        s["copy_approved_by"] = f"{by} (Telegram Approve)"
-        self.save()
-        self.logged("brand copy into the store (products, collections, empty policy pages)", "the store is built from the brand",
-                    s["copy_approved_by"], evidence={"plan": cp})
-        self.out(self.copy_command())
-        return 0
-
-    def copy_command(self) -> str:
-        return (f'cd services/store-builder && python -m provision.brand_copy apply --out ../../.work/stores/{self.job}/copy '
-                f'--approved-by "{self.s["copy_approved_by"]}"')
+        if not s.get("copy_approved_by"):
+            s["copy_approved_by"] = f"{by} (Telegram Approve)"
+            self.save()
+            self.logged("brand copy into the store (products, collections, empty policy pages): run by n8n, Store Factory: Brand Copy",
+                        "the store is built from the brand", s["copy_approved_by"], evidence={"plan": cp})
+        while True:  # n8n does the copy now; this only reads how far it is
+            try:
+                st = self.copy_status(self.job)
+            except Exception:  # noqa: BLE001 - the install service did not answer this time: the next look tries again
+                st = {}
+            done, total = st.get("done") or {}, st.get("total") or {}
+            if total:
+                self.bar("copy", done.get("products", 0) + done.get("failed", 0), max(total.get("products", 0), 1))
+            if st.get("finished"):
+                s["copy_result"] = st
+                self.save()
+                self.out(json.dumps(st))
+                return 1 if st.get("stopped") else 0
+            if self.ask.clock() >= end:
+                return WAITING
+            self.ask.sleep(20)
 
     # ---- the apps
     def apps(self, minutes: float = APPROVE_MINUTES) -> int:
@@ -455,13 +484,53 @@ def _scan(link: str) -> dict:
     return scan(link)
 
 
-def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path) -> dict:
-    """Read only: the brand's public catalogue and the target's handles, currency and policies (the CLI's sign-in for the store)."""
+class NotInstalled(Exception):
+    """DTJ Store Builder is not installed on the store (or the store is not in DTJ's organization)."""
+
+
+class CatcherError(Exception):
+    pass
+
+
+def _catcher(body: dict, opener=urllib.request.urlopen) -> dict:
+    """One signed call to the install service's POST /copy (DTJ_CATCHER_CONTROL_KEY, as licence_call.py signs /licence)."""
+    sys.path.insert(0, str(ROOT / "services" / "install-catcher" / "tools"))
+    from deploy import read_var  # noqa: PLC0415
+    key = read_var("DTJ_CATCHER_CONTROL_KEY")
+    if not key:
+        raise CatcherError("DTJ_CATCHER_CONTROL_KEY is not set on this laptop (vault.py pull)")
+    raw = json.dumps({**body, "ts": int(time.time())}).encode()
+    req = urllib.request.Request(f"{CATCHER}/copy", data=raw, method="POST", headers={
+        "Content-Type": "application/json", "User-Agent": "dtj-store-job/1",
+        "X-DTJ-Signature": hmac.new(key.encode(), raw, hashlib.sha256).hexdigest()})
+    try:
+        with opener(req, timeout=120) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as exc:
+        try:
+            why = json.loads(exc.read().decode()).get("error", "")
+        except ValueError:
+            why = ""
+        if exc.code == 404 and "not installed" in why:
+            raise NotInstalled(why) from exc
+        raise CatcherError(f"the install service said {exc.code}: {why or 'no reason given'}") from exc
+
+
+def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path, job: str) -> dict:
+    """Read only: the brand's public catalogue, and what the store has through DTJ Store Builder; then the plan is kept on the
+    install service for this job (nothing reaches the store until the Approve tap)."""
     from provision import brand_copy  # noqa: PLC0415
-    plan = brand_copy.make_plan(brand_copy.read_brand(brand_link), brand_copy.read_target(brand_copy.cli_client(store)), currency)
+    plan = brand_copy.make_plan(brand_copy.read_brand(brand_link), _catcher({"op": "target", "shop": store}), currency)
     out.mkdir(parents=True, exist_ok=True)
     (out / "plan.json").write_text(json.dumps(plan, indent=1, ensure_ascii=False), encoding="utf-8")
+    kept = _catcher({"op": "plan", "job": job, "shop": store, "plan": plan})
+    if kept.get("refused"):
+        plan["notes"].append(f"{len(kept['refused'])} products the install service refused to copy: {', '.join(kept['refused'][:5])}")
     return plan
+
+
+def _copy_status(job: str) -> dict:
+    return _catcher({"op": "status", "job": job})
 
 
 def _token() -> str:
