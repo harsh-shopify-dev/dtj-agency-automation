@@ -55,5 +55,14 @@
   {"name": "role", "type": "string"},
   {"name": "active", "type": "boolean"},
   {"name": "notes", "type": "string"}
+ ]},
+ "dtj_bot_answers": {"columns": [
+  {"name": "job", "type": "string"},
+  {"name": "key", "type": "string"},
+  {"name": "value", "type": "string"},
+  {"name": "choice", "type": "string"},
+  {"name": "by", "type": "string"},
+  {"name": "chat_id", "type": "string"},
+  {"name": "at", "type": "string"}
  ]}
 }

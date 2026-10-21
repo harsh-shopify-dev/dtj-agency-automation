@@ -1,0 +1,210 @@
+{
+ "id": "nvaph1ZhD1mreJHD",
+ "name": "Store Factory: New Store",
+ "description": "Store factory: an admin sends a brand's store link to the Telegram bot; Claude Code on a DTJ laptop asks the questions in Telegram, makes the draft copy and the DTJ apps, and designs every part chosen into the draft, each write that needs a yes after an A",
+ "nodes": [
+  {
+   "id": "237ac71c-a45c-4038-812c-7e8a728a87f1",
+   "name": "From the Telegram Bot",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "link",
+       "type": "string"
+      },
+      {
+       "name": "note",
+       "type": "string"
+      },
+      {
+       "name": "requested_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "acecd0c5-8548-4635-bcd6-c98d543d56d1",
+   "name": "Request for Claude Code: New Store",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Request for Claude Code: New Store\" in \"Store Factory: New Store\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. A Claude Code session on a DTJ laptop (listen.py watches this workflow too) reads\n// `instructions` and does them with the skill dtj-new-store: the store read from its link, the questions and every Approve tap in\n// Telegram, the draft copy, the DTJ apps, the brand data and each part chosen (Harsh, 21 Oct 2026: \"i just share the brand store link\n// and it starts designing the store and it asks the specific questions it needs along with the app installation\").\nconst req = $input.first().json || {};\nconst link = String(req.link || '').trim();\nif (!/^https?:\\/\\/(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?:[/?#][^\\s]*)?$/.test(link)) throw new Error('No store link reached this step');\nconst by = String(req.requested_by || 'an admin').trim().slice(0, 60);\nconst chat = /^-?[0-9]{3,20}$/.test(String(req.chat_id || '').trim()) ? String(req.chat_id).trim() : '';\nconst note = String(req.note || '').replace(/\\s+/g, ' ').trim().slice(0, 500);\nconst resumeUrl = $execution.resumeUrl;\nconst q = (s) => '\"' + String(s).replace(/\"/g, \"'\") + '\"';\nconst job = 'python n8n/store-factory/store_job.py';\nconst lines = [\n  'DTJ STORE FACTORY - a whole store from one link: ' + link,\n  'You are the AI step: a Claude Code session on a DTJ laptop with a person at it (the Shopify CLI there is logged in to DTJ\\'s account).',\n  '',\n  'REQUEST',\n  '- Store link: ' + link + (note ? ' | Note from ' + by + ': ' + note : ''),\n  '- Asked by: ' + by + ' (an admin on the DTJ bot) | Telegram chat: ' + (chat || '(none: ask the person at this laptop instead)'),\n  '- Every yes comes as an Approve tap in Telegram (Harsh, 21 Oct 2026): one tap for the draft copy, one for the app copies, one '\n    + 'for the header, one for the footer, one for the collection page. Product and home pages go to the draft under Harsh\\'s standing '\n    + 'rule. Nothing is published, the live theme is never written, no store or product is created.',\n  '',\n  'DO THIS, IN ORDER (from the repo root, D:\\\\CODE CONTAINERR\\\\WEB DEV\\\\dtj-agency-automation)',\n  '1. Read CLAUDE.md and the skill dtj-new-store; follow it step by step. Stay on the current git branch.',\n  '2. Start: ' + job + ' start --link ' + q(link) + (chat ? ' --chat ' + chat : '') + ' --by ' + q(by),\n  '   It reads the store and asks the questions in Telegram. Its JSON line names the job. Exit 3 = waiting for an answer: run it '\n    + 'again (it never asks twice); exit 1 = stopped (it says why).',\n  '3. The skill\\'s steps: the draft copy (store_job.py draft), the apps (store_job.py apps, then add_shop.py in the person\\'s terminal), '\n    + 'the brand data, then each part chosen, each write after its own Approve tap (store_job.py approve).',\n  '4. Answer this n8n run at the end, also when it stopped or is only partly done:',\n  '   ' + job + ' finish --job <job> --status \"<done | partly done | could not start>\" --note \"<what is open, in plain words>\"',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body .work/stores/<job>/answer.json',\n  '5. Add a dated entry to docs/HANDOFF.md: the store, what was written where, the samples to replace, what is open.',\n  '',\n  'RULES',\n  '- A write without its Approve tap does not happen; a Skip leaves it undone. One tap covers one action.',\n  '- Never invent an offer, price, claim, review or policy: the offer is only the words the person typed; mark samples SAMPLE.',\n  '- Never print, paste or store a secret. If something blocks you (the CLI login has no access, the system blocks a command): stop that '\n    + 'step, tell the person exactly what to do, and say it in the answer.',\n];\nreturn [{ json: {\n  claude_code_stage: 'new_store',\n  resume_url: resumeUrl,\n  instructions: lines.join('\\n'),\n  request: { link, requested_by: by, telegram_chat_id: chat, note },\n} }];\n"
+   }
+  },
+  {
+   "id": "9f0ba79f-f357-4b4a-bdf0-a1b4a690f78e",
+   "name": "Wait for Claude Code: New Store",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    0
+   ],
+   "parameters": {
+    "resume": "webhook",
+    "httpMethod": "POST",
+    "limitWaitTime": true,
+    "resumeAmount": 7,
+    "resumeUnit": "days",
+    "options": {}
+   },
+   "webhookId": "46ff4a21-1116-4b7a-9f96-d2165fc39c9d"
+  },
+  {
+   "id": "2f57b70c-39ac-48a1-9067-b48ba73a64ea",
+   "name": "Claude Code Reply: New Store",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Claude Code Reply: New Store\" in \"Store Factory: New Store\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same rules as\n// n8n/store-factory/reply.py, which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['done', 'partly done', 'could not start'];\nconst status = allowed.includes(b.store_status) ? b.store_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 7 days)');\nconst pages = (Array.isArray(b.pages) ? b.pages : []).slice(0, 40)\n  .filter((p) => p && /^https:\\/\\/[a-z0-9.-]+\\/\\S*$/i.test(String(p.preview || '')))\n  .map((p) => ({ part: String(p.part || 'page').slice(0, 60), preview: String(p.preview).slice(0, 400) }));\nconst req = $('Request for Claude Code: New Store').first().json.request;\nreturn [{ json: {\n  link: req.link,\n  chat_id: req.telegram_chat_id,\n  store_status: status,\n  shop: String(b.shop || '').slice(0, 100),\n  name: String(b.name || '').slice(0, 100),\n  draft_theme_id: /^\\d{6,20}$/.test(String(b.draft_theme_id || '')) ? String(b.draft_theme_id) : '',\n  pages,\n  note: String(b.note || '').slice(0, 800),\n} }];\n"
+   }
+  },
+  {
+   "id": "8a537d72-9d24-4607-8293-107eb8c2a143",
+   "name": "Tell the Requester",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Tell the Requester\" in \"Store Factory: New Store\" (mode: Run Once for All Items).\n// The result of a whole-store run for the admin who sent the link, with a preview link per page written to the draft.\n// Output: [] (no chat) or one { chat_id, text } for \"Send Result\".\nconst r = $input.first().json || {};\nconst chat = String(r.chat_id || '').trim();\nif (!chat) return [];\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst attr = (s) => esc(s).replace(/\"/g, '&quot;');\nconst who = esc(r.name || r.link) + (r.shop ? ' (' + esc(r.shop) + ')' : '');\nconst pages = (r.pages || []).map((p) => '- <a href=\"' + attr(p.preview) + '\">' + esc(p.part) + '</a>').join('\\n');\nconst draft = r.draft_theme_id ? ' in the draft copy (theme ' + esc(r.draft_theme_id) + ', unpublished)' : '';\nlet text;\nif (r.store_status === 'done') {\n  text = who + ' is designed' + draft + '. Nothing is published.' + (pages ? '\\n\\n' + pages : '')\n    + (r.note ? '\\n\\n' + esc(r.note) : '');\n} else if (r.store_status === 'partly done') {\n  text = who + ' is partly done' + draft + '.' + (r.note ? '\\nOpen: ' + esc(r.note) : '') + (pages ? '\\n\\nReady so far:\\n' + pages : '');\n} else {\n  text = who + ' was not started (' + esc(r.store_status || 'no answer') + ')' + (r.note ? ': ' + esc(r.note) : '.') + '\\nHarsh will take a look.';\n}\nreturn [{ json: { chat_id: chat, text } }];\n"
+   }
+  },
+  {
+   "id": "c6ce5fc1-fb32-432d-82d0-b8b213dae06a",
+   "name": "Send Result",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "2978f74d-af5d-4145-a358-669f4318fd44",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "91f7ec1f-1b1a-4db4-a348-f8980b94f4e6",
+   "name": "Sticky Note 15317d84",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -360
+   ],
+   "parameters": {
+    "content": "## A whole store from one link\nStarted by the Telegram bot when an admin sends a store's own link (no /products/ in it).\n\nThe run pauses at **Wait for Claude Code: New Store** (up to 7 days). A Claude Code session in the dtj-agency-automation folder (listening, or told \"handle the Claude Code trigger in n8n\") follows the skill dtj-new-store: store_job.py asks the questions and the Approve taps in Telegram, then the draft copy, the apps, the brand data and every page. Nothing is published; the live theme is never written.\n\nSource in git: `n8n/store-factory/` (store_job.py, bot_ask.py) and `.claude/skills/dtj-new-store`.",
+    "color": 5,
+    "width": 760,
+    "height": 320
+   }
+  }
+ ],
+ "connections": {
+  "From the Telegram Bot": {
+   "main": [
+    [
+     {
+      "node": "Request for Claude Code: New Store",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Request for Claude Code: New Store": {
+   "main": [
+    [
+     {
+      "node": "Wait for Claude Code: New Store",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait for Claude Code: New Store": {
+   "main": [
+    [
+     {
+      "node": "Claude Code Reply: New Store",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Claude Code Reply: New Store": {
+   "main": [
+    [
+     {
+      "node": "Tell the Requester",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tell the Requester": {
+   "main": [
+    [
+     {
+      "node": "Send Result",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

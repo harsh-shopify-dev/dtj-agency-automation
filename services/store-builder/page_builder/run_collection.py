@@ -86,10 +86,7 @@ def learn_uuid(access, theme_id: str, workdir: Path, registry_path: Path = HERE 
 def _access(store: str, access):
     if access is not None:
         return access
-    token = tt.read_token(store)
-    if not token:
-        raise ThemeError(f"no Theme Access password saved as {tt.token_env_name(store)}")
-    return tt.ThemeAccess(store, token)
+    return tt.open_access(store)  # the Theme Access password, else the CLI's own (collaborator) login
 
 
 def main(argv: list[str] | None = None, *, access=None) -> int:

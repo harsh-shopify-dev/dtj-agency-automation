@@ -73,10 +73,7 @@ def main(argv: list[str] | None = None, *, access=None) -> int:
 
     try:
         if access is None:
-            token = tt.read_token(approval["store"])
-            if not token:
-                return refuse(f"no Theme Access password saved as {tt.token_env_name(approval['store'])}")
-            access = tt.ThemeAccess(approval["store"], token)
+            access = tt.open_access(approval["store"])  # the Theme Access password, else the CLI's own (collaborator) login
         stamp = now.strftime("%Y%m%d-%H%M%S")
         check = tt.check_target(access, approval["theme_id"], out / f"backup-{stamp}", file)  # again, right before writing
         # a home page update was merged into the page as it was then: if someone changed it since (the theme editor), writing now would

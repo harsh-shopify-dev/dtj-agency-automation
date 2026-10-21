@@ -107,7 +107,8 @@ SPEC = {"dtj_client_intake": {"columns": [{"name": "status", "type": "string"}, 
         "dtj_stores": {"columns": [{"name": "store_name", "type": "string"}, {"name": "myshopify_domain", "type": "string"},
                                    {"name": "active", "type": "boolean"}]},
         "dtj_bot_users": {"columns": [{"name": "telegram_user_id", "type": "string"}, {"name": "name", "type": "string"},
-                                      {"name": "role", "type": "string"}, {"name": "active", "type": "boolean"}]}}
+                                      {"name": "role", "type": "string"}, {"name": "active", "type": "boolean"}]},
+        "dtj_bot_answers": {"columns": [{"name": "job", "type": "string"}, {"name": "value", "type": "string"}]}}
 CREDS = [{"id": "C-tg", "name": "DTJ Page Bot", "type": "telegramApi"}, {"id": "C-key", "name": "DTJ Catcher Bot Key", "type": "httpHeaderAuth"},
          {"id": "C-gh", "name": "DTJ GitHub Actions", "type": "httpBearerAuth"}, {"id": "C-other", "name": "Serper", "type": "httpHeaderAuth"}]
 # made-up test values (not real shops, people or keys)

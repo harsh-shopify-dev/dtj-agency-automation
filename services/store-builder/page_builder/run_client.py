@@ -150,12 +150,7 @@ def main(argv: list[str] | None = None, *, browser=None, client=None, access=Non
             return 1
         try:
             if access is None:
-                token = tt.read_token(store)
-                if not token:
-                    print(f"no Theme Access password for {store}: save it as the user environment variable {tt.token_env_name(store)} "
-                          "(never in a file or in chat). Nothing was read from the store.", file=sys.stderr)
-                    return 1
-                access = tt.ThemeAccess(store, token)
+                access = tt.open_access(store)  # the Theme Access password, else the CLI's own (collaborator) login
             target = tt.check_target(access, theme_id, out / "theme-before", tt.template_file(args.template_suffix))
             log.record(tier=0, mode="shadow", target=f"{target['store']} theme {theme_id}", action="check draft theme and back up product page",
                        reason="the page may only ever be written to a draft copy of a Horizon theme", result="success",

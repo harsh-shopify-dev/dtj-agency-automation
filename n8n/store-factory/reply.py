@@ -26,6 +26,8 @@ STAGES = {
     "reel": {"reel_status": ("reel ready", "needs a look", "could not make")},
     # "Store Factory: Add Shop" (21 Oct 2026, /addshop): the body is add_shop.py's .work/add-shop/<client>.answer.json
     "add_shop": {"shop_status": ("done", "waiting for installs", "could not add")},
+    # "Store Factory: New Store" (21 Oct 2026, a store link): the body is store_job.py's .work/stores/<job>/answer.json
+    "new_store": {"store_status": ("done", "partly done", "could not start")},
 }
 
 
@@ -56,7 +58,7 @@ def check(body: dict) -> str:
                     raise ValueError("a write to the draft theme needs approved_by (who said yes)")
                 return stage
     raise ValueError("the body answers no stage: give page_status (page design), result (write to draft), reel_status (reel) "
-                     "or shop_status (add shop)")
+                     "shop_status (add shop) or store_status (new store)")
 
 
 def main(argv=None) -> int:
