@@ -30,6 +30,22 @@ class Slop(unittest.TestCase):
         self.assertIn("hindi_share", slop.check(script, self.STYLE)["outside_real_range"])
 
 
+class Policy(unittest.TestCase):
+    def rules(self, line, **extra):
+        script = {"ai_label": True, "phrases": ["Senso Detox Green Tea Kahwa"], "clips": [{"seconds": 8, "spoken_line": line}], **extra}
+        return [p["rule"] for p in slop.check(script)["policy"]]
+
+    def test_claims_are_caught(self):
+        self.assertTrue(any("100%" in r for r in self.rules("Yeh 100% natural hai, aaj hi try karo yaar.")))
+        self.assertTrue(any("outcome" in r for r in self.rules("Yeh chai charbi jad se khatam kar degi, try karo.")))
+        self.assertTrue(any("body or health" in r for r in self.rules("Kya aapka pet phool jaata hai khaane ke baad?")))
+        self.assertTrue(any("customer" in r for r in self.rules("હવે અમારા રસોડામાં આ જ મસાલા આવે છે, તમે પણ ટ્રાય કરો.")))
+
+    def test_product_name_and_label(self):
+        self.assertEqual(self.rules("Khaane ke baad ek cup Senso Detox Green Tea Kahwa, bas itna."), [])
+        self.assertTrue(any("Video created using AI" in r for r in self.rules("Khaane ke baad ek cup, bas itna.", ai_label=False)))
+
+
 class Features(unittest.TestCase):
     def test_speech_numbers(self):
         import reel_factory.library as lib

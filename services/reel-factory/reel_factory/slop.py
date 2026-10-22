@@ -38,6 +38,24 @@ TELLS = [
      "formal Hindi no creator says on a reel", "everyday Hindi: 'bohot tasty', 'try karo', 'mast'"),
     (r"(उत्तम|अत्यंत|स्वादिष्ट|अनुभव|प्रस्तुत|संपूर्ण|विशेष|उपलब्ध|लाभदायक)", "formal Hindi", "everyday Hindi"),
 ]
+# Claim and policy lines (DTJ research 23 Oct 2026: docs/ugc-reels/research/2026-10-23-short-form-ad-script-playbook.md).
+# (pattern, rule, what to write instead). Product names in script["phrases"] are removed first ("Detox Green Tea Kahwa" is a name).
+POLICY = [
+    (r"100\s?%|सौ\s?प्रतिशत|૧૦૦\s?%", "FSSAI May 2025: no '100%' claims", "'sirf [ingredients], aur kuch nahi'"),
+    (r"\b(no\.?\s?1|number one|#\s?1)\b", "ASCI: 'No. 1' needs independent, dated proof", "a specific sourced fact, or drop it"),
+    (r"\b(cures?|treats?|heals?|prevents?|immunity|immune|detox(es|ify|ifies)?|burns? (belly )?fat|fat ?burn\w*|weight ?loss|lose weight"
+     r"|charbi|motapa|belly fat|sugar control|bp control|diabetes|periods?|hormon\w*|metabolism boost)\b",
+     "disease/body outcome (DMR Act, FSSAI, Meta)", "taste, ritual, origin, process, convenience"),
+    (r"\b(you|your|aap|aapka|aapki|aapko|tum|tumhara|tumhe)\b[^.?!]{0,30}\b(overweight|fat|mota|pet phool|bloat\w*|belly|weight|acne|pimples?"
+     r"|hair ?fall|diabet\w*)\b", "Meta: 'you' + a body or health condition", "a situation: 'late dinner ke baad kuch halka chahiye?'"),
+    (r"\b(i (have )?(used|been using|switched|tried)|worked for me|i lost|changed my life|maine\b[^.?!]{0,40}\b(kiya|use kiya|kam kiya)"
+     r"|mere liye kaam)\b|हमारे घर में|मैंने|હું\s[^.?!]{0,40}વાપરતી|અમારા (ઘરમાં|રસોડામાં)|મેં\s",
+     "AI person speaking as a customer (ASCI AI guidelines ~29 Dec 2026; CCPA 2022 endorsements)",
+     "the AI character presents or demonstrates: 'aa rang juo', 'dekho kaise banta hai'"),
+    (r"\bonly \d+ left\b|\boffer ends (today|tonight)\b|\bsirf \d+ (bache|baki)\b", "CCPA 2023 dark patterns: false urgency",
+     "the real stock or deadline, or no urgency"),
+    (r"\bshark tank\b", "Sony took down ads using Shark Tank India (2024)", "no show references in paid ads"),
+]
 LIST_OF_THREE = re.compile(r"\b\w+(?:\s\w+)?, \w+(?:\s\w+)?,? (?:and|aur|or) \w+", re.I)
 
 
@@ -72,6 +90,23 @@ def check(script: dict, style: dict | None = None) -> dict:
         tells.append({"said": "dashes", "why": "dash-heavy rhythm reads as written", "instead": "use '...' or a new sentence"})
     if text.count("!") > max(2, len(lines) // 2):
         tells.append({"said": "!", "why": "too many exclamation marks", "instead": "energy comes from the delivery, not the punctuation"})
+    policy = []
+    plain = text
+    for ph in sorted(script.get("phrases") or [], key=len, reverse=True):
+        plain = re.sub(re.escape(ph), " ", plain, flags=re.I)
+    for pat, rule, fix in POLICY:
+        for m in re.finditer(pat, plain, re.I):
+            policy.append({"said": m.group(0), "rule": rule, "instead": fix})
+    if not script.get("ai_label"):
+        policy.append({"said": "(script)", "rule": "every AI reel shows 'Video created using AI' (ASCI AI guidelines)",
+                       "instead": "set \"ai_label\": true and add the label in the edit"})
+    spoken = [l for l in lines if l.strip()]
+    if spoken:
+        hook = re.split(r"(?<=[.!?।,])\s+", spoken[0].strip())[0]       # the first phrase is what lands in the first ~3 s
+        n = len(hook.split())
+        if not 3 <= n <= 12:
+            tells.append({"said": hook[:60], "why": f"opening phrase has {n} words (Blue Tea: about 9-11 words in the first 3 s)",
+                          "instead": "an opening phrase of 3-12 words that lands inside 3 s"})
     seconds = sum(s.get("seconds", 0) for s in script.get("shots") or script.get("clips") or []) or 30
     nums = measure_text(lines, seconds)
     off = {}
@@ -88,7 +123,7 @@ def check(script: dict, style: dict | None = None) -> dict:
                 continue
             if v < lo * 0.85 or v > hi * 1.15:
                 off[k] = {"script": v, "real_creators_20_80": [lo, hi]}
-    return {"ok": not tells and not off, "tells": tells, "numbers": nums, "outside_real_range": off}
+    return {"ok": not tells and not off and not policy, "tells": tells, "policy": policy, "numbers": nums, "outside_real_range": off}
 
 
 def main(argv=None) -> int:

@@ -17,7 +17,13 @@ Decisions this runbook carries (Harsh, 20-21 Oct 2026):
 - **Flow: Omni 1.1 Flash only, 9:16, Ingredients mode** (start/end frames are not needed). 2 takes per shot.
 - **Flow's sparkle is removed with LaMa** on every raw clip (reel_factory/watermark.py), exactly as senso-01 v5. Not delogo.
 - **Captions at the bottom mark** (~69 % down); top (~14 %) only when the top band is empty AND the bottom would hide the product name.
-- **Languages**: English, Hindi, Hinglish. Music: only what the person supplies, and it must be licensed for paid ads.
+- **Languages**: English, Hindi, Hinglish, Gujarati (`gu`). Music: only what the person supplies, or a free-for-ads library track
+  (Pixabay Content License, no Content ID mention) with its licence note saved next to it.
+- **Clips are 8 s by default, 6 s minimum, never 4 s** (Harsh, 22 Oct 2026: 4 s cuts the line off).
+
+**Scripts (Harsh, 22 Oct 2026: "master the script writing"): read `references/script-playbook.md` before writing ANY script.**
+It holds the 12 rules, 12 timed beat templates, the do/don't wording table and the 22-point pre-flight from DTJ's research.
+AI characters are presenters/demonstrators/cartoons, never customers telling results; every AI reel carries "Video created using AI".
 
 **Realism (Harsh, 21 Oct 2026: Higgsfield-level, no AI slop): read `references/realism.md` before writing script.json.**
 Start pictures and prompts are written as real phone footage; the edit adds the measured phone look; `job edit` refuses
