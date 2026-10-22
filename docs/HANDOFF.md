@@ -22,6 +22,42 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 22 Oct 2026: AI STORE CREATION: REDESIGN OR NEW STORE (PR #37 merged, branch `feature/ai-store-creation`, account A)
+Harsh, 22 Oct 2026: "it starts and asks if it is a redesign or new store development" and "all the products will stay active none of
+them will be kept as draft".
+- **The flow in Telegram (one store link):**
+  - The first question is "Redesign an existing brand" or "New store from scratch".
+  - Redesign: products already in this store (nothing added), or the brand's current website scraped (WordPress, Wix or Shopify).
+  - New store: a Google Drive folder (layout `.claude/skills/dtj-new-store/references/drive-folder.md`, shared "Anyone with the
+    link"), or N sample products (3/6/9/12) whose pictures, and the home page banners, are made with ChatGPT's image model.
+  - Then the same questions as before; a prices question before the copy; one Approve tap per action.
+- **Every product goes in ACTIVE.** No price = 0.00 + `dtj-price-needed`, never guessed. An open store (no password page) is said
+  in the Approve tap.
+- **New tools:**
+  - `store_job.py assets`: samples + banners from a file the session writes; it refuses prices and claim words.
+  - `store_job.py activate`: old drafts -> ACTIVE, with a named yes.
+  - `provision/drive_assets.py` (keyless Drive), `provision/ai_images.py` (OpenAI API, else ChatGPT over CDP),
+    `provision/staged_upload.py`.
+  - Install service `/copy` ops `uploads` (stagedUploadsCreate) and `activate` (DRAFT -> ACTIVE + Online Store only, 12 per call).
+- n8n "Store Factory: New Store" instructions republished (code identical to the files).
+- **VERIFIED:**
+  - tests: store-factory 180, store-builder 497 (1 skipped), install service 24;
+  - Drive listing, Google Doc text and file download, live on gdown's public test folder.
+- **NOT VERIFIED:**
+  - picture bytes from a real client folder;
+  - the staged upload: the install service is NOT deployed with the new ops yet, and the Store Builder scopes are unproven for
+    stagedUploadsCreate;
+  - the image API (no `OPENAI_API_KEY` on this laptop);
+  - a whole new-store run end to end.
+- **OPEN for Harsh:**
+  1. "yes, deploy" for the install service (`services/install-catcher/tools/deploy.py`);
+  2. then Senso's 114 drafts in dtj-testing -> ACTIVE: `store_job.py activate --job dtj-testing --approved-by "Harsh (chat, 22 Oct 2026)"`;
+  3. an OpenAI key with credit saved as `OPENAI_API_KEY` (Windows variable + vault);
+  4. a test Drive folder in the layout.
+  - Also open: "Other pages" (About, Contact, FAQ) need `write_online_store_pages` on Store Builder (an app release = Harsh's yes);
+    a products Google Sheet is not read.
+- Earlier today, the policy copy re-plan for dtj-testing (Senso's terms page) waits for its Approve tap in Telegram.
+
 ## 22 Oct 2026: BRANDS THAT ARE NOT ON SHOPIFY (branch `feature/site-brands`, account A)
 Harsh's test brand was Senso (sensofoods.com): a WordPress trade site with 114 product pages and **no prices**. He asked whether the
 scraper takes everything; asked how to handle missing prices he chose **"Create them as drafts, prices later"**.
