@@ -4,7 +4,7 @@ import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import worker from "../src/worker.js";
-import { cleanProduct, cleanPlan } from "../src/copy.js";
+import { cleanProduct, cleanPlan, cleanUpload } from "../src/copy.js";
 
 const SHOP = "royal-demo.myshopify.com";
 const ORIGIN = "https://dtj-install-catcher.example.workers.dev";
@@ -22,9 +22,9 @@ const env = (extra = {}) => ({ APPS: "{}", VAULT_KEY: Buffer.alloc(32, 7).toStri
 
 // a stand-in store: products / collections by handle, policies, a password page, and every GraphQL call recorded
 function fakeStore({ password = true, products = ["old-product"], policies = { REFUND_POLICY: "", SHIPPING_POLICY: "Ours." }, failHandles = [],
-  passwordQuery = true } = {}) {
+  passwordQuery = true, statuses = {} } = {}) {
   const s = { products: new Map(products.map((h, i) => [h, `gid://shopify/Product/${i + 1}`])), collections: new Map(), policies: { ...policies },
-    published: [], sent: [], n: 100, password, failHandles: new Set(failHandles) };
+    published: [], sent: [], n: 100, password, failHandles: new Set(failHandles), statuses: { ...statuses } };
   s.fetch = async (url, init = {}) => {
     const u = new URL(url);
     if (u.host !== SHOP) return new Response("other host", { status: 404 });
@@ -59,6 +59,20 @@ function fakeStore({ password = true, products = ["old-product"], policies = { R
       },
       Publish: () => { s.published.push(variables.id); return { publishablePublish: { userErrors: [] } }; },
       SetPolicy: () => { s.policies[variables.shopPolicy.type] = variables.shopPolicy.body; return { shopPolicyUpdate: { shopPolicy: { type: variables.shopPolicy.type }, userErrors: [] } }; },
+      Publications: () => ({ publications: { nodes: [{ id: "gid://shopify/Publication/9", name: "Online Store" }] } }),
+      ProductStatus: () => {
+        const id = s.products.get(variables.handle);
+        return { productByIdentifier: id ? { id, status: s.statuses[variables.handle] || "DRAFT" } : null };
+      },
+      Activate: () => {
+        const handle = [...s.products].find(([, id]) => id === variables.product.id)[0];
+        if (s.failHandles.has(handle)) return { productUpdate: { product: null, userErrors: [{ field: ["status"], message: "Cannot activate" }] } };
+        s.statuses[handle] = variables.product.status;
+        return { productUpdate: { product: { id: variables.product.id, status: variables.product.status }, userErrors: [] } };
+      },
+      Stage: () => ({ stagedUploadsCreate: { stagedTargets: variables.input.map((f, i) => ({ url: "https://shopify-staged-uploads.storage.googleapis.com/",
+        resourceUrl: `https://shopify-staged-uploads.storage.googleapis.com/tmp/1/products/${i}/${f.filename}`, parameters: [{ name: "key", value: `tmp/1/${f.filename}` }] })),
+        userErrors: [] } }),
     }[name];
     const out = data && data();
     if (!out) return Response.json({ errors: [{ message: data ? "Access denied for onlineStore" : `unexpected ${name}` }] });
@@ -173,4 +187,64 @@ test("the password page comes from Shopify's own setting, else the storefront; a
   await send(e, signed({ op: "plan", job: "j2", shop: SHOP, plan: big }));
   await send(e, fromBot({ op: "step", job: "j2", approved_by: "Harsh" }));  // 8 of 12: started, not finished
   assert.equal((await send(e, signed({ op: "plan", job: "j2", shop: SHOP, plan: PLAN }))).status, 409);
+});
+
+test("uploads: Shopify's one-time upload addresses for pictures only, the store itself unchanged", async () => {
+  const e = env();
+  const r = await send(e, signed({ op: "uploads", shop: SHOP, files: [{ filename: "Glow Serum 1.jpg", mimeType: "image/jpeg", fileSize: 123456 },
+    { filename: "../banner.png", mimeType: "image/png", fileSize: 99 }] }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.targets.map((t) => t.filename), ["Glow-Serum-1.jpg", "banner.png"]);
+  assert.match(r.body.targets[0].resourceUrl, /^https:\/\/shopify-staged-uploads\.storage\.googleapis\.com\//);
+  assert.deepEqual(r.body.targets[0].parameters, [{ name: "key", value: "tmp/1/Glow-Serum-1.jpg" }]);
+  const stage = store.sent.find((c) => c.name === "Stage");
+  assert.deepEqual(stage.variables.input[0], { filename: "Glow-Serum-1.jpg", mimeType: "image/jpeg", fileSize: "123456", resource: "IMAGE", httpMethod: "POST" });
+  assert.ok(store.sent.every((c) => ["Stage"].includes(c.name)));  // nothing else is sent
+  assert.equal(r.body.userErrors, "");
+  // only pictures, of a sane size, at most 50 a call
+  assert.equal((await send(e, signed({ op: "uploads", shop: SHOP, files: [{ filename: "x.pdf", mimeType: "application/pdf", fileSize: 10 }] }))).status, 400);
+  assert.equal((await send(e, signed({ op: "uploads", shop: SHOP, files: [{ filename: "x.jpg", mimeType: "image/jpeg", fileSize: 21 * 1024 * 1024 }] }))).status, 400);
+  assert.equal((await send(e, signed({ op: "uploads", shop: SHOP, files: [] }))).status, 400);
+  const many = Array.from({ length: 51 }, (_, i) => ({ filename: `${i}.jpg`, mimeType: "image/jpeg", fileSize: 10 }));
+  assert.equal((await send(e, signed({ op: "uploads", shop: SHOP, files: many }))).status, 400);
+  assert.equal(cleanUpload({ filename: "a.jpg", mimeType: "image/jpeg", fileSize: 0 }), null);
+  assert.equal((await send(e, fromBot({ op: "uploads", shop: SHOP, files: [{ filename: "a.jpg", mimeType: "image/jpeg", fileSize: 5 }] }, "short"))).status, 401);
+});
+
+test("activate: a DRAFT product goes ACTIVE and onto the Online Store, the status is the only field sent", async () => {
+  store = fakeStore({ products: ["senso-a", "senso-b", "live-one", "archived-one", "broken"], statuses: { "live-one": "ACTIVE", "archived-one": "ARCHIVED" },
+    failHandles: ["broken"] });
+  globalThis.fetch = store.fetch;
+  const e = env();
+  assert.equal((await send(e, signed({ op: "activate", shop: SHOP, handles: ["senso-a"] }))).status, 400);  // no approver, no write
+  assert.equal((await send(e, signed({ op: "activate", shop: SHOP, handles: ["bad handle!"], approved_by: "Harsh" }))).status, 400);
+  const r = await send(e, signed({ op: "activate", shop: SHOP, approved_by: "Harsh (chat, 22 Oct 2026)",
+    handles: ["senso-a", "senso-b", "live-one", "archived-one", "missing", "broken"] }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.activated, ["senso-a", "senso-b"]);
+  assert.deepEqual(r.body.already_active, ["live-one", "archived-one"]);  // an archived product is a person's choice: left alone
+  assert.deepEqual(r.body.not_found, ["missing"]);
+  assert.deepEqual(r.body.failed.map((f) => f.handle), ["broken"]);
+  assert.deepEqual(r.body.left, []);
+  const sent = store.sent.filter((c) => c.name === "Activate").map((c) => c.variables.product);
+  assert.ok(sent.every((p) => Object.keys(p).sort().join() === "id,status" && p.status === "ACTIVE"));
+  assert.deepEqual(store.published, [store.products.get("senso-a"), store.products.get("senso-b")]);
+  assert.ok(store.sent.every((c) => !["CopyProduct", "CopyCollection", "SetPolicy"].includes(c.name)));
+  const audit = [...e.VAULT.data.keys()].filter((k) => k.startsWith("audit:")).map((k) => JSON.parse(e.VAULT.data.get(k)));
+  assert.equal(audit.length, 1);
+  assert.equal(audit[0].approved_by, "Harsh (chat, 22 Oct 2026)");
+});
+
+test("activate: at most 12 a call, the rest come back in left", async () => {
+  const handles = Array.from({ length: 30 }, (_, i) => `p${i}`);
+  store = fakeStore({ products: handles });
+  globalThis.fetch = store.fetch;
+  const e = env();
+  const first = (await send(e, fromBot({ op: "activate", shop: SHOP, handles, approved_by: "Riya (Telegram Approve)" }))).body;
+  assert.equal(first.activated.length, 12);
+  assert.deepEqual(first.left, handles.slice(12));
+  const second = (await send(e, fromBot({ op: "activate", shop: SHOP, handles: first.left, approved_by: "Riya (Telegram Approve)" }))).body;
+  assert.equal(second.activated.length, 12);
+  assert.equal(second.left.length, 6);
+  assert.equal((await send(e, signed({ op: "activate", shop: SHOP, handles: Array.from({ length: 251 }, (_, i) => `x${i}`), approved_by: "H" }))).status, 400);
 });

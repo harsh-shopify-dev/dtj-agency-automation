@@ -3,12 +3,20 @@ and it starts designing the store and it asks the specific questions it needs al
 n8n's "Store Factory: New Store"; the runbook is the skill dtj-new-store.
 
     python n8n/store-factory/store_job.py start --link https://store.myshopify.com --chat <telegram id> --by "<name>"
-        read the store and ask the questions in Telegram (the brand's link, whose store, the client's name, what to design, which
+        read the store and ask the questions in Telegram (redesign or new store; where the products come from: this store, the
+        brand's current website, a Google Drive folder or sample products; whose store, the client's name, what to design, which
         products, an offer)
+    python n8n/store-factory/store_job.py assets --job <job> --file <assets.json>
+                                                                   a new store: the sample products the session wrote and their
+                                                                   pictures, and the home page banners, made with ChatGPT
     python n8n/store-factory/store_job.py draft --job <job>       Approve tap, then the live theme duplicated as an UNPUBLISHED copy
-    python n8n/store-factory/store_job.py copy --job <job>        the brand's products, collections and empty policy pages: a read-only
-                                                                   plan kept on the install service, an Approve tap (it starts n8n's
-                                                                   Store Factory: Brand Copy, which does the writes), then it waits
+    python n8n/store-factory/store_job.py copy --job <job>        the products (from the brand's website, the Drive folder or the
+                                                                   samples; every one ACTIVE), collections and empty policy pages: a
+                                                                   prices question when some have none, a read-only plan kept on the
+                                                                   install service, an Approve tap (it starts n8n's Store Factory:
+                                                                   Brand Copy, which does the writes), then it waits
+    python n8n/store-factory/store_job.py activate --job <job> --approved-by "<name> (<where>)"
+                                                                   products an earlier copy left as drafts, switched to ACTIVE
     python n8n/store-factory/store_job.py apps --job <job>        Approve tap for the app copies; prints the add_shop.py command
     python n8n/store-factory/store_job.py installs --job <job>    DTJ's own store: 7 Install buttons, then each app switched on
     python n8n/store-factory/store_job.py approve --job <job> --key <key> --text "<what will be written>"   one write's Approve tap
@@ -51,11 +59,22 @@ WAITING, SKIPPED = 3, 4
 QUESTION_MINUTES = 60   # each question waits this long, then the job says "waiting" (exit 3) and a rerun keeps waiting
 APPROVE_MINUTES = 120
 PARTS = {"chrome": "Header and footer", "home": "Home page", "collection": "Collection page", "products": "Product pages"}
+SOURCES = {"self": "the products already in this store", "site": "the brand's current website", "drive": "a Google Drive folder",
+           "samples": "sample products"}
+DRIVE_HOW = ("Send the Google Drive folder link. Share the folder first: Share > General access > Anyone with the link > Viewer.\n"
+             "Inside it: <b>1 Brand</b> (logo + a \"Brand details\" doc), <b>2 Products</b> (one folder per product, named as the "
+             "product: a \"Details\" doc with Price, Sizes, Collection, Description + pictures 1.jpg, 2.jpg ...), <b>3 Banners</b> "
+             "(optional) and <b>4 Policies</b> (optional).")
+SAMPLE_COUNTS = (3, 6, 9, 12)
+PRICE_LINE = re.compile(r"^(.+?)\s*[=:\-\u2013]\s*(?:rs\.?|inr|\u20b9|\$)?\s*(\d{1,9}(?:\.\d{1,2})?)\s*$", re.I)
+CLAIM_WORDS = re.compile(r"\b(clinically|certified|certificate|cure[sd]?|guarantee[d]?|doctor|dermatologist|award|no\.?\s*1|number one|"
+                         r"best[- ]selling|bestseller|proven|fda|iso|organic certified|\d+\s*%|reviews?|rated|stars?)\b", re.I)
 FULL, PRODUCTS_ONLY = ("chrome", "home", "collection", "products"), ("products",)
 STORE_STAGES = {
     "questions": ("Your answers", 0, 8),
     "draft": ("The draft copy of the theme", 8, 12),
-    "copy": ("Copying the brand's products and collections", 12, 25),
+    "assets": ("Sample products and pictures (ChatGPT)", 12, 18),
+    "copy": ("Adding the products and collections", 18, 25),
     "apps": ("The DTJ apps: made, released, installed", 25, 38),
     "intake": ("Collecting the brand's pictures and details", 38, 45),
     "chrome": ("Header and footer", 45, 53),
@@ -120,8 +139,9 @@ class Job:
     def __init__(self, job: str, *, send: Callable[[str, dict], dict], rows: Callable[[str], list], progress=None, access=None,
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
                  today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None,
-                 copy_status=None, add_row=None, licence=None, org_apps=None):
-        self.licence, self.org_apps = licence or _licence, org_apps or _org_apps
+                 copy_status=None, add_row=None, licence=None, org_apps=None, drive=None, picture=None, catcher=None):
+        self.licence, self.org_apps, self.catcher = licence or _licence, org_apps or _org_apps, catcher or _catcher
+        self.drive, self.picture = drive or _drive, picture or _picture
         self.scanner, self.planner, self.copy_status = scanner or _scan_brand, planner or _copy_plan, copy_status or _copy_status
         self.job, self.dir = job, state_dir / job
         self.path = self.dir / "job.json"
@@ -161,17 +181,31 @@ class Job:
         intro = (f"<b>{esc(sc['name'])}</b> ({esc(sc['myshopify_domain'])})\n{sc['product_count']}{'+' if sc.get('more_products') else ''} "
                  f"products, {sc['collection_count']} collections, live theme {esc(theme.get('name') or '?')} "
                  f"({esc(theme.get('schema_name') or 'unknown')}).")
-        # the brand comes first (Harsh, 21 Oct 2026: "it didnt asked me the brand link it has to create the shopify store of it"):
-        # the link sent is the store to build in; the brand's own store is where the products, collections and policies come from
-        got = a.choose("brand_src", intro + "\n\nWhich brand should I build in this store?",
-                       [("I'll send the brand's link", "send"), ("This store is the brand", "self"), ("Wrong store: stop", "stop")],
+        # the link sent is the store to build in (21 Oct 2026). The first question (Harsh, 22 Oct 2026: "it starts and asks if it
+        # is a redesign or new store development"): a redesign keeps the brand's own products (already in this store, or scraped from
+        # the website it moves from); a new store gets them from a Google Drive folder, or as samples with ChatGPT pictures
+        got = a.choose("kind", intro + "\n\nWhat are we building in this store?",
+                       [("Redesign an existing brand", "redesign"), ("New store from scratch", "new"), ("Wrong store: stop", "stop")],
                        minutes)
         if not got:
             return WAITING
         if got["value"] == "stop":
             return self.stop("the person said it is the wrong store")
+        p["kind"] = got["value"]
+        if p["kind"] == "new":
+            stopped = self.new_store_source(minutes)
+            if stopped is not None:
+                return stopped
+            got = {"value": "new"}
+        else:
+            got = a.choose("brand_src", "Where are the brand's products now?",
+                           [("Already in this store", "self"), ("On its current website", "send")], minutes)
+            if not got:
+                return WAITING
+            p["source"] = "site" if got["value"] == "send" else "self"
         if got["value"] == "send" and not s.get("brand"):
-            link = a.type_in("brand_link", "Send the brand's website link: its own Shopify store, for example https://brand.com",
+            link = a.type_in("brand_link", "Send the brand's current website link (Shopify, WordPress, Wix or any other), for example "
+                                           "https://brand.com. I copy its products, pictures, prices, collections and policy pages.",
                              minutes, "https://brand.com")
             if not link:
                 return WAITING
@@ -187,15 +221,17 @@ class Job:
             website = br.get("platform") == "website"
             a.tell(f"Brand: <b>{esc(br['name'])}</b> ({esc(br['base'])}): {br['product_count']} products"
                    + (f", {br['collection_count']} collections" if not website else "") + ". "
-                   + ("Its website is not a Shopify store" + (" and shows no prices, so its products are copied as hidden drafts: you "
-                      "set each price in Shopify before they show. " if br.get("prices", 0) < br["product_count"] else ". ") if website else "")
+                   + ("Its website is not a Shopify store" + (" and shows no price for some products: they go in at 0.00 (never "
+                      "guessed) unless you send prices when I ask. " if br.get("prices", 0) < br["product_count"] else ". ") if website else "")
                    + f"Nothing is copied into {esc(sc['name'])} before your Approve tap.")
         elif got["value"] == "self":
             s["brand"] = sc
         br = s["brand"]
-        p["brand"] = {"link": br["base"], "name": br["name"], "store": br["myshopify_domain"], "currency": br.get("currency"),
+        p["brand"] = {"link": br["base"], "name": br["name"], "store": br.get("myshopify_domain"), "currency": br.get("currency"),
                       "product_count": br["product_count"]}
-        p["copy"] = br["myshopify_domain"] != sc["myshopify_domain"]
+        p["copy"] = p["source"] != "self" and br.get("myshopify_domain") != sc["myshopify_domain"]
+        if p["kind"] == "new":  # the home page banners: the Drive folder's, else made with ChatGPT (Harsh, 22 Oct 2026)
+            p["banners"] = "drive" if br.get("banners") else "make"
         got = a.choose("whose", f"Whose store is <b>{esc(sc['name'])}</b> ({esc(sc['myshopify_domain'])})?",
                        [("A client's store", "client"), ("DTJ's own store", "dtj")], minutes)
         if not got:
@@ -256,7 +292,16 @@ class Job:
                 return self.stop("nothing was chosen to design")
             p["parts"] = parts
         self.bar("questions", 3, 5)
-        if "products" in p["parts"]:
+        if "products" in p["parts"] and p["source"] == "samples":
+            n = br["product_count"]
+            got = a.choose("products", "Which product pages? The sample products are made right after these questions.",
+                           [(f"All {n} samples", f"top:{n}")] + [(f"The first {k}", f"top:{k}") for k in (3, 6) if k < n]
+                           + [("No product pages", "none")], minutes)
+            if not got:
+                return WAITING
+            p["product_pages"] = 0 if got["value"] == "none" else int(got["value"].split(":")[1])
+            p["products"] = []  # named once the samples are made (store_job.py assets)
+        elif "products" in p["parts"]:
             from page_builder.store_scan import product_choices  # noqa: PLC0415
             sellers = br["best_sellers"]  # the brand's products (copied with the same handles)
             top = "\n".join(f"{i}. {esc(x['title'])}" for i, x in enumerate(sellers[:5], 1))
@@ -300,13 +345,116 @@ class Job:
         s["planned"] = True
         s.pop("stopped", None)
         self.save()
-        products = "; ".join(x["title"] for x in p.get("products", [])) or "none"
-        copying = f"Copy <b>{esc(br['name'])}</b> into it, then design: " if p["copy"] else ""
+        products = "; ".join(x["title"] for x in p.get("products", [])) or (
+            f"the first {p['product_pages']} samples" if p.get("product_pages") else "none")
+        copying = {"site": f"Copy <b>{esc(br['name'])}</b> into it, then design: ",
+                   "drive": f"Add <b>{esc(br['name'])}</b>'s products from the Drive folder, then design: ",
+                   "samples": f"Make {br['product_count']} sample products for <b>{esc(br['name'])}</b> with ChatGPT pictures, then "
+                              "design: "}.get(p["source"], "") if p["copy"] else ""
         a.tell(f"Plan for <b>{esc(s['name'])}</b>: {copying}{esc(', '.join(PARTS[x] for x in p['parts']))}. Product pages: "
                f"{esc(products)}. Offer: {esc(p['offer'] or 'none')}.\nBefore anything is made or written I send an Approve button: "
-               "the draft copy, " + ("the brand copy, " if p["copy"] else "") + "the app copies, the header and footer, the collection "
-               "page. Product and home pages go to the draft without one (Harsh's standing rule). Nothing is published.")
+               "the draft copy, " + ("the products (every one ACTIVE), " if p["copy"] else "") + "the app copies, the header and "
+               "footer, the collection page. Product and home pages go to the draft without one (Harsh's standing rule). Nothing is "
+               "published.")
         self.out(json.dumps({"job": self.job, "plan": p}, ensure_ascii=False))
+        return 0
+
+    def new_store_source(self, minutes: float) -> int | None:
+        """A new store's products: a Google Drive folder (read now, so a folder that is not shared is said at once) or sample
+        products (the brand's name, what it sells, how many). None = answered, else the exit code (waiting / stopped)."""
+        s, a, p = self.s, self.ask, self.s["plan"]
+        got = a.choose("ready", "Are the brand's products ready?",
+                       [("Yes: I'll send a Google Drive folder", "drive"), ("No: make sample products", "samples")], minutes)
+        if not got:
+            return WAITING
+        p["source"] = got["value"]
+        if s.get("brand"):
+            return None
+        if p["source"] == "drive":
+            link = a.type_in("drive_link", DRIVE_HOW, minutes, "https://drive.google.com/drive/folders/...")
+            if not link:
+                return WAITING
+            try:
+                s["brand"] = self.drive(link["value"], self.dir / "drive")
+            except Exception as exc:  # noqa: BLE001 - a folder that is not shared or not in the layout: said, then asked again
+                if a.forget("drive_link") >= 3:
+                    return self.stop(f"three Drive links in a row could not be read (last: {str(exc)[:160]})")
+                a.tell(f"I could not read that folder: {esc(str(exc)[:300])}. Send the link again once that is fixed.")
+                return self.new_store_source(minutes)
+            self.save()
+            br = s["brand"]
+            unpriced = sum(1 for x in br["products"] if x.get("price_needed"))
+            a.tell(f"Drive folder: <b>{esc(br['name'])}</b>: {br['product_count']} products, {br.get('collection_count', 0)} collections, "
+                   f"{len(br.get('banners') or [])} banners, {len(br.get('policies') or {})} policy pages."
+                   + (f" {unpriced} products have no price: they go in at 0.00 unless you send prices when I ask." if unpriced else "")
+                   + "".join(f"\n- {esc(x)}" for x in (br.get("problems") or [])[:12])
+                   + f"\nNothing is added to {esc(s['name'])} before your Approve tap.")
+            return None
+        name = a.type_in("brand_name", "The new brand's name, as the store should show it.", minutes, "Senso Foods")
+        if not name:
+            return WAITING
+        sells = a.type_in("sells", "What will the store sell? One line, for example: herbal hair oils for women.", minutes,
+                          "herbal hair oils for women")
+        if not sells:
+            return WAITING
+        got = a.choose("sample_count", "How many sample products? ChatGPT makes their pictures; every one is marked as a sample and "
+                                       "goes in at 0.00 (I never make up a price).", [(str(n), str(n)) for n in SAMPLE_COUNTS], minutes)
+        if not got:
+            return WAITING
+        s["brand"] = {"source": "samples", "link": s["link"], "base": s["link"], "myshopify_domain": None,
+                      "name": re.sub(r"\s+", " ", name["value"]).strip()[:60], "currency": None, "live_theme": {},
+                      "product_count": int(got["value"]), "more_products": False, "collection_count": 0, "best_sellers": [],
+                      "best_sellers_from": "the sample products, in the order they were made",
+                      "sells": re.sub(r"\s+", " ", sells["value"]).strip()[:200], "products": [], "banners": []}
+        self.save()
+        return None
+
+    # ---- a new store: the samples and the banners (Harsh, 22 Oct 2026: "if not then it will create some sample products to complete
+    # the work and on a complete new store designing we will use chatgpt to generate banners and product images")
+    def assets(self, path: Path) -> int:
+        """The file the session wrote (skill dtj-new-store): {"products": [{"title", "description", "collection", "pictures":
+        [prompt, ...]}], "banners": [prompt, ...]}. Samples only for a samples store and never with a price or a claim; banners only
+        when the store has none yet. Each picture is made once (a rerun keeps what is made), then the brand is updated so `copy`
+        adds the samples (tags dtj-sample and dtj-price-needed, ACTIVE at 0.00)."""
+        self.need_plan()
+        s, p, a = self.s, self.s["plan"], self.ask
+        if p.get("kind") != "new":
+            raise SystemExit("assets is for a new store only: a redesign keeps the brand's own products and pictures")
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        br, out = s["brand"], self.dir / "assets"
+        items = data.get("products") or []
+        if items and p["source"] != "samples":
+            raise SystemExit("products come from the Drive folder for this store: the file may only hold banners")
+        if p["source"] == "samples" and not br["products"]:
+            why = sample_problems(items, br["product_count"])
+            if why:
+                raise SystemExit("the samples file is refused: " + "; ".join(why))
+        banners = [] if br.get("banners") else [str(x) for x in data.get("banners") or []][:5]
+        jobs = [("product", prompt, out / f"{slug(x['title'])}-{i}.png") for x in (items if not br["products"] else [])
+                for i, prompt in enumerate(x["pictures"][:3], 1)] + [("banner", b, out / f"banner-{i}.png") for i, b in enumerate(banners, 1)]
+        for n, (kind, prompt, f) in enumerate(jobs, 1):
+            if not f.exists():
+                try:
+                    self.picture(kind, prompt, f)
+                except Exception as exc:  # noqa: BLE001 - no key, a refused prompt, ChatGPT not answering: said in Telegram
+                    a.tell(f"I could not make the pictures: {esc(str(exc)[:300])}")
+                    return self.stop(f"a picture could not be made: {str(exc)[:200]}")
+            self.bar("assets", n, len(jobs))
+        if items and not br["products"]:
+            br["products"] = sample_products(items, br["name"], out)
+            br["best_sellers"] = [{"handle": x["handle"], "title": x["title"], "url": ""} for x in br["products"]]
+            br["collections"] = collections_of(items, br["products"])
+            br["collection_count"] = len(br["collections"])
+            br["product_count"] = len(br["products"])
+            p["products"] = [{"handle": x["handle"], "title": x["title"], "url": ""} for x in br["products"][:p.get("product_pages", 0)]]
+        if banners:
+            br["banners"] = [str(out / f"banner-{i}.png") for i in range(1, len(banners) + 1)]
+        self.save()
+        a.tell(f"Made with ChatGPT for <b>{esc(br['name'])}</b>: "
+               + (f"{len(items)} sample products ({sum(min(len(x['pictures']), 3) for x in items)} pictures)" if items else "")
+               + (" and " if items and banners else "") + (f"{len(banners)} home page banners" if banners else "")
+               + ". They are samples: swap in the brand's own before the store goes live.")
+        self.out(json.dumps({"products": len(br["products"]), "banners": br.get("banners") or []}))
         return 0
 
     def stop(self, why: str) -> int:
@@ -376,11 +524,19 @@ class Job:
         if s.get("copy_result"):
             self.out(json.dumps(s["copy_result"]))
             return 0
+        local = p.get("source") in ("drive", "samples")
+        if p.get("source") == "samples" and not s["brand"]["products"]:
+            raise SystemExit("the sample products are not made yet: run store_job.py assets first")
+        if not s.get("copy_plan"):
+            waiting = self.prices(minutes)
+            if waiting is not None:
+                return waiting
         self.bar("copy")
         end = self.ask.clock() + minutes * 60
         while not s.get("copy_plan"):
             try:
-                plan = self.planner(p["brand"]["link"], s["shop"], p["brand"].get("currency"), self.dir / "copy", job=self.job)
+                plan = self.planner(p["brand"]["link"], s["shop"], p["brand"].get("currency"), self.dir / "copy", job=self.job,
+                                    brand=s["brand"] if local else None, prices=p.get("prices") or {})
             except NotInstalled:
                 if not s.get("builder_asked"):
                     self.ask.tell(f"One tap first: install <b>DTJ Store Builder</b> on <b>{esc(s['name'])}</b>. It is the DTJ app that may "
@@ -400,7 +556,8 @@ class Job:
             self.save()
         cp = s["copy_plan"]
         notes = "".join(f"\n- {esc(n)}" for n in cp["notes"])
-        ok, by = self.ask.approve("ok_copy", f"Copy <b>{esc(p['brand']['name'])}</b> into <b>{esc(s['name'])}</b>: {esc(cp['summary'])}. "
+        what = {"drive": "Add the Drive folder's products of", "samples": "Add the sample products of"}.get(p.get("source"), "Copy")
+        ok, by = self.ask.approve("ok_copy", f"{what} <b>{esc(p['brand']['name'])}</b> into <b>{esc(s['name'])}</b>: {esc(cp['summary'])}. "
                                              "Nothing the store has is changed or deleted." + notes, minutes)
         if ok is None:
             return WAITING
@@ -429,6 +586,75 @@ class Job:
             if self.ask.clock() >= end:
                 return WAITING
             self.ask.sleep(20)
+
+    def prices(self, minutes: float) -> int | None:
+        """Products without a price (a website that shows none, a Drive folder without one, every sample): the person may type them
+        now (Harsh, 22 Oct 2026: every product ACTIVE; a price is never made up, so the rest go in at 0.00 with dtj-price-needed).
+        None = go on; else the exit code."""
+        s, p, a = self.s, self.s["plan"], self.ask
+        br = s["brand"]
+        if p.get("source") in ("drive", "samples"):
+            unpriced = [x for x in br["products"] if x.get("price_needed")]
+            sellers = [{"handle": x["handle"], "title": x["title"], "url": ""} for x in unpriced]
+        else:
+            sellers = br.get("best_sellers") or []
+            unpriced = [None] * max(0, br["product_count"] - br.get("prices", br["product_count"]))
+        if not unpriced:
+            return None
+        got = a.choose("prices", f"{len(unpriced)} products have no price. They go in ACTIVE at 0.00 with the tag dtj-price-needed "
+                                 "unless you send the prices now.", [("I'll type the prices", "type"), ("Leave them at 0.00", "later")],
+                       minutes)
+        if not got:
+            return WAITING
+        if got["value"] == "later" or "prices" in p:
+            return None
+        got = a.type_in("prices_typed", "One line per product: its name = price, for example\nMasala Chai = 249", minutes,
+                        "Masala Chai = 249")
+        if not got:
+            return WAITING
+        prices, left = {}, []
+        for line in got["value"].splitlines():
+            m = PRICE_LINE.match(line.strip())
+            if not m:
+                if line.strip():
+                    left.append(f"{line.strip()[:80]}: not \"name = price\"")
+                continue
+            hit, miss, _ = match_products([m.group(1)], sellers)
+            if hit:
+                prices[hit[0]["handle"]] = m.group(2)
+            left += miss
+        p["prices"] = prices
+        self.save()
+        a.tell(f"Prices noted for {len(prices)} products." + ("".join(f"\n- {esc(x)}" for x in left[:12]) if left else ""))
+        return None
+
+    def activate(self, approved_by: str, handles: list[str]) -> int:
+        """Products an earlier copy added as drafts, switched to ACTIVE and shown on the Online Store (Harsh, 22 Oct 2026: "all the
+        products will stay active none of them will be kept as draft"). Through DTJ Store Builder: only a draft changes, only its
+        status; the yes is a person's, by name. The install service does 12 a call and returns the rest in `left`."""
+        self.need_plan()
+        if not approved_by.strip():
+            raise SystemExit("--approved-by is required: the person who said yes, by name")
+        done = {"activated": [], "already_active": [], "not_found": [], "failed": []}
+        left, total = list(dict.fromkeys(handles)), len(set(handles))
+        while left:
+            got = self.catcher({"op": "activate", "shop": self.s["shop"], "approved_by": approved_by, "handles": left[:250]})
+            for k in done:
+                done[k] += got.get(k) or []
+            left = (got.get("left") or []) + left[250:]
+            self.bar("copy", total - len(left), total)
+        self.logged(f"products switched from draft to ACTIVE: {len(done['activated'])}", "every product stays active (Harsh, 22 Oct 2026)",
+                    approved_by, result="failed" if done["failed"] else "success", after={k: len(v) for k, v in done.items()})
+        self.out(json.dumps({k: len(v) for k, v in done.items()} | {"failed": done["failed"][:10]}))
+        return 1 if done["failed"] else 0
+
+    def handles(self) -> list[str]:
+        """The products this job added: the samples or the Drive folder's (kept here), else the brand's website read again."""
+        br = self.s.get("brand") or {}
+        if br.get("products"):
+            return [x["handle"] for x in br["products"]]
+        from provision.brand_copy import read_brand  # noqa: PLC0415
+        return [x["handle"] for x in read_brand(self.s["plan"]["brand"]["link"])["products"]]
 
     # ---- the apps
     def apps(self, minutes: float = APPROVE_MINUTES) -> int:
@@ -642,11 +868,128 @@ def _catcher(body: dict, opener=urllib.request.urlopen, sleep=time.sleep) -> dic
     raise CatcherError("unreachable")
 
 
-def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path, job: str) -> dict:
-    """Read only: the brand's public catalogue, and what the store has through DTJ Store Builder; then the plan is kept on the
-    install service for this job (nothing reaches the store until the Approve tap)."""
+def slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")[:80] or "product"
+
+
+def sample_problems(items: list, want: int) -> list[str]:
+    """Why a samples file cannot be used: the count asked for, a title, a description and 1-3 picture prompts each; never a price
+    (a price is never made up) and never a claim word (CLAUDE.md rule 5)."""
+    why = []
+    if not 1 <= len(items) <= want:
+        why.append(f"{len(items)} products, the person asked for {want}")
+    seen = set()
+    for i, x in enumerate(items, 1):
+        if not isinstance(x, dict):
+            why.append(f"product {i} is not an object")
+            continue
+        if {"price", "prices", "compare_at_price", "mrp"} & set(x):
+            why.append(f"product {i} has a price: samples never get one")
+        title, text = str(x.get("title") or "").strip(), str(x.get("description") or "").strip()
+        if not title or len(title) > 80 or slug(title) in seen:
+            why.append(f"product {i}: a title of 1-80 characters, not used twice")
+        seen.add(slug(title))
+        if not 20 <= len(text) <= 2000:
+            why.append(f"product {i}: a description of 20-2000 characters")
+        for found in {m.group(0).lower() for m in CLAIM_WORDS.finditer(f"{title} {text}")}:
+            why.append(f"product {i} says \"{found}\": no claims on a sample")
+        pics = x.get("pictures")
+        if not isinstance(pics, list) or not 1 <= len(pics) <= 3 or not all(isinstance(q, str) and q.strip() for q in pics):
+            why.append(f"product {i}: 1-3 picture prompts")
+    return why
+
+
+def sample_products(items: list, brand: str, out: Path) -> list[dict]:
+    """The samples in brand_copy's product shape (as /products.json shows one): no price, so 0.00 with the tags."""
+    from provision.brand_copy import PRICE_TAG  # noqa: PLC0415
+    made = []
+    for x in items:
+        h = slug(x["title"])
+        body = "".join(f"<p>{html.escape(para.strip())}</p>" for para in str(x["description"]).split("\n") if para.strip())
+        made.append({"handle": h, "title": x["title"].strip(), "body_html": body, "vendor": brand, "product_type": "",
+                     "tags": ["dtj-sample", PRICE_TAG], "options": [{"name": "Title", "position": 1, "values": ["Default Title"]}],
+                     "variants": [{"option1": "Default Title", "price": "0.00", "sku": ""}], "price_needed": True,
+                     "images": [{"path": str(out / f"{h}-{i}.png"), "alt": x["title"].strip()} for i in range(1, min(len(x["pictures"]), 3) + 1)],
+                     "source": "sample (made by DTJ for the design)"})
+    return made
+
+
+def collections_of(items: list, products: list[dict]) -> list[dict]:
+    out: dict[str, dict] = {}
+    for x, prod in zip(items, products):
+        for name in [c.strip() for c in str(x.get("collection") or "").split(",") if c.strip()][:3]:
+            c = out.setdefault(slug(name), {"handle": slug(name), "title": name[:80], "description_html": "", "products": []})
+            c["products"].append(prod["handle"])
+    return list(out.values())
+
+
+def _drive(link: str, out: Path) -> dict:
+    """A new store's products from a Google Drive folder shared with "Anyone with the link" (provision/drive_assets.py)."""
+    from provision.drive_assets import read_folder  # noqa: PLC0415
+    br = read_folder(link, out)
+    br.setdefault("myshopify_domain", None)
+    br.setdefault("currency", None)
+    br.setdefault("live_theme", {})
+    br.setdefault("more_products", False)
+    return br
+
+
+def _picture(kind: str, prompt: str, out: Path) -> dict:
+    """One picture made with ChatGPT's image model (provision/ai_images.py: OpenAI's API with DTJ's key, else ChatGPT in the reel
+    VPS's logged-in Chrome)."""
+    from provision import ai_images  # noqa: PLC0415
+    route, why = ai_images.route()
+    if not route:
+        raise RuntimeError(why)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    return ai_images.make(kind, prompt, out, backend=route)
+
+
+UPLOADABLE = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+
+
+def _local_pictures(brand: dict, store: str, upload=None) -> dict:
+    """A brand whose pictures are files on this laptop (the Drive folder's, ChatGPT's): each one sent to Shopify's own staged upload
+    through DTJ Store Builder (provision/staged_upload.py), then named by its upload address, as a website's picture is by its link.
+    A picture in another format, or bigger than Shopify takes, is left out and said in the plan's notes."""
+    if upload is None:
+        from provision.staged_upload import upload  # noqa: PLC0415
+    paths = [img["path"] for x in brand["products"] for img in x.get("images") or [] if img.get("path")]
+    ok = [x for x in paths if Path(x).suffix.lower() in UPLOADABLE and Path(x).exists() and Path(x).stat().st_size <= 20 * 2 ** 20]
+    urls = upload([Path(x) for x in ok], _catcher, store) if ok else {}
+    products = [dict(x, images=[{"src": urls[str(Path(img["path"]))], "alt": img.get("alt") or x["title"]} for img in x.get("images") or []
+                                if str(Path(img.get("path") or "")) in urls]) for x in brand["products"]]
+    left = len(paths) - len(urls)
+    return dict(brand, products=products, collections=brand.get("collections") or [], policies=brand.get("policies") or {},
+                left_out_pictures=left)
+
+
+def priced(brand: dict, prices: dict) -> dict:
+    """The prices the person typed (handle -> price), on every variant; the product loses its dtj-price-needed tag."""
+    from provision.brand_copy import PRICE_TAG  # noqa: PLC0415
+    out = []
+    for x in brand["products"]:
+        if x.get("handle") in prices:
+            tags = x.get("tags") or []
+            tags = [t.strip() for t in tags.split(",")] if isinstance(tags, str) else tags
+            x = dict(x, variants=[dict(v, price=prices[x["handle"]]) for v in x.get("variants") or []], price_needed=False,
+                     tags=[t for t in tags if t != PRICE_TAG])
+        out.append(x)
+    return dict(brand, products=out)
+
+
+def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path, job: str, brand: dict | None = None,
+               prices: dict | None = None) -> dict:
+    """Read only: the brand's public catalogue (or, for a Drive folder or samples, the products this laptop holds, their pictures
+    sent to Shopify's staged upload), and what the store has through DTJ Store Builder; then the plan is kept on the install
+    service for this job (nothing reaches the store until the Approve tap)."""
     from provision import brand_copy  # noqa: PLC0415
-    plan = brand_copy.make_plan(brand_copy.read_brand(brand_link), _catcher({"op": "target", "shop": store}), currency)
+    b = brand_copy.read_brand(brand_link) if brand is None else _local_pictures(brand, store)
+    if prices:
+        b = priced(b, prices)
+    plan = brand_copy.make_plan(b, _catcher({"op": "target", "shop": store}), currency)
+    if b.get("left_out_pictures"):
+        plan["notes"].append(f"{b['left_out_pictures']} pictures left out (not jpg, png, webp or gif, or over 20 MB)")
     out.mkdir(parents=True, exist_ok=True)
     (out / "plan.json").write_text(json.dumps(plan, indent=1, ensure_ascii=False), encoding="utf-8")
     kept = _catcher({"op": "plan", "job": job, "shop": store, "plan": plan})
@@ -724,6 +1067,13 @@ def main(argv=None) -> int:
     st.add_argument("--chat", default="")
     st.add_argument("--by", default="")
     st.add_argument("--minutes", type=float, default=QUESTION_MINUTES)
+    asf = sub.add_parser("assets")
+    asf.add_argument("--job", required=True)
+    asf.add_argument("--file", required=True, type=Path, help='{"products": [{"title", "description", "collection", "pictures": [..]}], '
+                                                             '"banners": [..]}')
+    ac = sub.add_parser("activate")
+    ac.add_argument("--job", required=True)
+    ac.add_argument("--approved-by", required=True, help='"<name> (<where they said yes>)"')
     for name in ("draft", "copy", "apps", "installs", "status"):
         x = sub.add_parser(name)
         x.add_argument("--job", required=True)
@@ -792,6 +1142,10 @@ def main(argv=None) -> int:
             return 1
     if a.cmd == "copy":
         return job.copy(a.minutes, again=getattr(a, "again", False))
+    if a.cmd == "assets":
+        return job.assets(a.file)
+    if a.cmd == "activate":
+        return job.activate(a.approved_by, job.handles())
     if a.cmd == "apps":
         return job.apps(a.minutes)
     if a.cmd == "installs":

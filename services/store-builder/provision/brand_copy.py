@@ -1,6 +1,6 @@
 """Copy a brand's public Shopify store into another Shopify store (Harsh, 21 Oct 2026: "it has to create the shopify store of it";
-his choices: products with pictures and prices, collections, the policy pages; products ACTIVE when the store is behind a password;
-one Approve tap per import).
+his choices: products with pictures and prices, collections, the policy pages; one Approve tap per import). Every product goes in
+ACTIVE (Harsh, 22 Oct 2026: "all the products will stay active none of them will be kept as draft").
 
     python -m provision.brand_copy plan --brand https://brand.com --store target.myshopify.com --out <dir>
         read only: the brand's public catalog, collections and policies, and the target's products, collections, policies and
@@ -10,8 +10,8 @@ one Approve tap per import).
 
 What it never does: change or delete anything the target has. A product or collection whose handle is on the target already is left
 alone (listed as skipped); a policy is written only where the target's own is empty; nothing is ever deleted (gql's allowlist).
-Products go in ACTIVE only when the target's storefront is behind a password (a dev store), else as DRAFT. Prices are the brand's
-numbers as its site shows them (never converted or guessed; a product without a price is left out). Every change is one allowlisted
+Products go in ACTIVE; when the target has no password page the Approve tap says they are visible at once. Prices are the brand's
+numbers as its site shows them (never converted or guessed): a website that shows none gives 0.00 and the tag dtj-price-needed. Every change is one allowlisted
 mutation through `shopify store execute` (the CLI's own sign-in for that store; no token in our files) and one action-log row; a
 rerun continues where it stopped (<dir>/applied.json). The store's sign-in needs the scopes in SCOPES once:
     shopify store auth -s <store> --scopes <SCOPES>      (a browser page a person approves)
@@ -394,7 +394,7 @@ def read_target(client, get: Getter = http_get) -> dict:
 
 def make_plan(brand: dict, target: dict, brand_currency: str | None = None) -> dict:
     needs_price = [p["handle"] for p in brand["products"] if p.get("price_needed")]
-    status = "ACTIVE" if target["password"] and not needs_price else "DRAFT"
+    status = "ACTIVE"  # always (Harsh, 22 Oct 2026): an open store is said in the notes, so the Approve tap knows
     have_p, have_c = set(target["products"]), set(target["collections"])
     products, skipped, no_price = [], [], []
     for p in brand["products"]:
@@ -417,10 +417,11 @@ def make_plan(brand: dict, target: dict, brand_currency: str | None = None) -> d
     if brand_currency and target["currency"] and brand_currency != target["currency"]:
         notes.append(f"prices are the brand's numbers in {brand_currency}; {target['store']} sells in {target['currency']} (not converted)")
     if needs_price:
-        notes.append(f"the brand's website shows no price for {len(needs_price)} products: everything goes in as hidden drafts, those at "
-                     f"0.00 with the tag {PRICE_TAG}; set each price in Shopify admin before they show")
+        notes.append(f"no price for {len(needs_price)} products: they go in ACTIVE at 0.00 with the tag {PRICE_TAG}; set each price "
+                     "in Shopify admin (prices are never guessed)")
     if not target["password"]:
-        notes.append(f"{target['store']} is open to the public (no password page), so the products go in as DRAFT")
+        notes.append(f"{target['store']} is open to the public (no password page): shoppers see and can buy the products as soon as "
+                     "they are copied" + (f", including the {len(needs_price)} at 0.00" if needs_price else ""))
     if brand.get("unreadable_pages"):
         notes.append(f"{len(brand['unreadable_pages'])} product pages could not be read and are left out")
     if brand.get("more_collections"):

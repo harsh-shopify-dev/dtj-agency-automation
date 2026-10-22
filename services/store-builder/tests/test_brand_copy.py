@@ -93,11 +93,11 @@ class Plan(unittest.TestCase):
         self.assertIn("prices are the brand's numbers in USD; royal-demo.myshopify.com sells in INR (not converted)", plan["notes"])
         self.assertEqual(bc.summary(plan), "1 products (1 pictures, 2 variants), 1 collections, 1 policy pages, as ACTIVE")
 
-    def test_an_open_store_gets_drafts_and_unreadable_policies_are_said(self):
+    def test_an_open_store_still_gets_active_products_and_says_so(self):
         brand = bc.read_brand(BASE, brand_site(), pause=lambda: None)
         plan = bc.make_plan(brand, dict(TARGET, password=False, empty_policies=None), None)
-        self.assertEqual(plan["status"], "DRAFT")
-        self.assertTrue(all(p["status"] == "DRAFT" for p in plan["products"]))
+        self.assertEqual(plan["status"], "ACTIVE")  # Harsh, 22 Oct 2026: never a draft
+        self.assertTrue(all(p["status"] == "ACTIVE" for p in plan["products"]))
         self.assertEqual(plan["policies"], [])
         self.assertTrue(any("open to the public" in n for n in plan["notes"]))
         self.assertTrue(any("cannot read policies yet" in n and bc.SCOPES in n for n in plan["notes"]))
@@ -198,13 +198,13 @@ class Website(unittest.TestCase):
         self.assertEqual(pictures["masala-chai"], ["masala-box.jpg", "masala-side.jpg"])
         self.assertEqual(pictures["extra-0"], ["extra-0.jpg"])
 
-    def test_a_site_without_prices_goes_in_as_hidden_drafts_and_says_so(self):
+    def test_a_site_without_prices_goes_in_active_at_zero_and_says_so(self):
         brand = bc.read_brand(SITE, chai_site(), pause=lambda: None)
         plan = bc.make_plan(brand, dict(TARGET, products=[]), None)
-        self.assertEqual(plan["status"], "DRAFT")  # even behind a password: a price must be set first
+        self.assertEqual(plan["status"], "ACTIVE")
         self.assertEqual([(p["handle"], p["status"], p["variants"][0]["price"]) for p in plan["products"]],
-                         [("masala-chai", "DRAFT", "0.00"), ("ginger-chai", "DRAFT", "249.00")])
-        self.assertTrue(any("shows no price for 1 products" in n and bc.PRICE_TAG in n for n in plan["notes"]))
+                         [("masala-chai", "ACTIVE", "0.00"), ("ginger-chai", "ACTIVE", "249.00")])
+        self.assertTrue(any("no price for 1 products" in n and bc.PRICE_TAG in n for n in plan["notes"]))
         self.assertFalse(any("open to the public" in n for n in plan["notes"]))  # the target has its password page
 
     def test_a_site_with_no_product_pages_is_refused(self):
@@ -233,11 +233,10 @@ class Apply(unittest.TestCase):
         bc.apply(self.plan, again, self.tmp / "applied.json", log, "Riya (Telegram Approve)", out=lambda *_: None)
         self.assertEqual(again.calls, [])
 
-    def test_drafts_are_not_published(self):
-        plan = bc.make_plan(bc.read_brand(BASE, brand_site(), pause=lambda: None), dict(TARGET, products=[], password=False), None)
-        admin = FakeAdmin()
-        bc.apply(plan, admin, self.tmp / "applied.json", Log(), "Harsh", out=lambda *_: None)
-        self.assertNotIn("Publish", [c[0] for c in admin.calls])
+    def test_an_open_store_says_unpriced_products_show_at_zero(self):
+        brand = bc.read_brand(SITE, chai_site(), pause=lambda: None)
+        plan = bc.make_plan(brand, dict(TARGET, products=[], password=False), None)
+        self.assertTrue(any("open to the public" in n and "1 at 0.00" in n for n in plan["notes"]))
 
     def test_a_failed_product_is_kept_for_the_next_run_and_three_in_a_row_stop(self):
         admin = FakeAdmin(fail={"glow-serum"})

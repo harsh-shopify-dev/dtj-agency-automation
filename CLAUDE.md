@@ -73,8 +73,9 @@ with `python tools/team-setup/check_setup.py`.
 **Setting everything up** (laptop, n8n, the app switch) and **"listen for the telegram call"** (wait for bot requests and design
 each one while a person is at the laptop): the skill `dtj-factory-setup`.
 **A new shop** (a client's store or one in DTJ's own Shopify organization; `/addshop` in the bot): the skill `dtj-add-shop`.
-**A whole store from one link** (an admin sends the bot the store to build in; the bot asks for the brand's own link and copies the
-brand into it; questions and Approve taps in Telegram, then the draft copy, the apps and every page): the skill `dtj-new-store`.
+**A whole store from one link** (an admin sends the bot the store to build in; the bot asks: redesign or new store, then where the
+products come from: this store, the brand's current website, a Google Drive folder, or samples with ChatGPT pictures; every product
+ACTIVE; questions and Approve taps in Telegram, then the draft copy, the apps and every page): the skill `dtj-new-store`.
 **A brand intake before a redesign** (the client's public pictures, videos, colours and details into DTJ's Google Drive; also
 `/intake` in the bot): the skill `dtj-brand-intake`.
 **A client's home page** (only when someone asks; the person picks the sections to build or update): the skill `dtj-home-page`.
