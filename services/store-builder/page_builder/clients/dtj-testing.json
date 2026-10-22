@@ -1,0 +1,34 @@
+{
+ "_comment": "DTJ's dev store dtj-testing (Senso Foods copied in, 22 Oct 2026) runs DTJ's ORIGINAL apps, like elevate-with-harsh: the original apps share their handles and extension uuids on every store of DTJ's organization, so these are elevate's. Made by the store job (dtj-new-store) after Harsh's apps Approve tap.",
+ "store": "dtj-testing.myshopify.com",
+ "apps": {
+  "dtj-blocks": {
+   "handle": "dtj-blocks",
+   "uuid": "01a10b7e-02ff-7b68-95a3-bbcdcb562875"
+  },
+  "dtj-sections": {
+   "handle": "dtj-sections",
+   "uuid": "01a110b6-1a6d-7bfc-9e97-23ae08da011c"
+  },
+  "dtj-sections-2": {
+   "handle": "dtj-sections-2",
+   "uuid": "01a11a57-84e4-71d3-9b65-0fc0dd6ca96a"
+  },
+  "dtj-heroes": {
+   "handle": "dtj-heroes",
+   "uuid": "01a1304c-d26f-7ac9-aad2-dd5d41d7a942"
+  },
+  "dtj-commerce": {
+   "handle": "dtj-commerce",
+   "uuid": "01a13473-6d78-796e-b593-adbe59703cb0"
+  },
+  "dtj-shop": {
+   "handle": "dtj-shop",
+   "uuid": "01a13473-ad4c-7f4c-9fcb-1352566e358a"
+  },
+  "dtj-collection": {
+   "handle": "dtj-collection",
+   "uuid": "01a158ac-fe15-738e-8c2e-b14636103612"
+  }
+ }
+}

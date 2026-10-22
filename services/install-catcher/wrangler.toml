@@ -17,6 +17,55 @@ crons = ["0 3 * * 1"]  # every Monday 03:00 UTC: refresh every store key (a refr
 BUILDER_CLIENT_ID = "5704872b2f8cb791487ab19c51530cca"  # DTJ Store Builder (tools/store_builder.py): the brand copy's app
 # one entry per app copy, written by tools/add_client.py (client ids and store addresses are not secret)
 APPS = '''{
+ "dtj-testing-blocks": {
+  "client_id": "5952b6121d9bc666225ea06143fb523d",
+  "grant": "org",
+  "label": "DTJ Blocks - DTJ Testing",
+  "org_app": "dtj-blocks",
+  "shop": "dtj-testing.myshopify.com"
+ },
+ "dtj-testing-collection": {
+  "client_id": "368689e48379a67864ec424a48256e1b",
+  "grant": "org",
+  "label": "DTJ Collection - DTJ Testing",
+  "org_app": "dtj-collection",
+  "shop": "dtj-testing.myshopify.com"
+ },
+ "dtj-testing-commerce": {
+  "client_id": "7bfdefb7dc103be3f26d3275f32239dc",
+  "grant": "org",
+  "label": "DTJ Commerce - DTJ Testing",
+  "org_app": "dtj-commerce",
+  "shop": "dtj-testing.myshopify.com"
+ },
+ "dtj-testing-heroes": {
+  "client_id": "6d250bd5db2eb72023243442a1e41e7b",
+  "grant": "org",
+  "label": "DTJ Heroes - DTJ Testing",
+  "org_app": "dtj-heroes",
+  "shop": "dtj-testing.myshopify.com"
+ },
+ "dtj-testing-sections": {
+  "client_id": "c10a9d9037a01cb9eacef391eab5d714",
+  "grant": "org",
+  "label": "DTJ Sections - DTJ Testing",
+  "org_app": "dtj-sections",
+  "shop": "dtj-testing.myshopify.com"
+ },
+ "dtj-testing-sections2": {
+  "client_id": "a257890dc9312b8ee1288f9bdb8a7c08",
+  "grant": "org",
+  "label": "DTJ Sections 2 - DTJ Testing",
+  "org_app": "dtj-sections2",
+  "shop": "dtj-testing.myshopify.com"
+ },
+ "dtj-testing-shop": {
+  "client_id": "41f5b8a6386f3735aaebe1c59abf5ee0",
+  "grant": "org",
+  "label": "DTJ Shop - DTJ Testing",
+  "org_app": "dtj-shop",
+  "shop": "dtj-testing.myshopify.com"
+ },
  "elevate-with-harsh-blocks": {
   "client_id": "5952b6121d9bc666225ea06143fb523d",
   "grant": "org",
