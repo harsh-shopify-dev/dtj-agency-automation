@@ -405,6 +405,19 @@ class BrandCopy(Base):
         self.assertEqual(j.copy(minutes=1), 0)
         self.assertEqual((len(self.planned_with), self.looked), (1, 2))  # finished: nothing asked again
 
+    def test_a_second_copy_after_a_finished_one_needs_its_own_tap(self):
+        j = self.planned()
+        j.copy(minutes=1)
+        self.answers.tap(self.tg, "Approve", by="Riya")
+        self.assertEqual(j.copy(minutes=5), 0)
+        self.statuses = [{"done": {"policies": 2}, "total": {"policies": 2}, "finished": True, "stopped": None}]
+        self.assertEqual(j.copy(minutes=1, again=True), store_job.WAITING)  # planned again, waiting for a NEW tap
+        self.assertEqual(len(self.planned_with), 2)
+        self.assertNotIn("copy_approved_by", j.s)
+        self.answers.tap(self.tg, "Approve", by="Harsh")
+        self.assertEqual(j.copy(minutes=1), 0)
+        self.assertEqual(j.s["copy_approved_by"], "Harsh (Telegram Approve)")
+
     def test_store_builder_not_installed_asks_once_then_goes_on(self):
         tries = []
 

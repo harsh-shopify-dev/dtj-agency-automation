@@ -31,6 +31,7 @@ const Q = {
   exists: "query Exists($handle: String!) { productByIdentifier(identifier: { handle: $handle }) { id } }",
   collectionExists: "query CollectionExists($handle: String!) { collectionByIdentifier(identifier: { handle: $handle }) { id } }",
   policies: "query Policies { shop { shopPolicies { type body } } }",
+  password: "query Password { onlineStore { passwordProtection { enabled } } }",
 };
 const M = {
   product: "mutation CopyProduct($input: ProductSetInput!) { productSet(input: $input, synchronous: true) { product { id handle } userErrors { field message code } } }",
@@ -126,13 +127,22 @@ async function target(env, body) {
     }
     return found.sort();
   };
-  const front = await call(`https://${cfg.shop}/`, { redirect: "follow" }).catch(() => null);
-  const page = front ? await front.text().catch(() => "") : "";
-  const password = Boolean(front && ((front.url || "").includes("/password") || /action="\/password"/.test(page)));
+  // the password page: Shopify's own setting first; the storefront only when the app may not read it (22 Oct 2026: the storefront
+  // check called dtj-testing "open to the public" although it shows its password page)
+  let password;
+  try {
+    password = Boolean((await gql(cfg.shop, token, Q.password)).onlineStore?.passwordProtection?.enabled);
+  } catch {
+    const front = await call(`https://${cfg.shop}/`, { redirect: "follow" }).catch(() => null);
+    const page = front ? await front.text().catch(() => "") : "";
+    password = Boolean(front && ((front.url || "").includes("/password") || /action="\/password"/.test(page)));
+  }
+  // a policy the store has never set is not in shopPolicies at all: it is as empty as a blank one (22 Oct 2026, dtj-testing)
+  const filled = new Set(data.shop.shopPolicies.filter((p) => String(p.body || "").trim()).map((p) => p.type));
   return {
     store: data.shop.myshopifyDomain, name: data.shop.name, currency: data.shop.currencyCode, password,
     online_store: (data.publications.nodes.find((p) => p.name === "Online Store") || {}).id || null,
-    empty_policies: data.shop.shopPolicies.filter((p) => !String(p.body || "").trim()).map((p) => p.type).sort(),
+    empty_policies: [...POLICY_TYPES].filter((t) => !filled.has(t)).sort(),
     products: await handles(Q.products, "products"), collections: await handles(Q.collections, "collections"),
   };
 }
@@ -141,7 +151,7 @@ async function keepPlan(env, body) {
   if (!JOB_RE.test(body.job || "")) throw new Refuse(400, "job must be lowercase letters, digits and dashes");
   builder(env, body.shop);
   const old = JSON.parse((await env.VAULT.get(`copy:${body.job}`)) || "null");
-  if (old && old.approved_by) throw new Refuse(409, "this copy has started already: its plan cannot change");
+  if (old && old.approved_by && !old.finished) throw new Refuse(409, "this copy has started already: its plan cannot change");
   const clean = cleanPlan(body.plan, body.shop);
   const state = { job: body.job, shop: body.shop, ...clean, done: { collections: {}, products: {}, policies: [] }, skipped: [],
     failed: {}, approved_by: null, finished: false, stopped: null, streak: { kind: "", n: 0 }, planned_at: new Date().toISOString() };
