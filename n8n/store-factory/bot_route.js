@@ -34,6 +34,21 @@ const isAdmin = roleOf(me) === 'admin';
 const myName = me.name || msg.name;
 // an answer to a store job's question or Approve button (21 Oct 2026): saved in dtj_bot_answers ("Save the Answer"), where the
 // laptop's store_job.py reads it. Anyone on the bot (an Approve tap is that person's yes, with their name: CLAUDE.md rule 2).
+// a plain message while one of the store job's typed questions is open in this chat is its answer (22 Oct 2026: Harsh sent the
+// brand's link as a new message, not a reply, and the bot took it for a second store). "Load Open Questions" holds the laptop's
+// open / closed marks for this chat; the newest one decides.
+let openQ = null;
+try {
+  const marks = $('Load Open Questions').all().map((i) => i.json)
+    .filter((r) => r && String(r.chat_id) === msg.chat_id && !String(r.value || '').trim() && ['open', 'closed'].includes(r.choice));
+  marks.sort((a, b) => (String(a.at).slice(0, 19) < String(b.at).slice(0, 19) ? -1 : 1));
+  const last = marks[marks.length - 1];
+  if (last && last.choice === 'open') openQ = last;
+} catch (e) { openQ = null; }  // the step is not there (an older bot): only a reply counts
+if (openQ && (msg.kind === 'link' || msg.kind === 'nolink') && String(msg.text || '').trim()) {
+  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: openQ.job, key: openQ.key, choice: '',
+    value: String(msg.text).trim().slice(0, 500), by: myName, at: new Date().toISOString() } }];
+}
 if (msg.kind === 'answer') {
   const value = String(msg.arg || '').trim();
   if (!value) return reply('I could not read that answer. Tap the button again, or reply to the question with your answer.');

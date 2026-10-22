@@ -484,6 +484,23 @@ class PrivateScan(unittest.TestCase):
         self.assertEqual((sc["name"], sc["product_count"]), ("dtj-testing", 0))
 
 
+class OpenMarks(unittest.TestCase):
+    def test_a_typed_question_is_marked_open_then_closed_and_marks_are_never_answers(self):
+        tg, answers, marks, state = Telegram(), Answers(), [], {}
+        a = bot_ask.Asker("dtj-testing", CHAT, send=tg, rows=answers, state=state, save=lambda: None, add_row=marks.append,
+                          sleep=lambda s: None, clock=Clock(), now=lambda: "2026-10-22T06:25:59Z")
+        a.ask_text("brand_link", "Send the brand's link")
+        self.assertEqual([(m["key"], m["choice"], m["value"]) for m in marks], [("brand_link", "open", "")])
+        answers.rows.append({"id": 9, "job": "dtj-testing", "key": "brand_link", "value": "", "choice": "open", "by": "", "chat_id": CHAT,
+                             "at": "2099-01-01T00:00:00Z"})  # the mark itself sits in the same table
+        self.assertIsNone(a.answer("brand_link"))
+        answers.type(tg, "https://sensofoods.com/")
+        self.assertEqual(a.answer("brand_link")["value"], "https://sensofoods.com/")
+        self.assertEqual([m["choice"] for m in marks], ["open", "closed"])
+        a.ask("whose", "Whose store?", [("Ours", "dtj")])  # a button question gets no mark
+        self.assertEqual(len(marks), 2)
+
+
 class Pieces(unittest.TestCase):
     def test_typed_products_match_by_link_or_unique_name(self):
         sellers = SCAN["best_sellers"]

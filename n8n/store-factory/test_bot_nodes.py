@@ -765,7 +765,45 @@ class WholeStore(unittest.TestCase):
         self.assertIn("could not save that answer", lost["out"][0]["json"]["text"])
 
 
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class PlainAnswers(unittest.TestCase):
+    """A plain message answers the store job's open typed question (22 Oct 2026: the brand link sent as a new message)."""
+
+    def route(self, upd, marks):
+        msg = run_node("bot_read.js", upd)["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD],
+                                                      "Load Open Questions": marks or [{}]})
+        self.assertTrue(res["ok"], res)
+        return res["out"][0]["json"]
+
+    OPEN = {"job": "dtj-testing", "key": "brand_link", "value": "", "choice": "open", "chat_id": "333", "at": "2026-10-22T06:25:59Z"}
+
+    def test_while_a_question_is_open_a_plain_link_or_text_is_its_answer(self):
+        out = self.route(update("https://sensofoods.com/", user=333), [self.OPEN])
+        self.assertEqual({k: out[k] for k in ("action", "job", "key", "value", "by")},
+                         {"action": "answer", "job": "dtj-testing", "key": "brand_link", "value": "https://sensofoods.com/", "by": "Harsh"})
+        offer = self.route(update("Flat 10% off on prepaid orders", user=333), [{**self.OPEN, "key": "offer_text"}])
+        self.assertEqual((offer["action"], offer["key"]), ("answer", "offer_text"))
+
+    def test_after_it_is_closed_or_in_another_chat_messages_go_their_usual_way(self):
+        closed = {**self.OPEN, "choice": "closed", "at": "2026-10-22T06:26:30Z"}
+        self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [self.OPEN, closed])["action"], "store")
+        self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [{**self.OPEN, "chat_id": "111"}])["action"], "store")
+        self.assertEqual(self.route(update("/commands", user=333), [self.OPEN])["action"], "reply")  # a command stays a command
+        self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [])["action"], "store")
+
+
 class WholeStoreDeploy(unittest.TestCase):
+    def test_the_open_question_check_sits_before_who_is_it(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.open_question_ops("T-ANS")
+        node = next(o["node"] for o in ops if o["type"] == "addNode")
+        self.assertEqual((node["name"], node["parameters"]["dataTableId"]["value"]), ("Load Open Questions", "T-ANS"))
+        self.assertEqual([c["keyName"] for c in node["parameters"]["filters"]["conditions"]], ["chat_id", "value"])
+        links = [(o["type"], o["source"], o["target"]) for o in ops if "Connection" in o["type"]]
+        self.assertEqual(links, [("removeConnection", "Load Shops", "Who Is It"), ("addConnection", "Load Shops", "Load Open Questions"),
+                                 ("addConnection", "Load Open Questions", "Who Is It")])
+
     def test_the_store_link_and_the_answers_take_the_ninth_and_tenth_outputs(self):
         import deploy_telegram_bot as d  # noqa: PLC0415
         ops = d.store_ops("WF-NS", "T-ANS")
