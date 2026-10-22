@@ -484,6 +484,62 @@ class PrivateScan(unittest.TestCase):
         self.assertEqual((sc["name"], sc["product_count"]), ("dtj-testing", 0))
 
 
+class Installs(Base):
+    """DTJ's own store: 7 Install buttons in Telegram, each app switched on as soon as it is installed (Harsh, 22 Oct 2026)."""
+    APPS = [("blocks", "DTJ Blocks", "a" * 32), ("sections", "DTJ Sections", "b" * 32), ("heroes", "DTJ Heroes", "c" * 32)]
+
+    def setUp(self):
+        super().setUp()
+        self.installed, self.switched = {}, []
+
+    def licence(self, key, state, approved_by):
+        if state == "status":
+            return (200, self.installed[key]) if key in self.installed else (404, {"error": "not installed"})
+        self.switched.append((key, approved_by))
+        self.installed[key] = {**self.installed[key], "licence": "active"}
+        return 200, {"verified": True}
+
+    def ready(self, whose="DTJ's own store"):
+        j = store_job.Job("royal-dosa", send=self.tg, rows=self.answers, log=self.log, state_dir=self.tmp, out=self.printed.append,
+                          sleep=self.clock.sleep, clock=self.clock, licence=self.licence, org_apps=lambda: self.APPS)
+        j.begin(SCAN, CHAT, "Harsh")
+        j.plan(minutes=1)
+        names = ['Use "Royal Dosa"'] if whose == "A client's store" else []
+        for label in ("This store is the brand", whose, *names, "Everything except product pages", "No offer"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        return j
+
+    def test_buttons_once_then_each_install_is_switched_on_under_the_apps_tap(self):
+        j = self.ready()
+        with self.assertRaises(SystemExit):
+            j.installs(minutes=1)  # no apps tap yet
+        j.apps(minutes=1)
+        self.assertIn("send you 7 Install buttons and switch each app on", self.tg.questions()[-1]["text"])
+        self.answers.tap(self.tg, "Approve", by="Harsh")
+        j.apps(minutes=1)
+        self.installed["royal-dosa-blocks"] = {"app_handle": "dtj-blocks", "licence": None}
+        self.assertEqual(j.installs(minutes=1), store_job.WAITING)
+        buttons = [r[0] for r in self.tg.questions()[-1]["reply_markup"]["inline_keyboard"]]
+        self.assertEqual(buttons[0], {"text": "Install DTJ Blocks",
+                                      "url": "https://admin.shopify.com/store/royal-dosa/oauth/install?client_id=" + "a" * 32})
+        self.assertEqual(len(buttons), 3)
+        self.assertEqual(self.switched, [("royal-dosa-blocks", "Harsh (Telegram Approve)")])
+        self.installed["royal-dosa-sections"] = {"app_handle": "dtj-sections", "licence": "active"}  # already on: nothing to switch
+        self.installed["royal-dosa-heroes"] = {"app_handle": "dtj-heroes", "licence": "inactive"}
+        sent = len(self.tg.sent)
+        self.assertEqual(j.installs(minutes=1), 0)
+        self.assertEqual([k for k, _ in self.switched], ["royal-dosa-blocks", "royal-dosa-heroes"])
+        self.assertEqual(len([d for m, d in self.tg.sent[sent:] if "reply_markup" in d]), 0)  # the buttons are sent once
+        self.assertIn("All 3 DTJ apps are installed and switched on", self.tg.last()["text"])
+        self.assertEqual(self.log.rows[-1]["approved_by"], "Harsh (Telegram Approve)")
+
+    def test_a_client_store_gets_its_buttons_from_add_shop(self):
+        j = self.ready(whose="A client's store")
+        self.assertEqual(j.installs(minutes=1), 0)
+        self.assertIn("add_shop.py sends its Install buttons", self.printed[-1])
+
+
 class RealActionLog(unittest.TestCase):
     """The job's rows go through the real action log, whose schema refuses an unknown field or result (22 Oct 2026: "approver" and
     "skipped" crashed the live copy job after Harsh's tap)."""

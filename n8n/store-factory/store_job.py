@@ -10,6 +10,7 @@ n8n's "Store Factory: New Store"; the runbook is the skill dtj-new-store.
                                                                    plan kept on the install service, an Approve tap (it starts n8n's
                                                                    Store Factory: Brand Copy, which does the writes), then it waits
     python n8n/store-factory/store_job.py apps --job <job>        Approve tap for the app copies; prints the add_shop.py command
+    python n8n/store-factory/store_job.py installs --job <job>    DTJ's own store: 7 Install buttons, then each app switched on
     python n8n/store-factory/store_job.py approve --job <job> --key <key> --text "<what will be written>"   one write's Approve tap
     python n8n/store-factory/store_job.py step --job <job> <stage> [--done N --total M]                      the progress bar
     python n8n/store-factory/store_job.py record --job <job> --part <part> --preview <url> [--code C] [--note N]   a page written
@@ -119,7 +120,8 @@ class Job:
     def __init__(self, job: str, *, send: Callable[[str, dict], dict], rows: Callable[[str], list], progress=None, access=None,
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
                  today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None,
-                 copy_status=None, add_row=None):
+                 copy_status=None, add_row=None, licence=None, org_apps=None):
+        self.licence, self.org_apps = licence or _licence, org_apps or _org_apps
         self.scanner, self.planner, self.copy_status = scanner or _scan_brand, planner or _copy_plan, copy_status or _copy_status
         self.job, self.dir = job, state_dir / job
         self.path = self.dir / "job.json"
@@ -434,8 +436,8 @@ class Job:
             what = (f"Add the 7 DTJ app copies for <b>{esc(p['label'])}</b>: created and released in DTJ's Shopify account. The store "
                     "sees nothing until its owner taps Install (I send the 7 buttons here).")
         else:
-            what = (f"Connect DTJ's own apps to <b>{esc(s['name'])}</b>: register the store with DTJ's install service and update that "
-                    "service (DTJ's original apps must be installed on the store by a person).")
+            what = (f"Connect DTJ's own apps to <b>{esc(s['name'])}</b>: register the store with DTJ's install service, update that "
+                    "service, then send you 7 Install buttons and switch each app on as soon as it is installed.")
         ok, by = self.ask.approve("ok_apps", what, minutes)
         if ok is None:
             return WAITING
@@ -449,6 +451,58 @@ class Job:
                     s["apps_approved_by"])
         self.out(self.apps_command())
         return 0
+
+    # ---- DTJ's own store: the 7 Install buttons, then each app switched on (Harsh, 22 Oct 2026: "Install buttons in Telegram")
+    def installs(self, minutes: float = APPROVE_MINUTES) -> int:
+        """One message with an Install button per DTJ app (Shopify's own install page for this store: an install is always a
+        person's tap there), then it watches the install service and switches each app on as soon as it is installed, under the
+        apps Approve tap. Exit 0 once all are on, 3 while some are still not installed (run it again to keep watching)."""
+        self.need_plan()
+        s = self.s
+        if s["plan"].get("whose") != "dtj":
+            self.out("a client's store: add_shop.py sends its Install buttons (skill dtj-add-shop)")
+            return 0
+        if not s.get("apps_approved_by"):
+            raise SystemExit("no apps Approve tap yet: run store_job.py apps first")
+        apps = self.org_apps()
+        handle = s["shop"].split(".")[0]
+        if not s.get("install_buttons_sent"):
+            rows = [[{"text": f"Install {label}", "url": f"https://admin.shopify.com/store/{handle}/oauth/install?client_id={cid}"}]
+                    for _part, label, cid in apps]
+            self.ask.send("sendMessage", {"chat_id": self.ask.chat, "parse_mode": "HTML", "disable_web_page_preview": True,
+                                          "text": f"Install DTJ's {len(apps)} apps on <b>{esc(s['name'])}</b>: tap each button while logged in to "
+                                                  "its admin and press Install on Shopify's page. I switch each one on as soon as it is installed.",
+                                          "reply_markup": {"inline_keyboard": rows}})
+            s["install_buttons_sent"] = True
+            self.save()
+        on = s.setdefault("apps_on", [])
+        end = self.ask.clock() + minutes * 60
+        while True:
+            for part, label, _cid in apps:
+                if part in on:
+                    continue
+                key = f"{self.job}-{part}"
+                code, state = self.licence(key, "status", "")
+                if code != 200 or not state.get("app_handle"):
+                    continue  # not installed yet
+                if state.get("licence") != "active":
+                    code, change = self.licence(key, "active", s["apps_approved_by"])
+                    if code != 200:
+                        self.out(f"  {label}: installed, but switching it on failed ({code}): tried again on the next look")
+                        continue
+                on.append(part)
+                self.save()
+                self.logged(f"{label} switched on (licence active) after its install", "the store's pages use DTJ's blocks", s["apps_approved_by"],
+                            after={"app": key})
+            self.bar("apps", len(on), len(apps))
+            if len(on) == len(apps):
+                self.ask.tell(f"All {len(apps)} DTJ apps are installed and switched on in <b>{esc(s['name'])}</b>.")
+                self.out(json.dumps({"apps_on": on}))
+                return 0
+            if self.ask.clock() >= end:
+                self.out(f"{len(on)} of {len(apps)} apps installed and on so far; run store_job.py installs again to keep watching")
+                return WAITING
+            self.ask.sleep(20)
 
     def apps_command(self) -> str:
         s, p = self.s, self.s["plan"]
@@ -584,6 +638,25 @@ def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path, job
     return plan
 
 
+def _org_apps() -> list[tuple[str, str, str]]:
+    """DTJ's original apps: (part, name, client id), from their shopify.app.toml files."""
+    sys.path.insert(0, str(ROOT / "services" / "install-catcher" / "tools"))
+    from add_client import APPS, ORG_APPS, original_client_id  # noqa: PLC0415
+    return [(part, APPS[part][1], original_client_id(ROOT / "services", part)) for part in ORG_APPS]
+
+
+def _licence(app_key: str, state: str, approved_by: str) -> tuple[int, dict]:
+    """The install service's /licence (licence_call.py, signed): status, or switch on with the approver's name."""
+    sys.path.insert(0, str(ROOT / "services" / "install-catcher" / "tools"))
+    from licence_call import call  # noqa: PLC0415
+    try:
+        if state == "status":
+            return call(app_key, "status")
+        return call(app_key, state, approved_by=approved_by, reason="store job: switched on after its install (apps Approve tap)")
+    except SystemExit as exc:
+        return 0, {"error": str(exc)}
+
+
 def _add_row(row: dict) -> None:
     """One row into dtj_bot_answers (the open / closed mark of a typed question)."""
     from n8n_mcp import call  # noqa: PLC0415
@@ -634,7 +707,7 @@ def main(argv=None) -> int:
     st.add_argument("--chat", default="")
     st.add_argument("--by", default="")
     st.add_argument("--minutes", type=float, default=QUESTION_MINUTES)
-    for name in ("draft", "copy", "apps", "status"):
+    for name in ("draft", "copy", "apps", "installs", "status"):
         x = sub.add_parser(name)
         x.add_argument("--job", required=True)
         x.add_argument("--minutes", type=float, default=APPROVE_MINUTES)
@@ -702,6 +775,8 @@ def main(argv=None) -> int:
         return job.copy(a.minutes)
     if a.cmd == "apps":
         return job.apps(a.minutes)
+    if a.cmd == "installs":
+        return job.installs(a.minutes)
     if a.cmd == "approve":
         return job.approve(a.key, a.text, a.minutes)
     if a.cmd == "step":
