@@ -11,8 +11,15 @@
 //   plan    {job, shop, plan}      keep the laptop's plan (provision/brand_copy.py make_plan) for this job; nothing reaches the store
 //   step    {job, approved_by}     copy the next few items (n8n calls it again until "finished"); the Approve tap's name goes in
 //   status  {job}                  how far it is, no Shopify call
-// Only the four mutations below can be sent, with inputs rebuilt from a list of allowed fields. It never updates or deletes: a
-// handle the store has is skipped, a policy is written only where the store's own is empty. Every step is one audit row.
+//   uploads {shop, files}          Shopify's one-time upload addresses for up to 50 pictures (stagedUploadsCreate): the laptop sends
+//                                  the bytes of a client's Drive picture or a ChatGPT picture there, and a plan names its resourceUrl;
+//                                  nothing in the store changes (22 Oct 2026, the new-store branch)
+//   activate {shop, handles, approved_by}  a DRAFT product goes ACTIVE and onto the Online Store, nothing else about it changes
+//                                  (Harsh, 22 Oct 2026: "all the products will stay active none of them will be kept as draft");
+//                                  at most 12 a call, the rest come back in "left"
+// Only the mutations below can be sent, with inputs rebuilt from a list of allowed fields. It never deletes: a handle the store has
+// is skipped, a policy is written only where the store's own is empty, activate changes the status only. Every call that writes is
+// one audit row.
 import { Refuse, audit, call, orgAccess } from "./worker.js";
 
 export const COPY_API = "2026-10";  // the fields below were read from this version's schema (21 Oct 2026)
@@ -23,6 +30,11 @@ const FRESH_SECONDS = 300;
 const UNITS_PER_STEP = 8;  // one call stays far below a Worker's 50 outside calls: a product is 3 (exists?, create, publish)
 const POLICY_TYPES = new Set(["REFUND_POLICY", "SHIPPING_POLICY", "PRIVACY_POLICY", "TERMS_OF_SERVICE"]);
 const LIMITS = { products: 2500, collections: 40, variants: 2048, files: 250 };
+const UPLOADS_PER_CALL = 50;
+const UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
+const UPLOAD_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ACTIVATE_MAX = 250;
+const ACTIVATE_PER_CALL = 12;  // 3 outside calls a product (find, status, publish) + the key and the channel: far below 50
 
 const Q = {
   target: "query Target { shop { name currencyCode myshopifyDomain shopPolicies { type body } } publications(first: 20) { nodes { id name } } }",
@@ -32,12 +44,16 @@ const Q = {
   collectionExists: "query CollectionExists($handle: String!) { collectionByIdentifier(identifier: { handle: $handle }) { id } }",
   policies: "query Policies { shop { shopPolicies { type body } } }",
   password: "query Password { onlineStore { passwordProtection { enabled } } }",
+  productStatus: "query ProductStatus($handle: String!) { productByIdentifier(identifier: { handle: $handle }) { id status } }",
+  publications: "query Publications { publications(first: 20) { nodes { id name } } }",
 };
 const M = {
   product: "mutation CopyProduct($input: ProductSetInput!) { productSet(input: $input, synchronous: true) { product { id handle } userErrors { field message code } } }",
   collection: "mutation CopyCollection($collection: CollectionCreateInput!) { collectionCreate(collection: $collection) { collection { id handle } userErrors { field message } } }",
   publish: "mutation Publish($id: ID!, $input: [PublicationInput!]!) { publishablePublish(id: $id, input: $input) { userErrors { field message } } }",
   policy: "mutation SetPolicy($shopPolicy: ShopPolicyInput!) { shopPolicyUpdate(shopPolicy: $shopPolicy) { shopPolicy { type } userErrors { field message } } }",
+  stage: "mutation Stage($input: [StagedUploadInput!]!) { stagedUploadsCreate(input: $input) { stagedTargets { url resourceUrl parameters { name value } } userErrors { field message } } }",
+  activate: "mutation Activate($product: ProductUpdateInput!) { productUpdate(product: $product) { product { id status } userErrors { field message } } }",
 };
 const SENDABLE = new Set([...Object.values(Q), ...Object.values(M)]);
 
@@ -242,6 +258,63 @@ async function step(env, body, via) {
   return out;
 }
 
+// a picture's upload address: the file name is rebuilt (letters, digits, dot, dash, underscore), the type and size are checked
+export function cleanUpload(f) {
+  const mimeType = String(f?.mimeType || "").toLowerCase();
+  const size = Number(f?.fileSize);
+  const filename = String(f?.filename || "").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-.]+/, "").slice(-120);
+  if (!UPLOAD_TYPES.has(mimeType) || !Number.isInteger(size) || size <= 0 || size > UPLOAD_MAX_BYTES || !filename) return null;
+  return { filename, mimeType, fileSize: String(size), resource: "IMAGE", httpMethod: "POST" };
+}
+
+async function uploads(env, body, via) {
+  const cfg = builder(env, body.shop);
+  const files = Array.isArray(body.files) ? body.files : [];
+  if (!files.length || files.length > UPLOADS_PER_CALL) throw new Refuse(400, `files must list 1 to ${UPLOADS_PER_CALL} pictures`);
+  const input = files.map(cleanUpload);
+  const bad = input.map((x, i) => (x ? null : String(files[i]?.filename || i).slice(0, 80))).filter((x) => x !== null);
+  if (bad.length) throw new Refuse(400, `not a jpg, png, webp or gif of at most 20 MB: ${bad.slice(0, 5).join(", ")}`);
+  const token = await orgAccess(cfg);
+  const made = (await gql(cfg.shop, token, M.stage, { input })).stagedUploadsCreate;
+  const targets = input.map((x, i) => {
+    const t = (made.stagedTargets || [])[i];
+    return t && t.url ? { filename: x.filename, url: t.url, resourceUrl: t.resourceUrl, parameters: t.parameters || [] } : { filename: x.filename, url: null };
+  });
+  await audit(env, { app: "dtj-store-builder", shop: cfg.shop, action: `picture upload addresses (${input.length})`, result: "success", via });
+  return { targets, userErrors: userErrors(made) };
+}
+
+async function activate(env, body, via) {
+  const by = String(body.approved_by || "").trim().slice(0, 100);
+  if (!by) throw new Refuse(400, "approved_by is required: activate changes products in the store");
+  const cfg = builder(env, body.shop);
+  const handles = Array.isArray(body.handles) ? [...new Set(body.handles.map(String))] : [];
+  if (!handles.length || handles.length > ACTIVATE_MAX || !handles.every((h) => HANDLE_RE.test(h))) {
+    throw new Refuse(400, `handles must list 1 to ${ACTIVATE_MAX} product handles`);
+  }
+  const token = await orgAccess(cfg);
+  const online = ((await gql(cfg.shop, token, Q.publications)).publications.nodes.find((p) => p.name === "Online Store") || {}).id;
+  const out = { activated: [], already_active: [], not_found: [], failed: [], left: handles.slice(ACTIVATE_PER_CALL) };
+  for (const handle of handles.slice(0, ACTIVATE_PER_CALL)) {
+    try {
+      const found = (await gql(cfg.shop, token, Q.productStatus, { handle })).productByIdentifier;
+      if (!found) { out.not_found.push(handle); continue; }
+      if (found.status !== "DRAFT") { out.already_active.push(handle); continue; }  // ACTIVE stays, ARCHIVED is a person's choice
+      const set = (await gql(cfg.shop, token, M.activate, { product: { id: found.id, status: "ACTIVE" } })).productUpdate;
+      if (userErrors(set)) { out.failed.push({ handle, why: userErrors(set).slice(0, 300) }); continue; }
+      if (online) {
+        const pub = (await gql(cfg.shop, token, M.publish, { id: found.id, input: [{ publicationId: online }] })).publishablePublish;
+        if (userErrors(pub)) { out.failed.push({ handle, why: `active, but not on the Online Store: ${userErrors(pub).slice(0, 250)}` }); continue; }
+      }
+      out.activated.push(handle);
+    } catch (err) { out.failed.push({ handle, why: String(err.message).slice(0, 300) }); }
+  }
+  if (!online) out.note = "no Online Store channel found: the products are active but not on the storefront";
+  await audit(env, { app: "dtj-store-builder", shop: cfg.shop, action: "products made active (status only)", result: out.failed.length ? "partly" : "success",
+    approved_by: by, via, activated: out.activated.length, failed: out.failed.length, left: out.left.length });
+  return out;
+}
+
 export async function copyRoute(request, env, caller, now) {
   const raw = await request.text();
   const via = await caller(request, env, raw);
@@ -251,10 +324,12 @@ export async function copyRoute(request, env, caller, now) {
   if (body.op === "target") return target(env, body);
   if (body.op === "plan") return keepPlan(env, body);
   if (body.op === "step") return step(env, body, via);
+  if (body.op === "uploads") return uploads(env, body, via);
+  if (body.op === "activate") return activate(env, body, via);
   if (body.op === "status") {
     const raw2 = await env.VAULT.get(`copy:${body.job || ""}`);
     if (!raw2) throw new Refuse(404, "no copy plan for this job");
     return counts(JSON.parse(raw2));
   }
-  throw new Refuse(400, "op must be target, plan, step or status");
+  throw new Refuse(400, "op must be target, plan, step, status, uploads or activate");
 }
