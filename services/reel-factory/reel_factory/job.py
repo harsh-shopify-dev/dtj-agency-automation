@@ -25,7 +25,7 @@ import shutil
 import sys
 from pathlib import Path
 
-LANGS = ("en", "hi", "hinglish")
+LANGS = ("en", "hi", "hinglish", "gu")       # gu: Gujarati (Mahalaxmi, 22 Oct 2026)
 SECONDS = (4, 6, 8, 10)
 CREDITS = {4: 14, 8: 24}                   # per x2 generation; 6 s and 10 s were not read: "not available"
 MAX_WORDS_PER_S = 3.0                      # faster lines get cut off or rushed by Omni

@@ -1,0 +1,95 @@
+{
+ "language": "gu",
+ "product_name": "Mahalaxmi Masala",
+ "phrases": [
+  "Mahalaxmi",
+  "મહાલક્ષ્મી"
+ ],
+ "keywords": [
+  "મહાલક્ષ્મી",
+  "કાશ્મીરી",
+  "હળદર",
+  "ધાણા-જીરું",
+  "૧૯૬૦"
+ ],
+ "spelling": {},
+ "music_db": -16,
+ "packs": {
+  "kashmiri": "https://mahalaxmispices.com/wp-content/uploads/2024/08/Kashmiri-Chilli-Powder-pik-min.png",
+  "turmeric": "https://mahalaxmispices.com/wp-content/uploads/2024/08/Turmeric-Powder-pik-min.png",
+  "dhanajiru": "https://mahalaxmispices.com/wp-content/uploads/2024/08/Coriander-Cumin-Powder-pik-min.png",
+  "relay": "https://images.weserv.nl/?url=<url without https://> (adds CORS so ChatGPT/Flow in the browser pane can read it)"
+ },
+ "character": {
+  "chatgpt_prompt": "A vertical 9:16 photo taken on a smartphone propped on a coffee table at chest height, slightly low angle, like a woman recording an Instagram story about her kitchen. She is a Gujarati homemaker, about 40, medium-brown skin with real texture, faint under-eye shadows and a few fine lines, small red bindi, thin gold earrings, black hair in a loose low bun with some strands falling out. She wears an ordinary mustard-yellow cotton kurti with a small block print. She sits on a slightly worn grey fabric sofa against a plain off-white wall, a little cushion beside her, soft daylight from a window on the left, mild phone-camera grain and slight softness. She looks into the lens mid-sentence, relaxed, one hand open in a small gesture. No text, no logos, nothing in her hands.",
+  "product_prompt": "Keep this exact woman, her face, clothes, sofa and wall (first picture). Put the three Mahalaxmi spice packets from the second, third and fourth pictures in her hands, fanned out at chest height, front labels facing the camera and readable, the same size and colours as the real packets (black Kashmiri Chilli Powder, yellow Turmeric Powder, green Coriander Cumin Powder). Same phone-camera look, same light."
+ },
+ "shots": [
+  {
+   "id": "s1",
+   "seconds": 8,
+   "product": false,
+   "line": "કેટલાય વર્ષો સુધી હું બજારનો કોઈ પણ મસાલો વાપરતી, પણ શાકમાં ના રંગ આવતો, ના એ સુગંધ.",
+   "image_prompt": "The same woman on the same grey sofa, nothing in her hands, mid-sentence, slightly frustrated half-smile, one hand open at chest height. Phone propped at chest height, soft window light, phone grain.",
+   "video_prompt": "Handheld-steady phone propped on a table, the same woman sits on the sofa and talks straight into the lens in natural Gujarati, warm conversational homemaker voice, small relaxed hand gestures at chest height: \"કેટલાય વર્ષો સુધી હું બજારનો કોઈ પણ મસાલો વાપરતી, પણ શાકમાં ના રંગ આવતો, ના એ સુગંધ.\" Room tone only, no music. She finishes the line and pauses."
+  },
+  {
+   "id": "s2",
+   "seconds": 6,
+   "product": false,
+   "line": "",
+   "no_captions": true,
+   "image_prompt": "Black-and-white phone photo looking down into a steel kadai on a gas stove in an ordinary Indian home kitchen: a pale, dull mixed-vegetable sabzi with no colour, a woman's hand stirring it with a steel spatula. Desaturated, a little grainy.",
+   "video_prompt": "Handheld phone, black and white, looking down into the kadai: the hand slowly stirs the pale, dull sabzi twice with a steel spatula, light steam, soft sizzle sound. No speech, no music, no text."
+  },
+  {
+   "id": "s3",
+   "seconds": 8,
+   "product": true,
+   "line": "પછી મને મહાલક્ષ્મી મસાલા મળ્યા, ૧૯૬૦ થી ગુજરાતના રસોડામાં વપરાય છે.",
+   "image_prompt": "The same woman on the same sofa holding the three Mahalaxmi packets fanned out at chest height, labels to camera and readable, happy smile. Phone propped at chest height, soft window light, phone grain.",
+   "video_prompt": "Phone propped on a table. The same woman holds the same three Mahalaxmi packets steady at chest height for the whole clip, labels to camera; they never leave her hands and never move quickly. She smiles and says in natural Gujarati: \"પછી મને મહાલક્ષ્મી મસાલા મળ્યા, ૧૯૬૦ થી ગુજરાતના રસોડામાં વપરાય છે.\" Room tone only. She finishes the line and holds."
+  },
+  {
+   "id": "s4",
+   "seconds": 8,
+   "product": true,
+   "line": "આ કાશ્મીરી મરચું જુઓ, રંગ એકદમ લાલચટક આવે અને તીખાશ માપમાં.",
+   "image_prompt": "The same woman on the same sofa holding only the black Mahalaxmi Kashmiri Chilli Powder packet in her right hand, a little closer to the lens, label to camera and readable, eyebrows raised. Phone propped, soft window light, phone grain.",
+   "video_prompt": "Phone propped on a table. The same woman holds the same Kashmiri Chilli Powder packet steady in her right hand for the whole clip, label to camera, never drops it; her left hand makes a small gesture. She says in natural Gujarati: \"આ કાશ્મીરી મરચું જુઓ, રંગ એકદમ લાલચટક આવે અને તીખાશ માપમાં.\" Room tone only. She finishes and holds."
+  },
+  {
+   "id": "s5",
+   "seconds": 8,
+   "product": true,
+   "line": "અને આ હળદર, દાળમાં નાખો તો પીળો રંગ જ જુદો દેખાય.",
+   "image_prompt": "The same woman on the same sofa holding only the yellow Mahalaxmi Turmeric Powder packet in her right hand at chest height, label to camera and readable, warm smile. Phone propped, soft window light, phone grain.",
+   "video_prompt": "Phone propped on a table. The same woman holds the same Turmeric Powder packet steady in her right hand for the whole clip, label to camera, never drops it. She says in natural Gujarati: \"અને આ હળદર, દાળમાં નાખો તો પીળો રંગ જ જુદો દેખાય.\" Room tone only. She finishes and holds."
+  },
+  {
+   "id": "s6",
+   "seconds": 8,
+   "product": true,
+   "line": "ધાણા-જીરું પાઉડરની સુગંધ તો આખા ઘરમાં ફેલાઈ જાય.",
+   "image_prompt": "The same woman on the same sofa holding only the green Mahalaxmi Coriander Cumin Powder packet in her right hand at chest height, label to camera and readable, eyes half-closed as if remembering a smell, smiling. Phone propped, soft window light, phone grain.",
+   "video_prompt": "Phone propped on a table. The same woman holds the same Coriander Cumin Powder packet steady in her right hand for the whole clip, label to camera, never drops it. She breathes in as if remembering the smell and says in natural Gujarati: \"ધાણા-જીરું પાઉડરની સુગંધ તો આખા ઘરમાં ફેલાઈ જાય.\" Room tone only. She finishes and holds."
+  },
+  {
+   "id": "s7",
+   "seconds": 6,
+   "product": true,
+   "line": "",
+   "no_captions": true,
+   "image_prompt": "Full-colour phone photo of an ordinary Indian home kitchen counter: a steel tadka pan on a gas flame with bright red chilli and yellow turmeric oil sizzling, a bowl of colourful dal beside it, and the three Mahalaxmi packets (black Kashmiri Chilli, yellow Turmeric, green Coriander Cumin) standing upright behind, labels to camera.",
+   "video_prompt": "Handheld phone, full colour: the tadka sizzles and bubbles in the steel pan, steam rises, the red and yellow oil shimmers. The three packets stand still in the same place for the whole clip, labels to camera, never move. Sizzle sound only, no speech, no music, no text."
+  },
+  {
+   "id": "s8",
+   "seconds": 8,
+   "product": true,
+   "line": "હવે અમારા રસોડામાં આ જ મસાલા આવે છે. તમે પણ એક વાર મહાલક્ષ્મી ટ્રાય કરો!",
+   "image_prompt": "The same woman on the same sofa leaning slightly forward, the three Mahalaxmi packets standing on the coffee table in front of her, labels to camera and readable, big friendly smile, pointing at the lens with one finger. Phone propped, soft window light, phone grain.",
+   "video_prompt": "Phone propped on a table. The three packets stand still on the table in front of her for the whole clip, labels to camera, never move. The same woman leans in, smiles and says in natural Gujarati: \"હવે અમારા રસોડામાં આ જ મસાલા આવે છે. તમે પણ એક વાર મહાલક્ષ્મી ટ્રાય કરો!\" Room tone only. She finishes with a smile and holds."
+  }
+ ]
+}

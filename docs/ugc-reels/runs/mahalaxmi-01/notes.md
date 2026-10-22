@@ -1,0 +1,17 @@
+# mahalaxmi-01: Mahalaxmi Masala, Gujarati testimonial reel (22 Oct 2026, PAUSED)
+
+Concept: Two Brothers Organic Farms reel #4 (Khapli flour, 166 days live): a woman at home talks to her propped phone
+holding the pack, with black-and-white "before" cut-ins. Library: `Downloads/dtj-reel-library/spices/` (47 ads).
+Job folder: `Downloads/dtj-ugc-mahalaxmi-01/` (script.json approved by Harsh: "script is perfect").
+
+Done:
+- Packs: the website packs (Harsh's pick), full size from mahalaxmispices.com/wp-content/uploads/2024/08/*-pik-min.png.
+- 8 start pictures made in ChatGPT only (Harsh's rule), one chat: images/s1..s8.png (s1 = character, s3 = hero).
+- Pictures reach Flow through DTJ's n8n media folder (`/media/reel-inputs/mx01-<token>/`, see media_url.txt) + images.weserv.nl.
+- Flow project https://flow.google.com/project/7609aa8e-4046-426f-9746-6c69e774a826: 16 takes (8 shots x2; s2/s7 6 s, others 8 s),
+  all downloaded to clips/. Omni speaks Gujarati well (s1_a: the whole line, 0.0-7.7 s; s1_b lost the opening).
+- Music: Pixabay "Free Soul - Gentle Flute and Strings" (music/LICENSE.txt).
+
+Left: `job check` (was running; it skips takes already done, re-run to finish), pick one take per shot by eye at 4 fps,
+`job edit` (Gujarati captions need a Gujarati font check), watch, deliver.
+Pausing note: the browser pane can sign Flow out on restart; a person signs in again.
