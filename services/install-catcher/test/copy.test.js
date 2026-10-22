@@ -4,7 +4,7 @@ import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import worker from "../src/worker.js";
-import { cleanProduct, cleanPlan, cleanUpload } from "../src/copy.js";
+import { cleanProduct, cleanPlan, cleanUpload, cleanPage } from "../src/copy.js";
 
 const SHOP = "royal-demo.myshopify.com";
 const ORIGIN = "https://dtj-install-catcher.example.workers.dev";
@@ -24,7 +24,10 @@ const env = (extra = {}) => ({ APPS: "{}", VAULT_KEY: Buffer.alloc(32, 7).toStri
 function fakeStore({ password = true, products = ["old-product"], policies = { REFUND_POLICY: "", SHIPPING_POLICY: "Ours." }, failHandles = [],
   passwordQuery = true, statuses = {} } = {}) {
   const s = { products: new Map(products.map((h, i) => [h, `gid://shopify/Product/${i + 1}`])), collections: new Map(), policies: { ...policies },
-    published: [], sent: [], n: 100, password, failHandles: new Set(failHandles), statuses: { ...statuses } };
+    published: [], sent: [], n: 100, password, failHandles: new Set(failHandles), statuses: { ...statuses },
+    pages: new Map([["contact", "gid://shopify/Page/1"]]),
+    menus: new Map([["main-menu", { id: "gid://shopify/Menu/1", handle: "main-menu", title: "Main menu", isDefault: true,
+      items: [{ title: "Home", type: "FRONTPAGE", url: "/", items: [] }, { title: "Catalog", type: "CATALOG", url: "/collections/all", items: [] }] }]]) };
   s.fetch = async (url, init = {}) => {
     const u = new URL(url);
     if (u.host !== SHOP) return new Response("other host", { status: 404 });
@@ -70,6 +73,16 @@ function fakeStore({ password = true, products = ["old-product"], policies = { R
         s.statuses[handle] = variables.product.status;
         return { productUpdate: { product: { id: variables.product.id, status: variables.product.status }, userErrors: [] } };
       },
+      PageHandles: () => ({ pages: { nodes: [...s.pages].map(([handle, id]) => ({ id, handle })) } }),
+      AddPage: () => { const id = `gid://shopify/Page/${++s.n}`; s.pages.set(variables.page.handle, id); return { pageCreate: { page: { id, handle: variables.page.handle }, userErrors: [] } }; },
+      Menus: () => ({ menus: { nodes: [...s.menus.values()] } }),
+      SetMenu: () => {
+        const m = [...s.menus.values()].find((x) => x.id === variables.id);
+        m.items = variables.items.map((i) => ({ title: i.title, type: i.type, url: i.url, items: [] }));
+        return { menuUpdate: { menu: { id: m.id, handle: m.handle }, userErrors: [] } };
+      },
+      PolicyIds: () => ({ shop: { shopPolicies: Object.entries(s.policies).filter(([, body]) => body)
+        .map(([type], i) => ({ id: `gid://shopify/ShopPolicy/${i + 1}`, type, url: "x" })) } }),
       Stage: () => ({ stagedUploadsCreate: { stagedTargets: variables.input.map((f, i) => ({ url: "https://shopify-staged-uploads.storage.googleapis.com/",
         resourceUrl: `https://shopify-staged-uploads.storage.googleapis.com/tmp/1/products/${i}/${f.filename}`, parameters: [{ name: "key", value: `tmp/1/${f.filename}` }] })),
         userErrors: [] } }),
@@ -233,6 +246,53 @@ test("activate: a DRAFT product goes ACTIVE and onto the Online Store, the statu
   const audit = [...e.VAULT.data.keys()].filter((k) => k.startsWith("audit:")).map((k) => JSON.parse(e.VAULT.data.get(k)));
   assert.equal(audit.length, 1);
   assert.equal(audit[0].approved_by, "Harsh (chat, 22 Oct 2026)");
+});
+
+test("pages: only new pages are added, safe HTML only, the contact template allowed, every call named", async () => {
+  const e = env();
+  const about = { handle: "about-us", title: "About us", body: "<p>Senso started in Rajkot.</p>" };
+  assert.equal((await send(e, signed({ op: "pages", shop: SHOP, pages: [about] }))).status, 400);  // no approver
+  for (const bad of ['<script>alert(1)</script>', '<p onclick="x()">a</p>', '<a href="javascript:x">a</a>', "<iframe src=x>", "<form>"]) {
+    assert.equal(cleanPage({ ...about, body: bad }), null, bad);
+  }
+  assert.equal(cleanPage({ ...about, handle: "Bad Handle" }), null);
+  assert.equal((await send(e, signed({ op: "pages", shop: SHOP, approved_by: "Harsh", pages: Array(7).fill(about) }))).status, 400);
+  const r = await send(e, fromBot({ op: "pages", shop: SHOP, approved_by: "Riya (Telegram Approve)", pages: [about,
+    { handle: "contact", title: "Contact", body: "", template_suffix: "contact" }, { handle: "faq", title: "FAQ", body: "<h3>Q</h3><p>A</p>" }] }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { created: ["about-us", "faq"], skipped: ["contact"], failed: [] });  // the store's own contact page stays
+  const made = store.sent.filter((c) => c.name === "AddPage").map((c) => c.variables.page);
+  assert.deepEqual(made[0], { handle: "about-us", title: "About us", body: "<p>Senso started in Rajkot.</p>", isPublished: true, templateSuffix: "" });
+  assert.equal(cleanPage({ handle: "contact-us", title: "Contact", body: "", template_suffix: "contact" }).templateSuffix, "contact");
+  const audit = [...e.VAULT.data.keys()].filter((k) => k.startsWith("audit:")).map((k) => JSON.parse(e.VAULT.data.get(k)));
+  assert.equal(audit[0].approved_by, "Riya (Telegram Approve)");
+});
+
+test("menu: main-menu or footer only, links resolved from the store, the old links kept in the audit row", async () => {
+  store = fakeStore({ policies: { REFUND_POLICY: "<p>7 days</p>", SHIPPING_POLICY: "" } });
+  store.collections.set("tea", "gid://shopify/Collection/5");
+  store.menus.set("footer", { id: "gid://shopify/Menu/2", handle: "footer", title: "Footer menu", isDefault: true, items: [] });
+  globalThis.fetch = store.fetch;
+  const e = env();
+  const items = [{ title: "Home", type: "FRONTPAGE" }, { title: "Shop all", type: "CATALOG" }, { title: "Tea", type: "COLLECTION", handle: "tea" },
+    { title: "Coffee", type: "COLLECTION", handle: "coffee" }, { title: "Contact", type: "PAGE", handle: "contact" },
+    { title: "Refunds", type: "SHOP_POLICY", handle: "refund-policy" }, { title: "Shipping", type: "SHOP_POLICY", handle: "shipping-policy" },
+    { title: "Elsewhere", type: "HTTP", handle: "https://evil.example" }];
+  assert.equal((await send(e, signed({ op: "menu", shop: SHOP, handle: "main-menu", items }))).status, 400);  // no approver
+  assert.equal((await send(e, signed({ op: "menu", shop: SHOP, handle: "sidebar", items, approved_by: "H" }))).status, 400);
+  const r = await send(e, signed({ op: "menu", shop: SHOP, handle: "main-menu", items, approved_by: "Harsh (Telegram Approve)" }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.items.map((i) => i.url), ["/", "/collections/all", "/collections/tea", "/pages/contact", "/policies/refund-policy"]);
+  assert.deepEqual(r.body.left_out.map((x) => x.title), ["Coffee", "Shipping", "Elsewhere"]);  // no such collection, an empty policy, any outside link
+  assert.deepEqual(r.body.before.map((x) => x.title), ["Home", "Catalog"]);
+  const sent = store.sent.find((c) => c.name === "SetMenu").variables;
+  assert.equal(sent.title, "Main menu");
+  assert.equal(sent.items[2].resourceId, "gid://shopify/Collection/5");
+  const audit = [...e.VAULT.data.keys()].filter((k) => k.startsWith("audit:")).map((k) => JSON.parse(e.VAULT.data.get(k)));
+  assert.deepEqual(audit[0].before.map((x) => x.url), ["/", "/collections/all"]);
+  const none = await send(e, signed({ op: "menu", shop: SHOP, handle: "footer", approved_by: "H", items: [{ title: "Nope", type: "PAGE", handle: "missing" }] }));
+  assert.equal(none.status, 400);  // nothing could be linked: the footer stays as it is
+  assert.deepEqual(store.menus.get("footer").items, []);
 });
 
 test("activate: at most 12 a call, the rest come back in left", async () => {

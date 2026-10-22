@@ -22,6 +22,23 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 22 Oct 2026 (night): ABOUT / CONTACT / FAQ PAGES AND THE MENUS (branch `feature/pages-and-menus`, account A)
+Harsh, 22 Oct 2026: "we have to handover a product ready shopify store so if anything is missed by me you will cover it".
+- **New part `pages`** in the "what to design" question, included in "Everything":
+  - `store_job.py pages --job J --file pages.json`: About us, Contact (theme contact form) and FAQ. New pages only, with their own
+    Approve tap. Sample text is marked, listed in the handover and checked for claim words.
+  - `store_job.py menus --job J`: the main menu (Home, Shop all, up to 5 collections, About, Contact) and the footer (About,
+    Contact, FAQ, Search, the 4 policies), with one Approve tap.
+- **Install service `/copy`:**
+  - op `pages` (pageCreate; a handle the store has is skipped; HTML without scripts, frames, forms or event handlers);
+  - op `menu` (menuUpdate of `main-menu` or `footer` only; links resolved from the store; the old links kept in the audit row).
+- **Store Builder scopes** gain `read/write_online_store_pages` and `read/write_online_store_navigation`
+  (`services/store-builder-app/shopify.app.toml`, `tools/store_builder.py`). **NOT RELEASED:** a new app version is Harsh's yes;
+  until then both steps are refused by Shopify and say so in Telegram.
+- CLAUDE.md's Telegram-Approve list now names the pages and the menus. n8n New Store instructions republished.
+- **VERIFIED:** tests (store-factory 191, install service 26 JS + 35 Python, store-builder all OK).
+- **NOT VERIFIED:** a live call (the app version is not released, the install service is not deployed).
+
 ## 22 Oct 2026 (evening): EVERYTHING ON THE VPS: n8n STARTS IT, CLAUDE RUNS ON THE API KEY (branch `feature/vps-worker`, account A)
 Harsh, 22 Oct 2026: "everything will be automated ... i would suggest that the n8n triggers it and same for the claude".
 - **`n8n/store-factory/worker.py`** is a service on the VPS (`tools/vps/dtj-worker.service`, setup `tools/vps/setup_worker.sh`,

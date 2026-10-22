@@ -147,7 +147,8 @@ class Questions(Base):
         self.assertEqual(j.plan(minutes=1), 0)
         p = j.s["plan"]
         self.assertEqual((p["whose"], p["label"], p["theme"], p["parts"], p["offer"]),
-                         ("client", "Royal Dosa", "duplicate", ["chrome", "home", "collection", "products"], "Flat 10% off on prepaid orders"))
+                         ("client", "Royal Dosa", "duplicate", ["chrome", "home", "collection", "products", "pages"],
+                          "Flat 10% off on prepaid orders"))
         self.assertEqual([x["handle"] for x in p["products"]], ["podi", "idli-mix", "masala-dosa-mix"])
         self.assertIn("Plan for <b>Royal Dosa</b>", self.tg.last()["text"])
         self.assertIn("Approve button", self.tg.last()["text"])
@@ -219,7 +220,7 @@ class Questions(Base):
     def test_picked_products_by_link_or_name_and_unknown_ones_are_said(self):
         j = self.job()
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "I'll pick them"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "No", "I'll pick them"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.answers.type(self.tg, "https://royaldosa.com/products/sambar?variant=1\nidli mix\nchocolate cake")
@@ -735,6 +736,71 @@ class NewStore(Base):
         priced = store_job.priced(out, {"ginger-chai": "199"})
         g = priced["products"][1]
         self.assertEqual((g["variants"][0]["price"], g["tags"], g["price_needed"]), ("199", [], False))
+
+
+class PagesAndMenus(Base):
+    """About, Contact, FAQ and the menus (22 Oct 2026: a store handed over ready to sell), each with its own Approve tap."""
+
+    def ready(self, catcher):
+        j = store_job.Job("royal-dosa", send=self.tg, rows=self.answers, log=self.log, state_dir=self.tmp, out=self.printed.append,
+                          sleep=self.clock.sleep, clock=self.clock, catcher=catcher)
+        j.begin(SCAN, CHAT, "Harsh")
+        j.s["planned"] = True
+        j.s["brand"] = {"collections": [{"handle": "tea", "title": "Tea"}, {"handle": "gifts", "title": "Gifts"}]}
+        return j
+
+    def test_pages_wait_for_their_tap_then_go_through_store_builder_once(self):
+        calls = []
+
+        def catcher(body):
+            calls.append(body)
+            return {"created": ["about-us", "faq"], "skipped": ["contact"], "failed": []}
+        j = self.ready(catcher)
+        f = self.tmp / "pages.json"
+        f.write_text(json.dumps({"pages": [
+            {"handle": "about-us", "title": "About us", "body_html": "<p>Founded in Rajkot.</p>", "sample": True},
+            {"handle": "contact", "title": "Contact", "body_html": "", "template_suffix": "contact"},
+            {"handle": "faq", "title": "FAQ", "body_html": "<h3>How do I order?</h3><p>Add to cart.</p>", "sample": True}]}), encoding="utf-8")
+        self.assertEqual(j.pages(f, minutes=1), store_job.WAITING)
+        self.assertEqual(calls, [])  # nothing before the tap
+        self.assertIn("Sample text, to replace before launch: About us, FAQ", self.tg.questions()[-1]["text"])
+        self.answers.tap(self.tg, "Approve", by="Riya")
+        self.assertEqual(j.pages(f, minutes=1), 0)
+        self.assertEqual((calls[0]["op"], calls[0]["approved_by"], calls[0]["pages"][1]["template_suffix"]),
+                         ("pages", "Riya (Telegram Approve)", "contact"))
+        self.assertEqual(j.s["sample_pages"], ["About us", "FAQ"])
+        self.assertEqual(j.pages(f, minutes=1), 0)
+        self.assertEqual(len(calls), 1)  # done once
+        bad = self.tmp / "bad.json"
+        bad.write_text(json.dumps({"pages": [{"handle": "About Us", "title": "x"},
+                                             {"handle": "faq", "title": "FAQ", "body_html": "<p>Clinically proven</p>", "sample": True}]}))
+        k = self.ready(catcher)
+        k.s.pop("pages_result", None)
+        with self.assertRaises(SystemExit) as refused:
+            store_job.Job.pages(k, bad, minutes=1)
+        self.assertIn("a claim word in sample text", str(refused.exception))
+
+    def test_menus_use_the_real_collections_and_pages_one_tap_for_both(self):
+        calls = []
+
+        def catcher(body):
+            calls.append(body)
+            if body["handle"] == "footer":
+                raise store_job.CatcherError("the install service said 502: Shopify refused it: Access denied")
+            return {"menu": body["handle"], "items": [{"title": x["title"], "url": "/"} for x in body["items"]], "left_out": [], "before": []}
+        j = self.ready(catcher)
+        self.assertEqual(j.menus(minutes=1), store_job.WAITING)
+        ask = self.tg.questions()[-1]["text"]
+        self.assertIn("Main menu: Home, Shop all, Tea, Gifts, About us, Contact", ask)
+        self.assertIn("Footer: About us, Contact, FAQ, Search, Refund policy, Shipping policy, Privacy policy, Terms of service", ask)
+        self.answers.tap(self.tg, "Approve", by="Harsh")
+        self.assertEqual(j.menus(minutes=1), 1)  # the footer was refused: said, the main menu is still set
+        self.assertEqual([c["handle"] for c in calls], ["main-menu", "footer"])
+        self.assertTrue(all(c["approved_by"] == "Harsh (Telegram Approve)" for c in calls))
+        self.assertIn("footer: not set", self.tg.last()["text"])
+        hand = j.handover()
+        self.assertIn("- Menus set: main-menu", hand)
+        self.assertIn("- Menus: the main menu and footer menu", hand)  # the footer is still the owner's
 
 
 class Activate(Base):

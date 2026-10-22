@@ -23,7 +23,7 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
      **Approve in Telegram (Harsh, 21 Oct 2026, for a whole store started from the bot):** the yes may be a tap on the Approve button
      that the store job (`n8n/store-factory/store_job.py`) sends for that one action, by an active person in `dtj_bot_users`; the tap
      carries their name, recorded as approved_by "<name> (Telegram Approve)". One tap, one action (the draft copy, the brand copy,
-     the app copies, the header, the footer, the collection page); Skip leaves it undone. The brand copy (Harsh, 21 Oct 2026: "One
+     the app copies, the header, the footer, the collection page, the About/Contact/FAQ pages, the menus); Skip leaves it undone. The brand copy (Harsh, 21 Oct 2026: "One
      Approve tap per import") is the one way a tap creates products: one tap covers that one import of a brand's products,
      collections and empty policy pages into the store. The tap itself starts n8n's "Store Factory: Brand Copy", which writes through
      DTJ Store Builder on the install service (`services/install-catcher/src/copy.js`; never changes or deletes what the store

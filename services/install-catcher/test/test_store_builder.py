@@ -47,7 +47,7 @@ class StoreBuilder(unittest.TestCase):
         cli = FakeCli()
         self.assertEqual(self.make(cli), "c" * 32)
         toml = (self.tmp / "app" / "shopify.app.toml").read_text(encoding="utf-8")
-        self.assertIn('scopes = "read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies"', toml)
+        self.assertIn('scopes = "read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies,read_online_store_pages,write_online_store_pages,read_online_store_navigation,write_online_store_navigation"', toml)
         self.assertIn('application_url = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/builder"', toml)
         self.assertEqual(self.saved, {"DTJ_STORE_BUILDER_CLIENT_SECRET": "shpss_builder_secret"})
         self.assertNotIn("shpss_builder_secret", " ".join(self.printed) + toml + self.wrangler.read_text(encoding="utf-8"))
