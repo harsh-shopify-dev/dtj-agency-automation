@@ -30,6 +30,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -481,7 +482,35 @@ class Job:
 
 def _scan(link: str) -> dict:
     from page_builder.store_scan import scan  # noqa: PLC0415
-    return scan(link)
+    return scan(link, private=_private_scan)
+
+
+def _private_scan(domain: str, link: str, access=None, catcher=None) -> dict:
+    """A store whose public pages show nothing (an admin link, or a store behind its password page, as every dev store is; 22 Oct
+    2026, dtj-testing): its live theme through this laptop's Shopify login, and its name, currency, products and collections through
+    DTJ Store Builder when it is installed there. Read only."""
+    from page_builder import theme_target as tt  # noqa: PLC0415
+    access = access or tt.open_access(domain)
+    live = next((x for x in access.themes(role="live") if x.get("role") == "live"), {})
+    schema, version = None, None
+    if live:
+        with tempfile.TemporaryDirectory() as tmp:
+            access.pull(str(live["id"]), [tt.SCHEMA_FILE], Path(tmp))
+            f = Path(tmp) / tt.SCHEMA_FILE
+            if f.exists():
+                info = next((s for s in json.loads(f.read_text(encoding="utf-8")) if s.get("name") == "theme_info"), {})
+                schema, version = info.get("theme_name"), info.get("theme_version")
+    try:
+        inside = (catcher or _catcher)({"op": "target", "shop": domain})
+    except (NotInstalled, CatcherError):
+        inside = {}  # Store Builder not installed yet: the name falls back to the handle, the counts to 0
+    handles = inside.get("products") or []
+    return {"link": link, "base": f"https://{domain}", "myshopify_domain": domain, "name": inside.get("name") or domain.split(".")[0],
+            "currency": inside.get("currency"), "live_theme": {"name": live.get("name"), "id": str(live.get("id") or ""),
+                                                               "schema_name": schema, "schema_version": version},
+            "product_count": len(handles), "more_products": False, "collection_count": len(inside.get("collections") or []),
+            "best_sellers": [{"handle": h, "title": h, "url": f"https://{domain}/products/{h}"} for h in handles],
+            "best_sellers_from": "the store's product list (it is behind a password, so there is no sales order)", "password": True}
 
 
 class NotInstalled(Exception):
@@ -600,11 +629,10 @@ def main(argv=None) -> int:
     from page_builder.progress import PageProgress  # noqa: PLC0415
     token = _token()
     if a.cmd == "start":
-        from page_builder.store_scan import NotShopify, scan  # noqa: PLC0415
         try:
-            sc = scan(a.link)
-        except NotShopify as exc:
-            print(f"stopped: {exc}")
+            sc = _scan(a.link)
+        except Exception as exc:  # noqa: BLE001 - not a Shopify store, no access, n8n down: the session answers n8n with why
+            print(f"stopped: {str(exc)[:400]}")
             return 1
         jid = job_id(sc["myshopify_domain"])
     else:

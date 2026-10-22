@@ -421,6 +421,40 @@ class BrandCopy(Base):
         self.assertEqual(self.planned_with, [])
 
 
+class PrivateScan(unittest.TestCase):
+    """A store behind its password page, read with DTJ's own access (22 Oct 2026, dtj-testing)."""
+
+    class Access:
+        def __init__(self):
+            self.pulled = []
+
+        def themes(self, role=None, **_):
+            return [{"id": 189402906775, "name": "test-data", "role": "live"}]
+
+        def pull(self, theme_id, files, dest):
+            self.pulled.append((theme_id, list(files)))
+            (dest / "config").mkdir(parents=True, exist_ok=True)
+            (dest / "config" / "settings_schema.json").write_text(json.dumps([{"name": "theme_info", "theme_name": "Horizon",
+                                                                               "theme_version": "4.2.0"}]), encoding="utf-8")
+
+    def test_its_live_theme_and_store_builders_view(self):
+        access = self.Access()
+        inside = {"name": "DTJ Testing", "currency": "USD", "products": ["a", "b"], "collections": ["c"]}
+        sc = store_job._private_scan("dtj-testing.myshopify.com", "https://admin.shopify.com/store/dtj-testing", access=access,
+                                     catcher=lambda body: inside)
+        self.assertEqual((sc["name"], sc["currency"], sc["product_count"], sc["collection_count"], sc["password"]),
+                         ("DTJ Testing", "USD", 2, 1, True))
+        self.assertEqual(sc["live_theme"], {"name": "test-data", "id": "189402906775", "schema_name": "Horizon", "schema_version": "4.2.0"})
+        self.assertEqual(access.pulled, [("189402906775", ["config/settings_schema.json"])])  # read only: one settings file
+        self.assertEqual(sc["best_sellers"][0], {"handle": "a", "title": "a", "url": "https://dtj-testing.myshopify.com/products/a"})
+
+    def test_without_store_builder_the_handle_names_it(self):
+        def missing(body):
+            raise store_job.NotInstalled("not installed")
+        sc = store_job._private_scan("dtj-testing.myshopify.com", "x", access=self.Access(), catcher=missing)
+        self.assertEqual((sc["name"], sc["product_count"]), ("dtj-testing", 0))
+
+
 class Pieces(unittest.TestCase):
     def test_typed_products_match_by_link_or_unique_name(self):
         sellers = SCAN["best_sellers"]

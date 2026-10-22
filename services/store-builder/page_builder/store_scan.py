@@ -14,6 +14,7 @@ import html
 import json
 import re
 import sys
+from typing import Callable
 from urllib.parse import urlparse
 
 from .brand_intake import Getter, _get, _json, _safe_get, read_home
@@ -66,16 +67,35 @@ def best_sellers(base: str, get: Getter, known: list[str]) -> tuple[list[str], s
     return list(known), "the store's product list order (its best-selling page did not answer)"
 
 
-def scan(link: str, get: Getter = _get) -> dict:
+def store_domain(link: str) -> str | None:
+    """The .myshopify.com address a link names by itself: admin.shopify.com/store/<handle> or <handle>.myshopify.com."""
+    m = (re.search(r"admin\.shopify\.com/store/([a-z0-9][a-z0-9-]*)", link, re.I)
+         or re.search(r"(?:^|//)([a-z0-9][a-z0-9-]*)\.myshopify\.com", link.strip(), re.I))
+    return f"{m.group(1).lower()}.myshopify.com" if m else None
+
+
+def scan(link: str, get: Getter = _get, private: Callable[[str, str], dict] | None = None) -> dict:
+    """private(domain, link): how to read a store whose public pages show nothing (an admin link, or a store behind its password
+    page, as every dev store is): the caller reads it with DTJ's own access instead (store_job.py). Without it, such a link is
+    refused with what to send instead."""
+    domain = store_domain(link)
+    if domain and "admin.shopify.com" in link.lower():
+        if private:
+            return private(domain, link)
+        raise NotShopify(f"{link} is the store's admin: its public address is https://{domain}")
     base = base_url(link)
     status, body = _safe_get(get, base + "/")
     if status != 200:
+        if domain and private:
+            return private(domain, link)
         raise NotShopify(f"{base} did not answer ({status or 'no response'})")
     page = body.decode("utf-8", "replace")
     shop = SHOP.search(page)
     if not shop:
         if "/password" in page[:20000] and "shopify" in page.lower():
-            raise NotShopify(f"{base} is a Shopify store behind a password page: send its .myshopify.com address and the password-free link")
+            if domain and private:
+                return private(domain, link)  # a dev store: read with DTJ's own access, not the public page
+            raise NotShopify(f"{base} is a Shopify store behind a password page: send its <name>.myshopify.com address")
         raise NotShopify(f"{base} does not look like a Shopify store (no Shopify.shop in its page)")
     home = read_home(base, page)
     theme = {}
