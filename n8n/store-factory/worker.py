@@ -177,8 +177,10 @@ class Worker:
 
     # ---- Claude
     def claude_turn(self, job: dict, prompt: str) -> None:
-        argv = [self.claude, "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings", str(self.settings),
-                "--max-budget-usd", str(self.environ["DTJ_CLAUDE_MAX_USD"])]
+        # --bare: Anthropic auth is strictly ANTHROPIC_API_KEY, the subscription login on this machine is never read (rule 9, made
+        # sure by Claude Code itself); --bare skips CLAUDE.md discovery, so the rulebook is handed in explicitly
+        argv = [self.claude, "-p", "--bare", "--output-format", "json", "--permission-mode", "dontAsk", "--settings", str(self.settings),
+                "--append-system-prompt-file", str(ROOT / "CLAUDE.md"), "--max-budget-usd", str(self.environ["DTJ_CLAUDE_MAX_USD"])]
         if job.get("session"):
             argv += ["--resume", job["session"]]
         job.update(state="running", turn_started=now_iso())
@@ -199,7 +201,8 @@ class Worker:
         text = str(res.get("result") or "")
         self.log(job["run"], f"claude turn ended ({res.get('subtype') or 'no result'}): {text[-1500:]}")
         if not res or res.get("is_error"):
-            why = str(res.get("subtype") or (done.stderr or "")[-300:] or "no answer from Claude Code")
+            # Claude Code's own words first (22 Oct 2026, a test run: is_error with subtype "success" and the result "Not logged in")
+            why = str(res.get("result") or res.get("subtype") or (done.stderr or "")[-300:] or "no answer from Claude Code")
             return self.failed(job, f"Claude Code stopped: {why}")
         argv_wait, refused = wait_command(text)
         if refused:

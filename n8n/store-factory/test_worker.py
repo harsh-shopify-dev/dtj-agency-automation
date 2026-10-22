@@ -94,9 +94,9 @@ class Runs_(Base):
         w.run = lambda argv, **kw: (runs.calls.append((argv, kw)), answered())[1]
         w.round()
         argv, kw = runs.calls[0]
-        self.assertEqual(argv[:8], ["claude", "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings",
+        self.assertEqual(argv[:9], ["claude", "-p", "--bare", "--output-format", "json", "--permission-mode", "dontAsk", "--settings",
                                     str(self.settings)])
-        self.assertEqual(argv[8:10], ["--max-budget-usd", "5"])
+        self.assertEqual(argv[9:13], ["--append-system-prompt-file", str(worker.ROOT / "CLAUDE.md"), "--max-budget-usd", "5"])
         self.assertIn("unattended on DTJ's VPS", kw["input"])
         self.assertIn("DO THIS: store_job.py start", kw["input"])
         self.assertEqual(kw["env"]["ANTHROPIC_API_KEY"], "sk-ant-test")
@@ -159,10 +159,10 @@ class Runs_(Base):
         self.assertEqual(w.s["stopped"], "")
 
     def test_claude_errors_and_timeouts_fail_the_run(self):
-        runs = Runs(claude=[result("budget", error=True)])
+        runs = Runs(claude=[dict(result("Not logged in · Please run /login"), subtype="success", is_error=True)])
         w = self.worker(runs)
         w.round()
-        self.assertIn("Claude Code stopped: error_during_execution", w.s["jobs"]["993"]["why"])
+        self.assertIn("Claude Code stopped: Not logged in", w.s["jobs"]["993"]["why"])
         runs = Runs(claude=["timeout"])
         w2 = worker.Worker(call=self.n8n, run=runs, tell=self.told.append, environ=dict(ENV), state=self.tmp / "w2" / "jobs.json",
                            clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings)
