@@ -22,6 +22,17 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 22 Oct 2026: PASSWORD STORES AND ADMIN LINKS (branch `fix/password-stores`, account A)
+Harsh asked which link to send for his new dev store `dtj-testing` (admin.shopify.com/store/dtj-testing or dtj-testing.myshopify.com).
+Neither worked: every dev store sits behind its password page, so the public page shows no store data and the job stopped.
+- **Fix:** `store_scan.scan(link, private=...)` hands an admin link or a password page to `store_job._private_scan`, which reads it
+  read-only: the live theme with this laptop's Shopify login (`theme list` plus that theme's `config/settings_schema.json`), and the
+  name, currency, products and collections through DTJ Store Builder. Tests: store-builder `test_store_access` 10 OK, store job 28 OK.
+- **VERIFIED live, read only, on dtj-testing:** both links read the store. **Store Builder is installed there and its key works**:
+  name, USD, 17 products and 3 collections came through `/copy` target. The live theme is Shopify's generated test-data theme
+  ("Generated Data Theme"), not Horizon, so the job will ask Harsh to add Horizon (unpublished) first.
+- The listener stopped overnight after 3 DNS failures in a row (`getaddrinfo failed`); it was restarted on 22 Oct.
+
 ## THE BRAND COPY RUNS FROM TELEGRAM ONLY: DTJ STORE BUILDER (21 Oct 2026, branch `feature/copy-from-telegram`, account A)
 Harsh: "all this steps must be done in the telegram bot nothing will be kept here", then he chose "A new DTJ Store Builder app".
 So the copy no longer uses the laptop's CLI sign-in (a short-lived token that needs a browser approval) or a PowerShell command.

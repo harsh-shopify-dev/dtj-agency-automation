@@ -139,6 +139,21 @@ class Scan(unittest.TestCase):
         with self.assertRaises(store_scan.NotShopify):
             store_scan.scan("not a link", store({}))
 
+    def test_a_password_store_or_an_admin_link_is_read_by_dtjs_own_access(self):
+        # every dev store sits behind its password page (22 Oct 2026, dtj-testing): the public page shows nothing to read
+        seen = []
+        private = lambda domain, link: seen.append((domain, link)) or {"myshopify_domain": domain}  # noqa: E731
+        locked = store({"https://dtj-testing.myshopify.com/": '<form action="/password" method="post">Shopify</form>'})
+        self.assertEqual(store_scan.scan("https://dtj-testing.myshopify.com/", locked, private)["myshopify_domain"], "dtj-testing.myshopify.com")
+        never = lambda url: (_ for _ in ()).throw(AssertionError("an admin link is never fetched"))  # noqa: E731
+        store_scan.scan("https://admin.shopify.com/store/dtj-testing", never, private)
+        self.assertEqual([d for d, _ in seen], ["dtj-testing.myshopify.com", "dtj-testing.myshopify.com"])
+        with self.assertRaises(store_scan.NotShopify) as no:  # a custom domain behind a password names no store
+            store_scan.scan("https://brand.com", store({"https://brand.com/": '<form action="/password">shopify</form>'}), private)
+        self.assertIn("<name>.myshopify.com", str(no.exception))
+        with self.assertRaises(store_scan.NotShopify):  # without DTJ's access: refused with the public address to send
+            store_scan.scan("https://admin.shopify.com/store/dtj-testing", never)
+
     def test_the_product_page_options_fit_the_store_size(self):
         self.assertEqual(store_scan.product_choices(1), [("The 1 product", "all:1"), ("I'll pick them", "pick")])
         self.assertEqual([v for _, v in store_scan.product_choices(4)], ["all:4", "top:3", "pick"])
