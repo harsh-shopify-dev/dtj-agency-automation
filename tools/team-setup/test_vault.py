@@ -128,5 +128,24 @@ class Vault(unittest.TestCase):
         self.assertIn("Make these collections", text)
 
 
+class EnvFile(unittest.TestCase):
+    """The VPS (22 Oct 2026): keys go into the worker's env file, owner-only, never into a Windows setting."""
+
+    def test_keys_round_trip_and_the_file_is_rewritten_whole(self):
+        import os
+        import tempfile
+        from pathlib import Path
+        path = Path(tempfile.mkdtemp()) / "dtj" / "worker.env"
+        save = vault.env_file_saver(path)
+        save("DTJ_CATCHER_CONTROL_KEY", 'a"b\\c')
+        save("N8N_MCP_TOKEN", "plain")
+        save("N8N_MCP_TOKEN", "newer")
+        self.assertEqual(vault.env_file_vars(path), {"DTJ_CATCHER_CONTROL_KEY": 'a"b\\c', "N8N_MCP_TOKEN": "newer"})
+        self.assertEqual(path.read_text(encoding="utf-8").count("\n"), 2)
+        if os.name != "nt":
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(vault.env_file_vars(path.parent / "missing.env"), {})
+
+
 if __name__ == "__main__":
     unittest.main()
