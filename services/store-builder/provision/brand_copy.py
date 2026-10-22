@@ -464,7 +464,7 @@ def apply(plan: dict, client, state_path: Path, log: ActionLog, approved_by: str
             state["failed"][f"{kind}:{key}"] = str(exc)[:300]
             save()
             log.record(tier=2, mode="approve", target=target, action=f"copy {kind} {key}", reason="brand copy", result="failed",
-                       approver=approved_by, error=str(exc)[:300])
+                       approved_by=approved_by, error=str(exc)[:300])
             if breaker.failed(kind):
                 raise SystemExit(f"stopped: 3 {kind} copies failed in a row (last: {exc}). Done so far is kept in {state_path}")
             return None
@@ -485,7 +485,7 @@ def apply(plan: dict, client, state_path: Path, log: ActionLog, approved_by: str
             state["collections"][c["handle"]] = cid
             save()
             log.record(tier=2, mode="approve", target=target, action=f"copy collection {c['handle']}", reason="brand copy",
-                       result="success", approver=approved_by, after={"id": cid})
+                       result="success", approved_by=approved_by, after={"id": cid})
     member = {}
     for c in plan["collections"]:
         for h in c["products"]:
@@ -506,7 +506,7 @@ def apply(plan: dict, client, state_path: Path, log: ActionLog, approved_by: str
             state["products"][p["handle"]] = pid
             save()
             log.record(tier=2, mode="approve", target=target, action=f"copy product {p['handle']}", reason="brand copy",
-                       result="success", approver=approved_by, after={"id": pid, "status": plan["status"]})
+                       result="success", approved_by=approved_by, after={"id": pid, "status": plan["status"]})
             out(f"  product {i} of {len(plan['products'])}: {p['handle']}")
     for pol in plan["policies"]:
         if pol["type"] in state["policies"]:
@@ -517,7 +517,7 @@ def apply(plan: dict, client, state_path: Path, log: ActionLog, approved_by: str
             state["policies"].append(pol["type"])
             save()
             log.record(tier=2, mode="approve", target=target, action=f"copy policy {pol['type']}", reason="brand copy (the target's was empty)",
-                       result="success", approver=approved_by, evidence={"source": pol["source"]})
+                       result="success", approved_by=approved_by, evidence={"source": pol["source"]})
     return {"products": len(state["products"]), "collections": len(state["collections"]), "policies": len(state["policies"]),
             "failed": state["failed"], "planned": {"products": len(plan["products"]), "collections": len(plan["collections"]),
                                                    "policies": len(plan["policies"])}}

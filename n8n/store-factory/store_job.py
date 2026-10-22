@@ -137,9 +137,11 @@ class Job:
             self.progress.step(stage, done, total)
 
     def logged(self, action: str, reason: str, by: str, result: str = "success", **extra) -> None:
+        """One action-log row (schemas/action.schema.json): results are success / failed / blocked (a Skip tap is "blocked": the
+        action did not happen because the person said no), the tapper goes in approved_by."""
         if self.log:
             self.log.record(tier=2, mode="approve", target=self.s.get("shop", self.job), action=action, reason=reason, result=result,
-                            approver=by, **extra)
+                            approved_by=by, approved_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **extra)
 
     # ---- start: the store, then the questions
     def begin(self, scan: dict, chat: str, by: str) -> None:
@@ -342,7 +344,7 @@ class Job:
         if ok is None:
             return WAITING
         if not ok:
-            self.logged("draft copy of the live theme", "skipped in Telegram", by, result="skipped")
+            self.logged("draft copy of the live theme", "skipped in Telegram", by, result="blocked")
             self.out(f"skipped by {by}")
             return SKIPPED
         made = self.access.duplicate_live(name)
@@ -396,7 +398,7 @@ class Job:
         if ok is None:
             return WAITING
         if not ok:
-            self.logged("brand copy into the store", "skipped in Telegram", by, result="skipped")
+            self.logged("brand copy into the store", "skipped in Telegram", by, result="blocked")
             self.out(f"skipped by {by}")
             return SKIPPED
         if not s.get("copy_approved_by"):
@@ -438,7 +440,7 @@ class Job:
         if ok is None:
             return WAITING
         if not ok:
-            self.logged("DTJ apps for the store", "skipped in Telegram", by, result="skipped")
+            self.logged("DTJ apps for the store", "skipped in Telegram", by, result="blocked")
             self.out(f"skipped by {by}")
             return SKIPPED
         s["apps_approved_by"] = f"{by} (Telegram Approve)"
@@ -463,7 +465,7 @@ class Job:
         ok, by = self.ask.approve(key, text, minutes)
         if ok is None:
             return WAITING
-        self.logged(f"approval {key}", "a write that needs a person's yes", by, result="approved" if ok else "skipped",
+        self.logged(f"approval {key}", "a write that needs a person's yes", by, result="success" if ok else "blocked",
                     evidence={"asked": text[:300]})
         self.out(f"APPROVED_BY={by} (Telegram Approve)" if ok else f"skipped by {by}")
         return 0 if ok else SKIPPED
