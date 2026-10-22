@@ -33,12 +33,16 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 - **The copy never changes or deletes what the store has:**
   - a product or collection whose handle exists is skipped;
   - a policy is written only where the store's own is empty;
-  - prices are the brand's numbers or what a person typed, never converted or guessed; no price = 0.00 with the tag
-    `dtj-price-needed`, still ACTIVE;
+  - prices are the brand's numbers, what a person typed, or a sample price from the niche's range (tag `dtj-sample-price`;
+    Harsh, 22 Oct 2026), never converted; with none of these, 0.00 with the tag `dtj-price-needed`, still ACTIVE;
   - every product goes in ACTIVE; on a store without a password page the Approve tap says they are visible at once.
 - Product and home pages go to the draft without a tap (Harsh's standing draft rule): `ship_draft` and `ship_home`.
 - Draft only. Never the live theme, never publish, never create a store, never assign a template to a product.
-- The offer is exactly what the person typed, or none. Never invent prices, offers, claims, reviews or policies; mark samples SAMPLE.
+- The offer is exactly what the person typed, or none. Never invent offers, claims, reviews or policies. Sample products, prices
+  and descriptions are allowed for a store build and always tagged (`dtj-sample`, `dtj-sample-price`, `dtj-sample-text`).
+- **Hand over a store that is ready to sell** (Harsh, 22 Oct 2026: "if anything is missed by me you will cover it"): `finish`
+  writes `.work/stores/J/handover.md` (what is in the store, every sample to replace, the owner's own settings) and sends the
+  short part to Telegram.
 - **Everything the person does happens in Telegram** (Harsh, 21 Oct 2026): taps, typed answers, the Install buttons. Never ask
   them to type a command on the laptop.
 - **Themes use the laptop's Shopify CLI login.** If a command answers that it has no access, stop that step and tell the person in
@@ -50,7 +54,7 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 1. **Questions.** `python n8n/store-factory/store_job.py start --link "<store link>" --chat <chat> --by "<name>"`
    - It reads the store (its original .myshopify.com address, live theme, products, collections). Then it asks in Telegram:
      1. **redesign or new store**;
-     2. where the products come from:
+     2. where the products come from (then: should ChatGPT make pictures? banners, extra product pictures, or none):
         - redesign: "Already in this store" (nothing is added), or "On its current website": the person sends the link. A Shopify
           brand is read from its catalogue; any other website from the product pages its sitemap lists (name, features, pictures;
           Senso). A link that cannot be read is asked for again (3 in a row stop);
@@ -68,19 +72,43 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
      a question was sent count.
    - Exit 1 = stopped (wrong store, a brand site that is not Shopify, nothing chosen): finish with "could not start".
    - `store_job.py status --job J` shows the plan.
-1b. **New store: the samples and banners** (skip for a redesign, and for a Drive folder that has banners).
-   - Write `.work/stores/J/assets.json` yourself (you are the AI step):
-     `{"products": [{"title", "description", "collection", "pictures": [1-3 prompts]}], "banners": [2-3 prompts]}`.
-     - `products` only for a samples store, exactly the count asked. Realistic, modest products for what the store sells, in plain
-       words: what it is, what is in it, how it is used. **No price, no claim** (clinically, certified, cures, %, reviews, stars,
-       best seller, No. 1: the job refuses them), no competitor or real person. Collections: 1-3 simple names.
-     - Picture prompts describe ONE product as a studio shot (shape, material, colour, size cues), never words or labels on it;
-       banners: a calm wide scene with empty space on one side for the page's headline. The picture maker refuses text, claims,
-       logos and real people.
-   - `python n8n/store-factory/store_job.py assets --job J --file .work/stores/J/assets.json`: makes every picture once
-     (`provision/ai_images.py`: OpenAI's API with DTJ's key `OPENAI_API_KEY`, else ChatGPT in the reel VPS's logged-in Chrome),
-     tags each sample `dtj-sample` and `dtj-price-needed`, and names the product pages. No route to make pictures = it stops and
-     says what to set up.
+1b. **The assets: research, sample details, pictures** (Harsh, 22 Oct 2026: "ensuring you dont generate bad results you will
+   search top 5 competitors in that brand niche ... analyze all the brands assets and then plan the images and then create the
+   images using chatgpt where you have to upload the referennce images of our products"). Run it whenever the plan says
+   `pictures` is not "none", or products lack a price or description, or the store is a samples store.
+   1. **Pick 5 competitors** (web search): D2C brands of the same niche that grow on Meta ads, never the category's giants (for a
+      tea brand like Senso: Blue Tea India and its peers, never Wagh Bakri, Red Label or Taj). Check each in Meta's Ad Library when
+      you can reach it; write one line per brand on why it was picked.
+   2. **Read them** (read only): `python -m provision.niche_assets <5 links> --out ../../.work/stores/J/niche --niche "<one line>"`
+      from `services/store-builder`. It downloads each brand's banners and 2-3 best-seller pictures and prices, writes
+      `niche.json` (with the niche's price range) and one contact sheet per brand. Their pictures are for study only: never
+      uploaded to the picture maker, never put in the store.
+   3. **Study and plan**: look at every contact sheet; write `style` (a few lines: light, background, props, colours, framing that
+      the best of them share, and how ours will look). Plan each picture: our product photos as `refs` (the Drive folder's or the
+      brand's own), one product per picture, no words on it.
+   4. **Write `.work/stores/J/assets.json`** (you are the AI step):
+      ```
+      {"research": "<.work/stores/J/niche/niche.json>", "style": "<the study>",
+       "products": [{"title", "description", "collection", "price", "compare_at_price", "pictures": [1-3 prompts]}],
+       "pictures": [{"for": "<handle>", "prompt", "refs": ["<our photo>"], "kind": "lifestyle" | "product"}],
+       "banners": [{"prompt", "refs": ["<our photo>"]}],
+       "sample_prices": {"<handle>": {"price", "compare_at_price"}}, "descriptions": {"<handle>": "<text>"}}
+      ```
+      - `products` only for a samples store, exactly the count asked: realistic, modest products for what the store sells.
+      - **Sample prices are allowed** (Harsh, 22 Oct 2026: "you can add any price, compare price, etc. because we will change it
+        later"): use `provision.niche_assets.sample_price(niche["prices"], rank, count)`, so they sit in the niche's real range.
+        They are tagged `dtj-sample-price`; sample descriptions `dtj-sample-text`; sample products `dtj-sample`. Every one is in the
+        handover list.
+      - Never a claim (clinically, certified, cures, %, reviews, stars, best seller, No. 1: refused), an offer, a competitor's name
+        or a real person.
+      - `pictures` (extra product pictures) only for a Drive store with "Banners and extra product pictures"; banners whenever the
+        answer allows and the store has none.
+   5. `python n8n/store-factory/store_job.py assets --job J --file .work/stores/J/assets.json`. It refuses pictures without the
+      research (3+ brands read) and the study; makes each picture once (`provision/ai_images.py`: the ChatGPT command on DTJ's VPS
+      `DTJ_IMAGE_VPS`, else OpenAI's API with `OPENAI_API_KEY`, else a local logged-in ChatGPT), with our photos uploaded as
+      references; adds ChatGPT's product pictures after the brand's own; keeps the sample prices for the prices question.
+   6. Look at every picture it made before going on. A picture that changed our product, added words or looks fake: delete that
+      file and run `assets` again (only missing pictures are made again).
 2. **Draft copy.** `python n8n/store-factory/store_job.py draft --job J`. One Approve tap, then the live theme is duplicated as
    "DTJ Draft <date>" (unpublished; read back to check). When the person added Horizon instead, that theme is used.
 3. **The products** (the brand copy; skipped when the products are already in this store). It runs in Telegram and n8n only (Harsh, 21 Oct 2026: "all this steps must
@@ -89,8 +117,8 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
      never can. A store needs it installed once: Dev Dashboard > Apps > DTJ Store Builder > Install app > the store. The job asks
      the person in Telegram the first time and goes on by itself once it is installed.
    - Run `python n8n/store-factory/store_job.py copy --job J`. It does four things:
-     1. When products have no price, it asks in Telegram: "I'll type the prices" (lines `name = price`, matched to the products)
-        or "Leave them at 0.00".
+     1. When products have no price, it asks in Telegram: "Use the sample prices" (when step 1b made them), "I'll type the
+        prices" (lines `name = price`; typed wins, samples fill the rest) or "Leave them at 0.00".
      2. It reads the brand's public store (or, for a Drive folder or samples, takes the products this laptop holds and sends their
         pictures to Shopify's own staged upload through Store Builder, `provision/staged_upload.py`), and what the store has
         through the install service (read only). It writes `.work/stores/J/copy/plan.json` and keeps the plan on the install

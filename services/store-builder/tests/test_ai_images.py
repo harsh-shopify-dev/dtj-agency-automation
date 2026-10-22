@@ -67,7 +67,7 @@ class Route(unittest.TestCase):
     def test_the_windows_user_variable_counts_too(self):
         seen = []
         way, why = ai.route({}, lambda n: seen.append(n) or (KEY if n == "DTJ_OPENAI_API_KEY" else None), NO_CDP)
-        self.assertEqual((way, seen), ("api", ["OPENAI_API_KEY", "DTJ_OPENAI_API_KEY"]))
+        self.assertEqual((way, seen), ("api", ["DTJ_IMAGE_VPS", "OPENAI_API_KEY", "DTJ_OPENAI_API_KEY"]))  # the VPS is looked for first
         self.assertIn("DTJ_OPENAI_API_KEY", why)
         self.assertNotIn(KEY, why)
 
@@ -224,6 +224,212 @@ class ChatGPTWay(Base):
         self.assertIn("signed out", str(e.exception))
 
 
+HOST = "ai@srv2048145.hstgr.cloud"
+
+
+class FakeRunner:
+    """Plays ssh and scp: records every argv, answers the chatgpt_cli command with `answer`, writes `data` where scp brings the
+    picture back. Nothing reaches the VPS."""
+
+    def __init__(self, answer=None, data=PNG, fail_on=None):
+        self.calls, self.data, self.fail_on = [], data, fail_on
+        self.answer = answer
+
+    def __call__(self, argv, timeout):
+        self.calls.append(list(argv))
+        line = " ".join(argv)
+        if self.fail_on and self.fail_on in line:
+            return 1, "", "lost connection"
+        if argv[0] == "ssh" and "chatgpt_cli" in line:
+            rdir = line.split("--prompt-file ")[1].split("/prompt.txt")[0]
+            got = self.answer if self.answer is not None else {"ok": True, "path": f"{rdir}/out.png", "refs": 1, "seconds": 41.5}
+            return 0, "some log line\n" + json.dumps(got) + "\n", ""
+        if argv[0] == "scp" and argv[-2].startswith(HOST + ":"):
+            Path(argv[-1]).write_bytes(self.data)
+        return 0, "", ""
+
+    def commands(self):
+        return [c[-1] for c in self.calls if c[0] == "ssh"]
+
+
+class VpsWay(Base):
+    """ChatGPT on DTJ's Hostinger VPS over ssh (Harsh, 22 Oct 2026: "chatgpt cli which will be hosted on our hostinger vps"),
+    with our product's photos as the reference."""
+
+    def setUp(self):
+        super().setUp()
+        self.ref = self.tmp / "1.jpg"
+        self.ref.write_bytes(b"\xff\xd8\xff\xe0jpg")
+
+    def test_the_vps_comes_first_when_set_and_answering(self):
+        asked = []
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: asked.append(h) or True)
+        self.assertEqual((way, asked), ("vps", [HOST]))
+        self.assertIn(HOST, why)
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: False)
+        self.assertEqual(way, "api")  # a VPS that does not answer: the next way
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST}, NO_VAR, NO_CDP, lambda h: False)
+        self.assertIsNone(way)
+        self.assertIn("ssh did not answer", why)
+        self.assertIn("DTJ_IMAGE_VPS", why)
+
+    def test_the_ssh_check_is_batch_mode_and_short(self):
+        r = FakeRunner()
+        self.assertTrue(ai._vps_answers(HOST, r))
+        self.assertEqual(r.calls, [["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", HOST, "true"]])
+
+    def test_a_picture_with_our_product_comes_back_and_only_its_folder_is_removed(self):
+        r = FakeRunner()
+        side = ai.make("product", "This exact bottle on a plain light background", self.tmp / "p1.webp", refs=[self.ref],
+                       environ={"DTJ_IMAGE_VPS": HOST}, read_var=NO_VAR, runner=r, vps_ok=lambda h: True)
+        self.assertEqual((side["backend"], side["model"]), ("vps", f"chatgpt.com (VPS {HOST})"))
+        self.assertTrue(side["path"].endswith("p1.png"))  # ChatGPT's PNG keeps its real type
+        self.assertEqual(side["refs"], [str(self.ref)])
+        self.assertEqual((self.tmp / "p1.png").read_bytes(), PNG)
+        mk, run, rm = r.commands()
+        rdir = mk.split()[-1]
+        self.assertRegex(rdir, r"^/tmp/dtj-img-[0-9a-f]{12}$")
+        self.assertEqual(mk, f"mkdir -m 700 {rdir}")
+        self.assertEqual(rm, f"rm -rf -- {rdir}")
+        self.assertIn('cd "$HOME"/dtj-agency-automation/services/reel-factory && "$PY" -m reel_factory.chatgpt_cli image', run)
+        self.assertIn(f"--prompt-file {rdir}/prompt.txt --out {rdir}/out.png --ref {rdir}/ref-1.jpg --timeout 300", run)
+        sent = next(c for c in r.calls if c[0] == "scp" and c[-1].startswith(HOST))
+        self.assertEqual([Path(x).name for x in sent[-3:-1]], ["prompt.txt", "ref-1.jpg"])
+        self.assertEqual(sent[-1], f"{HOST}:{rdir}/")
+        back = next(c for c in r.calls if c[0] == "scp" and c[-2].startswith(HOST))
+        self.assertEqual(back[-2], f"{HOST}:{rdir}/out.png")
+        self.assertTrue(all("-o" in c and "BatchMode=yes" in c for c in r.calls))
+
+    def test_the_prompt_sent_says_to_use_the_reference_and_keep_the_label(self):
+        r, seen = FakeRunner(), []
+        real = ai._vps_make
+
+        def spy(host, chat_prompt, out, refs, folder, runner, timeout=300):
+            seen.append((chat_prompt, folder))
+            return real(host, chat_prompt, out, refs, folder, runner, timeout)
+        with mock.patch.object(ai, "_vps_make", spy):
+            ai.make("lifestyle", "A woman pouring the product in the reference photo into a cup", self.tmp / "l.png",
+                    refs=[self.ref], backend="vps", environ={"DTJ_IMAGE_VPS": HOST, "DTJ_IMAGE_VPS_DIR": "/srv/dtj/reel-factory"},
+                    read_var=NO_VAR, runner=r)
+        prompt, folder = seen[0]
+        self.assertTrue(prompt.startswith("Create one wide landscape picture (1536x1024). Use the attached photo of our product as the reference."))
+        self.assertIn("its label as it is in the reference", prompt)
+        self.assertIn("only the product's own label", prompt)
+        self.assertNotIn("No words, letters, numbers, labels", prompt)
+        self.assertEqual(folder, "/srv/dtj/reel-factory")
+        self.assertIn("cd /srv/dtj/reel-factory &&", r.commands()[1])
+
+    def test_a_vps_failure_is_plain_and_the_folder_is_still_removed(self):
+        r = FakeRunner(answer={"ok": False, "error": "ChatGPT is signed out in the reel Chrome window", "needs_person": True})
+        with self.assertRaises(ImagesError) as e:
+            ai.make("product", GOOD, self.tmp / "p.webp", refs=[self.ref], backend="vps", environ={"DTJ_IMAGE_VPS": HOST},
+                    read_var=NO_VAR, runner=r)
+        self.assertIn("ChatGPT on the VPS could not make it: ChatGPT is signed out", str(e.exception))
+        self.assertIn("a person must look at the reel Chrome window", str(e.exception))
+        self.assertTrue(r.commands()[-1].startswith("rm -rf -- /tmp/dtj-img-"))
+        r = FakeRunner(fail_on="scp -q")
+        with self.assertRaises(ImagesError) as e:
+            ai.make("product", GOOD, self.tmp / "p.webp", backend="vps", environ={"DTJ_IMAGE_VPS": HOST}, read_var=NO_VAR, runner=r)
+        self.assertIn("could not copy the prompt", str(e.exception))
+        self.assertTrue(r.commands()[-1].startswith("rm -rf -- /tmp/dtj-img-"))
+
+    def test_an_answer_outside_the_job_folder_is_not_copied(self):
+        r = FakeRunner(answer={"ok": True, "path": "/home/ai/.ssh/id_ed25519"})
+        with self.assertRaises(ImagesError) as e:
+            ai.make("product", GOOD, self.tmp / "p.webp", backend="vps", environ={"DTJ_IMAGE_VPS": HOST}, read_var=NO_VAR, runner=r)
+        self.assertIn("outside its job folder", str(e.exception))
+        self.assertFalse(any(c[0] == "scp" and c[-2].startswith(HOST) for c in r.calls))
+
+    def test_no_ssh_on_this_computer_is_said(self):
+        with self.assertRaises(ImagesError) as e:
+            ai.make("banner", GOOD, self.tmp / "b.webp", backend="vps", environ={"DTJ_IMAGE_VPS": HOST}, read_var=NO_VAR,
+                    runner=lambda argv, t: (127, "", "ssh is not installed on this computer"))
+        self.assertIn("ssh is not installed", str(e.exception))
+        with self.assertRaises(ImagesError):
+            ai.make("banner", GOOD, self.tmp / "b.webp", backend="vps", environ={}, read_var=NO_VAR)  # no DTJ_IMAGE_VPS
+
+
+class References(Base):
+    """Our product's photos reach every way: the API's edits call, ChatGPT's chat, the VPS."""
+
+    def setUp(self):
+        super().setUp()
+        self.ref = self.tmp / "front.png"
+        self.ref.write_bytes(PNG)
+
+    def test_the_api_gets_them_as_an_edit(self):
+        post = FakePost(answer())
+        ai.make("product", GOOD, self.tmp / "p.webp", refs=[self.ref], post=post, environ={"OPENAI_API_KEY": KEY}, read_var=NO_VAR,
+                vps_ok=lambda h: False, cdp_ok=NO_CDP)
+        body, _ = post.calls[0]
+        self.assertEqual(body["image"], [str(self.ref)])
+        self.assertNotIn("background", body)
+        self.assertIn("Keep the product exactly as in the reference photo", body["prompt"])
+
+    def test_without_them_the_api_call_is_unchanged(self):
+        post = FakePost(answer())
+        ai.make("product", GOOD, self.tmp / "p.webp", post=post, environ={"OPENAI_API_KEY": KEY}, read_var=NO_VAR, cdp_ok=NO_CDP)
+        self.assertNotIn("image", post.calls[0][0])
+        self.assertEqual(post.calls[0][0]["background"], "opaque")
+
+    def test_the_edits_call_is_multipart_with_image_fields(self):
+        sent = {}
+
+        class Answer:
+            status = 200
+
+            def read(self):
+                return json.dumps({"data": []}).encode()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def urlopen(req, timeout):
+            sent.update(url=req.full_url, ctype=req.headers["Content-type"], data=req.data)
+            return Answer()
+        with mock.patch.object(ai.urllib.request, "urlopen", urlopen):
+            ai._post({"model": "m", "prompt": "p", "n": 1, "image": [str(self.ref)]}, KEY)
+        self.assertEqual(sent["url"], ai.EDITS_URL)
+        self.assertTrue(sent["ctype"].startswith("multipart/form-data; boundary="))
+        self.assertIn(b'name="image[]"; filename="front.png"', sent["data"])
+        self.assertIn(b'name="model"\r\n\r\nm\r\n', sent["data"])
+        self.assertNotIn(KEY.encode(), sent["data"])
+
+    def test_chatgpt_gets_them_attached(self):
+        class Seen(FakeChatGPT):
+            def image(self, prompt, out, files=()):
+                self.files = list(files)
+                return super().image(prompt, out, files)
+        cg = Seen(PNG)
+        side = ai.make("banner", GOOD, self.tmp / "b.webp", refs=[self.ref], chatgpt=cg, backend="chatgpt", environ={})
+        self.assertEqual(cg.files, [str(self.ref)])
+        self.assertIn("Use the attached photo of our product as the reference.", cg.prompts[0])
+        self.assertEqual(side["refs"], [str(self.ref)])
+
+    def test_missing_wrong_type_or_too_many_are_refused_before_anything_runs(self):
+        post = FakePost()
+        for refs, why in (([self.tmp / "nope.jpg"], "missing or not a jpg"), ([self.tmp / "a.gif"], "missing or not a jpg"),
+                          ([self.ref] * 5, "at most 4")):
+            if refs[0].suffix == ".gif":
+                refs[0].write_bytes(b"GIF89a")
+            with self.assertRaises(ImagesError) as e:
+                ai.make("product", GOOD, self.tmp / "p.webp", refs=refs, post=post, environ={"OPENAI_API_KEY": KEY}, read_var=NO_VAR)
+            self.assertIn(why, str(e.exception))
+        self.assertEqual(post.calls, [])
+
+    def test_the_guard_with_and_without_references(self):
+        plain = ai.guard(GOOD, "product")
+        self.assertTrue(plain.endswith(ai.NO_TEXT))
+        with_ref = ai.guard("This exact bottle, the product in the reference photo, on a stone slab", "product", refs=True)
+        self.assertIn(ai.REF_LINE.strip(), with_ref)
+        self.assertTrue(with_ref.endswith(ai.NO_TEXT_REF))
+        with self.assertRaises(ValueError):
+            ai.guard("This exact bottle with 20% off", "product", refs=True)  # the guard still applies
+
+
 class Cli(Base):
     def run_cli(self, *argv):
         buf = io.StringIO()
@@ -244,6 +450,19 @@ class Cli(Base):
         code, out = self.run_cli("--kind", "banner", "--prompt", "Sale banner 50% off", "--out", str(self.tmp / "b.webp"))
         self.assertEqual(code, 2)
         self.assertIn("REFUSED", out)
+
+    def test_ref_reaches_make_and_the_dry_run(self):
+        ref = self.tmp / "r.jpg"
+        ref.write_bytes(b"\xff\xd8")
+        with mock.patch.object(ai, "route", return_value=("vps", "ChatGPT on the VPS")):
+            code, out = self.run_cli("--kind", "product", "--prompt", GOOD, "--out", str(self.tmp / "p.webp"), "--ref", str(ref),
+                                     "--dry-run")
+        shown = json.loads(out)
+        self.assertEqual((code, shown["refs"], shown["route"]), (0, [str(ref)], "vps"))
+        self.assertIn("Keep the product exactly as in the reference photo", shown["prompt"])
+        with mock.patch.object(ai, "make", return_value={"path": "x"}) as made:
+            self.run_cli("--kind", "product", "--prompt", GOOD, "--out", str(self.tmp / "p.webp"), "--ref", str(ref), "--backend", "vps")
+        self.assertEqual((made.call_args.kwargs["refs"], made.call_args.kwargs["backend"]), ([str(ref)], "vps"))
 
     def test_no_way_exits_1(self):
         with mock.patch.object(ai, "make", side_effect=ImagesError("No way to make pictures yet")):
