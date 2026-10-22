@@ -583,6 +583,25 @@ def copy_ops(brand_copy_id: str) -> list[dict]:
     ]
 
 
+def open_question_ops(answers_id: str) -> list[dict]:
+    """A plain message answers the store job's open typed question (22 Oct 2026): "Load Open Questions" (the laptop's open /
+    closed marks for this chat in dtj_bot_answers: rows with an empty value) goes between "Load Shops" and "Who Is It"."""
+    return [
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        _add("Load Open Questions", "n8n-nodes-base.dataTable", 1.1, [720, 300], {
+            "resource": "row", "operation": "get", "dataTableId": {"__rl": True, "mode": "list", "value": answers_id, "cachedResultName": ANSWERS},
+            "matchType": "allConditions",
+            "filters": {"conditions": [{"keyName": "chat_id", "condition": "eq", "keyValue": "={{ $('Read the Message').first().json.chat_id }}"},
+                                       {"keyName": "value", "condition": "isEmpty"}]},
+            "returnAll": True}),
+        {"type": "setNodeSettings", "nodeName": "Load Open Questions", "settings": {"executeOnce": True, "alwaysOutputData": True,
+                                                                                    "onError": "continueRegularOutput"}},
+        {"type": "removeConnection", "source": "Load Shops", "target": "Who Is It"},
+        {"type": "addConnection", "source": "Load Shops", "target": "Load Open Questions"},
+        {"type": "addConnection", "source": "Load Open Questions", "target": "Who Is It"},
+    ]
+
+
 def find_table_id(name: str) -> str | None:
     found = [t for t in call("search_data_tables", {"query": name, "limit": 100}).get("data", []) if t.get("name") == name]
     return found[0]["id"] if found else None
@@ -658,7 +677,8 @@ def main(argv=None) -> int:
                            ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id")),
                            ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id")),
                            ("pictures", pictures_ops("telegram-credential-id")), ("addshop", addshop_ops("add-shop-workflow-id")),
-                           ("store", store_ops("new-store-workflow-id", "answers-table-id")), ("copy", copy_ops("brand-copy-workflow-id"))):
+                           ("store", store_ops("new-store-workflow-id", "answers-table-id")), ("copy", copy_ops("brand-copy-workflow-id")),
+                           ("open questions", open_question_ops("answers-table-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -705,6 +725,10 @@ def main(argv=None) -> int:
                 ops = store_ops(find_workflow_id(NEW_STORE), find_table_id(ANSWERS))
                 print("adding the whole store from a link:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "A store link starts the whole store; its answers"}).get("appliedOperations"), "operation(s)")
+            elif "Load Open Questions" not in live_bot and "Start Brand Copy" in live_bot and find_table_id(ANSWERS):
+                ops = open_question_ops(find_table_id(ANSWERS))
+                print("adding the open-question check:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "A plain message answers an open typed question"}).get("appliedOperations"), "operation(s)")
             elif "Start Brand Copy" not in live_bot and find_workflow_id(BRAND_COPY):
                 ops = copy_ops(find_workflow_id(BRAND_COPY))
                 print("adding the brand copy's Approve tap:", call("update_workflow", {"workflowId": bot, "operations": ops,

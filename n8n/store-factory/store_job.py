@@ -119,13 +119,14 @@ class Job:
     def __init__(self, job: str, *, send: Callable[[str, dict], dict], rows: Callable[[str], list], progress=None, access=None,
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
                  today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None,
-                 copy_status=None):
+                 copy_status=None, add_row=None):
         self.scanner, self.planner, self.copy_status = scanner or _scan_brand, planner or _copy_plan, copy_status or _copy_status
         self.job, self.dir = job, state_dir / job
         self.path = self.dir / "job.json"
         self.s = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         self.out, self.progress, self.access, self.log, self.today = out, progress, access, log, today
-        self.ask = Asker(job, self.s.get("chat", ""), send=send, rows=rows, state=self.s, save=self.save, sleep=sleep, clock=clock)
+        self.ask = Asker(job, self.s.get("chat", ""), send=send, rows=rows, state=self.s, save=self.save, sleep=sleep, clock=clock,
+                         add_row=add_row)
 
     def save(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -581,6 +582,15 @@ def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path, job
     return plan
 
 
+def _add_row(row: dict) -> None:
+    """One row into dtj_bot_answers (the open / closed mark of a typed question)."""
+    from n8n_mcp import call  # noqa: PLC0415
+    from setup_n8n import find_tables  # noqa: PLC0415
+    tables = find_tables(call, TABLE)
+    if tables:
+        call("add_data_table_rows", {"dataTableId": tables[0]["id"], "projectId": tables[0].get("projectId"), "rows": [row]})
+
+
 def _copy_status(job: str) -> dict:
     return _catcher({"op": "status", "job": job})
 
@@ -667,7 +677,7 @@ def main(argv=None) -> int:
         state = json.loads((STATE_DIR / jid / "job.json").read_text(encoding="utf-8")) if (STATE_DIR / jid / "job.json").exists() else {}
         access = tt.open_access(state.get("shop") or f"{jid}.myshopify.com")
     from provision.actionlog import ActionLog  # noqa: PLC0415
-    job = Job(jid, send=_sender(token), rows=_rows, progress=progress, access=access,
+    job = Job(jid, send=_sender(token), rows=_rows, progress=progress, access=access, add_row=_add_row,
               log=ActionLog(STATE_DIR / jid / "action-log.jsonl", jid, automation="store-job"))
     if a.cmd == "start":
         job.begin(sc, a.chat, a.by)

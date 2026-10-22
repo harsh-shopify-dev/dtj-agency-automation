@@ -3,7 +3,9 @@
 The laptop sends each question itself (the bot's token from DTJ_TELEGRAM_BOT_TOKEN). The tap or the typed reply reaches the bot's
 n8n workflow, which saves it in the data table dtj_bot_answers (job, key, value, choice, by, chat_id, at); the laptop reads that table
 through n8n's MCP server. A button carries the callback data "a:<job>:<key>:<n>" (Telegram allows 64 bytes); a typed answer is a
-reply to the question, whose last line is "(job <job>, answer <key>)". The Approve buttons are a question with two choices: the tap
+reply to the question, whose last line is "(job <job>, answer <key>)", or (22 Oct 2026, Harsh sent the brand link as a plain
+message) any plain message in that chat while a typed question is open: the laptop marks it open and closed in the same table (rows
+with an empty value and choice "open" / "closed"), and the bot's "Load Open Questions" reads those marks. The Approve buttons are a question with two choices: the tap
 of an active person on the bot, with their name, is the yes for that one action (Harsh, 21 Oct 2026: "Approve button in Telegram").
 Only answers from the job's own chat count. Nothing here prints or stores the bot's token.
 """
@@ -41,12 +43,13 @@ class Asker:
     so a job that stops and starts again never asks twice and keeps what was answered."""
 
     def __init__(self, job: str, chat: str, *, send: Send, rows: Rows, state: dict, save: Callable[[], None],
-                 sleep=time.sleep, clock=time.monotonic, poll: float = POLL_SECONDS, now: Callable[[], str] = utc_now):
+                 sleep=time.sleep, clock=time.monotonic, poll: float = POLL_SECONDS, now: Callable[[], str] = utc_now,
+                 add_row: Callable[[dict], None] | None = None):
         if not JOB_RE.fullmatch(job):
             raise ValueError(f"job {job!r}: lowercase letters, digits and dashes, at most 24")
         self.job, self.chat = job, str(chat or "")
         self.send, self.rows, self.state, self.save = send, rows, state, save
-        self.sleep, self.clock, self.poll, self.now = sleep, clock, poll, now
+        self.sleep, self.clock, self.poll, self.now, self.add_row = sleep, clock, poll, now, add_row
         self.state.setdefault("asked", {})
         self.state.setdefault("answers", {})
 
@@ -79,6 +82,15 @@ class Asker:
         mid = self._message(f"{text}\n\n(job {self.job}, answer {key})", markup)
         self.state["asked"][key] = {"options": [], "message_id": mid, "typed": True, "at": self.now()}
         self.save()
+        self._mark(key, "open")
+
+    def _mark(self, key: str, choice: str) -> None:
+        """The open / closed mark the bot reads, so a plain message in this chat answers the open typed question."""
+        if self.add_row and self.chat:
+            try:
+                self.add_row({"job": self.job, "key": key, "value": "", "choice": choice, "by": "", "chat_id": self.chat, "at": self.now()})
+            except Exception:  # noqa: BLE001 - without the mark only a reply to the question counts, as before
+                pass
 
     def forget(self, key: str) -> int:
         """Ask this question again from the start (its answer could not be used). That answer never counts again, even when it is
@@ -106,7 +118,7 @@ class Asker:
         since = _earlier(asked["at"], SKEW_SECONDS) if asked.get("at") else ""
         spent = set(self.state.get("spent", {}).get(key, []))
         mine = [r for r in self.rows(self.job) if str(r.get("key")) == key and str(r.get("chat_id", "")) == self.chat
-                and str(r.get("at") or "")[:19] >= since and str(r.get("id") or "") not in spent]
+                and str(r.get("at") or "")[:19] >= since and str(r.get("id") or "") not in spent and str(r.get("value") or "").strip()]
         if not mine:
             return None
         last = sorted(mine, key=lambda r: (str(r.get("at") or ""), int(r.get("id") or 0)))[-1]
@@ -122,6 +134,8 @@ class Asker:
         got = {"value": value, "label": label, "by": str(last.get("by") or "").strip() or "someone on the DTJ bot", "row": str(last.get("id") or "")}
         self.state["answers"][key] = got
         self.save()
+        if asked["typed"]:
+            self._mark(key, "closed")
         return got
 
     def wait(self, key: str, minutes: float) -> dict | None:
