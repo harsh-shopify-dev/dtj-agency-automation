@@ -141,6 +141,78 @@ class Log:
         self.rows.append(row)
 
 
+SITE = "https://chaico.com"
+HEADER = '<html><head><meta property="og:site_name" content="Chai Co"><title>Chai Co</title></head><body><header>menu</header>'
+NO_LD = (HEADER + '<meta name="description" content="Masala chai premix in 14 g sachets.">'
+         '<meta property="og:image" content="https://chaico.com/wp-content/uploads/masala-box.jpg">'
+         '<h1>Masala Chai Premix</h1><img src="https://chaico.com/wp-content/uploads/logo.png"><img src="https://chaico.com/wp-content/uploads/masala-side.jpg">'
+         + '<img src="https://chaico.com/wp-content/uploads/tick.png">' * 3 +
+         '<img src="https://chaico.com/wp-content/uploads/why-choose.png">'
+         '<h2>Product Features</h2><div><p>36 sachets</p><p>Ready in 30 seconds</p></div><h2>How to use</h2><p>Add hot water.</p>'
+         '<h2>Related Products</h2><img src="https://chaico.com/wp-content/uploads/ginger-box.jpg"></body></html>')
+WITH_LD = (HEADER + '<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Product","name":"Ginger Chai",'
+           '"description":"Ginger chai premix.","sku":"GC-14","image":["https://chaico.com/wp-content/uploads/ginger-box.jpg"],'
+           '"offers":{"@type":"Offer","price":"249.00","priceCurrency":"INR"}}]}</script><h1>Ginger Chai</h1>'
+           '<img src="https://chaico.com/wp-content/uploads/badge-natural.png"></body></html>')
+POLICY = (HEADER + '<section class="policy-block"><div><h2>Privacy Policy</h2>Last updated 1 Jan 2026. Chai Co collects your name and phone\n'
+          'number only to answer enquiries and never sells them to anyone else, as the law of India asks.</div><div class="policy"><h5>COOKIES</h5>'
+          'We use cookies to keep the site working and to count visits, nothing more than that.</div></section><footer>f</footer></body></html>')
+
+
+def chai_site(extra_products=0):
+    urls = [f"{SITE}/my-product/masala-chai/", f"{SITE}/my-product/ginger-chai/", f"{SITE}/about-us/"]
+    urls += [f"{SITE}/my-product/extra-{i}/" for i in range(extra_products)]
+    pages = {f"{SITE}/sitemap.xml": "<urlset>" + "".join(f"<url><loc>{u}</loc></url>" for u in urls) + "</urlset>",
+             f"{SITE}/": HEADER + "</body></html>", f"{SITE}/my-product/masala-chai/": NO_LD, f"{SITE}/my-product/ginger-chai/": WITH_LD,
+             f"{SITE}/privacy-policy/": POLICY}
+    for i in range(extra_products):
+        pages[f"{SITE}/my-product/extra-{i}/"] = (HEADER + f'<h1>Extra {i}</h1><img src="https://chaico.com/wp-content/uploads/why-choose.png">'
+                                                  f'<img src="https://chaico.com/wp-content/uploads/extra-{i}.jpg"></body></html>')
+
+    def get(url):
+        body = pages.get(url)
+        return (200, url, body.encode()) if body is not None else (404, url, b"")
+    return get
+
+
+class Website(unittest.TestCase):
+    """A brand whose site is not a Shopify store (22 Oct 2026, Senso): products from its own pages, drafts when it shows no price."""
+
+    def test_products_from_the_pages_the_sitemap_lists(self):
+        brand = bc.read_brand(SITE, chai_site(), pause=lambda: None)  # no /products.json: the website reader takes over
+        self.assertEqual((brand["platform"], brand["name"], brand["collections"]), ("website", "Chai Co", []))
+        masala, ginger = brand["products"]
+        self.assertEqual((masala["handle"], masala["title"], masala["vendor"]), ("masala-chai", "Masala Chai Premix", "Chai Co"))
+        self.assertEqual(masala["body_html"], "<p>Masala chai premix in 14 g sachets.</p><ul><li>36 sachets</li><li>Ready in 30 seconds</li></ul>")
+        self.assertEqual([i["src"].split("/")[-1] for i in masala["images"]], ["masala-box.jpg", "masala-side.jpg", "why-choose.png"])
+        self.assertEqual((masala["variants"][0]["price"], masala["tags"], masala["price_needed"]), ("0.00", [bc.PRICE_TAG], True))
+        self.assertEqual((ginger["variants"][0]["price"], ginger["variants"][0]["sku"], ginger["tags"]), ("249.00", "GC-14", []))
+        self.assertEqual(ginger["body_html"], "<p>Ginger chai premix.</p>")
+        pol = brand["policies"]["PRIVACY_POLICY"]
+        self.assertIn("<p>Last updated 1 Jan 2026. Chai Co collects your name and phone number only to answer enquiries", pol["body"])
+        self.assertIn("<p>COOKIES</p>", pol["body"])
+
+    def test_a_picture_on_four_or_more_products_is_a_site_badge(self):
+        brand = bc.read_brand(SITE, chai_site(extra_products=4), pause=lambda: None)
+        pictures = {p["handle"]: [i["src"].split("/")[-1] for i in p["images"]] for p in brand["products"]}
+        self.assertEqual(pictures["masala-chai"], ["masala-box.jpg", "masala-side.jpg"])
+        self.assertEqual(pictures["extra-0"], ["extra-0.jpg"])
+
+    def test_a_site_without_prices_goes_in_as_hidden_drafts_and_says_so(self):
+        brand = bc.read_brand(SITE, chai_site(), pause=lambda: None)
+        plan = bc.make_plan(brand, dict(TARGET, products=[]), None)
+        self.assertEqual(plan["status"], "DRAFT")  # even behind a password: a price must be set first
+        self.assertEqual([(p["handle"], p["status"], p["variants"][0]["price"]) for p in plan["products"]],
+                         [("masala-chai", "DRAFT", "0.00"), ("ginger-chai", "DRAFT", "249.00")])
+        self.assertTrue(any("shows no price for 1 products" in n and bc.PRICE_TAG in n for n in plan["notes"]))
+        self.assertFalse(any("open to the public" in n for n in plan["notes"]))  # the target has its password page
+
+    def test_a_site_with_no_product_pages_is_refused(self):
+        with self.assertRaises(ValueError):
+            bc.read_brand("https://blog.example", lambda url: (200, url, b"<html>blog</html>") if url.endswith("/") else (404, url, b""),
+                          pause=lambda: None)
+
+
 class Apply(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

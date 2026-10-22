@@ -103,6 +103,183 @@ def clean_html(text: str) -> str:
     return _SCRIPT.sub("", text or "").strip()
 
 
+# ---------------------------------------------------------------------------------------------------------- a brand that is not on Shopify
+# Harsh, 22 Oct 2026 (Senso: a WordPress trade site with product pages and no prices): its products come from its own product pages
+# (found through its sitemap), and a product without a price goes in as a hidden draft at 0.00 with the tag dtj-price-needed ("Create
+# them as drafts, prices later"); a price is never guessed.
+MAX_SITE_PRODUCTS = 150  # Senso has 114 product pages
+PRICE_TAG = "dtj-price-needed"
+SITE_POLICIES = {
+    "PRIVACY_POLICY": ("privacy-policy", "privacy"),
+    "TERMS_OF_SERVICE": ("terms-conditions", "terms-and-conditions", "terms-of-service", "terms-of-use"),
+    "REFUND_POLICY": ("refund-policy", "return-policy", "refund-and-returns-policy", "returns", "cancellation-refund-policy"),
+    "SHIPPING_POLICY": ("shipping-policy", "shipping-delivery-policy", "shipping-and-delivery", "shipping"),
+}
+_NOT_PRODUCT_PICTURE = re.compile(r"logo|icon|favicon|shape|sprite|placeholder|loader|arrow|badge|payment|flag", re.I)
+_RELATED = re.compile(r"Related Products|You may also like|Similar Products|Customers also bought", re.I)
+_FEATURES = re.compile(r"feature|benefit|specification|highlight|ingredient|key points|why ", re.I)
+
+
+def _text(fragment: str) -> str:
+    # \ufffd: a character the site's own page could not encode reads as a plain dash rather than a box
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", fragment or "")).replace("\ufffd", "-")).strip()
+
+
+def _blocks(fragment: str) -> list[str]:
+    """The text of a page part, one entry per block (div, p, heading, list item, line break): for pages whose text is not in <p>
+    (Senso's policy pages put it straight into <div>s under <h5> headings)."""
+    flat = re.sub(r"\s+", " ", clean_html(fragment))  # the page's own line breaks are not blocks
+    marked = re.sub(r"<(?:/?(?:div|p|li|ul|ol|section|h[1-6]|table|tr)|br)\b[^>]*>", "\n", flat, flags=re.I)
+    return [x for x in (_text(line) for line in marked.split("\n")) if x]
+
+
+def _meta(page: str, prop: str) -> str | None:
+    m = re.search(rf'<meta[^>]+(?:property|name)="{prop}"[^>]+content="([^"]*)"', page, re.I)
+    return html.unescape(m.group(1)).strip() if m else None
+
+
+def _ld_product(page: str) -> dict:
+    """schema.org Product from the page's JSON-LD, when it has one (most shops do; Senso's is broken)."""
+    for block in re.findall(r'<script[^>]+application/ld\+json[^>]*>([\s\S]*?)</script>', page, re.I):
+        try:
+            data = json.loads(block.strip())
+        except ValueError:
+            continue
+        items = data.get("@graph", [data]) if isinstance(data, dict) else data if isinstance(data, list) else []
+        for it in items:
+            kind = it.get("@type") if isinstance(it, dict) else None
+            if kind == "Product" or (isinstance(kind, list) and "Product" in kind):
+                return it
+    return {}
+
+
+def site_product_urls(base: str, get: Getter) -> list[str]:
+    """Product pages from the site's sitemaps: /product/<x>, /products/<x>, /my-product/<x> and the like."""
+    host = urlparse(base).netloc.replace("www.", "")
+    queue, seen, pages = [f"{base}/sitemap.xml", f"{base}/sitemap_index.xml", f"{base}/wp-sitemap.xml", f"{base}/product-sitemap.xml"], set(), []
+    while queue and len(seen) < 15:
+        sm = queue.pop(0)
+        if sm in seen:
+            continue
+        seen.add(sm)
+        status, _, body = get(sm)
+        if status != 200:
+            continue
+        text = body.decode("utf-8", "replace")
+        locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", text)
+        if "<sitemapindex" in text:
+            queue += sorted(locs, key=lambda u: "product" not in u)  # the product sitemaps first
+        else:
+            pages += locs
+    found = []
+    for u in pages:
+        pu = urlparse(u)
+        parts = [x for x in pu.path.split("/") if x]
+        if pu.netloc.replace("www.", "") == host and len(parts) >= 2 and re.search(r"product", parts[-2], re.I) and u not in found:
+            found.append(u)
+    return found[:MAX_SITE_PRODUCTS]
+
+
+def site_product(url: str, page: str, brand_name: str) -> dict | None:
+    """One product page as /products.json would show it (one variant), or None when the page names no product."""
+    ld = _ld_product(page)
+    h1 = re.search(r"<h1[^>]*>([\s\S]*?)</h1>", page, re.I)
+    name = str(ld.get("name") or (_text(h1.group(1)) if h1 else "") or _meta(page, "og:title") or "").strip()
+    if not name:
+        return None
+    cut = _RELATED.search(page)
+    main = page[:cut.start()] if cut else page
+    summary = _text(str(ld.get("description") or "")) or _meta(page, "description") or _meta(page, "og:description") or ""
+    features: list[str] = []
+    for head in re.finditer(r"<h[2-4][^>]*>([\s\S]*?)</h[2-4]>", main, re.I):
+        if _FEATURES.search(_text(head.group(1))):
+            section = main[head.end():]
+            nxt = re.search(r"<h2[^>]*>", section, re.I)
+            section = section[:nxt.start()] if nxt else section
+            features = [x for x in (_text(f) for f in re.findall(r"<(?:li|p)[^>]*>([\s\S]*?)</(?:li|p)>", section, re.I)) if 2 < len(x) < 200][:12]
+            break
+    body = (f"<p>{html.escape(summary)}</p>" if summary else "") + (
+        "<ul>" + "".join(f"<li>{html.escape(f)}</li>" for f in features) + "</ul>" if features else "")
+    srcs = []
+    ld_img = ld.get("image")
+    for s in (ld_img if isinstance(ld_img, list) else [ld_img] if ld_img else []):
+        srcs.append(s.get("url") if isinstance(s, dict) else s)
+    srcs.append(_meta(page, "og:image"))
+    found = re.findall(r'<img[^>]+src="([^"]+)"', main, re.I)
+    counts = {u: found.count(u) for u in found}
+    srcs += [u for u in found if counts[u] < 3]  # a picture repeated three times is an icon (Senso: the feature ticks)
+    images, seen = [], set()
+    for s in srcs:
+        s = html.unescape(str(s or "")).strip()
+        if s.startswith("//"):
+            s = "https:" + s
+        if not s.startswith("https://") or s in seen or _NOT_PRODUCT_PICTURE.search(file_name(s)) or not re.search(r"\.(jpe?g|png|webp)(\?|$)", s, re.I):
+            continue
+        seen.add(s)
+        images.append({"src": s, "alt": name})
+    offer = ld.get("offers") or {}
+    offer = offer[0] if isinstance(offer, list) and offer else offer
+    price = str(offer.get("price") or "") if isinstance(offer, dict) else ""
+    price = price if re.fullmatch(r"\d{1,9}(\.\d{1,4})?", price) else ""
+    slug = [x for x in urlparse(url).path.split("/") if x][-1].lower()
+    handle = slug if re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug) else re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:200]
+    return {"handle": handle, "title": name, "body_html": body, "vendor": brand_name, "product_type": "",
+            "tags": [] if price else [PRICE_TAG], "options": [{"name": "Title", "position": 1, "values": ["Default Title"]}],
+            "variants": [{"option1": "Default Title", "price": price or "0.00", "sku": str(ld.get("sku") or "")}],
+            "images": images[:8], "source": url, "price_needed": not price}
+
+
+def site_policies(base: str, get: Getter) -> dict:
+    out = {}
+    for ptype, slugs in SITE_POLICIES.items():
+        for slug in slugs:
+            status, _, body = get(f"{base}/{slug}/")
+            if status != 200:
+                continue
+            page = body.decode("utf-8", "replace")
+            m = (re.search(r"<main[^>]*>([\s\S]*?)</main>", page, re.I) or re.search(r"<article[^>]*>([\s\S]*?)</article>", page, re.I)
+                 or re.search(r'class="[^"]*entry-content[^"]*"[^>]*>([\s\S]*?)</div>\s*</div>', page, re.I)
+                 or re.search(r"</header>([\s\S]*?)<footer", page, re.I))  # a theme without main / article (Senso): the page body
+            if not m:
+                continue
+            blocks = [x for x in (_text(b) for b in re.findall(r"<(?:p|li|h[2-4])[^>]*>([\s\S]*?)</(?:p|li|h[2-4])>", clean_html(m.group(1)), re.I)) if x]
+            if len(" ".join(blocks)) <= 200:
+                blocks = _blocks(m.group(1))
+            text = "".join(f"<p>{html.escape(b)}</p>" for b in blocks)
+            if len(" ".join(blocks)) > 200:
+                out[ptype] = {"body": text, "source": f"{base}/{slug}/"}
+                break
+    return out
+
+
+def read_site(link: str, get: Getter = http_get, pause: Callable[[], None] = lambda: time.sleep(0.25)) -> dict:
+    """A brand whose website is not a Shopify store: its product pages, read one by one, and its policy pages."""
+    base = base_url(link)
+    status, _, body = get(base + "/")
+    home = body.decode("utf-8", "replace") if status == 200 else ""
+    title = re.search(r"<title[^>]*>([\s\S]*?)</title>", home, re.I)
+    name = _meta(home, "og:site_name") or (_text(title.group(1)).split("|")[-1].split(" - ")[-1].strip() if title else "") or urlparse(base).netloc
+    products, unreadable = [], []
+    for url in site_product_urls(base, get):
+        st, _, pb = get(url)
+        pause()
+        item = site_product(url, pb.decode("utf-8", "replace"), name) if st == 200 else None
+        if item and item["handle"] not in {x["handle"] for x in products}:
+            products.append(item)
+        elif not item:
+            unreadable.append(url)
+    if not products:
+        raise ValueError(f"{base} shows no product pages to read (no Shopify catalogue, and no /product/... pages in its sitemap)")
+    if len(products) >= 5:  # a picture on 4+ different products is a site badge or banner, not a product photo (Senso: wc-2.png,
+        shared = {i["src"] for p in products for i in p["images"]}  # 100-natural.png, Easily-soluble.png)
+        common = {s for s in shared if sum(any(i["src"] == s for i in p["images"]) for p in products) >= 4}
+        for p in products:
+            own = [i for i in p["images"] if i["src"] not in common]
+            p["images"] = own or p["images"][:1]
+    return {"base": base, "name": name, "platform": "website", "products": products, "collections": [], "more_collections": 0,
+            "policies": site_policies(base, get), "unreadable_pages": unreadable}
+
+
 # ---------------------------------------------------------------------------------------------------------- reading the brand
 def read_brand(link: str, get: Getter = http_get, pause: Callable[[], None] = lambda: time.sleep(0.25)) -> dict:
     base = base_url(link)
@@ -114,7 +291,7 @@ def read_brand(link: str, get: Getter = http_get, pause: Callable[[], None] = la
         if len(items) < 250:
             break
     if not products:
-        raise ValueError(f"{base} shows no public products (/products.json): it is not a Shopify store, or it hides its catalogue")
+        return read_site(link, get, pause)  # not a Shopify catalogue: the brand's own product pages instead
     known = {p.get("handle") for p in products}
     collections, more = [], 0
     for c in (_json(get, f"{base}/collections.json?limit=250") or {}).get("collections") or []:
@@ -216,7 +393,8 @@ def read_target(client, get: Getter = http_get) -> dict:
 
 
 def make_plan(brand: dict, target: dict, brand_currency: str | None = None) -> dict:
-    status = "ACTIVE" if target["password"] else "DRAFT"
+    needs_price = [p["handle"] for p in brand["products"] if p.get("price_needed")]
+    status = "ACTIVE" if target["password"] and not needs_price else "DRAFT"
     have_p, have_c = set(target["products"]), set(target["collections"])
     products, skipped, no_price = [], [], []
     for p in brand["products"]:
@@ -238,8 +416,13 @@ def make_plan(brand: dict, target: dict, brand_currency: str | None = None) -> d
                      f"{target['store']} --scopes {SCOPES}, then plan again)")
     if brand_currency and target["currency"] and brand_currency != target["currency"]:
         notes.append(f"prices are the brand's numbers in {brand_currency}; {target['store']} sells in {target['currency']} (not converted)")
-    if status == "DRAFT":
+    if needs_price:
+        notes.append(f"the brand's website shows no price for {len(needs_price)} products: everything goes in as hidden drafts, those at "
+                     f"0.00 with the tag {PRICE_TAG}; set each price in Shopify admin before they show")
+    if not target["password"]:
         notes.append(f"{target['store']} is open to the public (no password page), so the products go in as DRAFT")
+    if brand.get("unreadable_pages"):
+        notes.append(f"{len(brand['unreadable_pages'])} product pages could not be read and are left out")
     if brand.get("more_collections"):
         notes.append(f"{brand['more_collections']} more collections left out (the first {MAX_COLLECTIONS} with products are copied)")
     if not target["online_store"] and status == "ACTIVE":
