@@ -22,6 +22,41 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 22 Oct 2026 (later): STORE ASSETS: NICHE RESEARCH, CHATGPT PICTURES, SAMPLE PRICES, HANDOVER (branch `feature/store-assets`, account A)
+Harsh, 22 Oct 2026: sample prices and details are allowed ("we will change it later"); pictures only after studying the top 5
+D2C, Meta-ad-led competitors of the niche (never the giants: for Senso, never Wagh Bakri / Red Label / Taj), made with ChatGPT
+(a ChatGPT command hosted on the Hostinger VPS) from our own product photos; Telegram asks first whether to make pictures; hand
+over a store that is ready to sell.
+- **Telegram:** after the source question, "Should ChatGPT make new pictures?" The options are per source:
+  - samples: all, or product pictures only;
+  - Drive: banners and extra product pictures, only banners, or none;
+  - website or this store: only banners, or none.
+- **`store_job.py assets`** (assets.json written by the session, skill step 1b):
+  - Pictures are refused without `research` (3+ brands read, `provision/niche_assets.py`) and a written `style` study.
+  - Our photos go in as `refs`; ChatGPT's pictures come after the brand's own.
+  - Sample prices (`dtj-sample-price`) come from `niche_assets.sample_price` within the niche's real range. Sample descriptions
+    are tagged `dtj-sample-text`.
+- **Prices question:** "Use the sample prices" / type / leave at 0.00.
+- **`finish`:** writes `.work/stores/<job>/handover.md` and sends the short part to Telegram. It covers what is in the store,
+  every sample to replace, and the owner's settings: payments, shipping, GST, domain, store details, policies, menus, launch, ads.
+- **`provision/ai_images.py` order:**
+  1. the VPS: `DTJ_IMAGE_VPS` (ssh/scp to `reel_factory.chatgpt_cli`, the logged-in Chrome);
+  2. the OpenAI API, with `/images/edits` for refs;
+  3. a local ChatGPT.
+- CLAUDE.md rule 5 has the store-build sample exception (offers, claims, reviews and policies stay never).
+- **VERIFIED:**
+  - tests: store-factory 182, store-builder all OK (1 skipped), install service 24, reel-factory OK;
+  - niche_assets live on Blue Tea India (read only): 4 banners, 3 best sellers, 9 pictures, prices 599 / 719 / 1349.
+- **NOT VERIFIED:** the VPS route and the OpenAI edits call (no VPS access from this laptop, no key); a full run.
+- **BLOCKED:** reading the VPS from this laptop. `ssh ai@srv2048145.hstgr.cloud` is refused (the laptop key is not in
+  /home/ai/.ssh/authorized_keys). A root read was refused by Claude Code's auto-mode check ("Production Reads"); it was not
+  worked around.
+- **OPEN for Harsh:** set up the VPS route once (services/reel-factory/README.md, "VPS picture route"):
+  - the repo at ~/dtj-agency-automation as user ai, Playwright, and the logged-in Chrome on port 9222;
+  - the laptop's public key for user ai;
+  - `DTJ_IMAGE_VPS=ai@srv2048145.hstgr.cloud` on the laptop.
+  The earlier items stand: "yes, deploy" for the install service, then Senso's activate, and a test Drive folder.
+
 ## 22 Oct 2026: AI STORE CREATION: REDESIGN OR NEW STORE (PR #37 merged, branch `feature/ai-store-creation`, account A)
 Harsh, 22 Oct 2026: "it starts and asks if it is a redesign or new store development" and "all the products will stay active none of
 them will be kept as draft".
