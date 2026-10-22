@@ -58,7 +58,7 @@ class Lint(unittest.TestCase):
 class Request(unittest.TestCase):
     def test_missing_fields(self):
         self.assertEqual(len(job.check_request({})), 4)
-        self.assertIn("language must be one of ('en', 'hi', 'hinglish')",
+        self.assertIn(f"language must be one of {job.LANGS}",
                       job.check_request({"product_name": "x", "product_images": ["a"], "reference_reels": ["b"], "language": "de"}))
 
 

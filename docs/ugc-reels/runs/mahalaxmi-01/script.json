@@ -89,7 +89,8 @@
    "product": true,
    "line": "હવે અમારા રસોડામાં આ જ મસાલા આવે છે. તમે પણ એક વાર મહાલક્ષ્મી ટ્રાય કરો!",
    "image_prompt": "The same woman on the same sofa leaning slightly forward, the three Mahalaxmi packets standing on the coffee table in front of her, labels to camera and readable, big friendly smile, pointing at the lens with one finger. Phone propped, soft window light, phone grain.",
-   "video_prompt": "Phone propped on a table. The three packets stand still on the table in front of her for the whole clip, labels to camera, never move. The same woman leans in, smiles and says in natural Gujarati: \"હવે અમારા રસોડામાં આ જ મસાલા આવે છે. તમે પણ એક વાર મહાલક્ષ્મી ટ્રાય કરો!\" Room tone only. She finishes with a smile and holds."
+   "video_prompt": "Phone propped on a table. The three packets stand still on the table in front of her for the whole clip, labels to camera, never move. The same woman leans in, smiles and says in natural Gujarati: \"હવે અમારા રસોડામાં આ જ મસાલા આવે છે. તમે પણ એક વાર મહાલક્ષ્મી ટ્રાય કરો!\" Room tone only. She finishes with a smile and holds.",
+   "caption": "top"
   }
  ]
 }

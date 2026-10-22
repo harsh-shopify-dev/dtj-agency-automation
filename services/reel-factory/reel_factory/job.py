@@ -407,7 +407,8 @@ def stage_edit(job: Job) -> int:
     for i, s in enumerate(script["shots"]):
         p = picks[s["id"]]
         take = next((t for t in clips.get(s["id"], []) if t.get("clean") == p["take"]), {})
-        heard = take.get("words") or []
+        # A shot with no line has no speech, whatever Whisper "hears" (mahalaxmi-01: it echoed its prompt over sizzle sounds)
+        heard = (take.get("words") or []) if str(s.get("line", "")).strip() else []
         dur = duration(p["take"])
         sp = (heard[0][1], heard[-1][2]) if heard else None
         start = p.get("start", max(0.0, sp[0] - 0.25) if sp else 0.0)
@@ -415,6 +416,7 @@ def stage_edit(job: Job) -> int:
         # "caption": "top" | "bottom" in the script overrides the tracker (it cannot find a 3D-rendered box on an animated reel)
         place = s.get("caption") or caption_place(p["take"], tracker if s.get("product") else None)
         plan_clips.append({"file": p["take"], "start": round(start, 2), "end": round(min(end, dur), 2), "max_end": round(dur, 3),
+                           "fixed": "start" in p or "end" in p,
                            "cap_margin": -1 if s.get("no_captions") else (TOP_MARK if place == "top" else BOTTOM_MARK)})
         speech.append(sp); heard_by_shot.append(heard)
     music = (req["local"].get("music") or [None])[0]

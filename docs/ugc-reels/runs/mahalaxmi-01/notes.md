@@ -1,4 +1,4 @@
-# mahalaxmi-01: Mahalaxmi Masala, Gujarati testimonial reel (22 Oct 2026, PAUSED)
+# mahalaxmi-01: Mahalaxmi Masala, Gujarati testimonial reel (22 Oct 2026, DONE)
 
 Concept: Two Brothers Organic Farms reel #4 (Khapli flour, 166 days live): a woman at home talks to her propped phone
 holding the pack, with black-and-white "before" cut-ins. Library: `Downloads/dtj-reel-library/spices/` (47 ads).
@@ -15,3 +15,11 @@ Done:
 Left: `job check` (was running; it skips takes already done, re-run to finish), pick one take per shot by eye at 4 fps,
 `job edit` (Gujarati captions need a Gujarati font check), watch, deliver.
 Pausing note: the browser pane can sign Flow out on restart; a person signs in again.
+
+## Result (22 Oct 2026, 23:30)
+`Downloads/dtj-ugc-mahalaxmi-01/final/reel_final.mp4`: 49.6 s, 1080x1920, -14.0 LUFS, Remotion captions in Gujarati script
+(fallback font Nirmala UI / Noto Sans Gujarati), flute music. Picks: s1_a, s2_a (0-3.2 s), s3_a, s4_a, s5_b, s6_b, s7_b (1.5-5.0 s), s8_a (0-7.8 s).
+Captions at the top on the pack shots (s3-s6, s8). Watched at 1.25 fps: lines in sync, packs steady and readable.
+Fixed on the way: Whisper echoes its prompt on Gujarati/silence (shots with no line now have no speech); a person's trim is
+never moved by beat-sync; caption font fallback for Indian scripts; language gu.
+Time: ~2 h 10 m of work (log in the session); ~45 min avoidable (Flow sign-out, checking all 16 takes, the edit bug).
