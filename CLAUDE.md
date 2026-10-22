@@ -32,6 +32,10 @@ Harsh (developer). Explain things in plain, founder-friendly language. Lead with
 3. **Shadow first.** New automations only recommend until Harsh moves them up.
 4. **Numbers come from code.** Never invent or estimate a metric. Every figure must come from a stored query or file and name its source. If you do not have it, say "not available".
 5. **Never fabricate** offers, prices, claims, reviews or policies. Mark unknowns clearly.
+   **Store builds only (Harsh, 22 Oct 2026: "you can add any price, compare price, etc. because we will change it later"):** a
+   product with no price or description gets a sample price (from the niche's real price range), compare-at price and details,
+   always tagged `dtj-sample-price` / `dtj-sample-text` / `dtj-sample` and listed in the store's handover. Offers, claims, reviews
+   and policies stay never.
 6. **Secrets:** never put an API key or token in code, workflow JSON, HTML, logs or chat. Use environment variables or the vault. Do not open `.env` files.
 7. **Git:** work on a feature branch and open a pull request. Never commit to `main`, never force-push.
 8. **Webhooks:** verify the signature and validate the JSON Schema first. Malformed input goes to the dead-letter queue and nothing downstream runs.

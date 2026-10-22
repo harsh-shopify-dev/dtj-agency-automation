@@ -66,6 +66,16 @@ DRIVE_HOW = ("Send the Google Drive folder link. Share the folder first: Share >
              "product: a \"Details\" doc with Price, Sizes, Collection, Description + pictures 1.jpg, 2.jpg ...), <b>3 Banners</b> "
              "(optional) and <b>4 Policies</b> (optional).")
 SAMPLE_COUNTS = (3, 6, 9, 12)
+SAMPLE_TAG, SAMPLE_PRICE_TAG, SAMPLE_TEXT_TAG = "dtj-sample", "dtj-sample-price", "dtj-sample-text"
+# which pictures ChatGPT may make, per source (Harsh, 22 Oct 2026: "the telegram must ask for the follow up if the assets are needed
+# to generate or not"); products already in a store or copied from a website keep their own pictures, banners can always be made
+PICTURE_CHOICES = {
+    "samples": [("Product pictures and banners", "all"), ("Only product pictures", "products")],
+    "drive": [("Banners and extra product pictures", "all"), ("Only banners", "banners"), ("No: the folder's pictures are enough", "none")],
+    "site": [("Only banners", "banners"), ("No new pictures", "none")],
+    "self": [("Only banners", "banners"), ("No new pictures", "none")],
+}
+MIN_COMPETITORS = 3  # pictures are made only after at least 3 of the niche's D2C brands were read (Harsh asked for the top 5)
 PRICE_LINE = re.compile(r"^(.+?)\s*[=:\-\u2013]\s*(?:rs\.?|inr|\u20b9|\$)?\s*(\d{1,9}(?:\.\d{1,2})?)\s*$", re.I)
 CLAIM_WORDS = re.compile(r"\b(clinically|certified|certificate|cure[sd]?|guarantee[d]?|doctor|dermatologist|award|no\.?\s*1|number one|"
                          r"best[- ]selling|bestseller|proven|fda|iso|organic certified|\d+\s*%|reviews?|rated|stars?)\b", re.I)
@@ -230,8 +240,12 @@ class Job:
         p["brand"] = {"link": br["base"], "name": br["name"], "store": br.get("myshopify_domain"), "currency": br.get("currency"),
                       "product_count": br["product_count"]}
         p["copy"] = p["source"] != "self" and br.get("myshopify_domain") != sc["myshopify_domain"]
-        if p["kind"] == "new":  # the home page banners: the Drive folder's, else made with ChatGPT (Harsh, 22 Oct 2026)
-            p["banners"] = "drive" if br.get("banners") else "make"
+        got = a.choose("pictures", "Should ChatGPT make new pictures for this store? First I study 5 D2C brands of this niche that grow "
+                                   "on Meta ads (never the big names), then make ours from your own product photos.",
+                       PICTURE_CHOICES[p["source"]], minutes)
+        if not got:
+            return WAITING
+        p["pictures"] = got["value"]
         got = a.choose("whose", f"Whose store is <b>{esc(sc['name'])}</b> ({esc(sc['myshopify_domain'])})?",
                        [("A client's store", "client"), ("DTJ's own store", "dtj")], minutes)
         if not got:
@@ -397,8 +411,8 @@ class Job:
                           "herbal hair oils for women")
         if not sells:
             return WAITING
-        got = a.choose("sample_count", "How many sample products? ChatGPT makes their pictures; every one is marked as a sample and "
-                                       "goes in at 0.00 (I never make up a price).", [(str(n), str(n)) for n in SAMPLE_COUNTS], minutes)
+        got = a.choose("sample_count", "How many sample products? Each gets sample details and a sample price from what the niche's "
+                                       "D2C brands charge, tagged to change later.", [(str(n), str(n)) for n in SAMPLE_COUNTS], minutes)
         if not got:
             return WAITING
         s["brand"] = {"source": "samples", "link": s["link"], "base": s["link"], "myshopify_domain": None,
@@ -409,52 +423,99 @@ class Job:
         self.save()
         return None
 
-    # ---- a new store: the samples and the banners (Harsh, 22 Oct 2026: "if not then it will create some sample products to complete
-    # the work and on a complete new store designing we will use chatgpt to generate banners and product images")
+    # ---- the store's assets: sample products, sample prices and texts, and the pictures ChatGPT makes (Harsh, 22 Oct 2026: "if not
+    # then it will create some sample products", "you can add any price, compare price, etc. because we will change it later ... add
+    # sample details if not available", and pictures only after the niche's D2C brands are studied, from our own product photos)
     def assets(self, path: Path) -> int:
-        """The file the session wrote (skill dtj-new-store): {"products": [{"title", "description", "collection", "pictures":
-        [prompt, ...]}], "banners": [prompt, ...]}. Samples only for a samples store and never with a price or a claim; banners only
-        when the store has none yet. Each picture is made once (a rerun keeps what is made), then the brand is updated so `copy`
-        adds the samples (tags dtj-sample and dtj-price-needed, ACTIVE at 0.00)."""
+        """The file the session wrote (skill dtj-new-store, step 1b):
+            {"research": "<niche.json from provision/niche_assets.py>", "style": "<what the niche's pictures do, and our plan>",
+             "products": [{"title", "description", "collection", "price", "compare_at_price", "pictures": [prompt, ...]}],
+             "pictures": [{"for": "<handle>", "prompt", "refs": [our product photos], "kind": "lifestyle" | "product"}],
+             "banners": [{"prompt", "refs": [...]}, ...],
+             "sample_prices": {"<handle>": {"price", "compare_at_price"}}, "descriptions": {"<handle>": "<text>"}}
+        Sample products only for a samples store; sample prices and descriptions only for products that have none; everything
+        sample is tagged (dtj-sample, dtj-sample-price, dtj-sample-text) so it is found and replaced. Pictures only as far as the
+        person's pictures answer allows, and only after the research read at least MIN_COMPETITORS brands; competitors' pictures
+        are studied, never uploaded to the picture maker. Each picture is made once (a rerun keeps what is made)."""
         self.need_plan()
         s, p, a = self.s, self.s["plan"], self.ask
-        if p.get("kind") != "new":
-            raise SystemExit("assets is for a new store only: a redesign keeps the brand's own products and pictures")
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-        br, out = s["brand"], self.dir / "assets"
+        br, out, want = s["brand"], self.dir / "assets", p.get("pictures", "none")
         items = data.get("products") or []
         if items and p["source"] != "samples":
-            raise SystemExit("products come from the Drive folder for this store: the file may only hold banners")
-        if p["source"] == "samples" and not br["products"]:
+            raise SystemExit("sample products are only for a store whose products are samples")
+        new_samples = p["source"] == "samples" and not br.get("products")
+        if new_samples:
             why = sample_problems(items, br["product_count"])
             if why:
                 raise SystemExit("the samples file is refused: " + "; ".join(why))
-        banners = [] if br.get("banners") else [str(x) for x in data.get("banners") or []][:5]
-        jobs = [("product", prompt, out / f"{slug(x['title'])}-{i}.png") for x in (items if not br["products"] else [])
-                for i, prompt in enumerate(x["pictures"][:3], 1)] + [("banner", b, out / f"banner-{i}.png") for i, b in enumerate(banners, 1)]
-        for n, (kind, prompt, f) in enumerate(jobs, 1):
+        products = {x["handle"]: x for x in br.get("products") or []}
+        extra = [x for x in data.get("pictures") or []] if want == "all" and p["source"] == "drive" else []
+        banners = [] if br.get("banners") or want not in ("all", "banners") else [
+            b if isinstance(b, dict) else {"prompt": str(b)} for b in data.get("banners") or []][:5]
+        jobs = [("product", prompt, out / f"{slug(x['title'])}-{i}.png", []) for x in (items if new_samples and want in ("all", "products") else [])
+                for i, prompt in enumerate(x["pictures"][:3], 1)]
+        for i, x in enumerate(extra, 1):
+            refs = [str(r) for r in x.get("refs") or []]
+            if x.get("for") not in products or not str(x.get("prompt") or "").strip() or not all(Path(r).exists() for r in refs):
+                raise SystemExit(f"picture {i}: \"for\" must be one of this store's products, with a prompt and refs that exist here")
+            jobs.append((x.get("kind") if x.get("kind") in ("product", "lifestyle") else "lifestyle", x["prompt"],
+                         out / f"{x['for']}-ai-{i}.png", refs))
+        jobs += [("banner", b["prompt"], out / f"banner-{i}.png", [str(r) for r in b.get("refs") or []]) for i, b in enumerate(banners, 1)]
+        if jobs:
+            why = research_problems(data.get("research"), data.get("style"))
+            if why:
+                raise SystemExit("no pictures before the niche research: " + "; ".join(why))
+            s["research"] = {"file": str(data["research"]), "style": str(data["style"])[:1500]}
+        for n, (kind, prompt, f, refs) in enumerate(jobs, 1):
             if not f.exists():
                 try:
-                    self.picture(kind, prompt, f)
-                except Exception as exc:  # noqa: BLE001 - no key, a refused prompt, ChatGPT not answering: said in Telegram
+                    self.picture(kind, prompt, f, [Path(r) for r in refs])
+                except Exception as exc:  # noqa: BLE001 - no route, a refused prompt, ChatGPT not answering: said in Telegram
                     a.tell(f"I could not make the pictures: {esc(str(exc)[:300])}")
                     return self.stop(f"a picture could not be made: {str(exc)[:200]}")
             self.bar("assets", n, len(jobs))
-        if items and not br["products"]:
-            br["products"] = sample_products(items, br["name"], out)
+        made = s.setdefault("made_pictures", [])
+        made += [str(f) for _, _, f, _ in jobs if str(f) not in made]
+        if new_samples:
+            br["products"] = sample_products(items, br["name"], out, with_pictures=want in ("all", "products"))
             br["best_sellers"] = [{"handle": x["handle"], "title": x["title"], "url": ""} for x in br["products"]]
             br["collections"] = collections_of(items, br["products"])
             br["collection_count"] = len(br["collections"])
             br["product_count"] = len(br["products"])
             p["products"] = [{"handle": x["handle"], "title": x["title"], "url": ""} for x in br["products"][:p.get("product_pages", 0)]]
+        for i, x in enumerate(extra, 1):  # ChatGPT's pictures after the brand's own
+            f = str(out / f"{x['for']}-ai-{i}.png")
+            if f not in [img.get("path") for img in products[x["for"]].get("images") or []]:
+                products[x["for"]].setdefault("images", []).append({"path": f, "alt": products[x["for"]]["title"]})
         if banners:
             br["banners"] = [str(out / f"banner-{i}.png") for i in range(1, len(banners) + 1)]
+        texts = 0
+        for h, text in (data.get("descriptions") or {}).items():
+            x = products.get(h)
+            if x and not re.sub(r"<[^>]+>|\s", "", x.get("body_html") or "") and 20 <= len(str(text)) <= 2000 and not CLAIM_WORDS.search(str(text)):
+                x["body_html"] = "".join(f"<p>{html.escape(t.strip())}</p>" for t in str(text).split("\n") if t.strip())
+                x["tags"] = [*(x.get("tags") or []), SAMPLE_TEXT_TAG]
+                texts += 1
+        sample_prices, refused = {}, []
+        unpriced = {x["handle"] for x in products.values() if x.get("price_needed")} if p["source"] == "drive" else {
+            x["handle"] for x in br.get("best_sellers") or []}
+        for h, v in (data.get("sample_prices") or {}).items():
+            price, cap = money(v.get("price")), money(v.get("compare_at_price"))
+            if h in unpriced and price and float(price) > 0:
+                sample_prices[h] = {"price": price, "compare_at_price": cap if cap and float(cap) > float(price) else None}
+            else:
+                refused.append(h)
+        if sample_prices:
+            p["sample_prices"] = sample_prices
         self.save()
-        a.tell(f"Made with ChatGPT for <b>{esc(br['name'])}</b>: "
-               + (f"{len(items)} sample products ({sum(min(len(x['pictures']), 3) for x in items)} pictures)" if items else "")
-               + (" and " if items and banners else "") + (f"{len(banners)} home page banners" if banners else "")
-               + ". They are samples: swap in the brand's own before the store goes live.")
-        self.out(json.dumps({"products": len(br["products"]), "banners": br.get("banners") or []}))
+        said = [f"{len(items)} sample products" if new_samples else "", f"{len(jobs)} pictures made with ChatGPT" if jobs else "",
+                f"sample prices for {len(sample_prices)} products" if sample_prices else "", f"{texts} sample descriptions" if texts else ""]
+        a.tell(f"Ready for <b>{esc(br['name'])}</b>: " + (", ".join(x for x in said if x) or "nothing new") + ". Everything sample is "
+               "tagged (dtj-sample, dtj-sample-price, dtj-sample-text) and listed in the handover, to replace before launch."
+               + (f"\nSample prices refused for: {esc(', '.join(refused[:10]))}" if refused else ""))
+        self.out(json.dumps({"products": len(br.get("products") or []), "pictures": len(jobs), "banners": br.get("banners") or [],
+                             "sample_prices": len(sample_prices), "descriptions": texts}))
         return 0
 
     def stop(self, why: str) -> int:
@@ -588,9 +649,10 @@ class Job:
             self.ask.sleep(20)
 
     def prices(self, minutes: float) -> int | None:
-        """Products without a price (a website that shows none, a Drive folder without one, every sample): the person may type them
-        now (Harsh, 22 Oct 2026: every product ACTIVE; a price is never made up, so the rest go in at 0.00 with dtj-price-needed).
-        None = go on; else the exit code."""
+        """Products without a price (a website that shows none, a Drive folder without one): the sample prices from the niche's
+        prices (Harsh, 22 Oct 2026: "you can add any price, compare price, etc. because we will change it later"; tagged
+        dtj-sample-price), the person's typed prices, or 0.00 with dtj-price-needed. Every product ACTIVE. None = go on; else the
+        exit code."""
         s, p, a = self.s, self.s["plan"], self.ask
         br = s["brand"]
         if p.get("source") in ("drive", "samples"):
@@ -601,12 +663,20 @@ class Job:
             unpriced = [None] * max(0, br["product_count"] - br.get("prices", br["product_count"]))
         if not unpriced:
             return None
-        got = a.choose("prices", f"{len(unpriced)} products have no price. They go in ACTIVE at 0.00 with the tag dtj-price-needed "
-                                 "unless you send the prices now.", [("I'll type the prices", "type"), ("Leave them at 0.00", "later")],
-                       minutes)
+        sample = p.get("sample_prices") or {}
+        got = a.choose("prices", f"{len(unpriced)} products have no price."
+                       + (f" I have sample prices for {len(sample)} of them, from what the niche's D2C brands charge, tagged "
+                          "dtj-sample-price to change later." if sample else "")
+                       + " Without a price a product goes in ACTIVE at 0.00 with the tag dtj-price-needed.",
+                       ([("Use the sample prices", "sample")] if sample else []) + [("I'll type the prices", "type"),
+                                                                                    ("Leave them at 0.00", "later")], minutes)
         if not got:
             return WAITING
         if got["value"] == "later" or "prices" in p:
+            return None
+        if got["value"] == "sample":
+            p["prices"] = {h: dict(v, sample=True) for h, v in sample.items()}
+            self.save()
             return None
         got = a.type_in("prices_typed", "One line per product: its name = price, for example\nMasala Chai = 249", minutes,
                         "Masala Chai = 249")
@@ -621,11 +691,13 @@ class Job:
                 continue
             hit, miss, _ = match_products([m.group(1)], sellers)
             if hit:
-                prices[hit[0]["handle"]] = m.group(2)
+                prices[hit[0]["handle"]] = {"price": m.group(2), "compare_at_price": None, "sample": False}
             left += miss
-        p["prices"] = prices
+        typed = len(prices)
+        p["prices"] = {**{h: dict(v, sample=True) for h, v in sample.items()}, **prices}  # typed wins; samples fill the rest
         self.save()
-        a.tell(f"Prices noted for {len(prices)} products." + ("".join(f"\n- {esc(x)}" for x in left[:12]) if left else ""))
+        a.tell(f"Prices noted for {typed} products" + (f", sample prices for {len(p['prices']) - typed} more" if len(p["prices"]) > typed
+                                                       else "") + "." + ("".join(f"\n- {esc(x)}" for x in left[:12]) if left else ""))
         return None
 
     def activate(self, approved_by: str, handles: list[str]) -> int:
@@ -769,10 +841,55 @@ class Job:
                 "pages": [{"part": w["part"], "preview": w["preview"]} for w in written][:40], "note": note[:700]}
         self.dir.mkdir(parents=True, exist_ok=True)
         (self.dir / "answer.json").write_text(json.dumps(body, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        text = self.handover()
+        (self.dir / "handover.md").write_text(text, encoding="utf-8")
+        if self.s.get("chat"):
+            self.ask.tell(esc(text.split("\n## The store owner")[0].replace("# ", "", 1))[:3500] + "\n\nThe full list (with the owner's "
+                          "settings) is in the handover file.")
         if self.progress:
             self.progress.finish(status == "done", f"{self.s.get('name', '')}: {status}" + (f". {note[:200]}" if note else ""))
-        self.out(f"answer for n8n: {self.dir / 'answer.json'}")
+        self.out(f"answer for n8n: {self.dir / 'answer.json'}; handover: {self.dir / 'handover.md'}")
         return 0
+
+    def handover(self) -> str:
+        """What is in the store, what is sample, and what only the owner can set (Harsh, 22 Oct 2026: "we have to handover a product
+        ready shopify store so if anything is missed by me you will cover it"). Counts come from this job's own records."""
+        s, p = self.s, self.s.get("plan") or {}
+        br, done = s.get("brand") or {}, (s.get("copy_result") or {}).get("done") or {}
+        prods = br.get("products") or []
+        tagged = lambda tag: [x["title"] for x in prods if tag in (x.get("tags") or [])]  # noqa: E731
+        sample_priced = sorted(h for h, v in (p.get("prices") or {}).items() if v.get("sample"))
+        draft = s.get("draft") or {}
+        lines = [f"# {s.get('name', '')}: handover, {self.today()}", "", "## In the store now"]
+        if draft:
+            lines.append(f"- Draft theme: {draft.get('name')} ({draft.get('id')}), unpublished: the live store has not changed")
+        if s.get("copy_result"):
+            lines.append(f"- Added: {done.get('products', 0)} products (every one ACTIVE), {done.get('collections', 0)} collections, "
+                         f"{done.get('policies', 0)} policy pages")
+        lines += [f"- {w['part']}: {w['preview']}" for w in s.get("written") or []] or ["- No page written yet"]
+        lines += ["", "## Samples to replace before launch"]
+        samples = [("Sample products", tagged(SAMPLE_TAG)), ("Sample prices (dtj-sample-price)", sample_priced + tagged(SAMPLE_PRICE_TAG)),
+                   ("Sample descriptions (dtj-sample-text)", tagged(SAMPLE_TEXT_TAG)),
+                   ("Pictures made by ChatGPT", [Path(x).name for x in s.get("made_pictures") or []])]
+        unpriced = [x["title"] for x in prods if x.get("price_needed") and x["handle"] not in (p.get("prices") or {})]
+        if unpriced:
+            samples.append(("No price yet, at 0.00 (dtj-price-needed)", unpriced))
+        for label, names in samples:
+            if names:
+                lines.append(f"- {label}: {len(set(names))} ({', '.join(sorted(set(names))[:8])}{', ...' if len(set(names)) > 8 else ''})")
+        if not any(names for _, names in samples):
+            lines.append("- None")
+        lines += ["", "## The store owner's settings (Shopify admin; DTJ does not change these)",
+                  "- Payments: a payment provider, and Cash on Delivery if the brand takes it",
+                  "- Shipping: zones and rates",
+                  "- Taxes: the GST details",
+                  "- Domain: connect the brand's own domain",
+                  "- Store details: the contact email, the sender email, phone and address",
+                  "- Policies: refund, shipping, privacy and terms (Settings > Policies), checked by the brand",
+                  "- Menus: the main menu and footer menu linking the collections (Online Store > Navigation)",
+                  "- Launch: a test order in test mode, then publish the draft theme and remove the password page (Harsh's yes)",
+                  "- Ads: the Meta pixel and the Google channel (DTJ's ads team)"]
+        return "\n".join(lines) + "\n"
 
 
 def _scan(link: str) -> dict:
@@ -872,9 +989,31 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")[:80] or "product"
 
 
+def money(v) -> str | None:
+    s = str(v if v is not None else "").replace(",", "").strip()
+    return s if re.fullmatch(r"\d{1,9}(\.\d{1,2})?", s) else None
+
+
+def research_problems(path, style) -> list[str]:
+    """Pictures wait for the niche research (Harsh, 22 Oct 2026: "ensuring you dont generate bad results you will search top 5
+    competitors in that brand niche"): its niche.json with at least MIN_COMPETITORS brands read, and the session's written study."""
+    why = []
+    try:
+        niche = json.loads(Path(str(path)).read_text(encoding="utf-8"))
+        read = [c for c in niche.get("competitors") or [] if c.get("banners") or any(x.get("pictures") for x in c.get("products") or [])]
+        if len(read) < MIN_COMPETITORS:
+            why.append(f"{len(read)} competitors read, at least {MIN_COMPETITORS} are needed")
+    except (OSError, ValueError, TypeError):
+        why.append("no research file: run provision.niche_assets on the niche's D2C brands first")
+    if len(str(style or "").strip()) < 80:
+        why.append("no \"style\": what the niche's pictures do and how ours will look (a few lines)")
+    return why
+
+
 def sample_problems(items: list, want: int) -> list[str]:
-    """Why a samples file cannot be used: the count asked for, a title, a description and 1-3 picture prompts each; never a price
-    (a price is never made up) and never a claim word (CLAUDE.md rule 5)."""
+    """Why a samples file cannot be used: the count asked for, a title, a description, a sample price (Harsh, 22 Oct 2026: "you
+    can add any price, compare price, etc. because we will change it later") and 1-3 picture prompts each; never a claim word
+    (CLAUDE.md rule 5)."""
     why = []
     if not 1 <= len(items) <= want:
         why.append(f"{len(items)} products, the person asked for {want}")
@@ -883,8 +1022,11 @@ def sample_problems(items: list, want: int) -> list[str]:
         if not isinstance(x, dict):
             why.append(f"product {i} is not an object")
             continue
-        if {"price", "prices", "compare_at_price", "mrp"} & set(x):
-            why.append(f"product {i} has a price: samples never get one")
+        price, cap = money(x.get("price")), money(x.get("compare_at_price"))
+        if not price or float(price) <= 0:
+            why.append(f"product {i}: a sample price (a number above 0)")
+        elif x.get("compare_at_price") not in (None, "") and (not cap or float(cap) <= float(price)):
+            why.append(f"product {i}: the compare-at price must be above the price")
         title, text = str(x.get("title") or "").strip(), str(x.get("description") or "").strip()
         if not title or len(title) > 80 or slug(title) in seen:
             why.append(f"product {i}: a title of 1-80 characters, not used twice")
@@ -899,18 +1041,19 @@ def sample_problems(items: list, want: int) -> list[str]:
     return why
 
 
-def sample_products(items: list, brand: str, out: Path) -> list[dict]:
-    """The samples in brand_copy's product shape (as /products.json shows one): no price, so 0.00 with the tags."""
-    from provision.brand_copy import PRICE_TAG  # noqa: PLC0415
+def sample_products(items: list, brand: str, out: Path, with_pictures: bool = True) -> list[dict]:
+    """The samples in brand_copy's product shape (as /products.json shows one), with their sample prices and both tags."""
     made = []
     for x in items:
         h = slug(x["title"])
         body = "".join(f"<p>{html.escape(para.strip())}</p>" for para in str(x["description"]).split("\n") if para.strip())
+        cap = money(x.get("compare_at_price"))
         made.append({"handle": h, "title": x["title"].strip(), "body_html": body, "vendor": brand, "product_type": "",
-                     "tags": ["dtj-sample", PRICE_TAG], "options": [{"name": "Title", "position": 1, "values": ["Default Title"]}],
-                     "variants": [{"option1": "Default Title", "price": "0.00", "sku": ""}], "price_needed": True,
-                     "images": [{"path": str(out / f"{h}-{i}.png"), "alt": x["title"].strip()} for i in range(1, min(len(x["pictures"]), 3) + 1)],
-                     "source": "sample (made by DTJ for the design)"})
+                     "tags": [SAMPLE_TAG, SAMPLE_PRICE_TAG], "options": [{"name": "Title", "position": 1, "values": ["Default Title"]}],
+                     "variants": [{"option1": "Default Title", "price": money(x["price"]), "compare_at_price": cap, "sku": ""}],
+                     "price_needed": False, "source": "sample (made by DTJ for the design)",
+                     "images": [{"path": str(out / f"{h}-{i}.png"), "alt": x["title"].strip()}
+                                for i in range(1, min(len(x["pictures"]), 3) + 1)] if with_pictures else []})
     return made
 
 
@@ -934,15 +1077,15 @@ def _drive(link: str, out: Path) -> dict:
     return br
 
 
-def _picture(kind: str, prompt: str, out: Path) -> dict:
-    """One picture made with ChatGPT's image model (provision/ai_images.py: OpenAI's API with DTJ's key, else ChatGPT in the reel
-    VPS's logged-in Chrome)."""
+def _picture(kind: str, prompt: str, out: Path, refs: list[Path] = ()) -> dict:
+    """One picture made with ChatGPT (provision/ai_images.py: the ChatGPT command on DTJ's VPS, else OpenAI's API with DTJ's key,
+    else a local logged-in ChatGPT), with our own product photos uploaded as references."""
     from provision import ai_images  # noqa: PLC0415
     route, why = ai_images.route()
     if not route:
         raise RuntimeError(why)
     out.parent.mkdir(parents=True, exist_ok=True)
-    return ai_images.make(kind, prompt, out, backend=route)
+    return ai_images.make(kind, prompt, out, backend=route, refs=list(refs))
 
 
 UPLOADABLE = (".jpg", ".jpeg", ".png", ".webp", ".gif")
@@ -965,15 +1108,19 @@ def _local_pictures(brand: dict, store: str, upload=None) -> dict:
 
 
 def priced(brand: dict, prices: dict) -> dict:
-    """The prices the person typed (handle -> price), on every variant; the product loses its dtj-price-needed tag."""
+    """handle -> {"price", "compare_at_price", "sample"} (a bare price string is a typed price), on every variant; the product loses
+    its dtj-price-needed tag, and a sample price adds dtj-sample-price."""
     from provision.brand_copy import PRICE_TAG  # noqa: PLC0415
     out = []
     for x in brand["products"]:
         if x.get("handle") in prices:
+            v = prices[x["handle"]]
+            v = v if isinstance(v, dict) else {"price": v}
             tags = x.get("tags") or []
             tags = [t.strip() for t in tags.split(",")] if isinstance(tags, str) else tags
-            x = dict(x, variants=[dict(v, price=prices[x["handle"]]) for v in x.get("variants") or []], price_needed=False,
-                     tags=[t for t in tags if t != PRICE_TAG])
+            tags = [t for t in tags if t != PRICE_TAG] + ([SAMPLE_PRICE_TAG] if v.get("sample") and SAMPLE_PRICE_TAG not in tags else [])
+            x = dict(x, variants=[dict(var, price=v["price"], compare_at_price=v.get("compare_at_price")) for var in x.get("variants") or []],
+                     price_needed=False, tags=tags)
         out.append(x)
     return dict(brand, products=out)
 

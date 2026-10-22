@@ -122,6 +122,11 @@ class Questions(Base):
         self.assertIn("Where are the brand's products now?", self.tg.questions()[-1]["text"])
         self.answers.tap(self.tg, "Already in this store")
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)
+        pictures = self.tg.questions()[-1]
+        self.assertIn("Should ChatGPT make new pictures", pictures["text"])
+        self.assertEqual([r[0]["text"] for r in pictures["reply_markup"]["inline_keyboard"]], ["Only banners", "No new pictures"])
+        self.answers.tap(self.tg, "No new pictures")
+        self.assertEqual(j.plan(minutes=1), store_job.WAITING)
         self.assertIn("Whose store is <b>Royal Dosa</b>", self.tg.questions()[-1]["text"])
         self.answers.tap(self.tg, "A client's store")
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)
@@ -169,6 +174,8 @@ class Questions(Base):
         j.plan(minutes=1)
         self.answers.tap(self.tg, "Already in this store")
         j.plan(minutes=1)
+        self.answers.tap(self.tg, "No new pictures")
+        j.plan(minutes=1)
         self.assertFalse(j.s["plan"]["copy"])
         self.assertIn("Whose store is", self.tg.questions()[-1]["text"])
 
@@ -191,7 +198,7 @@ class Questions(Base):
     def test_a_theme_the_builder_does_not_know_asks_for_horizon_first(self):
         j = self.job(scan={**SCAN, "live_theme": {"name": "Impact", "schema_name": "Impact"}})
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "DTJ's own store"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertIn("Add theme > Horizon (do NOT publish it)", self.tg.questions()[-1]["text"])
@@ -201,7 +208,7 @@ class Questions(Base):
     def test_a_dawn_store_gets_product_pages_only(self):
         j = self.job(scan={**SCAN, "live_theme": {"name": "Dawn", "schema_name": "Dawn"}})
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "DTJ's own store"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.answers.tap(self.tg, "Product pages only, on Dawn")
@@ -212,7 +219,7 @@ class Questions(Base):
     def test_picked_products_by_link_or_name_and_unknown_ones_are_said(self):
         j = self.job()
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "I'll pick them"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "I'll pick them"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.answers.type(self.tg, "https://royaldosa.com/products/sambar?variant=1\nidli mix\nchocolate cake")
@@ -226,7 +233,7 @@ class Approvals(Base):
     def planned(self, access=None):
         j = self.job(access)
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertTrue(j.s.get("planned"))
@@ -259,7 +266,7 @@ class Approvals(Base):
         access = FakeAccess(added=[{"id": 700, "name": "Horizon", "role": "unpublished"}])
         j = self.job(access, scan={**SCAN, "live_theme": {"name": "Impact", "schema_name": "Impact"}})
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "DTJ's own store", "Done: Horizon is added", "Only product pages", "Top 3 best sellers",
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Done: Horizon is added", "Only product pages", "Top 3 best sellers",
                       "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
@@ -339,7 +346,7 @@ class BrandCopy(Base):
         j.plan(minutes=1)
         self.answers.type(self.tg, "https://glowco.com")
         j.plan(minutes=1)
-        for label in ("DTJ's own store", "Everything", "All 2 products", "No offer"):
+        for label in ("No new pictures", "DTJ's own store", "Everything", "All 2 products", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         return j
@@ -471,7 +478,7 @@ class BrandCopy(Base):
     def test_nothing_to_copy_when_the_store_is_the_brand(self):
         j = self.job()
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "DTJ's own store", "Only product pages", "Top 3 best sellers", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Only product pages", "Top 3 best sellers", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertEqual(j.copy(minutes=1), 0)
@@ -492,14 +499,19 @@ DRIVE_BRAND = {"source": "drive", "link": DRIVE, "base": DRIVE, "name": "Senso F
                "best_sellers": [{"handle": "masala-chai", "title": "Masala Chai", "url": DRIVE}, {"handle": "ginger-chai", "title": "Ginger Chai", "url": DRIVE}],
                "problems": ["Ginger Chai has no pictures"]}
 SAMPLES = {"products": [{"title": f"Chai Blend {n}", "description": "A warm, everyday blend of black tea and spices for the evening cup.",
-                         "collection": "Tea" if n % 2 else "Tea, Gifts", "pictures": [f"a tin of loose tea number {n}", "the tin open, leaves"]}
+                         "collection": "Tea" if n % 2 else "Tea, Gifts", "price": str(249 + 50 * n), "compare_at_price": str(349 + 50 * n),
+                         "pictures": [f"a tin of loose tea number {n}", "the tin open, leaves"]}
                         for n in range(1, 7)],
-           "banners": ["a calm kitchen counter with a tea tin and a steaming cup, morning light", "tea leaves on a wooden tray"]}
+           "banners": [{"prompt": "a calm kitchen counter with a tea tin and a steaming cup, morning light"}, "tea leaves on a wooden tray"],
+           "style": "Blue Tea and its peers shoot one tin on warm beige or a wooden counter, soft morning light, loose leaves and a "
+                    "steaming cup as the only props; ours follow that: warm, calm, one product, no text."}
+NICHE = {"niche": "tea", "competitors": [{"name": f"Brand {n}", "banners": [f"b{n}.jpg"], "products": [{"pictures": [f"p{n}.jpg"]}]}
+                                         for n in range(1, 6)]}
 
 
 class NewStore(Base):
-    """A new store (Harsh, 22 Oct 2026): the products from a Google Drive folder, or samples with ChatGPT pictures; every one ACTIVE,
-    a price only when a person gives it."""
+    """A new store (Harsh, 22 Oct 2026): the products from a Google Drive folder, or samples with ChatGPT pictures and sample prices;
+    every one ACTIVE; pictures only when the person says so and after the niche research."""
 
     def job(self, drive=None):
         self.planned_with, self.pictures = [], []
@@ -508,20 +520,39 @@ class NewStore(Base):
             self.planned_with.append((brand, prices))
             return PLAN
 
-        def picture(kind, prompt, out):
-            self.pictures.append((kind, prompt))
+        def picture(kind, prompt, out, refs=()):
+            self.pictures.append((kind, prompt, [Path(r).name for r in refs]))
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_bytes(b"png")
             return {}
         j = store_job.Job("royal-dosa", send=self.tg, rows=self.answers, log=self.log, state_dir=self.tmp, out=self.printed.append,
                           sleep=self.clock.sleep, clock=self.clock, planner=plan, picture=picture,
                           drive=drive or (lambda link, out: json.loads(json.dumps(DRIVE_BRAND))),
-                          copy_status=lambda job: {"finished": True, "done": {"products": 2}})
+                          copy_status=lambda job: {"finished": True, "done": {"products": 2, "collections": 1}},
+                          today=lambda: "22 Oct 2026")
         j.begin(SCAN, CHAT, "Harsh")
         return j
 
     def told(self):
         return [d["text"] for _, d in self.tg.sent]
+
+    def research(self, **kw):
+        f = self.tmp / "niche.json"
+        f.write_text(json.dumps(dict(NICHE, **kw)), encoding="utf-8")
+        return str(f)
+
+    def drive_job(self, pictures="No: the folder's pictures are enough"):
+        j = self.job()
+        j.plan(minutes=1)
+        for label in ("New store from scratch", "Yes: I'll send a Google Drive folder"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        self.answers.type(self.tg, DRIVE)
+        j.plan(minutes=1)
+        for label in (pictures, "DTJ's own store", "Everything", "All 2 products", "No offer"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        return j
 
     def test_a_drive_folder_store_is_read_at_once_and_typed_prices_reach_the_plan(self):
         j = self.job()
@@ -534,27 +565,77 @@ class NewStore(Base):
         self.assertIn("Anyone with the link", self.tg.questions()[-1]["text"])
         self.answers.type(self.tg, DRIVE)
         j.plan(minutes=1)
+        self.assertEqual([r[0]["text"] for r in self.tg.questions()[-1]["reply_markup"]["inline_keyboard"]],
+                         ["Banners and extra product pictures", "Only banners", "No: the folder's pictures are enough"])
         said = next(x for x in self.told() if x.startswith("Drive folder:"))
         self.assertIn("<b>Senso Foods</b>: 2 products", said)
         self.assertIn("1 products have no price", said)
         self.assertIn("- Ginger Chai has no pictures", said)
-        for label in ("DTJ's own store", "Everything", "All 2 products", "No offer"):
+        for label in ("No: the folder's pictures are enough", "DTJ's own store", "Everything", "All 2 products", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         p = j.s["plan"]
-        self.assertEqual((p["kind"], p["source"], p["copy"], p["banners"]), ("new", "drive", True, "make"))
+        self.assertEqual((p["kind"], p["source"], p["copy"], p["pictures"]), ("new", "drive", True, "none"))
         self.assertEqual([x["handle"] for x in p["products"]], ["masala-chai", "ginger-chai"])
         self.assertIn("from the Drive folder", self.tg.last()["text"])
         self.assertEqual(j.copy(minutes=1), store_job.WAITING)
-        self.assertIn("1 products have no price", self.tg.questions()[-1]["text"])
+        ask = self.tg.questions()[-1]
+        self.assertIn("1 products have no price", ask["text"])
+        self.assertEqual([r[0]["text"] for r in ask["reply_markup"]["inline_keyboard"]], ["I'll type the prices", "Leave them at 0.00"])
         self.answers.tap(self.tg, "I'll type the prices")
         self.assertEqual(j.copy(minutes=1), store_job.WAITING)
         self.answers.type(self.tg, "Ginger chai = 199\nChocolate cake = 99\nhello")
         self.assertEqual(j.copy(minutes=1), store_job.WAITING)  # planned, waiting for the Approve tap
         brand, prices = self.planned_with[0]
-        self.assertEqual((brand["name"], prices), ("Senso Foods", {"ginger-chai": "199"}))
+        self.assertEqual((brand["name"], prices), ("Senso Foods", {"ginger-chai": {"price": "199", "compare_at_price": None, "sample": False}}))
         self.assertTrue(any("chocolate cake: not found" in x.lower() and 'hello: not "name = price"' in x for x in self.told()))
         self.assertIn("Add the Drive folder's products of <b>Senso Foods</b>", self.tg.questions()[-1]["text"])
+
+    def test_drive_pictures_need_the_research_use_our_photos_and_sample_prices_are_offered(self):
+        j = self.drive_job("Banners and extra product pictures")
+        photo = self.tmp / "masala-1.jpg"
+        photo.write_bytes(b"jpg")
+        j.s["brand"]["products"][0]["images"] = [{"path": str(photo), "alt": "Masala Chai"}]
+        j.s["brand"]["products"][1]["body_html"] = "<p> </p>"  # no description in the folder: a sample one is allowed
+        f = self.tmp / "assets.json"
+        body = {"pictures": [{"for": "masala-chai", "prompt": "the tin in the reference on a kitchen counter, morning light",
+                              "refs": [str(photo)]}],
+                "banners": [{"prompt": "a warm counter with the tin in the reference", "refs": [str(photo)]}],
+                "sample_prices": {"ginger-chai": {"price": "299", "compare_at_price": "399"}, "masala-chai": {"price": "1"}},
+                "descriptions": {"ginger-chai": "Ginger and black tea, cut fine, for a strong cup with milk."}}
+        f.write_text(json.dumps(body), encoding="utf-8")
+        with self.assertRaises(SystemExit) as no_research:
+            j.assets(f)
+        self.assertIn("no pictures before the niche research", str(no_research.exception))
+        f.write_text(json.dumps(dict(body, research=self.research(competitors=NICHE["competitors"][:2]), style=SAMPLES["style"])), encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            j.assets(f)  # 2 competitors are not enough
+        f.write_text(json.dumps(dict(body, research=self.research(), style=SAMPLES["style"])), encoding="utf-8")
+        self.assertEqual(j.assets(f), 0)
+        self.assertEqual(self.pictures, [("lifestyle", body["pictures"][0]["prompt"], ["masala-1.jpg"]),
+                                         ("banner", body["banners"][0]["prompt"], ["masala-1.jpg"])])
+        masala, ginger = j.s["brand"]["products"]
+        self.assertEqual([Path(x["path"]).name for x in masala["images"]], ["masala-1.jpg", "masala-chai-ai-1.png"])
+        self.assertIn("dtj-sample-text", ginger["tags"])
+        self.assertEqual(j.s["plan"]["sample_prices"], {"ginger-chai": {"price": "299", "compare_at_price": "399"}})  # masala has a price
+        self.assertTrue(any("Sample prices refused for: masala-chai" in x for x in self.told()))
+        self.assertEqual(j.copy(minutes=1), store_job.WAITING)
+        self.assertEqual([r[0]["text"] for r in self.tg.questions()[-1]["reply_markup"]["inline_keyboard"]],
+                         ["Use the sample prices", "I'll type the prices", "Leave them at 0.00"])
+        self.answers.tap(self.tg, "Use the sample prices")
+        j.copy(minutes=1)
+        self.assertEqual(self.planned_with[0][1], {"ginger-chai": {"price": "299", "compare_at_price": "399", "sample": True}})
+        priced = store_job.priced(j.s["brand"], self.planned_with[0][1])["products"][1]
+        self.assertEqual((priced["variants"][0]["price"], priced["variants"][0]["compare_at_price"], priced["price_needed"]),
+                         ("299", "399", False))
+        self.assertEqual(priced["tags"], ["dtj-sample-text", "dtj-sample-price"])
+
+    def test_no_pictures_answer_makes_none(self):
+        j = self.drive_job()
+        f = self.tmp / "assets.json"
+        f.write_text(json.dumps({"pictures": [{"for": "masala-chai", "prompt": "x"}], "banners": ["a counter"]}), encoding="utf-8")
+        self.assertEqual(j.assets(f), 0)  # the person said no: nothing made, no research needed
+        self.assertEqual(self.pictures, [])
 
     def test_a_folder_that_cannot_be_read_is_asked_again(self):
         tries = []
@@ -586,8 +667,8 @@ class NewStore(Base):
         j.plan(minutes=1)
         self.answers.type(self.tg, "masala tea and tea gifts")
         j.plan(minutes=1)
-        self.assertIn("never make up a price", self.tg.questions()[-1]["text"])
-        for label in ("6", "DTJ's own store", "Everything", "The first 3", "No offer"):
+        self.assertIn("sample price", self.tg.questions()[-1]["text"])
+        for label in ("6", "Product pictures and banners", "DTJ's own store", "Everything", "The first 3", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         p = j.s["plan"]
@@ -596,32 +677,41 @@ class NewStore(Base):
         with self.assertRaises(SystemExit):
             j.copy(minutes=1)  # the samples are made first
         f = self.tmp / "assets.json"
-        f.write_text(json.dumps(SAMPLES), encoding="utf-8")
+        f.write_text(json.dumps(dict(SAMPLES, research=self.research())), encoding="utf-8")
         self.assertEqual(j.assets(f), 0)
-        self.assertEqual([k for k, _ in self.pictures], ["product"] * 12 + ["banner"] * 2)
+        self.assertEqual([k for k, _, _ in self.pictures], ["product"] * 12 + ["banner"] * 2)
         br = j.s["brand"]
         self.assertEqual(len(br["products"]), 6)
-        self.assertEqual(br["products"][0]["tags"], ["dtj-sample", "dtj-price-needed"])
-        self.assertEqual(br["products"][0]["variants"][0]["price"], "0.00")
+        self.assertEqual(br["products"][0]["tags"], ["dtj-sample", "dtj-sample-price"])
+        self.assertEqual((br["products"][0]["variants"][0]["price"], br["products"][0]["variants"][0]["compare_at_price"]), ("299", "399"))
         self.assertEqual({c["handle"]: len(c["products"]) for c in br["collections"]}, {"tea": 6, "gifts": 3})
         self.assertEqual([x["handle"] for x in p["products"]], ["chai-blend-1", "chai-blend-2", "chai-blend-3"])
         self.assertEqual(len(br["banners"]), 2)
         self.assertEqual(j.assets(f), 0)
         self.assertEqual(len(self.pictures), 14)  # nothing made twice
-        self.assertEqual(j.copy(minutes=1), store_job.WAITING)
-        self.answers.tap(self.tg, "Leave them at 0.00")
-        self.assertEqual(j.copy(minutes=1), store_job.WAITING)
+        self.assertEqual(j.copy(minutes=1), store_job.WAITING)  # every sample has its price: straight to the Approve tap
         brand, prices = self.planned_with[0]
         self.assertEqual((len(brand["products"]), prices), (6, {}))
         self.assertIn("Add the sample products of <b>Chai Ghar</b>", self.tg.questions()[-1]["text"])
+        self.answers.tap(self.tg, "Approve")
+        self.assertEqual(j.copy(minutes=1), 0)
+        j.record("Home page", "https://royal-dosa.myshopify.com/?preview_theme_id=1")
+        self.assertEqual(j.finish("partly done", "the apps wait for their installs"), 0)
+        hand = (self.tmp / "royal-dosa" / "handover.md").read_text(encoding="utf-8")
+        for part in ("Added: 2 products (every one ACTIVE), 1 collections", "- Home page: https://royal-dosa.myshopify.com/?preview_theme_id=1",
+                     "- Sample products: 6 (Chai Blend 1", "- Sample prices (dtj-sample-price): 6", "- Pictures made by ChatGPT: 14",
+                     "- Payments:", "- Launch: a test order in test mode"):
+            self.assertIn(part, hand)
+        self.assertIn("Samples to replace before launch", self.told()[-1])
+        self.assertNotIn("Payments", self.told()[-1])  # Telegram gets the short part; the owner's list is in the file
 
-    def test_a_samples_file_with_a_price_a_claim_or_the_wrong_count_is_refused(self):
+    def test_a_samples_file_without_a_price_a_claim_or_the_wrong_count_is_refused(self):
         good = SAMPLES["products"][:3]
         self.assertEqual(store_job.sample_problems(good, 3), [])
-        bad = [dict(good[0], price="249"), dict(good[1], description="Clinically proven to calm you, rated 5 stars by 2,000 buyers."),
-               dict(good[2], pictures=[])]
+        bad = [{k: v for k, v in good[0].items() if k != "price"}, dict(good[1], description="Clinically proven to calm you, rated 5 stars by 2,000 buyers."),
+               dict(good[2], pictures=[], compare_at_price="10")]
         why = " | ".join(store_job.sample_problems(bad, 3))
-        for part in ("product 1 has a price", 'says "clinically"', "product 3: 1-3 picture prompts"):
+        for part in ("product 1: a sample price", 'says "clinically"', "product 3: 1-3 picture prompts", "product 3: the compare-at price"):
             self.assertIn(part, why)
         self.assertIn("4 products, the person asked for 3", " ".join(store_job.sample_problems(good + good[:1], 3)))
 
@@ -725,7 +815,7 @@ class Installs(Base):
         j.begin(SCAN, CHAT, "Harsh")
         j.plan(minutes=1)
         names = ['Use "Royal Dosa"'] if whose == "A client's store" else []
-        for label in ("Redesign an existing brand", "Already in this store", whose, *names, "Everything except product pages", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", whose, *names, "Everything except product pages", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         return j
@@ -775,7 +865,7 @@ class RealActionLog(unittest.TestCase):
                           log=ActionLog(tmp / "action-log.jsonl", "royal-dosa", automation="store-job"), sleep=lambda s: None, clock=Clock())
         j.begin(SCAN, CHAT, "Harsh")
         j.plan(minutes=0)
-        for label in ("Redesign an existing brand", "Already in this store", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
             answers.tap(tg, label)
             j.plan(minutes=0)
         j.approve("ok_header", "Write the header", minutes=0)
