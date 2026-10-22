@@ -228,7 +228,7 @@ class Apply(unittest.TestCase):
         self.assertEqual(first["input"]["collections"], ["gid://shopify/Collection/1"])
         self.assertEqual(next(v for name, v in admin.calls if name == "Publish")["input"], [{"publicationId": "gid://shopify/Publication/9"}])
         self.assertEqual((done["products"], done["collections"], done["policies"], done["failed"]), (2, 1, 1, {}))
-        self.assertEqual({r["approver"] for r in log.rows}, {"Riya (Telegram Approve)"})
+        self.assertEqual({r["approved_by"] for r in log.rows}, {"Riya (Telegram Approve)"})
         again = FakeAdmin()  # a rerun makes nothing twice
         bc.apply(self.plan, again, self.tmp / "applied.json", log, "Riya (Telegram Approve)", out=lambda *_: None)
         self.assertEqual(again.calls, [])

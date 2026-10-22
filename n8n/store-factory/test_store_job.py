@@ -234,7 +234,7 @@ class Approvals(Base):
         self.assertEqual(j.draft(minutes=1), 0)
         self.assertEqual(access.made, ["DTJ Draft 21 Oct 2026"])
         self.assertEqual((j.s["draft"]["id"], j.s["draft"]["approved_by"]), ("555", "Riya (Telegram Approve)"))
-        self.assertEqual(self.log.rows[-1]["approver"], "Riya (Telegram Approve)")
+        self.assertEqual(self.log.rows[-1]["approved_by"], "Riya (Telegram Approve)")
         self.assertEqual(self.log.rows[-1]["tier"], 2)
         self.assertEqual(j.draft(minutes=1), 0)  # made once
         self.assertEqual(len(access.made), 1)
@@ -400,7 +400,7 @@ class BrandCopy(Base):
         self.assertEqual(self.looked, 2)
         self.assertEqual(json.loads(self.printed[-1])["done"]["products"], 2)
         self.assertEqual(j.s["copy_approved_by"], "Riya (Telegram Approve)")
-        self.assertEqual(self.log.rows[-1]["approver"], "Riya (Telegram Approve)")
+        self.assertEqual(self.log.rows[-1]["approved_by"], "Riya (Telegram Approve)")
         self.assertEqual(len(self.planned_with), 1)  # planned once
         self.assertEqual(j.copy(minutes=1), 0)
         self.assertEqual((len(self.planned_with), self.looked), (1, 2))  # finished: nothing asked again
@@ -482,6 +482,34 @@ class PrivateScan(unittest.TestCase):
             raise store_job.NotInstalled("not installed")
         sc = store_job._private_scan("dtj-testing.myshopify.com", "x", access=self.Access(), catcher=missing)
         self.assertEqual((sc["name"], sc["product_count"]), ("dtj-testing", 0))
+
+
+class RealActionLog(unittest.TestCase):
+    """The job's rows go through the real action log, whose schema refuses an unknown field or result (22 Oct 2026: "approver" and
+    "skipped" crashed the live copy job after Harsh's tap)."""
+
+    def test_every_kind_of_row_the_job_writes_is_valid(self):
+        import sys as _sys  # noqa: PLC0415
+        _sys.path.insert(0, str(store_job.ROOT / "services" / "store-builder"))
+        from provision.actionlog import ActionLog  # noqa: PLC0415
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        tg, answers = Telegram(), Answers()
+        j = store_job.Job("royal-dosa", send=tg, rows=answers, state_dir=tmp, out=lambda *_: None,
+                          log=ActionLog(tmp / "action-log.jsonl", "royal-dosa", automation="store-job"), sleep=lambda s: None, clock=Clock())
+        j.begin(SCAN, CHAT, "Harsh")
+        j.plan(minutes=0)
+        for label in ("This store is the brand", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
+            answers.tap(tg, label)
+            j.plan(minutes=0)
+        j.approve("ok_header", "Write the header", minutes=0)
+        answers.tap(tg, "Approve")
+        self.assertEqual(j.approve("ok_header", "Write the header", minutes=0), 0)
+        j.approve("ok_footer", "Write the footer", minutes=0)
+        answers.tap(tg, "Skip")
+        self.assertEqual(j.approve("ok_footer", "Write the footer", minutes=0), store_job.SKIPPED)
+        rows = [json.loads(x) for x in (tmp / "action-log.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual([(r["result"], r["approved_by"]) for r in rows], [("success", "Harsh"), ("blocked", "Harsh")])
 
 
 class OpenMarks(unittest.TestCase):
