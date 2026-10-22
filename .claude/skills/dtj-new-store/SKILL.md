@@ -42,7 +42,9 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 ## Steps (from the repo root; `J` = the job name, the store's handle)
 1. **Questions.** `python n8n/store-factory/store_job.py start --link "<store link>" --chat <chat> --by "<name>"`
    - It reads the store (its original .myshopify.com address, live theme, products, collections). Then it asks in Telegram:
-     1. **which brand**: the person sends the brand's own Shopify link, or taps "This store is the brand" (redesign the store as it is);
+     1. **which brand**: the person sends the brand's own link, or taps "This store is the brand" (redesign the store as it is). A
+        Shopify brand is read from its catalogue; any other website from the product pages its sitemap lists (name, features,
+        pictures; Harsh, 22 Oct 2026, Senso). A link that cannot be read is asked for again;
      2. whose store;
      3. the client's name (client stores);
      4. the theme question, when the store does not run Horizon;
@@ -115,7 +117,8 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 ## What can go wrong
 | You see | Why | Do |
 |---|---|---|
-| "could not be read as a Shopify store" | the brand's site is not Shopify, or hides its catalogue | ask for its Shopify address; other platforms are not copied yet |
+| "I could not read ... as a brand" | the link is neither a Shopify store nor a site with product pages in its sitemap | the bot asks again; 3 in a row stop the job |
+| "not a Shopify store and shows no prices" | a website brand (Senso: WordPress) | expected: its products go in as hidden drafts at 0.00 tagged dtj-price-needed; prices are set in Shopify |
 | the theme question | the live theme is not Horizon (Dawn: product pages only) | the person adds Horizon, or product pages only |
 | draft: "no access to ... themes" | the CLI login is not a collaborator of the store yet | the owner accepts DTJ's collaborator request; log in once |
 | copy: "install DTJ Store Builder" | the app is not on the store yet | the person installs it once (Dev Dashboard); the job goes on by itself |

@@ -22,6 +22,26 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 22 Oct 2026: BRANDS THAT ARE NOT ON SHOPIFY (branch `feature/site-brands`, account A)
+Harsh's test brand was Senso (sensofoods.com): a WordPress trade site with 114 product pages and **no prices**. He asked whether the
+scraper takes everything; asked how to handle missing prices he chose **"Create them as drafts, prices later"**.
+- **`provision/brand_copy.read_site`:** when there is no /products.json, it reads the product pages from the site's sitemap
+  (`/product/`, `/products/`, `/my-product/`...):
+  - the name comes from schema.org Product or the `<h1>`;
+  - the description is the page summary plus the "Features" list;
+  - the pictures are the product's own: no logos or icons, nothing after "Related Products", nothing shared by 4+ products;
+  - a price is used only when the page states one;
+  - it also reads the WordPress policy pages.
+  Products without a price go in at 0.00 with the tag `dtj-price-needed`, and the whole copy is DRAFT.
+- **Live read of Senso (read only):** 114 products, all readable, each with its own photo; privacy and terms found. The odd
+  characters in the console are real dashes and quotes.
+- **`store_job`:** a website brand is announced as "hidden drafts, set the prices". A link that cannot be read is asked for
+  again; a refused answer is never reused, even within the clock allowance; 3 in a row stop the job.
+- **Live run 988 (dtj-testing):** Harsh sent the Senso link as a new message, not a reply, so the bot started a second store
+  (run 993, closed with a note). His message was recorded as the brand answer (`dtj_bot_answers`, its own time). Still to do: let
+  a plain message answer a waiting typed question.
+- **Tests:** n8n/store-factory 165 OK, page builder 449 OK, install service JS 20 OK. No Worker change, so no deploy.
+
 ## 22 Oct 2026: PASSWORD STORES AND ADMIN LINKS (branch `fix/password-stores`, account A)
 Harsh asked which link to send for his new dev store `dtj-testing` (admin.shopify.com/store/dtj-testing or dtj-testing.myshopify.com).
 Neither worked: every dev store sits behind its password page, so the public page shows no store data and the job stopped.

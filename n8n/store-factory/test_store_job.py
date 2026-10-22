@@ -345,16 +345,45 @@ class BrandCopy(Base):
         self.assertIn("Copy <b>GlowCo</b> into it", self.tg.last()["text"])
         self.assertIn("the brand copy", self.tg.last()["text"])
 
-    def test_a_brand_that_cannot_be_read_stops_and_says_why(self):
-        def bad(link):
-            raise ValueError("no Shopify.shop in its page")
-        j = self.job(scanner=bad)
+    def test_a_brand_that_cannot_be_read_is_asked_again_and_three_in_a_row_stop(self):
+        def scanner(link):
+            if "wordpress" in link:
+                raise ValueError("no product pages to read")
+            return BRAND
+        j = self.job(scanner=scanner)
         j.plan(minutes=1)
         self.answers.tap(self.tg, "I'll send the brand's link")
         j.plan(minutes=1)
         self.answers.type(self.tg, "https://wordpress-brand.com")
-        self.assertEqual(j.plan(minutes=1), 1)
-        self.assertIn("could not be read as a Shopify store", self.tg.last()["text"])
+        self.assertEqual(j.plan(minutes=1), store_job.WAITING)  # asked again: the refused link never counts twice
+        told = [d["text"] for _, d in self.tg.sent]
+        self.assertTrue(any("I could not read https://wordpress-brand.com as a brand" in x for x in told))
+        self.assertIn("answer brand_link", self.tg.questions()[-1]["text"])
+        self.answers.type(self.tg, "https://glowco.com")
+        j.plan(minutes=1)
+        self.assertEqual(j.s["brand"]["name"], "GlowCo")
+        k = self.job(scan={**SCAN, "myshopify_domain": "other-store.myshopify.com"}, scanner=scanner)
+        k.plan(minutes=1)
+        self.answers.tap(self.tg, "I'll send the brand's link")
+        k.plan(minutes=1)
+        for _ in range(3):
+            self.answers.type(self.tg, "https://wordpress-brand.com")
+            code = k.plan(minutes=1)
+        self.assertEqual(code, 1)
+        self.assertIn("three brand links in a row", k.s["stopped"])
+
+    def test_a_website_brand_is_said_to_come_in_as_hidden_drafts(self):
+        site = {**BRAND, "platform": "website", "myshopify_domain": None, "collection_count": 0, "prices": 0}
+        j = self.job(scanner=lambda link: site)
+        j.plan(minutes=1)
+        self.answers.tap(self.tg, "I'll send the brand's link")
+        j.plan(minutes=1)
+        self.answers.type(self.tg, "https://glowco.com")
+        j.plan(minutes=1)
+        told = next(d["text"] for _, d in self.tg.sent if d["text"].startswith("Brand: <b>GlowCo</b>"))
+        self.assertIn("not a Shopify store and shows no prices", told)
+        self.assertIn("hidden drafts", told)
+        self.assertNotIn("collections", told)
 
     def test_the_copy_is_planned_read_only_then_waits_for_its_own_tap(self):
         j = self.planned()

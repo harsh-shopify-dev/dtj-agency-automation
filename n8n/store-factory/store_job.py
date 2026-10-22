@@ -120,7 +120,7 @@ class Job:
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
                  today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None,
                  copy_status=None):
-        self.scanner, self.planner, self.copy_status = scanner or _scan, planner or _copy_plan, copy_status or _copy_status
+        self.scanner, self.planner, self.copy_status = scanner or _scan_brand, planner or _copy_plan, copy_status or _copy_status
         self.job, self.dir = job, state_dir / job
         self.path = self.dir / "job.json"
         self.s = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
@@ -172,12 +172,19 @@ class Job:
                 return WAITING
             try:
                 s["brand"] = self.scanner(link["value"])
-            except Exception as exc:  # noqa: BLE001 - any reason the brand cannot be read stops here, said plainly
-                return self.stop(f"the brand's link could not be read as a Shopify store ({str(exc)[:200]})")
+            except Exception as exc:  # noqa: BLE001 - a link that cannot be read is asked for again, with why (22 Oct 2026)
+                if a.forget("brand_link") >= 3:  # three links in a row could not be read: stop and say so (CLAUDE.md self-healing)
+                    return self.stop(f"three brand links in a row could not be read (last: {str(exc)[:160]})")
+                a.tell(f"I could not read {esc(link['value'])} as a brand: {esc(str(exc)[:200])}. Send another link: the brand's own website.")
+                return self.plan(minutes)
             self.save()
             br = s["brand"]
-            a.tell(f"Brand: <b>{esc(br['name'])}</b> ({esc(br['base'])}): {br['product_count']} products, {br['collection_count']} "
-                   f"collections. They are copied into {esc(sc['name'])} only after your Approve tap.")
+            website = br.get("platform") == "website"
+            a.tell(f"Brand: <b>{esc(br['name'])}</b> ({esc(br['base'])}): {br['product_count']} products"
+                   + (f", {br['collection_count']} collections" if not website else "") + ". "
+                   + ("Its website is not a Shopify store" + (" and shows no prices, so its products are copied as hidden drafts: you "
+                      "set each price in Shopify before they show. " if br.get("prices", 0) < br["product_count"] else ". ") if website else "")
+                   + f"Nothing is copied into {esc(sc['name'])} before your Approve tap.")
         elif got["value"] == "self":
             s["brand"] = sc
         br = s["brand"]
@@ -483,6 +490,22 @@ class Job:
 def _scan(link: str) -> dict:
     from page_builder.store_scan import scan  # noqa: PLC0415
     return scan(link, private=_private_scan)
+
+
+def _scan_brand(link: str) -> dict:
+    """The brand to copy: a Shopify store (its catalogue, best sellers first), else its own website's product pages (22 Oct 2026,
+    Senso: a WordPress trade site; Harsh: products without a price go in as hidden drafts)."""
+    from page_builder.store_scan import NotShopify, scan  # noqa: PLC0415
+    try:
+        return scan(link)
+    except NotShopify:
+        from provision.brand_copy import read_site  # noqa: PLC0415
+        site = read_site(link)
+        return {"link": link, "base": site["base"], "myshopify_domain": None, "name": site["name"], "currency": None, "live_theme": {},
+                "product_count": len(site["products"]), "more_products": False, "collection_count": 0,
+                "best_sellers": [{"handle": x["handle"], "title": x["title"], "url": x["source"]} for x in site["products"]],
+                "best_sellers_from": "the brand's website, in its own order (not a Shopify store, so there is no sales order)",
+                "platform": "website", "prices": sum(1 for x in site["products"] if not x["price_needed"])}
 
 
 def _private_scan(domain: str, link: str, access=None, catcher=None) -> dict:

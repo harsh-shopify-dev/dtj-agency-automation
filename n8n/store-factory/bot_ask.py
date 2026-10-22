@@ -80,6 +80,17 @@ class Asker:
         self.state["asked"][key] = {"options": [], "message_id": mid, "typed": True, "at": self.now()}
         self.save()
 
+    def forget(self, key: str) -> int:
+        """Ask this question again from the start (its answer could not be used). That answer never counts again, even when it is
+        newer than the new question by the clock allowance; returns how many answers to this question were refused so far."""
+        old = self.state["answers"].pop(key, None)
+        spent = self.state.setdefault("spent", {}).setdefault(key, [])
+        if old:
+            spent.append(str(old.get("row") or ""))
+        self.state["asked"].pop(key, None)
+        self.save()
+        return len(spent)
+
     def tell(self, text: str) -> None:
         self._message(text)
 
@@ -93,8 +104,9 @@ class Asker:
             return None
         # only answers given after the question was sent count: an earlier run for the same store left its taps in the table
         since = _earlier(asked["at"], SKEW_SECONDS) if asked.get("at") else ""
+        spent = set(self.state.get("spent", {}).get(key, []))
         mine = [r for r in self.rows(self.job) if str(r.get("key")) == key and str(r.get("chat_id", "")) == self.chat
-                and str(r.get("at") or "")[:19] >= since]
+                and str(r.get("at") or "")[:19] >= since and str(r.get("id") or "") not in spent]
         if not mine:
             return None
         last = sorted(mine, key=lambda r: (str(r.get("at") or ""), int(r.get("id") or 0)))[-1]
@@ -107,7 +119,7 @@ class Asker:
                 label, value = asked["options"][int(choice)]
         if value is None or value == "":
             return None
-        got = {"value": value, "label": label, "by": str(last.get("by") or "").strip() or "someone on the DTJ bot"}
+        got = {"value": value, "label": label, "by": str(last.get("by") or "").strip() or "someone on the DTJ bot", "row": str(last.get("id") or "")}
         self.state["answers"][key] = got
         self.save()
         return got
