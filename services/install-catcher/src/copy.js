@@ -17,6 +17,11 @@
 //   activate {shop, handles, approved_by}  a DRAFT product goes ACTIVE and onto the Online Store, nothing else about it changes
 //                                  (Harsh, 22 Oct 2026: "all the products will stay active none of them will be kept as draft");
 //                                  at most 12 a call, the rest come back in "left"
+//   pages {shop, pages, approved_by} new pages only (About, Contact, FAQ: a store handed over ready to sell, Harsh 22 Oct 2026); a
+//                                  handle the store has is left as it is; body HTML without scripts, frames or event handlers
+//   menu  {shop, handle, items, approved_by}  the store's "main-menu" or "footer" set to these links (home, all products, a
+//                                  collection, a page, a policy, search); the menu's old links are kept in the audit row
+// Pages and menus need the app's online_store_pages / online_store_navigation scopes (a new Store Builder version: Harsh's yes).
 // Only the mutations below can be sent, with inputs rebuilt from a list of allowed fields. It never deletes: a handle the store has
 // is skipped, a policy is written only where the store's own is empty, activate changes the status only. Every call that writes is
 // one audit row.
@@ -46,6 +51,9 @@ const Q = {
   password: "query Password { onlineStore { passwordProtection { enabled } } }",
   productStatus: "query ProductStatus($handle: String!) { productByIdentifier(identifier: { handle: $handle }) { id status } }",
   publications: "query Publications { publications(first: 20) { nodes { id name } } }",
+  pageHandles: "query PageHandles { pages(first: 250) { nodes { id handle } } }",
+  menus: "query Menus { menus(first: 50) { nodes { id handle title isDefault items { title type url items { title } } } } }",
+  policyIds: "query PolicyIds { shop { shopPolicies { id type url } } }",
 };
 const M = {
   product: "mutation CopyProduct($input: ProductSetInput!) { productSet(input: $input, synchronous: true) { product { id handle } userErrors { field message code } } }",
@@ -54,7 +62,15 @@ const M = {
   policy: "mutation SetPolicy($shopPolicy: ShopPolicyInput!) { shopPolicyUpdate(shopPolicy: $shopPolicy) { shopPolicy { type } userErrors { field message } } }",
   stage: "mutation Stage($input: [StagedUploadInput!]!) { stagedUploadsCreate(input: $input) { stagedTargets { url resourceUrl parameters { name value } } userErrors { field message } } }",
   activate: "mutation Activate($product: ProductUpdateInput!) { productUpdate(product: $product) { product { id status } userErrors { field message } } }",
+  page: "mutation AddPage($page: PageCreateInput!) { pageCreate(page: $page) { page { id handle } userErrors { field message } } }",
+  menu: "mutation SetMenu($id: ID!, $title: String!, $items: [MenuItemUpdateInput!]!) { menuUpdate(id: $id, title: $title, items: $items) { menu { id handle } userErrors { field message } } }",
 };
+const PAGES_MAX = 6;
+const MENU_HANDLES = new Set(["main-menu", "footer"]);
+const MENU_MAX = 12;
+const POLICY_HANDLES = { "refund-policy": "REFUND_POLICY", "shipping-policy": "SHIPPING_POLICY", "privacy-policy": "PRIVACY_POLICY",
+  "terms-of-service": "TERMS_OF_SERVICE" };
+const UNSAFE_HTML = /<\s*(script|iframe|object|embed|form|style)\b|\bon[a-z]+\s*=|javascript:/i;
 const SENDABLE = new Set([...Object.values(Q), ...Object.values(M)]);
 
 export function builder(env, shop) {
@@ -315,6 +331,84 @@ async function activate(env, body, via) {
   return out;
 }
 
+// a page as the laptop wrote it, rebuilt: a handle, a title, safe HTML, the default or the contact template
+export function cleanPage(p) {
+  const handle = String(p?.handle || "").toLowerCase();
+  const title = String(p?.title || "").trim().slice(0, 255);
+  const body = String(p?.body || "");
+  const templateSuffix = p?.template_suffix === "contact" ? "contact" : "";
+  if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(handle) || !title || body.length > 100000 || UNSAFE_HTML.test(body)) return null;
+  return { handle, title, body, isPublished: true, templateSuffix };
+}
+
+async function pages(env, body, via) {
+  const by = String(body.approved_by || "").trim().slice(0, 100);
+  if (!by) throw new Refuse(400, "approved_by is required: pages appear on the store");
+  const cfg = builder(env, body.shop);
+  const list = Array.isArray(body.pages) ? body.pages : [];
+  const input = list.map(cleanPage);
+  if (!list.length || list.length > PAGES_MAX || input.some((x) => !x)) {
+    throw new Refuse(400, `pages must list 1 to ${PAGES_MAX} pages, each a handle, a title and HTML without scripts, frames or forms`);
+  }
+  const token = await orgAccess(cfg);
+  const have = new Set((await gql(cfg.shop, token, Q.pageHandles)).pages.nodes.map((n) => n.handle));
+  const out = { created: [], skipped: [], failed: [] };
+  for (const page of input) {
+    if (have.has(page.handle)) { out.skipped.push(page.handle); continue; }  // the store's own page is never changed
+    try {
+      const made = (await gql(cfg.shop, token, M.page, { page })).pageCreate;
+      if (userErrors(made)) out.failed.push({ handle: page.handle, why: userErrors(made).slice(0, 300) });
+      else out.created.push(page.handle);
+    } catch (err) { out.failed.push({ handle: page.handle, why: String(err.message).slice(0, 300) }); }
+  }
+  await audit(env, { app: "dtj-store-builder", shop: cfg.shop, action: `pages added (${out.created.join(", ") || "none"})`,
+    result: out.failed.length ? "partly" : "success", approved_by: by, via, skipped: out.skipped.length, failed: out.failed.length });
+  return out;
+}
+
+async function menu(env, body, via) {
+  const by = String(body.approved_by || "").trim().slice(0, 100);
+  if (!by) throw new Refuse(400, "approved_by is required: the menu is on every page of the store");
+  const cfg = builder(env, body.shop);
+  if (!MENU_HANDLES.has(body.handle)) throw new Refuse(400, "handle must be main-menu or footer");
+  const wanted = Array.isArray(body.items) ? body.items : [];
+  if (!wanted.length || wanted.length > MENU_MAX) throw new Refuse(400, `items must list 1 to ${MENU_MAX} links`);
+  const token = await orgAccess(cfg);
+  const found = (await gql(cfg.shop, token, Q.menus)).menus.nodes.find((m) => m.handle === body.handle);
+  if (!found) throw new Refuse(404, `the store has no ${body.handle} menu`);
+  let pageIds = null, policies = null;
+  const items = [], left = [];
+  for (const it of wanted) {
+    const title = String(it?.title || "").trim().slice(0, 255);
+    const handle = String(it?.handle || "").toLowerCase();
+    if (!title) { left.push({ title: "?", why: "no title" }); continue; }
+    if (it.type === "FRONTPAGE") items.push({ title, type: "FRONTPAGE", url: "/" });
+    else if (it.type === "CATALOG") items.push({ title, type: "CATALOG", url: "/collections/all" });
+    else if (it.type === "SEARCH") items.push({ title, type: "SEARCH", url: "/search" });
+    else if (it.type === "COLLECTION" && HANDLE_RE.test(handle)) {
+      const c = (await gql(cfg.shop, token, Q.collectionExists, { handle })).collectionByIdentifier;
+      if (c) items.push({ title, type: "COLLECTION", resourceId: c.id, url: `/collections/${handle}` });
+      else left.push({ title, why: `no collection ${handle}` });
+    } else if (it.type === "PAGE" && HANDLE_RE.test(handle)) {
+      pageIds = pageIds || new Map((await gql(cfg.shop, token, Q.pageHandles)).pages.nodes.map((n) => [n.handle, n.id]));
+      if (pageIds.has(handle)) items.push({ title, type: "PAGE", resourceId: pageIds.get(handle), url: `/pages/${handle}` });
+      else left.push({ title, why: `no page ${handle}` });
+    } else if (it.type === "SHOP_POLICY" && POLICY_HANDLES[handle]) {
+      policies = policies || (await gql(cfg.shop, token, Q.policyIds)).shop.shopPolicies;
+      const pol = policies.find((x) => x.type === POLICY_HANDLES[handle]);
+      if (pol && pol.id) items.push({ title, type: "SHOP_POLICY", resourceId: pol.id, url: `/policies/${handle}` });
+      else left.push({ title, why: `the ${handle} is empty` });
+    } else left.push({ title, why: "not a link this menu may have" });
+  }
+  if (!items.length) throw new Refuse(400, "none of the links could be made: the menu is left as it is");
+  const before = (found.items || []).map((i) => ({ title: i.title, type: i.type, url: i.url, sub: (i.items || []).length }));
+  const set = (await gql(cfg.shop, token, M.menu, { id: found.id, title: found.title, items })).menuUpdate;
+  if (userErrors(set)) throw new Refuse(502, `Shopify refused the menu: ${userErrors(set).slice(0, 300)}`);
+  await audit(env, { app: "dtj-store-builder", shop: cfg.shop, action: `menu ${body.handle} set (${items.length} links)`, result: "success",
+    approved_by: by, via, before, after: items.map((i) => ({ title: i.title, type: i.type, url: i.url })) });
+  return { menu: body.handle, items: items.map((i) => ({ title: i.title, url: i.url })), left_out: left, before };
+}
+
 export async function copyRoute(request, env, caller, now) {
   const raw = await request.text();
   const via = await caller(request, env, raw);
@@ -326,10 +420,12 @@ export async function copyRoute(request, env, caller, now) {
   if (body.op === "step") return step(env, body, via);
   if (body.op === "uploads") return uploads(env, body, via);
   if (body.op === "activate") return activate(env, body, via);
+  if (body.op === "pages") return pages(env, body, via);
+  if (body.op === "menu") return menu(env, body, via);
   if (body.op === "status") {
     const raw2 = await env.VAULT.get(`copy:${body.job || ""}`);
     if (!raw2) throw new Refuse(404, "no copy plan for this job");
     return counts(JSON.parse(raw2));
   }
-  throw new Refuse(400, "op must be target, plan, step, status, uploads or activate");
+  throw new Refuse(400, "op must be target, plan, step, status, uploads, activate, pages or menu");
 }

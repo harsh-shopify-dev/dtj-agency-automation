@@ -53,7 +53,7 @@ MAX_WAIT_DAYS = 7          # n8n's own Wait node gives up after 7 days too
 CLAUDE_HOURS = 4           # one Claude turn may take this long (a whole store's pages), then it is stopped
 FAILS_TO_STOP = 3
 WAIT_LINE = re.compile(r"^DTJ_WAIT:\s*(.+?)\s*$", re.M)
-WAIT_OK = re.compile(r"^python3? n8n/store-factory/store_job\.py (start|draft|copy|apps|installs|approve) ")
+WAIT_OK = re.compile(r"^python3? n8n/store-factory/store_job\.py (start|draft|copy|apps|installs|approve|pages|menus) ")
 SHELL = re.compile(r"[;&|`$<>\\\n]")
 RESUME_URL = re.compile(r"https?://\S*webhook-waiting/\S+")
 
@@ -107,7 +107,7 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
         return None, ""
     line = found[-1].strip().strip("`")
     if SHELL.search(line) or not WAIT_OK.match(line):
-        return None, f"refused DTJ_WAIT command (only store_job.py start/draft/copy/apps/installs/approve, no shell): {line[:200]}"
+        return None, f"refused DTJ_WAIT command (only store_job.py start/draft/copy/apps/installs/approve/pages/menus, no shell): {line[:200]}"
     argv = shlex.split(line)
     argv[0] = sys.executable
     if "--minutes" in argv:  # each look waits briefly; the worker comes back every WAIT_EVERY seconds

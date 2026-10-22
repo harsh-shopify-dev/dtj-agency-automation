@@ -15,6 +15,8 @@ n8n's "Store Factory: New Store"; the runbook is the skill dtj-new-store.
                                                                    prices question when some have none, a read-only plan kept on the
                                                                    install service, an Approve tap (it starts n8n's Store Factory:
                                                                    Brand Copy, which does the writes), then it waits
+    python n8n/store-factory/store_job.py pages --job <job> --file <pages.json>   About, Contact, FAQ (new pages only), its own tap
+    python n8n/store-factory/store_job.py menus --job <job>       the main menu and the footer, one tap
     python n8n/store-factory/store_job.py activate --job <job> --approved-by "<name> (<where>)"
                                                                    products an earlier copy left as drafts, switched to ACTIVE
     python n8n/store-factory/store_job.py apps --job <job>        Approve tap for the app copies; prints the add_shop.py command
@@ -58,7 +60,8 @@ CATCHER = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev"  # the
 WAITING, SKIPPED = 3, 4
 QUESTION_MINUTES = 60   # each question waits this long, then the job says "waiting" (exit 3) and a rerun keeps waiting
 APPROVE_MINUTES = 120
-PARTS = {"chrome": "Header and footer", "home": "Home page", "collection": "Collection page", "products": "Product pages"}
+PARTS = {"chrome": "Header and footer", "home": "Home page", "collection": "Collection page", "products": "Product pages",
+         "pages": "About, Contact and FAQ pages and the menus"}
 SOURCES = {"self": "the products already in this store", "site": "the brand's current website", "drive": "a Google Drive folder",
            "samples": "sample products"}
 DRIVE_HOW = ("Send the Google Drive folder link. Share the folder first: Share > General access > Anyone with the link > Viewer.\n"
@@ -79,7 +82,9 @@ MIN_COMPETITORS = 3  # pictures are made only after at least 3 of the niche's D2
 PRICE_LINE = re.compile(r"^(.+?)\s*[=:\-\u2013]\s*(?:rs\.?|inr|\u20b9|\$)?\s*(\d{1,9}(?:\.\d{1,2})?)\s*$", re.I)
 CLAIM_WORDS = re.compile(r"\b(clinically|certified|certificate|cure[sd]?|guarantee[d]?|doctor|dermatologist|award|no\.?\s*1|number one|"
                          r"best[- ]selling|bestseller|proven|fda|iso|organic certified|\d+\s*%|reviews?|rated|stars?)\b", re.I)
-FULL, PRODUCTS_ONLY = ("chrome", "home", "collection", "products"), ("products",)
+FULL, PRODUCTS_ONLY = ("chrome", "home", "collection", "products", "pages"), ("products",)
+FOOTER_POLICIES = (("Refund policy", "refund-policy"), ("Shipping policy", "shipping-policy"), ("Privacy policy", "privacy-policy"),
+                   ("Terms of service", "terms-of-service"))
 STORE_STAGES = {
     "questions": ("Your answers", 0, 8),
     "draft": ("The draft copy of the theme", 8, 12),
@@ -90,7 +95,8 @@ STORE_STAGES = {
     "chrome": ("Header and footer", 45, 53),
     "home": ("Home page", 53, 63),
     "collection": ("Collection page", 63, 70),
-    "products": ("Product pages", 70, 98),
+    "products": ("Product pages", 70, 94),
+    "pages": ("About, Contact, FAQ and the menus", 94, 98),
 }
 STORE_UNITS = {"products": "page"}
 STATUSES = ("done", "partly done", "could not start")
@@ -728,6 +734,112 @@ class Job:
         from provision.brand_copy import read_brand  # noqa: PLC0415
         return [x["handle"] for x in read_brand(self.s["plan"]["brand"]["link"])["products"]]
 
+    # ---- About, Contact, FAQ and the menus (22 Oct 2026, Harsh: "we have to handover a product ready shopify store so if anything is
+    # missed by me you will cover it"); through DTJ Store Builder, each with its own Approve tap
+    def pages(self, path: Path, minutes: float = APPROVE_MINUTES) -> int:
+        """The pages the session wrote (skill dtj-new-store, step 7): {"pages": [{"handle", "title", "body_html", "template_suffix":
+        "contact" for the contact form, "sample": true when the text is DTJ's sample}]}. New pages only: a page the store has stays.
+        Sample text never carries a claim word; contact details are the brand's own or left out (the session's rule)."""
+        self.need_plan()
+        s, a = self.s, self.ask
+        if s.get("pages_result"):
+            self.out(json.dumps(s["pages_result"]))
+            return 0
+        items = json.loads(Path(path).read_text(encoding="utf-8")).get("pages") or []
+        why = []
+        if not 1 <= len(items) <= 6:
+            why.append(f"{len(items)} pages: 1 to 6")
+        for i, x in enumerate(items, 1):
+            if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,99}", str(x.get("handle") or "")) or not str(x.get("title") or "").strip():
+                why.append(f"page {i}: a handle (lowercase, dashes) and a title")
+            if x.get("sample") and CLAIM_WORDS.search(re.sub(r"<[^>]+>", " ", str(x.get("body_html") or ""))):
+                why.append(f"page {i}: a claim word in sample text")
+        if why:
+            raise SystemExit("the pages file is refused: " + "; ".join(why))
+        samples = [x["title"] for x in items if x.get("sample")]
+        ok, by = a.approve("ok_pages", f"Add {len(items)} pages to <b>{esc(s['name'])}</b>: {esc(', '.join(x['title'] for x in items))}. "
+                                       "New pages only: a page the store already has is left as it is."
+                                       + (f" Sample text, to replace before launch: {esc(', '.join(samples))}." if samples else ""), minutes)
+        if ok is None:
+            return WAITING
+        if not ok:
+            self.logged("pages (About, Contact, FAQ)", "skipped in Telegram", by, result="blocked")
+            self.out(f"skipped by {by}")
+            return SKIPPED
+        approved = f"{by} (Telegram Approve)"
+        self.bar("pages", 0, 2)
+        try:
+            res = self.catcher({"op": "pages", "shop": s["shop"], "approved_by": approved,
+                                "pages": [{"handle": x["handle"], "title": x["title"].strip(), "body": str(x.get("body_html") or ""),
+                                           "template_suffix": x.get("template_suffix") or ""} for x in items]})
+        except Exception as exc:  # noqa: BLE001 - the app has no pages permission yet, Shopify refused: said in Telegram
+            a.tell(f"The pages could not be added: {esc(str(exc)[:300])}")
+            self.logged("pages (About, Contact, FAQ)", "the install service refused", approved, result="failed")
+            return 1
+        s["pages_result"] = res
+        s["sample_pages"] = [x["title"] for x in items if x.get("sample") and x["handle"] in res.get("created", [])]
+        self.save()
+        self.logged(f"pages added: {', '.join(res.get('created') or []) or 'none'}", "a store handed over ready to sell", approved,
+                    result="failed" if res.get("failed") else "success", after=res)
+        a.tell(f"Pages on <b>{esc(s['name'])}</b>: added {esc(', '.join(res.get('created') or []) or 'none')}"
+               + (f"; already there, left as they were: {esc(', '.join(res['skipped']))}" if res.get("skipped") else "")
+               + (f"; failed: {esc(', '.join(f['handle'] for f in res['failed']))}" if res.get("failed") else "") + ".")
+        self.out(json.dumps(res))
+        return 1 if res.get("failed") else 0
+
+    def menu_links(self) -> dict[str, list[dict]]:
+        """The main menu and the footer from what the store has now: up to 5 collections (the brand's, else the store's), the pages."""
+        s = self.s
+        cols = [(c.get("title") or c["handle"], c["handle"]) for c in (s.get("brand") or {}).get("collections") or [] if c.get("handle")]
+        if not cols:
+            try:
+                cols = [(h.replace("-", " ").capitalize(), h) for h in self.catcher({"op": "target", "shop": s["shop"]}).get("collections") or []]
+            except Exception:  # noqa: BLE001 - no collections known: the menu has none
+                cols = []
+        main = ([{"title": "Home", "type": "FRONTPAGE"}, {"title": "Shop all", "type": "CATALOG"}]
+                + [{"title": t[:40], "type": "COLLECTION", "handle": h} for t, h in cols[:5]]
+                + [{"title": "About us", "type": "PAGE", "handle": "about-us"}, {"title": "Contact", "type": "PAGE", "handle": "contact"}])
+        footer = ([{"title": "About us", "type": "PAGE", "handle": "about-us"}, {"title": "Contact", "type": "PAGE", "handle": "contact"},
+                   {"title": "FAQ", "type": "PAGE", "handle": "faq"}, {"title": "Search", "type": "SEARCH"}]
+                  + [{"title": t, "type": "SHOP_POLICY", "handle": h} for t, h in FOOTER_POLICIES])
+        return {"main-menu": main, "footer": footer}
+
+    def menus(self, minutes: float = APPROVE_MINUTES) -> int:
+        """The store's main menu and footer set to the store's real collections, pages and policies; one Approve tap for both. A link
+        the store does not have is left out by the install service; the old links are kept in its audit row."""
+        self.need_plan()
+        s, a = self.s, self.ask
+        if s.get("menus_result"):
+            self.out(json.dumps(s["menus_result"]))
+            return 0
+        links = self.menu_links()
+        ok, by = a.approve("ok_menus", f"Set the menus of <b>{esc(s['name'])}</b>:\nMain menu: {esc(', '.join(x['title'] for x in links['main-menu']))}"
+                                       f"\nFooter: {esc(', '.join(x['title'] for x in links['footer']))}\nA link the store does not have is left "
+                                       "out; the old menus are kept on record.", minutes)
+        if ok is None:
+            return WAITING
+        if not ok:
+            self.logged("menus (main menu, footer)", "skipped in Telegram", by, result="blocked")
+            self.out(f"skipped by {by}")
+            return SKIPPED
+        approved, out = f"{by} (Telegram Approve)", {}
+        for handle, items in links.items():
+            try:
+                out[handle] = self.catcher({"op": "menu", "shop": s["shop"], "handle": handle, "items": items, "approved_by": approved})
+            except Exception as exc:  # noqa: BLE001 - one menu refused: the other is still set, and both are said
+                out[handle] = {"error": str(exc)[:300]}
+        s["menus_result"] = out
+        self.save()
+        failed = [h for h, r in out.items() if r.get("error")]
+        self.logged("menus set: " + ", ".join(h for h in out if h not in failed), "a store handed over ready to sell", approved,
+                    result="failed" if failed else "success", evidence={h: {"before": r.get("before")} for h, r in out.items()},
+                    after={h: r.get("items") for h, r in out.items()})
+        a.tell(f"Menus of <b>{esc(s['name'])}</b>: " + "; ".join(
+            f"{h}: " + (f"not set ({esc(r['error'][:150])})" if r.get("error") else esc(", ".join(i["title"] for i in r.get("items") or [])))
+            for h, r in out.items()))
+        self.out(json.dumps(out))
+        return 1 if failed else 0
+
     # ---- the apps
     def apps(self, minutes: float = APPROVE_MINUTES) -> int:
         self.need_plan()
@@ -867,10 +979,16 @@ class Job:
             lines.append(f"- Added: {done.get('products', 0)} products (every one ACTIVE), {done.get('collections', 0)} collections, "
                          f"{done.get('policies', 0)} policy pages")
         lines += [f"- {w['part']}: {w['preview']}" for w in s.get("written") or []] or ["- No page written yet"]
+        if s.get("pages_result"):
+            lines.append(f"- Pages added: {', '.join(s['pages_result'].get('created') or []) or 'none'}")
+        menus_set = [h for h, r in (s.get("menus_result") or {}).items() if not r.get("error")]
+        if menus_set:
+            lines.append(f"- Menus set: {', '.join(menus_set)}")
         lines += ["", "## Samples to replace before launch"]
         samples = [("Sample products", tagged(SAMPLE_TAG)), ("Sample prices (dtj-sample-price)", sample_priced + tagged(SAMPLE_PRICE_TAG)),
                    ("Sample descriptions (dtj-sample-text)", tagged(SAMPLE_TEXT_TAG)),
-                   ("Pictures made by ChatGPT", [Path(x).name for x in s.get("made_pictures") or []])]
+                   ("Pictures made by ChatGPT", [Path(x).name for x in s.get("made_pictures") or []]),
+                   ("Pages with sample text", s.get("sample_pages") or [])]
         unpriced = [x["title"] for x in prods if x.get("price_needed") and x["handle"] not in (p.get("prices") or {})]
         if unpriced:
             samples.append(("No price yet, at 0.00 (dtj-price-needed)", unpriced))
@@ -886,7 +1004,7 @@ class Job:
                   "- Domain: connect the brand's own domain",
                   "- Store details: the contact email, the sender email, phone and address",
                   "- Policies: refund, shipping, privacy and terms (Settings > Policies), checked by the brand",
-                  "- Menus: the main menu and footer menu linking the collections (Online Store > Navigation)",
+                  *([] if len(menus_set) == 2 else ["- Menus: the main menu and footer menu linking the collections (Online Store > Navigation)"]),
                   "- Launch: a test order in test mode, then publish the draft theme and remove the password page (Harsh's yes)",
                   "- Ads: the Meta pixel and the Google channel (DTJ's ads team)"]
         return "\n".join(lines) + "\n"
@@ -1218,6 +1336,13 @@ def main(argv=None) -> int:
     asf.add_argument("--job", required=True)
     asf.add_argument("--file", required=True, type=Path, help='{"products": [{"title", "description", "collection", "pictures": [..]}], '
                                                              '"banners": [..]}')
+    pg = sub.add_parser("pages")
+    pg.add_argument("--job", required=True)
+    pg.add_argument("--file", required=True, type=Path, help='{"pages": [{"handle", "title", "body_html", "template_suffix", "sample"}]}')
+    pg.add_argument("--minutes", type=float, default=APPROVE_MINUTES)
+    mn = sub.add_parser("menus")
+    mn.add_argument("--job", required=True)
+    mn.add_argument("--minutes", type=float, default=APPROVE_MINUTES)
     ac = sub.add_parser("activate")
     ac.add_argument("--job", required=True)
     ac.add_argument("--approved-by", required=True, help='"<name> (<where they said yes>)"')
@@ -1293,6 +1418,10 @@ def main(argv=None) -> int:
         return job.assets(a.file)
     if a.cmd == "activate":
         return job.activate(a.approved_by, job.handles())
+    if a.cmd == "pages":
+        return job.pages(a.file, a.minutes)
+    if a.cmd == "menus":
+        return job.menus(a.minutes)
     if a.cmd == "apps":
         return job.apps(a.minutes)
     if a.cmd == "installs":

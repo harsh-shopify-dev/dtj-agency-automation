@@ -31,7 +31,8 @@ from deploy import BUILDER_VAR, read_var  # noqa: E402
 
 NAME = "DTJ Store Builder"
 FOLDER = ROOT / "services" / "store-builder-app"
-SCOPES = "read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies"
+# 22 Oct 2026: + online store pages and navigation (About / Contact / FAQ and the menus of a store handed over ready to sell)
+SCOPES = "read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies,read_online_store_pages,write_online_store_pages,read_online_store_navigation,write_online_store_navigation"
 WRANGLER = HERE.parent / "wrangler.toml"
 
 

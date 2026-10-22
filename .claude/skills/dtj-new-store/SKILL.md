@@ -27,7 +27,8 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
 - **One Approve tap per action**, never a code typed at the laptop and never one tap for two actions:
   - `store_job.py draft` (the draft copy) and `copy` (the products: copied, from the Drive folder, or the samples);
   - `apps` (the app copies);
-  - `approve` for the header, the footer and the collection page.
+  - `approve` for the header, the footer and the collection page;
+  - `pages` (About, Contact, FAQ) and `menus` (the main menu and the footer).
 
   Skip = the action stays undone; say so at the end. The tapper's name goes into `--approved-by "<name> (Telegram Approve)"`.
 - **The copy never changes or deletes what the store has:**
@@ -173,6 +174,25 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
      3. `ship_draft --store <store> --theme <draft> --template-suffix dtj-<handle> --client-registry page_builder/clients/<store handle>.json`
      4. `store_job.py step --job J products --done <n> --total <all>`.
      - Use the offer from the plan word for word, or none.
+   - **About, Contact and FAQ pages and the menus** (part "pages"; Harsh, 22 Oct 2026: "we have to handover a product ready
+     shopify store"). These go through DTJ Store Builder and need its pages and navigation permissions. Those come in a new app
+     version, which needs Harsh's yes; until then the step says in Telegram that it is refused and stays open in the handover.
+     1. Write `.work/stores/J/pages.json`:
+        `{"pages": [{"handle", "title", "body_html", "template_suffix", "sample"}]}`
+        - **About us** (`about-us`): the brand's own story, from its website or the Drive "Brand details" About. A samples store
+          gets a short sample text marked `"sample": true`.
+        - **Contact** (`contact`, `"template_suffix": "contact"`): the theme's contact form. Add only the brand's real email,
+          phone and address; if it has none, add nothing.
+        - **FAQ** (`faq`): what shoppers ask in this niche, answered only from the brand's facts and its real policies. Shipping,
+          returns or payment terms the brand has not stated are left out, never made up.
+        - No claims, offers or reviews.
+     2. `store_job.py pages --job J --file .work/stores/J/pages.json`. It has its own Approve tap. It adds new pages only; a page
+        the store already has stays as it is.
+     3. `store_job.py menus --job J`. One Approve tap sets both menus:
+        - main menu: Home, Shop all, up to 5 collections, About us, Contact;
+        - footer: About us, Contact, FAQ, Search and the 4 policies.
+
+        A link the store does not have is left out. The old menus are kept in the install service's audit row.
 8. **Finish and answer n8n.**
    1. `store_job.py finish --job J --status "done" | "partly done" | "could not start" --note "<open items>"`
    2. `python n8n/store-factory/reply.py --resume-url "<resume_url>" --body .work/stores/J/answer.json`

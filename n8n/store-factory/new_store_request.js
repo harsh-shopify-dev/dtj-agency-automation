@@ -24,7 +24,8 @@ const lines = [
     + 'ACTIVE, never as a draft (Harsh, 22 Oct 2026); a price is never made up.',
   '- Every yes comes as an Approve tap in Telegram (Harsh, 21 Oct 2026): one tap for the draft copy, one for the products (copied, '
     + 'from the Drive folder or the samples, with collections and empty policy pages), one for the app copies, one for the header, one for the footer, one for the '
-    + 'collection page. Product and home pages go to the draft under Harsh\'s standing rule. Nothing is published, the live theme is '
+    + 'collection page, one for the About/Contact/FAQ pages, one for the menus. Product and home pages go to the draft under Harsh\'s '
+    + 'standing rule. Nothing is published, the live theme is '
     + 'never written, no store is created, and nothing the store has is changed or deleted.',
   '',
   'DO THIS, IN ORDER (from the repo root, D:\\CODE CONTAINERR\\WEB DEV\\dtj-agency-automation)',
