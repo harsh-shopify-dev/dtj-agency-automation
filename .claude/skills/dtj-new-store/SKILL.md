@@ -76,7 +76,12 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
    - a client's store: `add_shop.py ... --approved-by "<name> (Telegram Approve)" --theme <draft id>`. Run it in the person's
      terminal (`run_in_terminal`, read with `read_terminal`) and follow the skill dtj-add-shop, "One command" (the install links from
      the Dev Dashboard, the 7 Install buttons for the store OWNER). The installs can take hours: carry on with step 5 meanwhile;
-   - DTJ's own store: the skill dtj-add-shop, path B.
+   - DTJ's own store: register it (`add_client.py --org --shop <store> --label "<Name>" --name J`), deploy the install service
+     (`tools/deploy.py`; it needs the 7 original apps' secrets on this laptop: read from the Dev Dashboard with `shopify app env
+     show`, saved in Windows variables, never shown), write `page_builder/clients/J.json` (elevate's, store changed), then
+     `python n8n/store-factory/store_job.py installs --job J`: one Telegram message with 7 Install buttons (Shopify's own install
+     page; an install is always a person's tap), and each app switched on as soon as it is installed (Harsh, 22 Oct 2026:
+     "Install buttons in Telegram"). No `/on` needed.
 5. **Brand data** (no store change).
    - `store_job.py step --job J intake`.
    - Then from `services/store-builder`: `python -m page_builder.brand_intake <the BRAND's link> --client
