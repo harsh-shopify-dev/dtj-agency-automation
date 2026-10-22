@@ -606,28 +606,40 @@ class CatcherError(Exception):
     pass
 
 
-def _catcher(body: dict, opener=urllib.request.urlopen) -> dict:
-    """One signed call to the install service's POST /copy (DTJ_CATCHER_CONTROL_KEY, as licence_call.py signs /licence)."""
+def _catcher(body: dict, opener=urllib.request.urlopen, sleep=time.sleep) -> dict:
+    """One signed call to the install service's POST /copy (DTJ_CATCHER_CONTROL_KEY, as licence_call.py signs /licence). A dropped
+    connection, a 429 or a 5xx is tried again up to 3 times with a growing pause (CLAUDE.md self-healing; 22 Oct 2026: a connection
+    reset stopped the Senso policy copy); every try is signed with a fresh time."""
     sys.path.insert(0, str(ROOT / "services" / "install-catcher" / "tools"))
     from deploy import read_var  # noqa: PLC0415
     key = read_var("DTJ_CATCHER_CONTROL_KEY")
     if not key:
         raise CatcherError("DTJ_CATCHER_CONTROL_KEY is not set on this laptop (vault.py pull)")
-    raw = json.dumps({**body, "ts": int(time.time())}).encode()
-    req = urllib.request.Request(f"{CATCHER}/copy", data=raw, method="POST", headers={
-        "Content-Type": "application/json", "User-Agent": "dtj-store-job/1",
-        "X-DTJ-Signature": hmac.new(key.encode(), raw, hashlib.sha256).hexdigest()})
-    try:
-        with opener(req, timeout=120) as r:
-            return json.loads(r.read().decode())
-    except urllib.error.HTTPError as exc:
+    for attempt in range(4):
+        raw = json.dumps({**body, "ts": int(time.time())}).encode()
+        req = urllib.request.Request(f"{CATCHER}/copy", data=raw, method="POST", headers={
+            "Content-Type": "application/json", "User-Agent": "dtj-store-job/1",
+            "X-DTJ-Signature": hmac.new(key.encode(), raw, hashlib.sha256).hexdigest()})
         try:
-            why = json.loads(exc.read().decode()).get("error", "")
-        except ValueError:
-            why = ""
-        if exc.code == 404 and "not installed" in why:
-            raise NotInstalled(why) from exc
-        raise CatcherError(f"the install service said {exc.code}: {why or 'no reason given'}") from exc
+            with opener(req, timeout=120) as r:
+                return json.loads(r.read().decode())
+        except urllib.error.HTTPError as exc:
+            try:
+                why = json.loads(exc.read().decode()).get("error", "")
+            except ValueError:
+                why = ""
+            if (exc.code == 429 or exc.code >= 500) and attempt < 3:
+                sleep(2 ** (attempt + 1))
+                continue
+            if exc.code == 404 and "not installed" in why:
+                raise NotInstalled(why) from exc
+            raise CatcherError(f"the install service said {exc.code}: {why or 'no reason given'}") from exc
+        except (urllib.error.URLError, OSError) as exc:
+            if attempt < 3:
+                sleep(2 ** (attempt + 1))
+                continue
+            raise CatcherError(f"the install service did not answer after 4 tries ({exc})") from exc
+    raise CatcherError("unreachable")
 
 
 def _copy_plan(brand_link: str, store: str, currency: str | None, out: Path, job: str) -> dict:

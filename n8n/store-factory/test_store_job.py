@@ -3,7 +3,9 @@ is asked, in which order, what a tap means, and that a job picks up where it sto
 
     python -m unittest discover -s n8n/store-factory -t n8n/store-factory
 """
+import io
 import json
+import os
 import shutil
 import tempfile
 import unittest
@@ -596,6 +598,56 @@ class OpenMarks(unittest.TestCase):
         self.assertEqual([m["choice"] for m in marks], ["open", "closed"])
         a.ask("whose", "Whose store?", [("Ours", "dtj")])  # a button question gets no mark
         self.assertEqual(len(marks), 2)
+
+
+class CatcherRetry(unittest.TestCase):
+    """22 Oct 2026: a dropped connection stopped the Senso policy copy; the call is now tried again (max 3 more, CLAUDE.md)."""
+
+    def test_a_dropped_connection_is_tried_again_and_a_4xx_is_final(self):
+        import urllib.error  # noqa: PLC0415
+        tries, pauses = [], []
+
+        class Answer:
+            def __init__(self, data):
+                self.data = data
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self):
+                return json.dumps(self.data).encode()
+
+        def flaky(req, timeout):
+            tries.append(json.loads(req.data)["ts"])
+            if len(tries) < 3:
+                raise urllib.error.URLError(ConnectionResetError(10054, "closed by the remote host"))
+            return Answer({"done": {}})
+        old = os.environ.get("DTJ_CATCHER_CONTROL_KEY")
+        os.environ["DTJ_CATCHER_CONTROL_KEY"] = "test-key"
+        try:
+            self.assertEqual(store_job._catcher({"op": "status", "job": "x"}, opener=flaky, sleep=pauses.append), {"done": {}})
+            self.assertEqual((len(tries), pauses), (3, [2, 4]))
+
+            def always_down(req, timeout):
+                raise urllib.error.URLError("down")
+            with self.assertRaises(store_job.CatcherError):
+                store_job._catcher({"op": "status", "job": "x"}, opener=always_down, sleep=lambda s: None)
+
+            def refused(req, timeout):
+                raise urllib.error.HTTPError(req.full_url, 400, "bad", {}, io.BytesIO(b'{"error": "bad request"}'))
+            calls = []
+            with self.assertRaises(store_job.CatcherError):
+                store_job._catcher({"op": "status", "job": "x"}, opener=lambda r, timeout: calls.append(1) or refused(r, timeout),
+                                   sleep=lambda s: None)
+            self.assertEqual(len(calls), 1)  # a 4xx is never repeated
+        finally:
+            if old is None:
+                os.environ.pop("DTJ_CATCHER_CONTROL_KEY", None)
+            else:
+                os.environ["DTJ_CATCHER_CONTROL_KEY"] = old
 
 
 class Pieces(unittest.TestCase):
