@@ -360,7 +360,7 @@ class Job:
         return 0
 
     # ---- the brand copy (every store write runs in n8n after the Approve tap: no laptop step, Harsh 21 Oct 2026)
-    def copy(self, minutes: float = APPROVE_MINUTES) -> int:
+    def copy(self, minutes: float = APPROVE_MINUTES, again: bool = False) -> int:
         """A read-only plan through the install service (DTJ Store Builder), kept there for this job; its Approve tap, which itself
         starts "Store Factory: Brand Copy" in n8n; then waits until the install service says the copy is finished."""
         self.need_plan()
@@ -368,6 +368,11 @@ class Job:
         if not p.get("copy"):
             self.out("nothing to copy: this store is the brand")
             return 0
+        if again and s.get("copy_result"):  # a new copy after a finished one (22 Oct 2026: the policy pages): what the store has is skipped
+            for k in ("copy_plan", "copy_result", "copy_approved_by"):
+                s.pop(k, None)
+            self.ask.forget("ok_copy")  # its own Approve tap: the first one never counts twice
+            self.save()
         if s.get("copy_result"):
             self.out(json.dumps(s["copy_result"]))
             return 0
@@ -711,6 +716,8 @@ def main(argv=None) -> int:
         x = sub.add_parser(name)
         x.add_argument("--job", required=True)
         x.add_argument("--minutes", type=float, default=APPROVE_MINUTES)
+        if name == "copy":
+            x.add_argument("--again", action="store_true", help="a new copy after a finished one (what the store has is skipped)")
     ok = sub.add_parser("approve")
     ok.add_argument("--job", required=True)
     ok.add_argument("--key", required=True, help="ok_<what>, e.g. ok_header, ok_footer, ok_collection")
@@ -772,7 +779,7 @@ def main(argv=None) -> int:
             print(f"stopped: {exc}")
             return 1
     if a.cmd == "copy":
-        return job.copy(a.minutes)
+        return job.copy(a.minutes, again=getattr(a, "again", False))
     if a.cmd == "apps":
         return job.apps(a.minutes)
     if a.cmd == "installs":

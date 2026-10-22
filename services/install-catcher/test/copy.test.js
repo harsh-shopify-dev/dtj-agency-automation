@@ -21,7 +21,8 @@ const env = (extra = {}) => ({ APPS: "{}", VAULT_KEY: Buffer.alloc(32, 7).toStri
   BUILDER_CLIENT_ID: "builder-client-id", ORG_SECRET_DTJ_STORE_BUILDER: BUILDER_SECRET, VAULT: new FakeKV(), ...extra });
 
 // a stand-in store: products / collections by handle, policies, a password page, and every GraphQL call recorded
-function fakeStore({ password = true, products = ["old-product"], policies = { REFUND_POLICY: "", SHIPPING_POLICY: "Ours." }, failHandles = [] } = {}) {
+function fakeStore({ password = true, products = ["old-product"], policies = { REFUND_POLICY: "", SHIPPING_POLICY: "Ours." }, failHandles = [],
+  passwordQuery = true } = {}) {
   const s = { products: new Map(products.map((h, i) => [h, `gid://shopify/Product/${i + 1}`])), collections: new Map(), policies: { ...policies },
     published: [], sent: [], n: 100, password, failHandles: new Set(failHandles) };
   s.fetch = async (url, init = {}) => {
@@ -49,6 +50,7 @@ function fakeStore({ password = true, products = ["old-product"], policies = { R
       Exists: () => ({ productByIdentifier: s.products.has(variables.handle) ? { id: s.products.get(variables.handle) } : null }),
       CollectionExists: () => ({ collectionByIdentifier: s.collections.has(variables.handle) ? { id: s.collections.get(variables.handle) } : null }),
       Policies: () => ({ shop: { shopPolicies: pol } }),
+      Password: () => (passwordQuery ? { onlineStore: { passwordProtection: { enabled: s.password } } } : null),
       CopyCollection: () => { const id = `gid://shopify/Collection/${++s.n}`; s.collections.set(variables.collection.handle, id); return { collectionCreate: { collection: { id, handle: variables.collection.handle }, userErrors: [] } }; },
       CopyProduct: () => {
         if (s.failHandles.has(variables.input.handle)) return { productSet: { product: null, userErrors: [{ field: ["input"], message: "Bad input" }] } };
@@ -58,8 +60,9 @@ function fakeStore({ password = true, products = ["old-product"], policies = { R
       Publish: () => { s.published.push(variables.id); return { publishablePublish: { userErrors: [] } }; },
       SetPolicy: () => { s.policies[variables.shopPolicy.type] = variables.shopPolicy.body; return { shopPolicyUpdate: { shopPolicy: { type: variables.shopPolicy.type }, userErrors: [] } }; },
     }[name];
-    if (!data) return Response.json({ errors: [{ message: `unexpected ${name}` }] });
-    return Response.json({ data: data() });
+    const out = data && data();
+    if (!out) return Response.json({ errors: [{ message: data ? "Access denied for onlineStore" : `unexpected ${name}` }] });
+    return Response.json({ data: out });
   };
   return s;
 }
@@ -91,7 +94,7 @@ test("target reads what the store has, through DTJ Store Builder's own key, and 
   const r = await send(e, signed({ op: "target", shop: SHOP }));
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { store: SHOP, name: "Royal Demo", currency: "INR", password: true, online_store: "gid://shopify/Publication/9",
-    empty_policies: ["REFUND_POLICY"], products: ["old-product"], collections: [] });
+    empty_policies: ["PRIVACY_POLICY", "REFUND_POLICY", "TERMS_OF_SERVICE"], products: ["old-product"], collections: [] });  // never set = empty
   assert.ok(store.sent.every((c) => !["CopyProduct", "CopyCollection", "Publish", "SetPolicy"].includes(c.name)));
 });
 
@@ -140,8 +143,9 @@ test("the whole copy: kept, then step by step (collections first), each product 
   assert.equal(store.policies.REFUND_POLICY, "<p>7 days</p>");
   const audit = [...e.VAULT.data.keys()].filter((k) => k.startsWith("audit:")).map((k) => JSON.parse(e.VAULT.data.get(k)));
   assert.ok(audit.every((a) => a.approved_by === "Riya (Telegram Approve)" && a.via === "telegram bot"));
-  assert.equal((await send(e, signed({ op: "plan", job: "royal-demo", shop: SHOP, plan: PLAN }))).status, 409);  // started: plan fixed
-  assert.equal((await send(e, signed({ op: "status", job: "royal-demo" }))).body.finished, true);
+  assert.equal((await send(e, signed({ op: "plan", job: "royal-demo", shop: SHOP, plan: PLAN }))).status, 200);  // finished: a new copy may follow
+  const fresh = (await send(e, signed({ op: "status", job: "royal-demo" }))).body;  // the new plan waits for its own Approve tap
+  assert.deepEqual([fresh.finished, fresh.approved_by], [false, null]);
 });
 
 test("a draft copy is never published, a failed product is reported and 3 failures in a row stop the copy", async () => {
@@ -155,4 +159,18 @@ test("a draft copy is never published, a failed product is reported and 3 failur
   assert.match(r.stopped, /3 product copies failed in a row/);
   assert.equal(r.done.failed, 3);
   assert.deepEqual(store.published, []);
+});
+
+test("the password page comes from Shopify's own setting, else the storefront; an unfinished copy keeps its plan", async () => {
+  store = fakeStore({ password: false });
+  globalThis.fetch = store.fetch;
+  assert.equal((await send(env(), signed({ op: "target", shop: SHOP }))).body.password, false);
+  store = fakeStore({ password: true, passwordQuery: false });  // the app may not read the setting: the storefront decides
+  globalThis.fetch = store.fetch;
+  assert.equal((await send(env(), signed({ op: "target", shop: SHOP }))).body.password, true);
+  const e = env();
+  const big = { ...PLAN, collections: [], policies: [], products: Array.from({ length: 12 }, (_, i) => product(`p${i}`)) };
+  await send(e, signed({ op: "plan", job: "j2", shop: SHOP, plan: big }));
+  await send(e, fromBot({ op: "step", job: "j2", approved_by: "Harsh" }));  // 8 of 12: started, not finished
+  assert.equal((await send(e, signed({ op: "plan", job: "j2", shop: SHOP, plan: PLAN }))).status, 409);
 });
