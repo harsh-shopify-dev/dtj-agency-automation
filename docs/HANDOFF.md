@@ -22,6 +22,28 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 22 Oct 2026 (evening): EVERYTHING ON THE VPS: n8n STARTS IT, CLAUDE RUNS ON THE API KEY (branch `feature/vps-worker`, account A)
+Harsh, 22 Oct 2026: "everything will be automated ... i would suggest that the n8n triggers it and same for the claude".
+- **`n8n/store-factory/worker.py`** is a service on the VPS (`tools/vps/dtj-worker.service`, setup `tools/vps/setup_worker.sh`,
+  steps `tools/vps/README.md`).
+  - It takes every Page Design / Add Shop / New Store request within about 30 s.
+  - It runs `claude -p --permission-mode dontAsk --settings .claude/vps-settings.json --max-budget-usd $DTJ_CLAUDE_MAX_USD` on
+    `ANTHROPIC_API_KEY`. It refuses to start without the key or the cap (rule 9).
+  - Telegram waits: Claude ends with `DTJ_WAIT: <store_job command>`. The worker reruns that command every 5 min (only
+    store_job start/draft/copy/apps/installs/approve, never a shell) and resumes the same session when it exits not-3.
+  - A run left unanswered is marked failed and the admin chat is told; 3 in a row stop new starts.
+  - Reel requests are not taken yet.
+- **`.claude/vps-settings.json`** lists what unattended Claude may run (DTJ's tools only). It denies the Shopify CLI itself,
+  theme publish, git push/commit, rm, curl, ssh, the vault and `deploy.py`.
+- **Linux support:** `n8n_mcp.token()` reads the environment on Linux; `vault.py pull --env-file` writes the worker's owner-only
+  env file; `tools/vps/set_key.py` saves a key at a hidden prompt.
+- **VERIFIED:** tests (worker 7, store-factory 189 in all, vault 6); `bash -n` on the setup script.
+- **NOT VERIFIED:** anything on the VPS (no access from this laptop), and a real headless Claude run.
+- **OPEN for Harsh:**
+  1. an Anthropic API key and the per-request cap (spend decisions);
+  2. run the README steps as `ai` on the VPS;
+  3. stop laptop listeners once the worker runs.
+
 ## 22 Oct 2026 (later): STORE ASSETS: NICHE RESEARCH, CHATGPT PICTURES, SAMPLE PRICES, HANDOVER (branch `feature/store-assets`, account A)
 Harsh, 22 Oct 2026: sample prices and details are allowed ("we will change it later"); pictures only after studying the top 5
 D2C, Meta-ad-led competitors of the niche (never the giants: for Senso, never Wagh Bakri / Red Label / Taj), made with ChatGPT

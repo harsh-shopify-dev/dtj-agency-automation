@@ -3,6 +3,9 @@
     python tools/team-setup/vault.py status              which keys are in the vault and which are on this laptop (names only)
     python tools/team-setup/vault.py pull                copy the keys you may see from the vault into your Windows user settings
     python tools/team-setup/vault.py pull --replace      the same, also overwriting keys this laptop already has
+    python tools/team-setup/vault.py pull --env-file ~/.config/dtj/worker.env
+                                                         on DTJ's VPS (Linux): into the worker's settings file (only its owner may
+                                                         read it; tools/vps/README.md), not Windows settings
     python tools/team-setup/vault.py push NAME [NAME..]  copy keys from this laptop into the vault (Harsh, when a key is new or changed)
     python tools/team-setup/vault.py push --all          every store-factory key this laptop has
 
@@ -28,6 +31,7 @@ import re
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from typing import Callable
 
 DESIGNERS = "DTJ Store Factory - Designers"
@@ -102,6 +106,40 @@ def save_user_var(name: str, value: str) -> None:
     import winreg
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_SET_VALUE) as k:
         winreg.SetValueEx(k, name, 0, winreg.REG_SZ, value)
+
+
+def env_file_vars(path: Path) -> dict[str, str]:
+    """The keys an env file already holds (NAME="value" lines, as env_file_saver writes them)."""
+    out: dict[str, str] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return out
+    for line in lines:
+        m = re.match(r'^([A-Z][A-Z0-9_]*)="((?:[^"\\]|\\.)*)"$', line.strip())
+        if m:
+            out[m.group(1)] = re.sub(r"\\(.)", r"\1", m.group(2))
+    return out
+
+
+def env_file_saver(path: Path):
+    """save(name, value) into a systemd EnvironmentFile on the VPS (Harsh, 22 Oct 2026: the worker runs there): one NAME="value"
+    line per key, the file readable by its owner only (0600), written whole each time so a key is never half there."""
+    def save(name: str, value: str) -> None:
+        keys = env_file_vars(path)
+        keys[name] = value
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        body = "".join(f'{k}="' + v.replace("\\", "\\\\").replace('"', '\\"') + '"\n' for k, v in sorted(keys.items()))
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(body)
+        os.replace(tmp, path)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+    return save
 
 
 # ------------------------------------------------------------------------------------------------ Bitwarden's command-line tool
@@ -265,6 +303,7 @@ def main(argv=None, vault: Vault | None = None, local: dict | None = None, save=
     sub.add_parser("status")
     p = sub.add_parser("pull")
     p.add_argument("--replace", action="store_true")
+    p.add_argument("--env-file", type=Path, help="the VPS: save into this env file (0600) instead of Windows settings")
     p = sub.add_parser("push")
     p.add_argument("names", nargs="*")
     p.add_argument("--all", action="store_true")
@@ -276,6 +315,9 @@ def main(argv=None, vault: Vault | None = None, local: dict | None = None, save=
         if args.job == "status":
             return status(v, local)
         if args.job == "pull":
+            if getattr(args, "env_file", None):
+                path = args.env_file.expanduser()
+                return pull(v, env_file_vars(path), args.replace, save=env_file_saver(path))
             return pull(v, local, args.replace, save=save)
         names = sorted(n for n in local if is_known(n)) if args.all else args.names
         if not names:

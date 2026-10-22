@@ -1,7 +1,7 @@
 """One call to DTJ's n8n through its MCP server (used by the deploy scripts in this folder).
 
 The token is read at run time from the Windows USER variable N8N_MCP_TOKEN (the registry, so a value saved after a program started
-is still seen) and is never printed or written anywhere.
+is still seen), or on the VPS from the environment, and is never printed or written anywhere.
 """
 from __future__ import annotations
 
@@ -33,6 +33,10 @@ PAGE_DESIGN = "n8MzskKamTbVhZ3h"    # Store Factory: Page Design
 
 
 def token() -> str:
+    """The Windows user variable on a laptop; the environment on the VPS (the worker's EnvironmentFile)."""
+    import os
+    if os.name != "nt":
+        return os.environ.get("N8N_MCP_TOKEN", "").strip()
     import winreg
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
         return winreg.QueryValueEx(k, "N8N_MCP_TOKEN")[0].strip()
