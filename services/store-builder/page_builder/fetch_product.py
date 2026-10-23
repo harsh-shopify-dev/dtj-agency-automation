@@ -18,6 +18,7 @@ import html
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Callable
@@ -45,10 +46,53 @@ def as_text(description_html: str) -> str:
     return "\n".join(line.strip() for line in re.sub(r"[ \t]+", " ", text).splitlines() if line.strip())
 
 
-def read_product(store: str, handle: str, get: Getter = _get) -> dict:
-    status, final_url, body = get(f"https://{normalise_store(store)}/products/{handle}.js")
-    if status != 200 or "/password" in final_url:
-        raise ValueError(f"the store did not show /products/{handle} (HTTP {status}{', password page' if '/password' in final_url else ''})")
+def _admin_call(body: dict) -> dict:
+    """The install service's POST /copy, signed with this computer's control key (n8n/store-factory/store_job.py _catcher)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "n8n" / "store-factory"))
+    from store_job import _catcher  # noqa: PLC0415
+    return _catcher(body)
+
+
+def from_admin(store: str, handle: str, call: Callable[[dict], dict] = _admin_call) -> dict:
+    """The product through DTJ Store Builder (read only), when the storefront is behind its password page (23 Oct 2026: a dev store
+    never drops it, and the first page run on the VPS stopped there). Same shape as the public read."""
+    p = call({"op": "product", "shop": normalise_store(store), "handle": handle})["product"]
+    money = lambda v: round(float(v), 2) if v not in (None, "") else None  # noqa: E731 - the store's own currency, as the .js read
+    variants = (p.get("variants") or {}).get("nodes") or []
+    media = []
+    for m in (p.get("media") or {}).get("nodes") or []:
+        img = (m.get("image") or (m.get("preview") or {}).get("image") or {})
+        kind = "video" if m.get("mediaContentType") in ("VIDEO", "EXTERNAL_VIDEO") else "image"
+        item = {"type": kind, "file": file_name(img.get("url") or ""), "url": img.get("url") or "", "alt": m.get("alt") or "",
+                "width": img.get("width"), "height": img.get("height")}
+        if kind == "video":
+            item["sources"] = [s.get("url") for s in m.get("sources") or [] if s.get("url")]
+        media.append(item)
+    first = variants[0] if variants else {}
+    return {
+        "store": normalise_store(store), "handle": p.get("handle", handle), "title": p.get("title"),
+        "price_rupees": money(first.get("price")), "compare_at_price_rupees": money(first.get("compareAtPrice")),
+        "available": any(v.get("availableForSale") for v in variants), "vendor": p.get("vendor"), "type": p.get("productType"),
+        "tags": p.get("tags") or [], "options": [o.get("name") for o in p.get("options") or []],
+        "variants": [{"title": v.get("title"), "price_rupees": money(v.get("price")), "available": v.get("availableForSale")}
+                     for v in variants],
+        "description_text": as_text(p.get("descriptionHtml", "")), "media": media,
+        "source": f"https://{normalise_store(store)}/products/{handle} (the store's own data through DTJ Store Builder: its storefront "
+                  "is behind its password page)",
+    }
+
+
+def read_product(store: str, handle: str, get: Getter = _get, admin: Callable[[dict], dict] | None = None) -> dict:
+    try:
+        status, final_url, body = get(f"https://{normalise_store(store)}/products/{handle}.js")
+    except urllib.error.HTTPError as exc:  # a password page answers with a redirect loop to /password
+        if exc.code in (301, 302, 303, 307, 308) or "password" in str(exc).lower():
+            return from_admin(store, handle, admin or _admin_call)
+        raise
+    if "/password" in final_url:
+        return from_admin(store, handle, admin or _admin_call)
+    if status != 200:
+        raise ValueError(f"the store did not show /products/{handle} (HTTP {status})")
     p = json.loads(body.decode("utf-8", "replace"))
     rupees = lambda v: round(v / 100, 2) if isinstance(v, (int, float)) else None  # noqa: E731 - the .js prices are in paise
     media = []
@@ -72,7 +116,7 @@ def read_product(store: str, handle: str, get: Getter = _get) -> dict:
     }
 
 
-def main(argv: list[str] | None = None, *, get: Getter = _get) -> int:
+def main(argv: list[str] | None = None, *, get: Getter = _get, admin: Callable[[dict], dict] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--store", required=True, help="the store's .myshopify.com address")
     ap.add_argument("--handle", required=True, help="the product handle (the part after /products/ in its link)")
@@ -82,9 +126,13 @@ def main(argv: list[str] | None = None, *, get: Getter = _get) -> int:
         sys.stdout.reconfigure(errors="replace")
     client = Path(args.client)
     try:
-        product = read_product(args.store, args.handle, get)
+        product = read_product(args.store, args.handle, get, admin)
     except (OSError, ValueError) as exc:
         print(f"could not read the product: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:  # noqa: BLE001 - behind a password and DTJ Store Builder could not read it (not installed, not deployed)
+        print(f"could not read the product: the store is behind its password page and DTJ Store Builder could not read it either "
+              f"({str(exc)[:300]})", file=sys.stderr)
         return 1
     media_dir = client / "media"
     media_dir.mkdir(parents=True, exist_ok=True)
