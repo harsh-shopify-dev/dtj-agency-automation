@@ -185,6 +185,20 @@ class Attended(Base):
         self.assertEqual(w2.rows("w1"), [])  # n8n refused: no answers this round, said once
         self.assertTrue(any("answers not read this round" in p for p in self.printed))
 
+    def test_retry_goes_through_the_inbox_and_answered_runs_are_closed(self):
+        w = self.worker(Runs(), ATTENDED)
+        w.s["jobs"]["900"] = {"run": "900", "workflow": "Store Factory: New Store", "workflow_id": NS, "state": "failed"}
+        w.s["jobs"]["901"] = {"run": "901", "workflow": "Store Factory: New Store", "workflow_id": NS, "state": "asking", "chat": "1"}
+        w.save()
+        cli = self.worker(Runs(), ATTENDED)  # the command line, while the service runs
+        self.assertEqual(cli.send({"retry": "900"}), 0)
+        self.assertIn("900", w.s["jobs"])  # nothing changed under the service
+        self.n8n.waiting = []  # run 901 was answered elsewhere; 993 too
+        w.round()
+        self.assertNotIn("900", w.s["jobs"])  # the service applied the retry itself
+        self.assertEqual(w.s["jobs"]["901"]["state"], "closed")
+        self.assertFalse(w.inbox.exists())
+
     def test_a_restart_marks_the_turns_it_stopped_without_counting_failures(self):
         w = self.worker(Runs(), ATTENDED)
         w.s["jobs"]["900"] = {"run": "900", "workflow": "Store Factory: Page Design", "state": "running"}
