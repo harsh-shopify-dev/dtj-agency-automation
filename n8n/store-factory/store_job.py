@@ -1514,12 +1514,26 @@ def _sender(token: str) -> Callable[[str, dict], dict]:
     return send
 
 
+_TABLES: dict[str, dict] = {}  # the answers table, looked up once per process (fewer calls to n8n)
+
+
+def answers_table() -> dict | None:
+    from n8n_mcp import call  # noqa: PLC0415
+    from setup_n8n import find_tables  # noqa: PLC0415
+    if TABLE not in _TABLES:
+        found = find_tables(call, TABLE)
+        if not found:
+            return None
+        _TABLES[TABLE] = found[0]
+    return _TABLES[TABLE]
+
+
 def _rows(job: str) -> list:
     from n8n_mcp import call  # noqa: PLC0415
-    from setup_n8n import ERRORS, find_tables, table_rows  # noqa: PLC0415
+    from setup_n8n import ERRORS, table_rows  # noqa: PLC0415
     try:
-        tables = find_tables(call, TABLE)
-        return table_rows(call, tables[0], [{"columnName": "job", "condition": "eq", "value": job}]) if tables else []
+        table = answers_table()
+        return table_rows(call, table, [{"columnName": "job", "condition": "eq", "value": job}]) if table else []
     except ERRORS:
         return []  # n8n did not answer: the next check tries again
 

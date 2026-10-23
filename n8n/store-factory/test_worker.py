@@ -98,8 +98,9 @@ class Asker:
     def __init__(self, shared):
         self.shared = shared
 
-    def __call__(self, job, chat, state, save):
+    def __call__(self, job, chat, state, save, rows=None):
         self.shared["made"].append((job, chat))
+        self.shared.setdefault("rows", []).append(rows)
         return self
 
     def tell(self, text):
@@ -166,6 +167,23 @@ class Attended(Base):
         w.round()
         self.assertIn("Starting now (n8n run 993), watched by Riya", " ".join(shared["told"]))
         self.assertEqual((job["state"], len(runs.calls)), ("done", 1))
+
+    def test_one_read_of_the_answers_per_round_for_every_job(self):
+        reads = []
+        w = worker.Worker(call=self.n8n, run=Runs(), tell=self.told.append, environ=dict(ATTENDED), state=self.tmp / "r" / "jobs.json",
+                          clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings,
+                          read_answers=lambda: reads.append(1) or [{"job": "w1", "key": "watch"}, {"job": "w2", "key": "stop"}])
+        w.round()
+        self.assertEqual(([r["key"] for r in w.rows("w1")], [r["key"] for r in w.rows("w2")], len(reads)), (["watch"], ["stop"], 1))
+        w.round()
+        w.rows("w1")
+        self.assertEqual(len(reads), 2)  # read again next round, once
+        w2 = worker.Worker(call=self.n8n, run=Runs(), tell=self.told.append, environ=dict(ATTENDED), state=self.tmp / "r2" / "jobs.json",
+                           clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings,
+                           read_answers=lambda: (_ for _ in ()).throw(RuntimeError("HTTP Error 429: Too Many Requests")))
+        w2.round()
+        self.assertEqual(w2.rows("w1"), [])  # n8n refused: no answers this round, said once
+        self.assertTrue(any("answers not read this round" in p for p in self.printed))
 
     def test_a_restart_marks_the_turns_it_stopped_without_counting_failures(self):
         w = self.worker(Runs(), ATTENDED)
