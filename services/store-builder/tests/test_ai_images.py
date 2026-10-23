@@ -87,7 +87,7 @@ class Route(unittest.TestCase):
         way, why = ai.route({}, NO_VAR, NO_CDP)
         self.assertIsNone(way)
         self.assertIn("OPENAI_API_KEY", why)
-        self.assertIn("reel VPS", why)
+        self.assertIn("so Codex there makes them", why)
 
 
 class Guard(unittest.TestCase):
@@ -228,8 +228,8 @@ HOST = "ai@srv2048145.hstgr.cloud"
 
 
 class FakeRunner:
-    """Plays ssh and scp: records every argv, answers the chatgpt_cli command with `answer`, writes `data` where scp brings the
-    picture back. Nothing reaches the VPS."""
+    """Plays ssh, scp and the local Codex script: records every argv, answers codex_image.sh with `answer`, writes `data` where scp
+    brings the picture back (or where the local script saves it). Nothing reaches the VPS or Codex."""
 
     def __init__(self, answer=None, data=PNG, fail_on=None):
         self.calls, self.data, self.fail_on = [], data, fail_on
@@ -240,10 +240,16 @@ class FakeRunner:
         line = " ".join(argv)
         if self.fail_on and self.fail_on in line:
             return 1, "", "lost connection"
-        if argv[0] == "ssh" and "chatgpt_cli" in line:
+        if argv[0] == "ssh" and "codex_image.sh" in line:
             rdir = line.split("--prompt-file ")[1].split("/prompt.txt")[0]
-            got = self.answer if self.answer is not None else {"ok": True, "path": f"{rdir}/out.png", "refs": 1, "seconds": 41.5}
+            got = self.answer if self.answer is not None else {"ok": True, "path": f"{rdir}/out.png", "seconds": 41}
             return 0, "some log line\n" + json.dumps(got) + "\n", ""
+        if argv[0] == "bash" and argv[1].endswith("codex_image.sh"):
+            out = argv[argv.index("--out") + 1]
+            got = self.answer if self.answer is not None else {"ok": True, "path": out, "seconds": 38}
+            if got.get("ok"):
+                Path(out).write_bytes(self.data)
+            return 0, json.dumps(got) + "\n", ""
         if argv[0] == "scp" and argv[-2].startswith(HOST + ":"):
             Path(argv[-1]).write_bytes(self.data)
         return 0, "", ""
@@ -261,14 +267,35 @@ class VpsWay(Base):
         self.ref = self.tmp / "1.jpg"
         self.ref.write_bytes(b"\xff\xd8\xff\xe0jpg")
 
+    def test_codex_here_comes_first_then_the_vps(self):
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: True, codex_ok=lambda: True)
+        self.assertEqual(way, "codex")
+        self.assertIn("Codex on this computer", why)
+
+    def test_codex_on_this_computer_makes_it_with_our_photos(self):
+        r = FakeRunner()
+        side = ai.make("product", "This exact bottle on a plain light background", self.tmp / "p9.webp", refs=[self.ref],
+                       environ={}, read_var=NO_VAR, runner=r, codex_ok=lambda: True)
+        self.assertEqual((side["backend"], side["model"]), ("codex", "Codex (this computer)"))
+        self.assertTrue(side["path"].endswith("p9.png"))
+        argv = r.calls[0]
+        self.assertEqual(argv[:2], ["bash", str(ai.CODEX_SCRIPT)])
+        self.assertEqual(argv[argv.index("--ref") + 1], str(self.ref))
+        self.assertEqual(argv[argv.index("--timeout") + 1], "600")
+        r = FakeRunner(answer={"ok": False, "error": "no picture from codex (exit 1): usage limit reached"})
+        with self.assertRaises(ImagesError) as e:
+            ai.make("banner", GOOD, self.tmp / "b9.webp", environ={}, read_var=NO_VAR, runner=r, codex_ok=lambda: True)
+        self.assertIn("Codex could not make it: no picture from codex (exit 1): usage limit reached", str(e.exception))
+
     def test_the_vps_comes_first_when_set_and_answering(self):
         asked = []
-        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: asked.append(h) or True)
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: asked.append(h) or True,
+                            codex_ok=lambda: False)
         self.assertEqual((way, asked), ("vps", [HOST]))
         self.assertIn(HOST, why)
-        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: False)
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST, "OPENAI_API_KEY": KEY}, NO_VAR, NO_CDP, lambda h: False, codex_ok=lambda: False)
         self.assertEqual(way, "api")  # a VPS that does not answer: the next way
-        way, why = ai.route({"DTJ_IMAGE_VPS": HOST}, NO_VAR, NO_CDP, lambda h: False)
+        way, why = ai.route({"DTJ_IMAGE_VPS": HOST}, NO_VAR, NO_CDP, lambda h: False, codex_ok=lambda: False)
         self.assertIsNone(way)
         self.assertIn("ssh did not answer", why)
         self.assertIn("DTJ_IMAGE_VPS", why)
@@ -281,8 +308,8 @@ class VpsWay(Base):
     def test_a_picture_with_our_product_comes_back_and_only_its_folder_is_removed(self):
         r = FakeRunner()
         side = ai.make("product", "This exact bottle on a plain light background", self.tmp / "p1.webp", refs=[self.ref],
-                       environ={"DTJ_IMAGE_VPS": HOST}, read_var=NO_VAR, runner=r, vps_ok=lambda h: True)
-        self.assertEqual((side["backend"], side["model"]), ("vps", f"chatgpt.com (VPS {HOST})"))
+                       environ={"DTJ_IMAGE_VPS": HOST}, read_var=NO_VAR, runner=r, vps_ok=lambda h: True, codex_ok=lambda: False)
+        self.assertEqual((side["backend"], side["model"]), ("vps", f"Codex (VPS {HOST})"))
         self.assertTrue(side["path"].endswith("p1.png"))  # ChatGPT's PNG keeps its real type
         self.assertEqual(side["refs"], [str(self.ref)])
         self.assertEqual((self.tmp / "p1.png").read_bytes(), PNG)
@@ -291,8 +318,8 @@ class VpsWay(Base):
         self.assertRegex(rdir, r"^/tmp/dtj-img-[0-9a-f]{12}$")
         self.assertEqual(mk, f"mkdir -m 700 {rdir}")
         self.assertEqual(rm, f"rm -rf -- {rdir}")
-        self.assertIn('cd "$HOME"/dtj-agency-automation/services/reel-factory && "$PY" -m reel_factory.chatgpt_cli image', run)
-        self.assertIn(f"--prompt-file {rdir}/prompt.txt --out {rdir}/out.png --ref {rdir}/ref-1.jpg --timeout 300", run)
+        self.assertIn('cd "$HOME"/dtj-agency-automation && bash tools/vps/codex_image.sh', run)
+        self.assertIn(f"--prompt-file {rdir}/prompt.txt --out {rdir}/out.png --ref {rdir}/ref-1.jpg --timeout 600", run)
         sent = next(c for c in r.calls if c[0] == "scp" and c[-1].startswith(HOST))
         self.assertEqual([Path(x).name for x in sent[-3:-1]], ["prompt.txt", "ref-1.jpg"])
         self.assertEqual(sent[-1], f"{HOST}:{rdir}/")
@@ -304,28 +331,27 @@ class VpsWay(Base):
         r, seen = FakeRunner(), []
         real = ai._vps_make
 
-        def spy(host, chat_prompt, out, refs, folder, runner, timeout=300):
+        def spy(host, chat_prompt, out, refs, folder, runner, timeout=600):
             seen.append((chat_prompt, folder))
             return real(host, chat_prompt, out, refs, folder, runner, timeout)
         with mock.patch.object(ai, "_vps_make", spy):
             ai.make("lifestyle", "A woman pouring the product in the reference photo into a cup", self.tmp / "l.png",
-                    refs=[self.ref], backend="vps", environ={"DTJ_IMAGE_VPS": HOST, "DTJ_IMAGE_VPS_DIR": "/srv/dtj/reel-factory"},
+                    refs=[self.ref], backend="vps", environ={"DTJ_IMAGE_VPS": HOST, "DTJ_IMAGE_VPS_DIR": "/srv/dtj/repo"},
                     read_var=NO_VAR, runner=r)
         prompt, folder = seen[0]
         self.assertTrue(prompt.startswith("Create one wide landscape picture (1536x1024). Use the attached photo of our product as the reference."))
         self.assertIn("its label as it is in the reference", prompt)
         self.assertIn("only the product's own label", prompt)
         self.assertNotIn("No words, letters, numbers, labels", prompt)
-        self.assertEqual(folder, "/srv/dtj/reel-factory")
-        self.assertIn("cd /srv/dtj/reel-factory &&", r.commands()[1])
+        self.assertEqual(folder, "/srv/dtj/repo")
+        self.assertIn("cd /srv/dtj/repo &&", r.commands()[1])
 
     def test_a_vps_failure_is_plain_and_the_folder_is_still_removed(self):
-        r = FakeRunner(answer={"ok": False, "error": "ChatGPT is signed out in the reel Chrome window", "needs_person": True})
+        r = FakeRunner(answer={"ok": False, "error": "no picture from codex (exit 1): not logged in"})
         with self.assertRaises(ImagesError) as e:
             ai.make("product", GOOD, self.tmp / "p.webp", refs=[self.ref], backend="vps", environ={"DTJ_IMAGE_VPS": HOST},
                     read_var=NO_VAR, runner=r)
-        self.assertIn("ChatGPT on the VPS could not make it: ChatGPT is signed out", str(e.exception))
-        self.assertIn("a person must look at the reel Chrome window", str(e.exception))
+        self.assertIn("Codex on the VPS could not make it: no picture from codex (exit 1): not logged in", str(e.exception))
         self.assertTrue(r.commands()[-1].startswith("rm -rf -- /tmp/dtj-img-"))
         r = FakeRunner(fail_on="scp -q")
         with self.assertRaises(ImagesError) as e:

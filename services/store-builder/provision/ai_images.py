@@ -2,19 +2,20 @@
 
 Harsh, 22 Oct 2026: "on a complete new store designing we will use chatgpt to generate banners and product images so our assets
 gets ready", then "we will use chatgpt cli which will be hosted on our hostinger vps using which you can generate the images ...
-where you have to upload the referennce images of our products". Three ways to the same pictures, tried in this order:
-  vps      ChatGPT on DTJ's Hostinger VPS (services/reel-factory/reel_factory/chatgpt_cli.py in the reel VPS's logged-in Chrome),
-           over ssh: DTJ_IMAGE_VPS is the ssh target (e.g. ai@srv2048145.hstgr.cloud; this process's environment first, then the
-           Windows user variable), DTJ_IMAGE_VPS_DIR the repo's reel-factory folder there (default
-           ~/dtj-agency-automation/services/reel-factory). The prompt and the reference pictures go to a fresh /tmp/dtj-img-<id>
+where you have to upload the referennce images of our products". The "ChatGPT CLI" is Codex (OpenAI's command-line tool, logged
+in with DTJ's ChatGPT account) on the VPS, as ~/work/run-ref.sh there already used it (found 23 Oct 2026). The ways, in this order:
+  codex    Codex on THIS computer (the VPS, where the worker runs the store job): tools/vps/codex_image.sh. No API key.
+  vps      the same script on DTJ's Hostinger VPS from another computer, over ssh: DTJ_IMAGE_VPS is the ssh target (e.g.
+           ai@srv2048145.hstgr.cloud; this process's environment first, then the Windows user variable), DTJ_IMAGE_VPS_DIR the
+           repo there (default ~/dtj-agency-automation). The prompt and the reference pictures go to a fresh /tmp/dtj-img-<id>
            folder on the VPS, the picture comes back, and only that folder is removed. No API key.
   api      OpenAI's Images API (GPT Image 2.5, the model behind ChatGPT's pictures). Needs OPENAI_API_KEY or DTJ_OPENAI_API_KEY
            (this process's environment first, then the Windows user variable). Unattended; costs a little per picture
            (openai.com/api/pricing). The key is never printed, written or returned.
   chatgpt  ChatGPT in the logged-in Chrome on the reel VPS over its DevTools port (services/reel-factory/reel_factory/chatgpt.py),
            no API key. DTJ_CHATGPT_CDP is that Chrome's address (default http://127.0.0.1:9222).
-  auto     vps when DTJ_IMAGE_VPS is set and answers ssh, else api when a key is saved, else chatgpt when that Chrome answers,
-           else it stops and says what to set up.
+  auto     codex when this computer has it, else vps when DTJ_IMAGE_VPS is set and answers ssh, else api when a key is saved,
+           else chatgpt when that Chrome answers, else it stops and says what to set up.
 Reference pictures (--ref, refs=): photos of OUR product, uploaded with the prompt so the picture shows the real product (ChatGPT:
 attached to the chat; the API: /v1/images/edits). The prompt then also says to keep the product exactly as in the reference.
 
@@ -27,7 +28,7 @@ Usage (from services/store-builder):
     python -m provision.ai_images --kind banner --prompt "Morning kitchen counter, warm light, fresh herbs" --out <dir>/banner-1.webp
     ... --kind product | lifestyle      sizes in KINDS
     ... --ref <photo of our product>    (repeatable, up to 4)
-    ... --backend vps|api|chatgpt|auto  (default auto)
+    ... --backend codex|vps|api|chatgpt|auto  (default auto)
     ... --dry-run                       prints the guarded prompt and the route only (free, nothing is made)
 Exit 0 = made (the sidecar is printed), 1 = could not (the reason is printed; a key never is), 2 = the prompt was refused.
 """
@@ -65,8 +66,9 @@ KINDS = {"banner": "1536x864", "product": "1024x1024", "lifestyle": "1536x1024"}
 KEY_NAMES = ("OPENAI_API_KEY", "DTJ_OPENAI_API_KEY")
 CDP_DEFAULT = "http://127.0.0.1:9222"
 VPS_VAR, VPS_DIR_VAR = "DTJ_IMAGE_VPS", "DTJ_IMAGE_VPS_DIR"
-VPS_DIR_DEFAULT = "~/dtj-agency-automation/services/reel-factory"
-VPS_PYTHON = "$HOME/dtj/reel-venv/bin/python"  # the reel venv (setup_vps.sh) has playwright; python3 when it is missing
+VPS_DIR_DEFAULT = "~/dtj-agency-automation"  # the repo on the VPS: tools/vps/codex_image.sh
+CODEX_SCRIPT = ROOT / "tools" / "vps" / "codex_image.sh"
+CODEX_SECONDS = 600  # run-ref.sh's own limit for one picture
 SSH_OPTS = ("-o", "BatchMode=yes", "-o", "ConnectTimeout=10")
 MAX_REFS = 4
 REF_TYPES = (".jpg", ".jpeg", ".png", ".webp")
@@ -169,6 +171,11 @@ def _vps_answers(host: str, runner: Runner = _run) -> bool:
     return runner(["ssh", *SSH_OPTS, host, "true"], 25)[0] == 0
 
 
+def _codex_here() -> bool:
+    """Codex on this computer (the VPS): the worker's store job makes pictures right here."""
+    return os.name != "nt" and bool(shutil.which("codex") or Path("~/.npm-global/bin/codex").expanduser().exists())
+
+
 def _cdp_base(environ: Mapping[str, str]) -> str:
     base = (environ.get("DTJ_CHATGPT_CDP") or CDP_DEFAULT).strip().rstrip("/")
     return base[: -len("/json/version")] if base.endswith("/json/version") else base
@@ -183,11 +190,14 @@ def _cdp_answers(url: str) -> bool:
 
 
 def route(environ: Mapping[str, str] = os.environ, read_var: Callable[[str], str | None] | None = None,
-          cdp_ok: Callable[[str], bool] | None = None, vps_ok: Callable[[str], bool] | None = None) -> tuple[str | None, str]:
-    """("vps" | "api" | "chatgpt" | None, a plain reason). Never returns or prints the key."""
+          cdp_ok: Callable[[str], bool] | None = None, vps_ok: Callable[[str], bool] | None = None,
+          codex_ok: Callable[[], bool] | None = None) -> tuple[str | None, str]:
+    """("codex" | "vps" | "api" | "chatgpt" | None, a plain reason). Never returns or prints the key."""
+    if (codex_ok or _codex_here)():
+        return "codex", "Codex on this computer (DTJ's ChatGPT account)"
     host = _var(VPS_VAR, environ, read_var)
     if host and (vps_ok or _vps_answers)(host):
-        return "vps", f"ChatGPT on the VPS ({host}, over ssh)"
+        return "vps", f"Codex on the VPS ({host}, over ssh)"
     key, name = _key(environ, read_var)
     if key:
         return "api", f"OpenAI Images API (key saved as {name})"
@@ -195,8 +205,8 @@ def route(environ: Mapping[str, str] = os.environ, read_var: Callable[[str], str
     if (cdp_ok or _cdp_answers)(base + "/json/version"):
         return "chatgpt", f"ChatGPT in the logged-in Chrome at {base}"
     down = f" ({VPS_VAR} is {host} but ssh did not answer: is this computer's key in the VPS user's authorized_keys?)" if host else ""
-    return None, (f"No way to make pictures yet{down}: set the Windows user variable {VPS_VAR} to the reel VPS's ssh target (e.g. "
-                  "ai@srv2048145.hstgr.cloud) so ChatGPT there makes them, or save an OpenAI key as OPENAI_API_KEY (or "
+    return None, (f"No way to make pictures yet{down}: set the Windows user variable {VPS_VAR} to the VPS's ssh target (e.g. "
+                  "ai@srv2048145.hstgr.cloud) so Codex there makes them, or save an OpenAI key as OPENAI_API_KEY (or "
                   "DTJ_OPENAI_API_KEY) on this computer, or open the logged-in Chrome with its DevTools port "
                   f"(DTJ_CHATGPT_CDP, now {base}).")
 
@@ -292,9 +302,34 @@ def _remote_dir(base: str) -> str:
     return '"$HOME"/' + shlex.quote(base[2:]) if base.startswith("~/") else shlex.quote(base)
 
 
-def _vps_make(host: str, chat_prompt: str, out: Path, refs: list[Path], folder: str, runner: Runner, timeout: int = 300) -> Path:
-    """One picture by chatgpt_cli on the VPS: a fresh /tmp/dtj-img-<id> there, the prompt and our product's photos copied in, the
-    command run, the picture copied back, and only that folder removed."""
+def _answer(stdout: str) -> dict:
+    lines = [ln for ln in stdout.strip().splitlines() if ln.strip().startswith("{")]
+    try:
+        return json.loads(lines[-1]) if lines else {}
+    except ValueError:
+        return {}
+
+
+def _codex_make(chat_prompt: str, out: Path, refs: list[Path], runner: Runner, timeout: int = CODEX_SECONDS) -> Path:
+    """One picture by Codex on this computer (tools/vps/codex_image.sh), saved as a PNG next to `out`."""
+    png = out.with_suffix(".png")
+    with tempfile.TemporaryDirectory() as tmp:
+        prompt = Path(tmp) / "prompt.txt"
+        prompt.write_text(chat_prompt, encoding="utf-8")
+        argv = ["bash", str(CODEX_SCRIPT), "--prompt-file", str(prompt), "--out", str(png), "--timeout", str(timeout)]
+        for r in refs:
+            argv += ["--ref", str(r)]
+        code, so, err = runner(argv, timeout + 60)
+    answer = _answer(so)
+    if not answer.get("ok"):
+        raise ImagesError(f"Codex could not make it: {answer.get('error') or err.strip()[:200] or f'exit {code}'}")
+    return png
+
+
+def _vps_make(host: str, chat_prompt: str, out: Path, refs: list[Path], folder: str, runner: Runner,
+              timeout: int = CODEX_SECONDS) -> Path:
+    """One picture by Codex on the VPS (tools/vps/codex_image.sh): a fresh /tmp/dtj-img-<id> there, the prompt and our product's
+    photos copied in, the script run, the picture copied back, and only that folder removed."""
     rdir = f"/tmp/dtj-img-{uuid.uuid4().hex[:12]}"
     assert re.fullmatch(r"/tmp/dtj-img-[0-9a-f]{12}", rdir)
 
@@ -319,19 +354,13 @@ def _vps_make(host: str, chat_prompt: str, out: Path, refs: list[Path], folder: 
             if code:
                 raise ImagesError(f"could not copy the prompt and photos to {host} (scp exit {code}): {err.strip()[:200]}")
         refs_args = "".join(f" --ref {shlex.quote(f'{rdir}/ref-{i}{r.suffix.lower()}')}" for i, r in enumerate(refs, 1))
-        command = (f'PY=python3; [ -x "{VPS_PYTHON}" ] && PY="{VPS_PYTHON}"; cd {_remote_dir(folder)} && "$PY" -m reel_factory.chatgpt_cli '
-                   f"image --prompt-file {shlex.quote(rdir + '/prompt.txt')} --out {shlex.quote(rdir + '/out.png')}{refs_args} "
-                   f"--timeout {int(timeout)}")
+        command = (f"cd {_remote_dir(folder)} && bash tools/vps/codex_image.sh --prompt-file {shlex.quote(rdir + '/prompt.txt')} "
+                   f"--out {shlex.quote(rdir + '/out.png')}{refs_args} --timeout {int(timeout)}")
         code, so, err = run(["ssh", *SSH_OPTS, host, command], timeout + 120)
-        lines = [ln for ln in so.strip().splitlines() if ln.strip().startswith("{")]
-        try:
-            answer = json.loads(lines[-1]) if lines else {}
-        except ValueError:
-            answer = {}
+        answer = _answer(so)
         if not answer.get("ok"):
             why = answer.get("error") or err.strip()[:200] or f"exit {code}"
-            raise ImagesError(f"ChatGPT on the VPS could not make it: {why}"
-                              + (" (a person must look at the reel Chrome window)" if answer.get("needs_person") else ""))
+            raise ImagesError(f"Codex on the VPS could not make it: {why}")
         path = str(answer.get("path") or "")
         if not path.startswith(rdir + "/"):
             raise ImagesError("the VPS answered with a picture outside its job folder: nothing copied")
@@ -347,7 +376,7 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
          environ: Mapping[str, str] = os.environ, read_var: Callable[[str], str | None] | None = None,
          cdp_ok: Callable[[str], bool] | None = None, sleep=time.sleep, model: str = MODELS[0], quality: str = "medium",
          forbid: tuple[str, ...] | list[str] = (), refs: list[Path | str] | tuple = (), runner: Runner | None = None,
-         vps_ok: Callable[[str], bool] | None = None) -> dict:
+         vps_ok: Callable[[str], bool] | None = None, codex_ok: Callable[[], bool] | None = None) -> dict:
     """Make one picture at `out` (.webp or .png; another extension becomes .webp) and its sidecar <stem>.json; returns the sidecar.
     `refs`: up to 4 photos of OUR product (jpg, png, webp) the picture must show as they are. ValueError when the prompt is
     refused, ImagesError when no picture could be made."""
@@ -363,17 +392,20 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
         out = out.with_suffix(".webp")
     out.parent.mkdir(parents=True, exist_ok=True)
     if backend == "auto":
-        backend, why = route(environ, read_var, cdp_ok, vps_ok)
+        backend, why = route(environ, read_var, cdp_ok, vps_ok, codex_ok)
         if backend is None:
             raise ImagesError(why)
     size, usage = KINDS[kind], None
-    if backend == "vps":
+    if backend == "codex":
+        out = _codex_make(_chat_prompt(text, size, refs), out, refs, runner or _run)
+        made_with = "Codex (this computer)"
+    elif backend == "vps":
         host = _var(VPS_VAR, environ, read_var)
         if not host:
             raise ImagesError(f"{VPS_VAR} is not set: the VPS's ssh target, e.g. ai@srv2048145.hstgr.cloud")
         folder = _var(VPS_DIR_VAR, environ, read_var) or VPS_DIR_DEFAULT
         out = _vps_make(host, _chat_prompt(text, size, refs), out, refs, folder, runner or _run)
-        made_with = f"chatgpt.com (VPS {host})"
+        made_with = f"Codex (VPS {host})"
     elif backend == "api":
         key, _name = _key(environ, read_var)
         if not key:
@@ -406,7 +438,7 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
                 cg.close()
         made_with = "chatgpt.com"
     else:
-        raise ImagesError("backend must be vps, api, chatgpt or auto")
+        raise ImagesError("backend must be codex, vps, api, chatgpt or auto")
     if not out.exists() or not out.stat().st_size:
         raise ImagesError("no picture was saved")
     out = _fix_suffix(out)
@@ -425,7 +457,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kind", choices=sorted(KINDS), required=True)
     ap.add_argument("--prompt", required=True, help="what the picture shows: one scene, no words")
     ap.add_argument("--out", required=True, help="the picture's file (.webp or .png); the sidecar is <stem>.json next to it")
-    ap.add_argument("--backend", choices=("auto", "vps", "api", "chatgpt"), default="auto")
+    ap.add_argument("--backend", choices=("auto", "codex", "vps", "api", "chatgpt"), default="auto")
     ap.add_argument("--ref", action="append", default=[], help="a photo of our product the picture must show as it is (repeatable)")
     ap.add_argument("--model", choices=MODELS, default=MODELS[0])
     ap.add_argument("--quality", choices=("low", "medium", "high", "auto"), default="medium")
