@@ -380,14 +380,14 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
     """Make one picture at `out` (.webp or .png; another extension becomes .webp) and its sidecar <stem>.json; returns the sidecar.
     `refs`: up to 4 photos of OUR product (jpg, png, webp) the picture must show as they are. ValueError when the prompt is
     refused, ImagesError when no picture could be made."""
-    refs = [Path(r) for r in refs]
+    refs = [Path(r).resolve() for r in refs]  # absolute: Codex runs in its own folder, where a relative path finds nothing
     if len(refs) > MAX_REFS:
         raise ImagesError(f"{len(refs)} reference photos: at most {MAX_REFS}")
     bad = [r.name for r in refs if r.suffix.lower() not in REF_TYPES or not r.is_file() or not r.stat().st_size]
     if bad:
         raise ImagesError(f"reference photo missing or not a jpg, png or webp: {', '.join(bad)}")
     text = guard(prompt, kind, forbid, refs=bool(refs))
-    out = Path(out)
+    out = Path(out).resolve()
     if out.suffix.lower() not in (".webp", ".png"):
         out = out.with_suffix(".webp")
     out.parent.mkdir(parents=True, exist_ok=True)

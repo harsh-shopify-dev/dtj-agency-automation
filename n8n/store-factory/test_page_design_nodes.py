@@ -69,6 +69,9 @@ class Nodes(unittest.TestCase):
         for stage in ("brief", "intake", "product", "facts", "check"):
             self.assertIn(f"python -m page_builder.progress page step --stage {stage}{state}", text)
         self.assertIn("page step --stage build --done <this round: 1, 2 or 3> --total 3" + state, text)
+        # the study and ChatGPT's pictures move the bar too (Harsh, 23 Oct 2026: "telegram told nothing next")
+        self.assertIn("page step --stage study" + state, text)
+        self.assertIn("page step --stage pictures --done <pictures made> --total <pictures planned>" + state, text)
         self.assertIn("python -m page_builder.progress page done" + state, text)
         self.assertIn('page stopped --note "<why, in plain words>"' + state, text)
         # in the order of the work: start, brief, intake, product, facts, build, check, done (the done line before reply.py)
