@@ -803,6 +803,28 @@ class PagesAndMenus(Base):
         self.assertIn("- Menus: the main menu and footer menu", hand)  # the footer is still the owner's
 
 
+class FreshJob(unittest.TestCase):
+    """A new n8n run for the same store starts with fresh questions; the old job is kept aside (23 Oct 2026)."""
+
+    def test_a_new_run_moves_the_old_job_aside_and_the_same_run_keeps_it(self):
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        folder = root / "dtj-testing"
+        folder.mkdir()
+        (folder / "job.json").write_text(json.dumps({"run": "988", "planned": True}), encoding="utf-8")
+        self.assertIsNone(store_job.fresh_job(folder, ""))  # no run given: nothing moves
+        self.assertIsNone(store_job.fresh_job(folder, "988"))  # the same run (a rerun after exit 3): kept
+        moved = store_job.fresh_job(folder, "1201", stamp=lambda: "20261023-090000")
+        self.assertEqual(moved, root / "dtj-testing-20261023-090000")
+        self.assertTrue((moved / "job.json").exists())
+        self.assertFalse(folder.exists())
+        self.assertIsNone(store_job.fresh_job(folder, "1201"))  # nothing there any more: the new job starts from scratch
+        legacy = root / "elevate"
+        legacy.mkdir()
+        (legacy / "job.json").write_text("{}", encoding="utf-8")  # a job from before runs were recorded
+        self.assertIsNotNone(store_job.fresh_job(legacy, "1300", stamp=lambda: "x"))
+
+
 class Activate(Base):
     def test_old_drafts_are_switched_on_in_rounds_and_logged_with_the_named_yes(self):
         calls = []

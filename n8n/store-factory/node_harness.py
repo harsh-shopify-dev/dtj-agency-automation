@@ -21,7 +21,7 @@ const $ = (name) => {
   const list = Array.isArray(refs[name]) ? refs[name] : [refs[name]];  // a list = that node's items
   return { first: () => ({ json: list[0] }), all: () => list.map((json) => ({ json })) };
 };
-const $execution = { resumeUrl: refs.__resume };
+const $execution = { resumeUrl: refs.__resume, id: refs.__run };
 try {
   // n8n's Code sandbox has no URL / URLSearchParams (test execution 330): hide them here too, so a node that needs them fails in tests
   const out = new Function('$input', '$', '$execution', 'URL', 'URLSearchParams', code)($input, $, $execution, undefined, undefined);

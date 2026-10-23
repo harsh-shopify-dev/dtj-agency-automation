@@ -182,10 +182,10 @@ class Job:
                             approved_by=by, approved_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **extra)
 
     # ---- start: the store, then the questions
-    def begin(self, scan: dict, chat: str, by: str) -> None:
+    def begin(self, scan: dict, chat: str, by: str, run: str = "") -> None:
         if not self.s.get("shop"):  # a new job (the Asker has already added its empty "asked" / "answers")
             self.s.update({"job": self.job, "link": scan["link"], "shop": scan["myshopify_domain"], "name": scan["name"],
-                           "chat": str(chat or ""), "requested_by": by, "scan": scan, "plan": {}, "written": []})
+                           "chat": str(chat or ""), "requested_by": by, "scan": scan, "plan": {}, "written": [], "run": str(run or "")})
             self.ask.chat = self.s["chat"]
             self.save()
 
@@ -1010,6 +1010,24 @@ class Job:
         return "\n".join(lines) + "\n"
 
 
+def fresh_job(folder: Path, run: str, stamp: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")) -> Path | None:
+    """A new n8n run for a store that already has a job (23 Oct 2026: dtj-testing would have picked up the Senso job of the day
+    before instead of asking again): the old job moves aside to <job>-<time> (kept, never deleted) and this run starts with fresh
+    questions. The same run again (a rerun after exit 3) keeps its job; without --run nothing moves."""
+    state = folder / "job.json"
+    if not run or not state.exists():
+        return None
+    try:
+        old = json.loads(state.read_text(encoding="utf-8"))
+    except ValueError:
+        old = {}
+    if str(old.get("run") or "") == str(run):
+        return None
+    dest = folder.with_name(f"{folder.name}-{stamp()}")
+    folder.rename(dest)
+    return dest
+
+
 def _scan(link: str) -> dict:
     from page_builder.store_scan import scan  # noqa: PLC0415
     return scan(link, private=_private_scan)
@@ -1331,6 +1349,7 @@ def main(argv=None) -> int:
     st.add_argument("--link", required=True)
     st.add_argument("--chat", default="")
     st.add_argument("--by", default="")
+    st.add_argument("--run", default="", help="the n8n run: a new run for a store that has a job starts a fresh one")
     st.add_argument("--minutes", type=float, default=QUESTION_MINUTES)
     asf = sub.add_parser("assets")
     asf.add_argument("--job", required=True)
@@ -1384,6 +1403,9 @@ def main(argv=None) -> int:
             print(f"stopped: {str(exc)[:400]}")
             return 1
         jid = job_id(sc["myshopify_domain"])
+        moved = fresh_job(STATE_DIR / jid, a.run)
+        if moved:
+            print(f"the earlier job for this store is kept in {moved}; this run starts fresh")
     else:
         jid = a.job
     progress = PageProgress(STATE_DIR / jid / "progress.json", token=token, stages=STORE_STAGES, units=STORE_UNITS)
@@ -1396,7 +1418,7 @@ def main(argv=None) -> int:
     job = Job(jid, send=_sender(token), rows=_rows, progress=progress, access=access, add_row=_add_row,
               log=ActionLog(STATE_DIR / jid / "action-log.jsonl", jid, automation="store-job"))
     if a.cmd == "start":
-        job.begin(sc, a.chat, a.by)
+        job.begin(sc, a.chat, a.by, a.run)
         if a.chat and not progress.s.get("message_id"):
             progress.start(a.chat, f"Designing the store: {sc['name']}")
         return job.plan(a.minutes)
