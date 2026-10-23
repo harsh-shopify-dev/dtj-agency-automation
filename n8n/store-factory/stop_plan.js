@@ -36,6 +36,7 @@ if (ask.mode === 'cancel') {
   return [{ json: { action: 'cancel', chat_id: ask.chat_id, run_id: String(run.id), store: store(run), by: ask.by } }];
 }
 const running = runs.filter((r) => GOING.includes(r.status));
-if (!running.length) return reply('No brand intake is running right now.');
+if (!running.length) return reply('No brand intake is running right now. To stop a page or store job, tap "Stop this job" under its '
+  + '"Started" message.');
 return running.map((r) => ({ json: { action: 'choose', chat_id: ask.chat_id,
   text: 'Running: brand intake for ' + esc(store(r)) + ', started ' + ago(r) + '.', stop_data: 'stop:intake:' + r.id } }));

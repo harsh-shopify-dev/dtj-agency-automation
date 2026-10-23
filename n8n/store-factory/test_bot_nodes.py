@@ -342,7 +342,9 @@ class Stop(unittest.TestCase):
         self.assertEqual([o["stop_data"] for o in out], ["stop:intake:1", "stop:intake:3"])
         self.assertIn("Running: brand intake for freesoul.com, started", out[0]["text"])
         self.assertIn("&lt;b&gt;x&lt;/b&gt;.com", out[1]["text"])  # a store name is never read as HTML
-        self.assertEqual(self.plan(ask, 200, [run(2, "completed")])[0]["text"], "No brand intake is running right now.")
+        none = self.plan(ask, 200, [run(2, "completed")])[0]["text"]
+        self.assertTrue(none.startswith("No brand intake is running right now."))
+        self.assertIn('tap "Stop this job" under its "Started" message', none)  # page and store jobs stop from their own button
 
     def test_only_a_brand_intake_that_is_still_going_is_cancelled(self):
         ask = {"chat_id": "111", "mode": "cancel", "run_id": "7", "by": "Riya"}
