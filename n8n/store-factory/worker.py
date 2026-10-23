@@ -46,6 +46,7 @@ import listen  # noqa: E402
 
 STATE = ROOT / ".work" / "worker" / "jobs.json"
 SETTINGS = ROOT / ".claude" / "vps-settings.json"
+MCP = ROOT / "tools" / "vps" / "mcp.json"  # n8n's MCP server (the repo's .mcp.json is not in git); the token from the environment
 # the workflows taken; "Reel Factory: New Reel" ("Reel") joins once a person has watched its first live run (HANDOFF, 21 Oct 2026:
 # it spends Flow credits)
 STEPS = {listen.WORKFLOW: "Page Design", listen.ADD_SHOP: "Add Shop", listen.NEW_STORE: "New Store"}
@@ -198,12 +199,13 @@ class Worker:
             # made sure by Claude Code itself); --bare skips CLAUDE.md discovery, so the rulebook is handed in explicitly
             argv = [self.claude, "-p", "--bare", "--output-format", "json", "--permission-mode", "dontAsk", "--settings",
                     str(self.settings), "--append-system-prompt-file", str(ROOT / "CLAUDE.md"),
-                    "--max-budget-usd", str(self.environ["DTJ_CLAUDE_MAX_USD"])]
+                    "--max-budget-usd", str(self.environ["DTJ_CLAUDE_MAX_USD"]), "--mcp-config", str(MCP)]
         else:
             # attended: this machine's own Claude login (a person tapped Start and watches); an API key in the environment is not
             # passed on, so the login is what runs (Harsh, 23 Oct 2026: no API key for this)
             env.pop("ANTHROPIC_API_KEY", None)
-            argv = [self.claude, "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings", str(self.settings)]
+            argv = [self.claude, "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings", str(self.settings),
+                    "--mcp-config", str(MCP)]
         if job.get("session"):
             argv += ["--resume", job["session"]]
         job.update(state="running", turn_started=now_iso())

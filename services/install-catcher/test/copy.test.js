@@ -73,6 +73,11 @@ function fakeStore({ password = true, products = ["old-product"], policies = { R
         s.statuses[handle] = variables.product.status;
         return { productUpdate: { product: { id: variables.product.id, status: variables.product.status }, userErrors: [] } };
       },
+      OneProduct: () => (s.products.has(variables.handle) ? { productByIdentifier: { handle: variables.handle, title: "Hydrogen", descriptionHtml: "<p>Fast</p>",
+        vendor: "Hydrogen Vendor", productType: "Snowboard", tags: ["winter"], status: "ACTIVE", options: [{ name: "Title" }],
+        variants: { nodes: [{ title: "Default Title", price: "600.0", compareAtPrice: null, availableForSale: true }] },
+        media: { nodes: [{ mediaContentType: "IMAGE", alt: "board", preview: { image: { url: "https://cdn.shopify.com/s/files/1/a/files/board.jpg", width: 800, height: 800 } },
+          image: { url: "https://cdn.shopify.com/s/files/1/a/files/board.jpg", width: 800, height: 800 } }] } } } : { productByIdentifier: null }),
       PageHandles: () => ({ pages: { nodes: [...s.pages].map(([handle, id]) => ({ id, handle })) } }),
       AddPage: () => { const id = `gid://shopify/Page/${++s.n}`; s.pages.set(variables.page.handle, id); return { pageCreate: { page: { id, handle: variables.page.handle }, userErrors: [] } }; },
       Menus: () => ({ menus: { nodes: [...s.menus.values()] } }),
@@ -293,6 +298,19 @@ test("menu: main-menu or footer only, links resolved from the store, the old lin
   const none = await send(e, signed({ op: "menu", shop: SHOP, handle: "footer", approved_by: "H", items: [{ title: "Nope", type: "PAGE", handle: "missing" }] }));
   assert.equal(none.status, 400);  // nothing could be linked: the footer stays as it is
   assert.deepEqual(store.menus.get("footer").items, []);
+});
+
+test("product: one product read through Store Builder (the storefront is behind its password), nothing written", async () => {
+  store = fakeStore({ products: ["the-collection-snowboard-hydrogen"] });
+  globalThis.fetch = store.fetch;
+  const e = env();
+  const r = await send(e, signed({ op: "product", shop: SHOP, handle: "the-collection-snowboard-hydrogen" }));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.product.title, "Hydrogen");
+  assert.equal(r.body.product.variants.nodes[0].price, "600.0");
+  assert.equal((await send(e, signed({ op: "product", shop: SHOP, handle: "missing" }))).status, 404);
+  assert.equal((await send(e, signed({ op: "product", shop: SHOP, handle: "bad handle!" }))).status, 400);
+  assert.deepEqual(store.sent.map((c) => c.name), ["OneProduct", "OneProduct"]);
 });
 
 test("activate: at most 12 a call, the rest come back in left", async () => {

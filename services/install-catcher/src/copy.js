@@ -17,6 +17,8 @@
 //   activate {shop, handles, approved_by}  a DRAFT product goes ACTIVE and onto the Online Store, nothing else about it changes
 //                                  (Harsh, 22 Oct 2026: "all the products will stay active none of them will be kept as draft");
 //                                  at most 12 a call, the rest come back in "left"
+//   product {shop, handle}         read only: one product's text, prices, variants and media, for the page builder when the store's
+//                                  pages are behind its password (23 Oct 2026: the first VPS page run could not read a dev store)
 //   pages {shop, pages, approved_by} new pages only (About, Contact, FAQ: a store handed over ready to sell, Harsh 22 Oct 2026); a
 //                                  handle the store has is left as it is; body HTML without scripts, frames or event handlers
 //   menu  {shop, handle, items, approved_by}  the store's "main-menu" or "footer" set to these links (home, all products, a
@@ -50,6 +52,7 @@ const Q = {
   policies: "query Policies { shop { shopPolicies { type body } } }",
   password: "query Password { onlineStore { passwordProtection { enabled } } }",
   productStatus: "query ProductStatus($handle: String!) { productByIdentifier(identifier: { handle: $handle }) { id status } }",
+  oneProduct: "query OneProduct($handle: String!) { productByIdentifier(identifier: { handle: $handle }) { handle title descriptionHtml vendor productType tags status options { name } variants(first: 100) { nodes { title price compareAtPrice availableForSale } } media(first: 50) { nodes { mediaContentType alt preview { image { url width height } } ... on MediaImage { image { url width height } } ... on Video { sources { url } } } } } }",
   publications: "query Publications { publications(first: 20) { nodes { id name } } }",
   pageHandles: "query PageHandles { pages(first: 250) { nodes { id handle } } }",
   menus: "query Menus { menus(first: 50) { nodes { id handle title isDefault items { title type url items { title } } } } }",
@@ -420,6 +423,13 @@ export async function copyRoute(request, env, caller, now) {
   if (body.op === "step") return step(env, body, via);
   if (body.op === "uploads") return uploads(env, body, via);
   if (body.op === "activate") return activate(env, body, via);
+  if (body.op === "product") {
+    const cfg = builder(env, body.shop);
+    if (!HANDLE_RE.test(body.handle || "")) throw new Refuse(400, "handle must be a product handle");
+    const found = (await gql(cfg.shop, await orgAccess(cfg), Q.oneProduct, { handle: body.handle })).productByIdentifier;
+    if (!found) throw new Refuse(404, `no product ${body.handle} in ${cfg.shop}`);
+    return { product: found };
+  }
   if (body.op === "pages") return pages(env, body, via);
   if (body.op === "menu") return menu(env, body, via);
   if (body.op === "status") {
@@ -427,5 +437,5 @@ export async function copyRoute(request, env, caller, now) {
     if (!raw2) throw new Refuse(404, "no copy plan for this job");
     return counts(JSON.parse(raw2));
   }
-  throw new Refuse(400, "op must be target, plan, step, status, uploads, activate, pages or menu");
+  throw new Refuse(400, "op must be target, plan, step, status, uploads, activate, product, pages or menu");
 }
