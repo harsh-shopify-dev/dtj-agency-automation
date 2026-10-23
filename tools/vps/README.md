@@ -36,8 +36,8 @@ waits for a person, the worker checks for the answer itself and wakes Claude whe
      check names. No Claude API key is needed in the default (attended) mode; Claude Code must be logged in once as `ai`.
 5. The Shopify login for themes: run `shopify theme list --store <a DTJ store>.myshopify.com` once and finish the login with
    DTJ's collaborator account in your browser.
-6. ChatGPT for the pictures: the reel factory's Chrome on port 9222 (`services/reel-factory/setup_vps.sh`), logged in to
-   chatgpt.com once.
+6. Pictures: Codex (already on the VPS, logged in with DTJ's ChatGPT account; `tools/vps/codex_image.sh`). Nothing to do
+   unless Codex says it is logged out (then: codex login, once, as ai).
 7. Run `bash ~/dtj-agency-automation/tools/vps/setup_worker.sh`. It installs what is missing and starts the service. Once, as
    root: `loginctl enable-linger ai`, so the worker keeps running after you log out.
 8. **Stop every laptop listener** (`listen.py`). Two takers would both take the same request.
