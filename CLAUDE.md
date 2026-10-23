@@ -71,10 +71,12 @@ trigger, the n8n request or the waiting run:
 4. Answer through `resume_url` exactly as the instructions say (`n8n/store-factory/reply.py`). The resume link resumes the run: use
    it only in that command, never in a file.
 If the n8n tools are not loaded, ask Harsh to paste the output of the "Request for Claude Code" node from the n8n execution.
-**On the VPS, with nobody at a computer (Harsh, 22 Oct 2026: "the n8n triggers it and same for the claude"):** the service
-`n8n/store-factory/worker.py` (`tools/vps/README.md`) takes every Page Design, Add Shop and New Store request within about 30 s,
-runs Claude Code headless on DTJ's Claude API key (rule 9; a spend cap per request), only with what `.claude/vps-settings.json`
-allows, and keeps Telegram waits itself without Claude. A session it starts follows the request's instructions with the headless
+**On the VPS, started by n8n (Harsh, 22 Oct 2026: "the n8n triggers it and same for the claude"; 23 Oct: "there will be a person
+watching it"):** the service `n8n/store-factory/worker.py` (`tools/vps/README.md`) sees every Page Design, Add Shop and New Store
+request within about 30 s and asks in Telegram "tap Start if you are watching". Only after that tap (the watcher's name is kept)
+does Claude Code run, on the VPS's own Claude login (attended, so rule 9 allows it), only with what `.claude/vps-settings.json`
+allows; the watcher follows it in Telegram. Unattended runs exist only as DTJ_WORKER_MODE=api (the API key and a spend cap, if Harsh
+ever switches it on). The worker keeps Telegram waits itself without Claude. A session it starts follows the request's instructions with the headless
 rules the worker adds (a wait for a person ends the turn with `DTJ_WAIT: <command>`). While it runs, laptops do not listen.
 A new page is started in n8n with **Store Factory: New Page** (just a product link; the shop's details come from the data table
 `dtj_stores`) or, later, from the Telegram bot. A new team laptop is set up with `tools/team-setup/setup-team-pc.ps1` and checked

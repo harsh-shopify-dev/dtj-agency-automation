@@ -9,7 +9,9 @@ set -euo pipefail
 REPO="${DTJ_REPO:-$HOME/dtj-agency-automation}"
 ENV_FILE="$HOME/.config/dtj/worker.env"
 UNIT_DIR="$HOME/.config/systemd/user"
-NEEDED=(ANTHROPIC_API_KEY DTJ_CLAUDE_MAX_USD N8N_MCP_TOKEN DTJ_TELEGRAM_BOT_TOKEN DTJ_ADMIN_CHAT DTJ_CATCHER_CONTROL_KEY)
+# attended (the default, Harsh 23 Oct 2026: a person watches every run in Telegram) needs no Claude API key: the VPS's own Claude
+# login runs it. DTJ_WORKER_MODE="api" in the env file = unattended, which needs the API key and the spend cap too.
+NEEDED=(N8N_MCP_TOKEN DTJ_TELEGRAM_BOT_TOKEN DTJ_ADMIN_CHAT DTJ_CATCHER_CONTROL_KEY)
 OPTIONAL=(DTJ_GDRIVE_CLIENT_ID DTJ_GDRIVE_CLIENT_SECRET DTJ_GDRIVE_REFRESH_TOKEN OPENAI_API_KEY)
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
@@ -56,6 +58,13 @@ fi
 
 echo "4. Keys in $ENV_FILE (names only)"
 mkdir -p "$(dirname "$ENV_FILE")" && touch "$ENV_FILE" && chmod 600 "$ENV_FILE"
+if grep -q '^DTJ_WORKER_MODE="api"' "$ENV_FILE"; then
+  echo "  mode: api (unattended): the Claude API key and the spend cap are needed too"
+  NEEDED+=(ANTHROPIC_API_KEY DTJ_CLAUDE_MAX_USD)
+else
+  echo "  mode: attended (a person taps Start in Telegram and watches): the VPS's own Claude login runs it"
+  if [ -f "$HOME/.claude/.credentials.json" ]; then ok "Claude Code is logged in for $(id -un)"; else todo "log in to Claude Code once as $(id -un): claude, then /login"; fi
+fi
 for k in "${NEEDED[@]}"; do
   if grep -q "^$k=" "$ENV_FILE"; then ok "$k"; else todo "$k: python tools/vps/set_key.py $k (or the vault pull below)"; fi
 done

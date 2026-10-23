@@ -22,6 +22,21 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 23 Oct 2026: THE WORKER IS ATTENDED BY DEFAULT: A START TAP, NO API KEY (branch `feature/worker-attended`, account A)
+Harsh, 23 Oct 2026: "there will be a person watching it, its just because i dont have to tell you here to listen for the call in
+n8n so everything gets handled there ... when we get a client only then we build the site via automation so we need a person".
+- **`worker.py` mode `attended` is the default (`DTJ_WORKER_MODE`):**
+  - each new request gets one Telegram question in the chat the link came from (else `DTJ_ADMIN_CHAT`): "Start: I'm watching";
+  - nothing starts before that tap, and the tapper's name is kept and told to Claude;
+  - Claude then runs on the VPS's own Claude login (no `--bare`, no API key passed on, no spend cap needed).
+- **Mode `api`** (the earlier unattended mode: `--bare`, `ANTHROPIC_API_KEY`, `DTJ_CLAUDE_MAX_USD`) stays, off unless Harsh
+  switches it on.
+- `setup_worker.sh` and the README now ask only for the bot, the n8n token, the admin chat and the catcher key, and check that
+  Claude Code is logged in as `ai`. CLAUDE.md is updated.
+- **VERIFIED:** tests (store-factory 194, worker 10).
+- **NOT VERIFIED:** on the VPS (no access from this laptop).
+- **OPEN for Harsh:** the VPS setup (tools/vps/README.md); no API key needed.
+
 ## 22 Oct 2026 (night): ABOUT / CONTACT / FAQ PAGES AND THE MENUS (branch `feature/pages-and-menus`, account A)
 Harsh, 22 Oct 2026: "we have to handover a product ready shopify store so if anything is missed by me you will cover it".
 - **New part `pages`** in the "what to design" question, included in "Everything":

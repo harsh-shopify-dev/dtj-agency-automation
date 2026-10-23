@@ -1,16 +1,19 @@
 # The store factory worker on DTJ's VPS
 
-Harsh, 22 Oct 2026: "everything will be automated ... i would suggest that the n8n triggers it and same for the claude".
+Harsh, 22 Oct 2026: "the n8n triggers it and same for the claude"; 23 Oct 2026: "there will be a person watching it, its just
+because i dont have to tell you here to listen for the call".
 
 **What it does.** n8n leaves every AI step as a waiting run (Store Factory: Page Design, Add Shop, New Store). The worker
-(`n8n/store-factory/worker.py`, a service on the VPS) takes each one within about 30 seconds and runs Claude Code on it with
-nobody at a computer. People still answer the questions and tap Approve in Telegram. While a job waits for a person, the worker
-checks for the answer itself, with no Claude and no cost, and wakes Claude when the answer comes.
+(`n8n/store-factory/worker.py`, a service on the VPS) sees each one within about 30 seconds and asks in Telegram, in the chat the
+link came from: **"tap Start if you are watching"**. When someone taps it, Claude Code starts on the VPS. That person follows the
+job in Telegram: its questions, the Approve taps and the progress bar. Nobody has to tell a laptop session to listen. While a job
+waits for a person, the worker checks for the answer itself and wakes Claude when it comes.
 
 **The rules it keeps:**
-- **Claude runs on DTJ's Claude API key** (`ANTHROPIC_API_KEY`), never on the subscription login. CLAUDE.md rule 9 and
-  Anthropic's terms require this for anything that runs alone.
-- **Each request has a spending cap** (`DTJ_CLAUDE_MAX_USD`, Harsh's number); nothing starts without one.
+- **Attended is the default: nothing starts without a person's Start tap.** The tap is recorded with their name, and Claude runs
+  on the VPS's own Claude login (ai@dtjgrowth.com), which CLAUDE.md rule 9 allows because a person watches. No API key is needed.
+- **Unattended mode** (`DTJ_WORKER_MODE="api"` in the env file) is only if Harsh switches it on. It needs DTJ's Claude API key
+  (`ANTHROPIC_API_KEY`) and a spending cap per request (`DTJ_CLAUDE_MAX_USD`), and Claude Code then never reads the login.
 - **Claude may only run what `.claude/vps-settings.json` allows.** It never gets the Shopify CLI itself, publishing, git pushes,
   the vault or network tools. Store changes go through DTJ's own tools: draft themes only, and every store write after its
   Approve tap.
@@ -28,9 +31,9 @@ checks for the answer itself, with no Claude and no cost, and wakes Claude when 
 4. Put in the keys:
    - From the vault: `python tools/team-setup/vault.py pull --env-file ~/.config/dtj/worker.env`. Bitwarden asks for your master
      password in a hidden prompt; type nothing after it ends.
-   - The rest, one at a time, at a hidden prompt: `python tools/vps/set_key.py ANTHROPIC_API_KEY`, then the same for
-     `DTJ_CLAUDE_MAX_USD` (the most one request may spend), `N8N_MCP_TOKEN` (an n8n MCP token for the worker),
-     `DTJ_ADMIN_CHAT` (the Telegram chat that hears failures) and any other key the check names.
+   - The rest, one at a time, at a hidden prompt: `python tools/vps/set_key.py N8N_MCP_TOKEN` (an n8n MCP token for the worker),
+     then the same for `DTJ_ADMIN_CHAT` (the Telegram chat for requests without one, and for failures) and any other key the
+     check names. No Claude API key is needed in the default (attended) mode; Claude Code must be logged in once as `ai`.
 5. The Shopify login for themes: run `shopify theme list --store <a DTJ store>.myshopify.com` once and finish the login with
    DTJ's collaborator account in your browser.
 6. ChatGPT for the pictures: the reel factory's Chrome on port 9222 (`services/reel-factory/setup_vps.sh`), logged in to
