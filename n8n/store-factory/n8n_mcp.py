@@ -96,6 +96,13 @@ def call(tool: str, arguments: dict, clock=time.monotonic, sleep=time.sleep) -> 
     if res["result"].get("isError"):
         raise RuntimeError(f"{tool} refused: {text[:1500]}")
     try:
-        return json.loads(text)
+        out = json.loads(text)
     except json.JSONDecodeError:
-        return {"text": text}
+        out = {"text": text}
+    # an update is only saved as a draft in n8n; the live version moves only when it is published (23 Oct 2026: four workflows ran
+    # their old versions all day after "code identical to the files"). Every deploy here means it live, so it is published at once.
+    if tool == "update_workflow" and arguments.get("workflowId") and not (isinstance(out, dict) and out.get("error")):
+        published = call("publish_workflow", {"workflowId": arguments["workflowId"]}, clock, sleep)
+        if isinstance(out, dict):
+            out["published"] = published.get("activeVersionId") if isinstance(published, dict) else published
+    return out
