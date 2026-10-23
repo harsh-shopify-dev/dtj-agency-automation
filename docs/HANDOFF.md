@@ -22,6 +22,41 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 23 Oct 2026 (evening): THE VPS WORKER IS LIVE (PRs #43-#56, account A)
+- **The VPS (srv2048145, user `ai`):**
+  - the repo at ~/dtj-agency-automation, updated from the laptop with git bundles over ssh (no GitHub login there);
+  - the service `dtj-worker` is active (attended mode, 2 Claude sessions at once);
+  - the keys are in ~/.config/dtj/worker.env (0600; the n8n token is Harsh's own for now);
+  - the Shopify CLI is signed in as ultimateecomwithharsh@gmail.com (`shopify auth login`), plus `shopify store auth` for
+    elevate-with-harsh (write_files);
+  - pictures come from Codex (`tools/vps/codex_image.sh`, as ~/work/run-ref.sh did);
+  - ~/.local/bin/xdg-open only saves a sign-in link to /tmp/last-open-url. A store auth redirects to 127.0.0.1:<port> on the
+    VPS: open an ssh tunnel (`ssh -N -L <port>:127.0.0.1:<port> ai@srv2048145.hstgr.cloud`) before the person opens the link.
+- **Laptop access:** ssh as `ai` (Harsh added the key; local permission `Bash(ssh -o BatchMode=yes ai@srv2048145.hstgr.cloud:*)`).
+  Root stays blocked by the auto-mode check.
+- **Built today:**
+  - the competitor study with a focus question and the person's own words (store and page);
+  - ChatGPT-pictures questions for pages (`page_questions.py`);
+  - a step-by-step guide for a shop that is not connected (`match_store.js`), and the store job adds a connected shop to dtj_stores;
+  - a "Next:" line after every store-job step, and Started + a Stop this job button from the worker;
+  - parallel sessions and queued Start taps;
+  - the progress bar and the read-only n8n tools allowed on the VPS (`tools/vps/mcp.json`);
+  - `fetch_product` reads a password-protected store's product through DTJ Store Builder (install service op `product`).
+  - dtj-testing is on dtj_stores; its 7 DTJ apps are installed and on; old run 988 is answered.
+- **First live VPS runs:**
+  - briefs 7 and 8 stopped: dtj-testing's password page; no n8n connection on the VPS (both fixed);
+  - brief 9 stopped: elevate's `properi-spread` is an empty product (Rs 0, sold out, no pictures) and the CLI was not signed in
+    (fixed). No Cheat's intake is kept in .work/clients/intake-nocheatnutrition.com on the VPS;
+  - brief 10 (run 1399) waits for its Start tap.
+- **OPEN for Harsh:**
+  1. fill elevate's properi-spread (price, stock, pictures) or use a product that has them;
+  2. "yes, deploy" for the install service (ops uploads, activate, pages, menu, product), which is needed for password-protected
+     stores;
+  3. "yes, release" for Store Builder (pages and navigation scopes);
+  4. a test Drive folder.
+- **NOT VERIFIED LIVE:** a page written to a draft from the VPS; Codex pictures through the script; the competitor study and
+  page questions; a whole store end to end through the worker.
+
 ## 23 Oct 2026: THE WORKER IS ATTENDED BY DEFAULT: A START TAP, NO API KEY (branch `feature/worker-attended`, account A)
 Harsh, 23 Oct 2026: "there will be a person watching it, its just because i dont have to tell you here to listen for the call in
 n8n so everything gets handled there ... when we get a client only then we build the site via automation so we need a person".
