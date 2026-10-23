@@ -71,6 +71,15 @@ const lines = [
   '     (the intake ran on GitHub, so its folder is only in Drive? first: python -m page_builder.drive_upload --download "DTJ Clients/<brand>/Brand intake <date>" <the intake folder>/intake)',
   '     Then use the names in its store-files.json as facts.media[].file (roles such as lifestyle, pack, serve), point story, story_2, final_push and ugc image_role at them, and keep a picture of another pack version out of the buy box.',
   '   - "no" or empty: upload nothing; the store already has its pictures.',
+  // the same follow-ups as a whole store (Harsh, 23 Oct 2026: "here it should also show ChatGPT generates and that competitor flow
+  // message follow ups")
+  ...(chat ? [
+    '2b. The page\'s own questions in Telegram: ChatGPT pictures, a competitor study and what it should focus on (from the repo root):',
+    '   python n8n/store-factory/page_questions.py --brief ' + row.id + ' --chat ' + chat,
+    '   Exit 3 = waiting for the person: run it again (it never asks twice). It prints {"pictures", "pictures_by", "competitors": {"how", "links", "focus", "note"}}.',
+    '   - competitors.how is not "no": the study, before step 4 (skill dtj-new-store, step 1a): the person\'s links, or 5 D2C brands of this niche that grow on Meta ads (never the giants); from services/store-builder: python -m provision.niche_assets <links> --out ' + C + '/niche --niche "<one line>"; read their home and product pages too. Write ' + C + '/study.md: one "#" heading per focus (Pictures, Copywriting, Colour palette and fonts, Layout and sections, Offers and pricing, Trust) and "# Your request" when there is a note. Then from the repo root: python n8n/store-factory/page_questions.py --brief ' + row.id + ' --study ' + '.work/clients/' + folder + '/study.md (it sends the short form to Telegram). Use the study in steps 4-6; never copy their text, claims, offers or pictures.',
+    '   - pictures is "make": after step 3, plan 2 to 4 pictures for the page (lifestyle, the hero, the story sections) from the study, with the product\'s own photos (step 3\'s media/) as references, one product per picture and no words on it; from services/store-builder: python -m provision.ai_images --kind lifestyle --prompt "<what the picture shows>" --ref <a product photo> --out ' + C + '/ai/<name>.png (Codex on the VPS). Look at each one: a changed product, words or a fake look = make it again. Upload them with python -m page_builder.store_files --store ' + store + ' --folder ' + C + '/ai --approved-by "<pictures_by> (Telegram, brief ' + row.id + ' pictures)" and use them as SAMPLE pictures in facts.media (roles lifestyle, story, story_2, final_push).',
+  ] : []),
   '3. Read the product as the store shows it and fetch its pictures (read-only):',
   ...prog('step --stage product'),
   '   cd services/store-builder',

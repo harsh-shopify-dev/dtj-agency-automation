@@ -57,7 +57,7 @@ MAX_WAIT_DAYS = 7          # n8n's own Wait node gives up after 7 days too
 CLAUDE_HOURS = 4           # one Claude turn may take this long (a whole store's pages), then it is stopped
 FAILS_TO_STOP = 3
 WAIT_LINE = re.compile(r"^DTJ_WAIT:\s*(.+?)\s*$", re.M)
-WAIT_OK = re.compile(r"^python3? n8n/store-factory/store_job\.py (start|draft|copy|apps|installs|approve|pages|menus) ")
+WAIT_OK = re.compile(r"^python3? n8n/store-factory/(store_job\.py (start|draft|copy|apps|installs|approve|pages|menus)|page_questions\.py) ")
 SHELL = re.compile(r"[;&|`$<>\\\n]")
 RESUME_URL = re.compile(r"https?://\S*webhook-waiting/\S+")
 
@@ -65,7 +65,7 @@ HEADLESS = """You run on DTJ's VPS: n8n/store-factory/worker.py started you. {wa
 Follow CLAUDE.md and the request below exactly, with these changes because nobody is at this computer:
 - Every question, answer and yes happens in Telegram through the job's own commands (store_job.py and its Approve taps). Never
   ask anyone at this computer for anything and never wait for a login here.
-- When a store_job.py command exits 3 (it waits for a person in Telegram), do not wait yourself and do not run it again: end your
+- When a store_job.py or page_questions.py command exits 3 (it waits for a person in Telegram), do not wait yourself and do not run it again: end your
   turn with this exact last line, the command exactly as you ran it:
   DTJ_WAIT: <the command>
   The worker runs it until the person answers, then resumes you with what it printed.
@@ -114,7 +114,8 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
         return None, ""
     line = found[-1].strip().strip("`")
     if SHELL.search(line) or not WAIT_OK.match(line):
-        return None, f"refused DTJ_WAIT command (only store_job.py start/draft/copy/apps/installs/approve/pages/menus, no shell): {line[:200]}"
+        return None, (f"refused DTJ_WAIT command (only store_job.py start/draft/copy/apps/installs/approve/pages/menus or page_questions.py, "
+                      f"no shell): {line[:200]}")
     argv = shlex.split(line)
     argv[0] = sys.executable
     if "--minutes" in argv:  # each look waits briefly; the worker comes back every WAIT_EVERY seconds
