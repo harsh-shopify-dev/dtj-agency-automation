@@ -163,8 +163,10 @@ class Job:
     def __init__(self, job: str, *, send: Callable[[str, dict], dict], rows: Callable[[str], list], progress=None, access=None,
                  log=None, state_dir: Path = STATE_DIR, out=print, sleep=time.sleep, clock=time.monotonic,
                  today: Callable[[], str] = lambda: datetime.now(timezone.utc).strftime("%d %b %Y"), scanner=None, planner=None,
-                 copy_status=None, add_row=None, licence=None, org_apps=None, drive=None, picture=None, catcher=None):
+                 copy_status=None, add_row=None, licence=None, org_apps=None, drive=None, picture=None, catcher=None,
+                 stores_row=None):
         self.licence, self.org_apps, self.catcher = licence or _licence, org_apps or _org_apps, catcher or _catcher
+        self.stores_row = stores_row or _stores_row
         self.drive, self.picture = drive or _drive, picture or _picture
         self.scanner, self.planner, self.copy_status = scanner or _scan_brand, planner or _copy_plan, copy_status or _copy_status
         self.job, self.dir = job, state_dir / job
@@ -1016,6 +1018,7 @@ class Job:
             self.bar("apps", len(on), len(apps))
             if len(on) == len(apps):
                 self.ask.tell(f"All {len(apps)} DTJ apps are installed and switched on in <b>{esc(s['name'])}</b>.")
+                self.shops_list()
                 self.out(json.dumps({"apps_on": on}))
                 return 0
             if self.ask.clock() >= end:
@@ -1048,9 +1051,34 @@ class Job:
         self.save()
         return 0
 
+    def shops_list(self) -> None:
+        """A store with its draft theme and DTJ's apps joins n8n's shops list (dtj_stores), so a product link of it sent to the bot
+        later is designed straight away (Harsh, 23 Oct 2026: the step-by-step follow-up for a store that is not connected ends
+        here). A row the list already has for this store is never changed."""
+        s = self.s
+        draft, handle = (s.get("draft") or {}).get("id"), str(s.get("shop", "")).split(".")[0]
+        registry = f"page_builder/clients/{handle}.json"
+        if s.get("shops_list") or not draft or not (ROOT / "services" / "store-builder" / registry).exists():
+            return
+        row = {"store_name": s.get("name") or handle, "myshopify_domain": s["shop"], "other_domains": "", "draft_theme_id": str(draft),
+               "client_registry": registry, "brand_name": "", "brand_website": "", "reference_brands": "",
+               "store_notes": f"added by the store job ({self.today()}): take the brand from the product (its vendor) and its own website",
+               "active": True}
+        try:
+            got = self.stores_row(row)
+        except Exception as exc:  # noqa: BLE001 - n8n did not answer: the next finish or installs run tries again
+            self.out(f"the shops list was not updated: {exc}")
+            return
+        s["shops_list"] = got
+        self.save()
+        if got == "added":
+            self.ask.tell(f"<b>{esc(row['store_name'])}</b> is on the shops list now: product links of this store sent here are "
+                          "designed straight away.")
+
     def finish(self, status: str, note: str = "") -> int:
         if status not in STATUSES:
             raise SystemExit(f"--status must be one of {STATUSES}")
+        self.shops_list()
         written = self.s.get("written", [])
         body = {"store_status": status, "shop": self.s.get("shop", ""), "name": self.s.get("name", ""),
                 "draft_theme_id": (self.s.get("draft") or {}).get("id", ""),
@@ -1404,6 +1432,19 @@ def _licence(app_key: str, state: str, approved_by: str) -> tuple[int, dict]:
         return call(app_key, state, approved_by=approved_by, reason="store job: switched on after its install (apps Approve tap)")
     except SystemExit as exc:
         return 0, {"error": str(exc)}
+
+
+def _stores_row(row: dict) -> str:
+    """Add the store to n8n's dtj_stores unless it is there: "added" or "exists"."""
+    from n8n_mcp import call  # noqa: PLC0415
+    from setup_n8n import find_tables, table_rows  # noqa: PLC0415
+    tables = find_tables(call, "dtj_stores")
+    if not tables:
+        raise RuntimeError("n8n has no dtj_stores table")
+    if any(str(r.get("myshopify_domain", "")).lower() == row["myshopify_domain"] for r in table_rows(call, tables[0])):
+        return "exists"
+    call("add_data_table_rows", {"dataTableId": tables[0]["id"], "projectId": tables[0].get("projectId"), "rows": [row]})
+    return "added"
 
 
 def _add_row(row: dict) -> None:

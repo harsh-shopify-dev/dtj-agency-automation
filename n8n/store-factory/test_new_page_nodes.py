@@ -57,6 +57,18 @@ class NewPage(unittest.TestCase):
             self.assertIn(words, got["message"], link)
             self.assertNotIn("row", got)
 
+    def test_a_shop_not_connected_gets_the_steps_to_connect_it(self):
+        msg = self.match("https://dtj-testing.myshopify.com/products/the-collection-snowboard-hydrogen", stores=())["message"]
+        for part in ("not set up for page design yet", "To connect it, step by step", "Send me https://dtj-testing.myshopify.com",
+                     "Already in this store", "Only product pages", "7 Install buttons", "<code>/addshop dtj-testing.myshopify.com Client Name</code>"):
+            self.assertIn(part, msg)
+        self.assertNotIn("Ask Harsh", msg)
+        custom = self.match("https://brand.com/products/x", stores=())["message"]
+        self.assertIn("admin.shopify.com/store/&lt;name&gt;", custom)  # the Shopify address is explained when the link is a custom domain
+        half = self.match("https://hopenskin.com/products/x", stores=({**CLIENT, "draft_theme_id": "", "active": False},))["message"]
+        self.assertIn("no draft theme saved yet", half)  # added by /addshop without a theme: the steps, not "paused"
+        self.assertIn("step by step", half)
+
     def test_a_paused_or_half_set_up_shop_is_refused(self):
         self.assertIn("paused", self.match("https://hopenskin.com/products/x", stores=({**CLIENT, "active": False},))["message"])
         self.assertIn("no draft theme", self.match("https://hopenskin.com/products/x", stores=({**CLIENT, "draft_theme_id": ""},))["message"])
@@ -67,7 +79,7 @@ class NewPage(unittest.TestCase):
         refs = {"Match the Store": {"handle": "pore-clarifying-serum", "store_name": "DTJ Test Store"}, "Save Brief": {"id": 7}}
         started = run_node("started.js", {}, refs)["out"][0]["json"]
         self.assertEqual((started["ok"], started["row_id"]), (True, 7))
-        self.assertIn("handle the Claude Code trigger in n8n", started["message"])
+        self.assertIn("Start: I'm watching", started["message"])
         stopped = run_node("not_started.js", {"ok": False, "message": "The shop x is not set up"})["out"][0]["json"]
         self.assertEqual((stopped["ok"], stopped["message"]), (False, "The shop x is not set up"))
 

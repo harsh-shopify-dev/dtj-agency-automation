@@ -898,6 +898,29 @@ class PagesAndMenus(Base):
         self.assertIn("- Menus: the main menu and footer menu", hand)  # the footer is still the owner's
 
 
+class ShopsList(Base):
+    """A connected store (draft theme + apps) joins the shops list, so its product links work in the bot (23 Oct 2026)."""
+
+    def test_added_once_with_the_draft_and_the_registry_and_never_twice(self):
+        rows = []
+
+        def stores_row(row):
+            rows.append(row)
+            return "added" if len(rows) == 1 else "exists"
+        j = store_job.Job("dtj-testing", send=self.tg, rows=self.answers, log=self.log, state_dir=self.tmp, out=self.printed.append,
+                          sleep=self.clock.sleep, clock=self.clock, stores_row=stores_row, today=lambda: "23 Oct 2026")
+        j.begin({**SCAN, "myshopify_domain": "dtj-testing.myshopify.com", "name": "DTJ Testing"}, CHAT, "Harsh")
+        j.shops_list()
+        self.assertEqual(rows, [])  # no draft theme yet: not connected
+        j.s["draft"] = {"id": "189402775703"}
+        j.shops_list()
+        self.assertEqual((rows[0]["draft_theme_id"], rows[0]["client_registry"], rows[0]["active"]),
+                         ("189402775703", "page_builder/clients/dtj-testing.json", True))
+        self.assertIn("is on the shops list now", self.tg.last()["text"])
+        j.shops_list()
+        self.assertEqual(len(rows), 1)  # done once
+
+
 class FreshJob(unittest.TestCase):
     """A new n8n run for the same store starts with fresh questions; the old job is kept aside (23 Oct 2026)."""
 
