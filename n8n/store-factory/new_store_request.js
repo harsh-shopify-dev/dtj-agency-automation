@@ -10,6 +10,7 @@ const by = String(req.requested_by || 'an admin').trim().slice(0, 60);
 const chat = /^-?[0-9]{3,20}$/.test(String(req.chat_id || '').trim()) ? String(req.chat_id).trim() : '';
 const note = String(req.note || '').replace(/\s+/g, ' ').trim().slice(0, 500);
 const resumeUrl = $execution.resumeUrl;
+const run = /^[0-9]{1,15}$/.test(String($execution.id || '')) ? String($execution.id) : '';  // a new run = a fresh job (23 Oct 2026)
 const q = (s) => '"' + String(s).replace(/"/g, "'") + '"';
 const job = 'python n8n/store-factory/store_job.py';
 const lines = [
@@ -30,7 +31,7 @@ const lines = [
   '',
   'DO THIS, IN ORDER (from the repo root, D:\\CODE CONTAINERR\\WEB DEV\\dtj-agency-automation)',
   '1. Read CLAUDE.md and the skill dtj-new-store; follow it step by step. Stay on the current git branch.',
-  '2. Start: ' + job + ' start --link ' + q(link) + (chat ? ' --chat ' + chat : '') + ' --by ' + q(by),
+  '2. Start: ' + job + ' start --link ' + q(link) + (chat ? ' --chat ' + chat : '') + ' --by ' + q(by) + (run ? ' --run ' + run : ''),
   '   It reads the store and asks the questions in Telegram. Its JSON line names the job. Exit 3 = waiting for an answer: run it '
     + 'again (it never asks twice); exit 1 = stopped (it says why).',
   '3. The skill\'s steps: a new store\'s samples and banners (store_job.py assets), the draft copy (store_job.py draft), the products '

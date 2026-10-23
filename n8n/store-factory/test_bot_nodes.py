@@ -832,12 +832,12 @@ class NewStoreWorkflow(unittest.TestCase):
 
     def test_the_request_is_a_complete_task_list(self):
         res = run_node("new_store_request.js", {"link": "https://royaldosa.com", "note": "premium", "requested_by": "Harsh", "chat_id": "333"},
-                       {"__resume": self.RESUME})
+                       {"__resume": self.RESUME, "__run": "1201"})
         self.assertTrue(res["ok"], res)
         out = res["out"][0]["json"]
         self.assertEqual(out["claude_code_stage"], "new_store")
         text = out["instructions"]
-        for must in ('store_job.py start --link "https://royaldosa.com" --chat 333 --by "Harsh"', "skill dtj-new-store",
+        for must in ('store_job.py start --link "https://royaldosa.com" --chat 333 --by "Harsh" --run 1201', "skill dtj-new-store",
                      f'reply.py --resume-url "{self.RESUME}" --body .work/stores/<job>/answer.json', "Approve tap", "Nothing is published",
                      "Never invent an offer", "docs/HANDOFF.md", "Note from Harsh: premium", "store_job.py copy",
                      "This link is the store to build IN", "one for the products", "store_job.py assets",
