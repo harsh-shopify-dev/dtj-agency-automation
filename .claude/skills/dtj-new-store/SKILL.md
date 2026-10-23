@@ -73,6 +73,30 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
      a question was sent count.
    - Exit 1 = stopped (wrong store, a brand site that is not Shopify, nothing chosen): finish with "could not start".
    - `store_job.py status --job J` shows the plan.
+1a. **The competitor study** (Harsh, 23 Oct 2026: "an option for competitor website analysis and a block that asks what to focus
+   on"). Skip it when the plan's `competitors.how` is "no".
+   1. **The links.** Take `competitors.links` (the person's), or find 5 yourself when `how` is "find": D2C brands of the same
+      niche that grow on Meta ads, never the category's giants. Write one line per brand on why it was picked.
+   2. **Read them**, read only, from `services/store-builder`:
+      `python -m provision.niche_assets <links> --out ../../.work/stores/J/niche --niche "<one line>"`. You get each brand's
+      banners, best sellers, prices, colours and a contact sheet. Open their home and product pages too
+      (WebFetch / built-in browser) for copy, layout and trust.
+   3. **Write `.work/stores/J/study.md`.** One `#` heading per focus the person picked, named exactly: Pictures,
+      Copywriting, Colour palette and fonts, Layout and sections, Offers and pricing, Trust. Under each:
+      - what the best of them do, with an example and which brand;
+      - what WE do, in our own words and from our own facts.
+
+      Never copy their text, claims, offers, reviews or pictures. Prices go only into the price range for sample prices
+      (step 1b).
+   4. `python n8n/store-factory/store_job.py study --job J --file .work/stores/J/study.md`. It keeps the study with the job
+      and sends its short form to Telegram. It refuses a study that is missing a picked focus.
+   5. The later steps use it:
+      - the palette and fonts: header, footer and every page;
+      - the layout: home and product pages;
+      - the copywriting: tone and headlines;
+      - the pictures: the `style` of step 1b;
+      - the trust: which real proof to show.
+
 1b. **The assets: research, sample details, pictures** (Harsh, 22 Oct 2026: "ensuring you dont generate bad results you will
    search top 5 competitors in that brand niche ... analyze all the brands assets and then plan the images and then create the
    images using chatgpt where you have to upload the referennce images of our products"). Run it whenever the plan says
