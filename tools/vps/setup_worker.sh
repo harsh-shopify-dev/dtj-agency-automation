@@ -5,6 +5,7 @@
 #     bash tools/vps/setup_worker.sh --check    only say what is ready and what is missing
 # It never prints a key. Keys go into ~/.config/dtj/worker.env (owner-only), see tools/vps/README.md.
 set -euo pipefail
+export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"  # claude and codex live there for ai (the service's PATH has them too)
 
 REPO="${DTJ_REPO:-$HOME/dtj-agency-automation}"
 ENV_FILE="$HOME/.config/dtj/worker.env"
@@ -72,11 +73,11 @@ for k in "${OPTIONAL[@]}"; do
   grep -q "^$k=" "$ENV_FILE" && ok "$k" || echo "  -     $k (optional)"
 done
 
-echo "5. ChatGPT for the pictures"
-if curl -s -m 3 http://127.0.0.1:9222/json/version >/dev/null; then
-  ok "a Chrome answers on port 9222 (log in to chatgpt.com in it once)"
+echo "5. Pictures (Codex, logged in with DTJ's ChatGPT account: tools/vps/codex_image.sh)"
+if command -v codex >/dev/null; then
+  ok "codex $(codex --version 2>/dev/null | tail -1)"
 else
-  todo "the logged-in Chrome on port 9222 (the reel factory's: services/reel-factory/setup_vps.sh)"
+  todo "install codex for $(id -un) (npm install -g @openai/codex) and log in once: codex login"
 fi
 
 echo "6. The service"
