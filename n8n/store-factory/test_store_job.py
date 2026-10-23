@@ -768,15 +768,22 @@ class CompetitorStudy(Base):
         for answer in ("Yes", "Yes", "Yes", "No", "No", "No"):
             self.answers.tap(self.tg, answer)
             j.plan(minutes=1)
+        self.assertIn("Anything specific you want me to look at as well?", self.tg.questions()[-1]["text"])
+        self.answers.tap(self.tg, "I'll type it")
+        j.plan(minutes=1)
+        self.answers.type(self.tg, "How they   show the ingredients on the first phone screen")
+        j.plan(minutes=1)
         rivals = j.s["plan"]["competitors"]
         self.assertEqual(rivals, {"how": "send", "links": ["https://bluetea.co.in", "https://www.sleepyowl.co/", "http://x.example"],
-                                  "focus": ["pictures", "copy", "palette"]})
+                                  "focus": ["pictures", "copy", "palette"],
+                                  "note": "How they show the ingredients on the first phone screen"})
         self.assertIn("Whose store is", self.tg.questions()[-1]["text"])
 
     def test_find_them_and_everything_then_the_study_is_kept_and_sent(self):
         j = self.job()
         self.to_rivals(j)
-        for label in ("Yes: find them yourself", "Everything", "DTJ's own store", "Everything except product pages", "No offer"):
+        for label in ("Yes: find them yourself", "Everything", "No, that's all", "DTJ's own store", "Everything except product pages",
+                      "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertEqual(j.s["plan"]["competitors"]["focus"], list(store_job.FOCUS))
@@ -792,6 +799,28 @@ class CompetitorStudy(Base):
         self.assertTrue((self.tmp / "royal-dosa" / "study.md").exists())
         self.assertIn("Competitor study for <b>Royal Dosa</b>", self.tg.last()["text"])
         self.assertIn("Competitor study:", j.handover())
+
+    def test_only_what_i_type_and_the_study_must_answer_it(self):
+        j = self.job()
+        self.to_rivals(j)
+        for label in ("Yes: find them yourself", "Only what I type"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        self.answers.type(self.tg, "Their bundles and how they price a 3-pack")
+        j.plan(minutes=1)
+        for label in ("DTJ's own store", "Everything except product pages", "No offer"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        self.assertEqual(j.s["plan"]["competitors"], {"how": "find", "focus": [], "note": "Their bundles and how they price a 3-pack"})
+        self.assertIn("your request: Their bundles and how they price a 3-pack", self.tg.last()["text"])
+        f = self.tmp / "study.md"
+        f.write_text("# Pictures\n" + "Something about pictures that is long enough to pass the length check. " * 4, encoding="utf-8")
+        with self.assertRaises(SystemExit) as no_answer:
+            j.study(f)
+        self.assertIn("Your request", str(no_answer.exception))
+        f.write_text("# Your request\n" + "They sell 3-packs at a lower price per pack; we show our own pack sizes only. " * 4,
+                     encoding="utf-8")
+        self.assertEqual(j.study(f), 0)
 
     def test_no_study_skips_the_focus(self):
         j = self.job()

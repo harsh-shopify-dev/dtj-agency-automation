@@ -82,7 +82,8 @@ Read `CLAUDE.md` first. This skill is the order of work. Each part is done by it
       banners, best sellers, prices, colours and a contact sheet. Open their home and product pages too
       (WebFetch / built-in browser) for copy, layout and trust.
    3. **Write `.work/stores/J/study.md`.** One `#` heading per focus the person picked, named exactly: Pictures,
-      Copywriting, Colour palette and fonts, Layout and sections, Offers and pricing, Trust. Under each:
+      Copywriting, Colour palette and fonts, Layout and sections, Offers and pricing, Trust. When the person typed what to look
+      at (`competitors.note`), add a `# Your request` heading that answers it first. Under each:
       - what the best of them do, with an example and which brand;
       - what WE do, in our own words and from our own facts.
 
