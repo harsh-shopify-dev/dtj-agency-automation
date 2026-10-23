@@ -34,6 +34,7 @@ import re
 import shlex
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,7 +53,8 @@ MCP = ROOT / "tools" / "vps" / "mcp.json"  # n8n's MCP server (the repo's .mcp.j
 STEPS = {listen.WORKFLOW: "Page Design", listen.ADD_SHOP: "Add Shop", listen.NEW_STORE: "New Store"}
 POLL_SECONDS = 30          # how often n8n is asked for new requests
 WAIT_EVERY = 300           # a command that waits for a person is run again every 5 minutes
-WAIT_MINUTES = "4"         # ... and each run of it waits at most this long (store_job.py --minutes)
+WAIT_MINUTES = "0.2"       # ... and each run of it only looks (store_job.py --minutes): the loop never stops on one job
+PARALLEL = 2               # Claude sessions at the same time (DTJ_WORKER_PARALLEL); more Start taps wait their turn, and say so
 MAX_WAIT_DAYS = 7          # n8n's own Wait node gives up after 7 days too
 CLAUDE_HOURS = 4           # one Claude turn may take this long (a whole store's pages), then it is stopped
 FAILS_TO_STOP = 3
@@ -129,8 +131,15 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
 class Worker:
     def __init__(self, *, call, run: Callable = subprocess.run, tell: Callable[[str], None] = lambda text: None,
                  environ=os.environ, state: Path = STATE, clock=time.time, sleep=time.sleep, out=print, settings: Path = SETTINGS,
-                 claude: str = "claude", asker: Callable | None = None):
+                 claude: str = "claude", asker: Callable | None = None, threaded: bool = False):
         self.call, self.run, self.tell, self.environ, self.path = call, run, tell, environ, state
+        # each Claude session in its own thread, so the loop keeps asking Start for new requests and looking at waits (Harsh,
+        # 23 Oct 2026: brief 10 showed nothing while brief 9 was being designed); False = one after another (tests)
+        self.threaded, self.lock = threaded, threading.RLock()
+        try:
+            self.parallel = max(1, int(environ.get("DTJ_WORKER_PARALLEL") or PARALLEL))
+        except ValueError:
+            self.parallel = PARALLEL
         self.mode = str(environ.get("DTJ_WORKER_MODE") or "attended").strip().lower()
         self.asker = asker or _asker
         self.clock, self.sleep, self.out, self.settings, self.claude = clock, sleep, out, settings, claude
@@ -138,10 +147,11 @@ class Worker:
         self.ids: dict[str, str] = {}
 
     def save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.s, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-        os.replace(tmp, self.path)
+        with self.lock:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self.s, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+            os.replace(tmp, self.path)
 
     def log(self, run_id: str, text: str) -> None:
         f = self.path.parent / f"{run_id}.log"
@@ -194,6 +204,16 @@ class Worker:
 
     # ---- Claude
     def claude_turn(self, job: dict, prompt: str) -> None:
+        """One Claude turn: in its own thread when the worker runs as the service (the loop goes on meanwhile)."""
+        with self.lock:
+            job.update(state="running", turn_started=now_iso())
+            self.save()
+        if self.threaded:
+            threading.Thread(target=self._turn, args=(job, prompt), name=f"run-{job['run']}", daemon=True).start()
+        else:
+            self._turn(job, prompt)
+
+    def _turn(self, job: dict, prompt: str) -> None:
         env = dict(self.environ)
         if self.mode == "api":
             # --bare: Anthropic auth is strictly ANTHROPIC_API_KEY, the subscription login on this machine is never read (rule 9,
@@ -209,17 +229,22 @@ class Worker:
                     "--mcp-config", str(MCP)]
         if job.get("session"):
             argv += ["--resume", job["session"]]
-        job.update(state="running", turn_started=now_iso())
-        self.save()
         self.log(job["run"], f"claude turn {job.get('turns', 0) + 1} started")
+        done = None
         try:
             done = self.run(argv, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(ROOT),
                             env=env, timeout=CLAUDE_HOURS * 3600)
             res = json.loads((done.stdout or "").strip().splitlines()[-1]) if (done.stdout or "").strip() else {}
         except subprocess.TimeoutExpired:
-            return self.failed(job, f"Claude ran longer than {CLAUDE_HOURS} hours and was stopped")
+            with self.lock:
+                return self.failed(job, f"Claude ran longer than {CLAUDE_HOURS} hours and was stopped")
         except ValueError:
             res = {}
+        with self.lock:
+            return self._after(job, res, done)
+
+    def _after(self, job: dict, res: dict, done) -> None:
+        """What a finished turn means: a wait for a person, done (n8n answered), or failed."""
         job["turns"] = job.get("turns", 0) + 1
         job["session"] = res.get("session_id") or job.get("session")
         if isinstance(res.get("total_cost_usd"), (int, float)):  # Claude Code's own figure for this turn
@@ -228,7 +253,7 @@ class Worker:
         self.log(job["run"], f"claude turn ended ({res.get('subtype') or 'no result'}): {text[-1500:]}")
         if not res or res.get("is_error"):
             # Claude Code's own words first (22 Oct 2026, a test run: is_error with subtype "success" and the result "Not logged in")
-            why = str(res.get("result") or res.get("subtype") or (done.stderr or "")[-300:] or "no answer from Claude Code")
+            why = str(res.get("result") or res.get("subtype") or ((done.stderr or "")[-300:] if done else "") or "no answer from Claude Code")
             return self.failed(job, f"Claude Code stopped: {why}")
         argv_wait, refused = wait_command(text)
         if refused:
@@ -299,6 +324,12 @@ class Worker:
             return
         job["watched_by"] = got.get("by") or "a teammate"
         self.log(job["run"], f"Start tapped by {job['watched_by']}")
+        busy = [j for j in self.s["jobs"].values() if j.get("state") == "running"]
+        if len(busy) >= self.parallel:
+            job["state"] = "queued"
+            self.save()
+            ask.tell(f"Queued: {what} starts as soon as one of the {len(busy)} jobs running now is done. I tell you here when it starts.")
+            return
         # say it started and what comes, not only "Noted" (Harsh, 23 Oct 2026: "i should get a progress bar or some updates in between
         # as i will not understand whats happening")
         ask.tell(f"Started: Claude is working on {what} on DTJ's server, watched by {job['watched_by']}. A progress bar follows here "
@@ -320,7 +351,7 @@ class Worker:
                 continue
             try:
                 done = self.run(job["wait"], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(ROOT),
-                                env=dict(self.environ), timeout=int(WAIT_MINUTES) * 60 + 120)
+                                env=dict(self.environ), timeout=float(WAIT_MINUTES) * 60 + 120)
                 code, printed = done.returncode, (done.stdout or "") + (done.stderr or "")
             except subprocess.TimeoutExpired:
                 code, printed = 3, ""
@@ -334,6 +365,19 @@ class Worker:
             self.claude_turn(job, f"The command you were waiting on has finished.\n$ {shown}\nexit {code}\n{printed[-4000:]}\n"
                                   "Continue the request from here, under the same rules.")
 
+    def look_at_queue(self) -> None:
+        """A queued job (Start tapped, every slot busy) begins when a slot is free, the oldest first."""
+        queued = sorted((j for j in self.s["jobs"].values() if j.get("state") == "queued"), key=lambda j: j.get("started", ""))
+        for job in queued:
+            if len([j for j in self.s["jobs"].values() if j.get("state") == "running"]) >= self.parallel:
+                return
+            try:
+                ask = self.asker(f"w{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save)
+                ask.tell(f"Starting now (n8n run {job['run']}), watched by {job.get('watched_by') or 'a teammate'}.")
+                self.begin(job, self.request(job["run"], job["workflow_id"], job["workflow"]), job.get("watched_by") or "")
+            except Exception as exc:  # noqa: BLE001 - n8n or Telegram did not answer: the next round tries again
+                self.log(job["run"], f"could not start from the queue: {exc}")
+
     def look_at_starts(self) -> None:
         for job in [j for j in self.s["jobs"].values() if j.get("state") == "asking"]:
             try:
@@ -342,15 +386,25 @@ class Worker:
                 self.log(job["run"], f"could not look at the Start tap: {exc}")
 
     def round(self) -> None:
+        self.look_at_queue()
         self.look_at_starts()
         self.look_at_waits()
         self.start_next()
+
+    def after_restart(self) -> None:
+        """Jobs a restart stopped mid-turn (the service's Claude sessions stop with it): said, never counted as failures."""
+        for job in [j for j in self.s["jobs"].values() if j.get("state") == "running"]:
+            job.update(state="interrupted", why="the worker restarted while Claude was working on it")
+            self.tell(f"Store factory worker: {job['workflow']} run {job['run']} was stopped by a restart of the worker. "
+                      f"python n8n/store-factory/worker.py --retry {job['run']} runs it again.")
+        self.save()
 
     def serve(self) -> int:
         why = self.ready()
         if why:
             self.out(f"not started: {why}")
             return 2
+        self.after_restart()
         while True:
             try:
                 self.round()
@@ -364,6 +418,7 @@ class Worker:
         lines = [(f"stopped: {self.s['stopped']}" if self.s.get("stopped") else "running") + f" ({self.mode})"]
         for j in jobs[-30:]:
             extra = {"waiting": f"for a person since {j.get('wait_since')}", "failed": j.get("why", ""), "asking": "for a Start tap",
+                     "queued": "Start tapped, waiting for a free slot", "interrupted": j.get("why", ""),
                      "done": f"watched by {j['watched_by']}" if j.get("watched_by") else f"{j.get('cost_usd', 0)} USD"}.get(j.get("state"), "")
             lines.append(f"run {j['run']} {j['workflow']}: {j.get('state')} {extra}".rstrip())
         return "\n".join(lines)
@@ -417,7 +472,7 @@ def main(argv=None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     from n8n_mcp import call  # noqa: PLC0415
-    w = Worker(call=call, tell=_tell)
+    w = Worker(call=call, tell=_tell, threaded=not a.once)
     if a.status:
         print(w.status())
         return 0

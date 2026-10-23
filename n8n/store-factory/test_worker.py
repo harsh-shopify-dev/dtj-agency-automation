@@ -144,6 +144,52 @@ class Attended(Base):
         self.assertEqual(shared["made"][0], ("w993", "7051933055"))
         self.assertIn("watched by Riya", w.status())
 
+    def test_a_start_tap_with_every_slot_busy_is_queued_and_begins_when_one_is_free(self):
+        shared = {"made": [], "asked": [], "texts": [], "tapped": "Riya"}
+        runs = Runs(claude=[result("Done, answered n8n.")])
+        w = self.worker(runs, {**ATTENDED, "DTJ_WORKER_PARALLEL": "1"}, asker=Asker(shared))
+        w.s["jobs"]["900"] = {"run": "900", "workflow": "Store Factory: New Store", "workflow_id": NS, "state": "running", "started": "a"}
+        w.round()
+        job = w.s["jobs"]["993"]
+        self.assertEqual(job["state"], "queued")
+        self.assertEqual(runs.calls, [])
+        self.assertIn("Queued: a whole store starts as soon as one of the 1 jobs running now is done", shared["told"][-1])
+        self.assertIn("Start tapped, waiting for a free slot", w.status())
+        w.s["jobs"]["900"]["state"] = "done"
+        self.n8n.waiting = []
+        w.round()
+        self.assertIn("Starting now (n8n run 993), watched by Riya", " ".join(shared["told"]))
+        self.assertEqual((job["state"], len(runs.calls)), ("done", 1))
+
+    def test_a_restart_marks_the_turns_it_stopped_without_counting_failures(self):
+        w = self.worker(Runs(), ATTENDED)
+        w.s["jobs"]["900"] = {"run": "900", "workflow": "Store Factory: Page Design", "state": "running"}
+        w.after_restart()
+        self.assertEqual((w.s["jobs"]["900"]["state"], w.s.get("fails", 0)), ("interrupted", 0))
+        self.assertIn("--retry 900", self.told[-1])
+
+    def test_threaded_turns_leave_the_loop_free(self):
+        import threading
+        gate = threading.Event()
+        calls = []
+
+        def slow_run(argv, **kw):
+            calls.append(argv)
+            gate.wait(5)
+            return subprocess.CompletedProcess(argv, 0, json.dumps(result("Done.")) + "\n", "")
+        shared = {"made": [], "asked": [], "texts": [], "tapped": "Riya"}
+        w = worker.Worker(call=self.n8n, run=slow_run, tell=self.told.append, environ=dict(ATTENDED), state=self.tmp / "t" / "jobs.json",
+                          clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings,
+                          asker=Asker(shared), threaded=True)
+        w.round()  # returns while Claude is still "working"
+        self.assertEqual(w.s["jobs"]["993"]["state"], "running")
+        self.n8n.waiting = []
+        gate.set()
+        for t in threading.enumerate():
+            if t.name == "run-993":
+                t.join(5)
+        self.assertEqual(w.s["jobs"]["993"]["state"], "done")
+
     def test_without_a_chat_in_the_request_the_admin_chat_is_asked(self):
         self.assertEqual(worker.chat_of({"request": {"telegram_chat_id": ""}}), "")
         self.assertEqual(worker.chat_of({"request": {"telegram_chat_id": "-100123"}}), "-100123")
