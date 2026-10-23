@@ -20,6 +20,7 @@
       "Bash(mkdir -p ../../.work:*)",
       "Bash(python n8n/store-factory/store_job.py:*)",
       "Bash(python n8n/store-factory/reply.py:*)",
+      "Bash(python -m page_builder.progress:*)",
       "Bash(python -m page_builder.fetch_product:*)",
       "Bash(python -m page_builder.ship_draft:*)",
       "Bash(python -m page_builder.ship_home:*)",

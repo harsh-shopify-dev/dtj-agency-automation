@@ -296,6 +296,10 @@ class Worker:
             return
         job["watched_by"] = got.get("by") or "a teammate"
         self.log(job["run"], f"Start tapped by {job['watched_by']}")
+        # say it started and what comes, not only "Noted" (Harsh, 23 Oct 2026: "i should get a progress bar or some updates in between
+        # as i will not understand whats happening")
+        ask.tell(f"Started: Claude is working on {what} on DTJ's server, watched by {job['watched_by']}. A progress bar follows here "
+                 "and moves at every step; questions and Approve buttons come here too. Nothing to do for you until then.")
         self.begin(job, req or self.request(job["run"], job["workflow_id"], job["workflow"]), job["watched_by"])
 
     def begin(self, job: dict, req: dict, watcher: str) -> None:
