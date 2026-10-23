@@ -2,7 +2,7 @@
 # A systemd USER service of the user ai; tools/vps/setup_worker.sh copies it to ~/.config/systemd/user/ and starts it.
 # Exit 2 = a key or the spend cap is missing: it does not restart until someone fixes that (tools/vps/README.md).
 [Unit]
-Description=DTJ store factory worker (n8n requests -> Claude Code on DTJ's Claude API key)
+Description=DTJ store factory worker (n8n requests -> a Start tap in Telegram -> Claude Code)
 After=network-online.target
 
 [Service]

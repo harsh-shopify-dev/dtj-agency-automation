@@ -385,7 +385,7 @@ class Job:
         rivals = p.get("competitors") or {}
         study = ("" if rivals.get("how", "no") == "no" else
                  f" Competitor study ({'your links' if rivals['how'] == 'send' else 'I find them'}): "
-                 f"{esc(', '.join(FOCUS[f].split(' (')[0].lower() for f in rivals.get('focus') or []))}.")
+                 f"{esc(', '.join([FOCUS[f].split(' (')[0].lower() for f in rivals.get('focus') or []] + (['your request: ' + rivals['note'][:120]] if rivals.get('note') else [])))}.")
         a.tell(f"Plan for <b>{esc(s['name'])}</b>: {copying}{esc(', '.join(PARTS[x] for x in p['parts']))}. Product pages: "
                f"{esc(products)}. Offer: {esc(p['offer'] or 'none')}.{study}\nBefore anything is made or written I send an Approve button: "
                "the draft copy, " + ("the products (every one ACTIVE), " if p["copy"] else "") + "the app copies, the header and "
@@ -569,12 +569,13 @@ class Job:
             else:
                 rivals["links"] = links
         got = a.choose("focus", "What should the competitor study focus on?",
-                       [("Everything", "all"), ("Choose one by one", "each")], minutes)
+                       [("Everything", "all"), ("Choose one by one", "each"), ("Only what I type", "type")], minutes)
         if not got:
             return WAITING
-        if got["value"] == "all":
+        how = got["value"]
+        if how == "all":
             rivals["focus"] = list(FOCUS)
-        else:
+        elif how == "each":
             focus = []
             for key, label in FOCUS.items():
                 one = a.choose(f"focus_{key}", f"Study their {label[0].lower()}{label[1:]}?", [("Yes", "yes"), ("No", "no")], minutes)
@@ -582,11 +583,25 @@ class Job:
                     return WAITING
                 if one["value"] == "yes":
                     focus.append(key)
-            if not focus:
-                rivals.update(how="no", focus=[])
-                a.tell("Nothing picked: no competitor study.")
-                return None
             rivals["focus"] = focus
+        else:
+            rivals["focus"] = []
+        # the person's own words (Harsh, 23 Oct 2026: "also add an option of a text message in which i can specify a specific thing")
+        if how != "type":
+            more = a.choose("focus_more", "Anything specific you want me to look at as well?",
+                            [("I'll type it", "type"), ("No, that's all", "no")], minutes)
+            if not more:
+                return WAITING
+        if how == "type" or more["value"] == "type":
+            got = a.type_in("focus_text", "What should I look at on their websites? In your own words, for example: how they show "
+                                          "ingredients, their first screen on phones, their bundles.", minutes, "how they show ingredients")
+            if not got:
+                return WAITING
+            rivals["note"] = re.sub(r"\s+", " ", got["value"]).strip()[:1000]
+        if not rivals["focus"] and not rivals.get("note"):
+            rivals.update(how="no", focus=[])
+            a.tell("Nothing picked: no competitor study.")
+            return None
         self.save()
         return None
 
@@ -599,8 +614,8 @@ class Job:
         if rivals.get("how", "no") == "no":
             raise SystemExit("no competitor study was asked for this store")
         text = Path(path).read_text(encoding="utf-8").strip()
-        missing = [FOCUS[f].split(" (")[0] for f in rivals.get("focus") or []
-                   if not re.search(rf"^#+\s*{re.escape(FOCUS[f].split(' (')[0])}", text, re.I | re.M)]
+        headings = [FOCUS[f].split(" (")[0] for f in rivals.get("focus") or []] + (["Your request"] if rivals.get("note") else [])
+        missing = [h for h in headings if not re.search(rf"^#+\s*{re.escape(h)}", text, re.I | re.M)]
         if missing or len(text) < 200:
             raise SystemExit("the study needs a heading for each focus the person picked (" + ", ".join(missing or ["more text"]) + ")")
         keep = self.dir / "study.md"
