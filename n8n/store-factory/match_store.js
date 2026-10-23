@@ -22,10 +22,21 @@ const handle = m[1].toLowerCase();
 
 const norm = (d) => String(d || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
 const store = stores.find((s) => [s.myshopify_domain, ...String(s.other_domains || '').split(',')].map(norm).filter(Boolean).includes(host));
-if (!store) return fail('The shop ' + host + ' is not set up for page design yet. Ask Harsh to add it.');
+// a shop that is not connected (or only half) gets the steps to connect it, not "ask Harsh" (Harsh, 23 Oct 2026: "if i provide a
+// new store link which isnt connected a step by step follow up shows up on how to set up"); the bot sends these as HTML
+const shopLink = host.endsWith('.myshopify.com') ? 'https://' + host : 'the store\'s Shopify address (in its admin the link reads admin.shopify.com/store/&lt;name&gt;: send https://&lt;name&gt;.myshopify.com)';
+const steps = (what) => what + '\n\n<b>To connect it, step by step:</b>\n'
+  + '1. Send me ' + shopLink + ' (the store, not a product). I ask a few questions here: tap <b>Redesign an existing brand</b> > '
+  + '<b>Already in this store</b>, then <b>Only product pages</b>.\n'
+  + '2. I make the draft copy of its theme after your <b>Approve</b> tap (the live store does not change).\n'
+  + '3. I send <b>7 Install buttons</b> for DTJ\'s apps: the store owner (or you, logged in to its admin) taps each one and presses Install.\n'
+  + '4. I design the product pages you pick into the draft and send the preview links. After that, product links of this shop work here too.\n'
+  + 'Only adding the shop, no design yet? An admin sends: <code>/addshop ' + (host.endsWith('.myshopify.com') ? host : '&lt;name&gt;.myshopify.com')
+  + ' Client Name</code>';
+if (!store) return fail(steps('The shop ' + host + ' is not set up for page design yet.'));
+if (!/^page_builder\/clients\/[a-z0-9-]+\.json$/.test(String(store.client_registry || ''))) return fail(steps((store.store_name || host) + ' has no app copies saved yet.'));
+if (!/^[0-9]{6,20}$/.test(String(store.draft_theme_id || ''))) return fail(steps((store.store_name || host) + ' has no draft theme saved yet.'));
 if (store.active === false) return fail('Page design is paused for ' + (store.store_name || host) + '. Ask Harsh.');
-if (!/^[0-9]{6,20}$/.test(String(store.draft_theme_id || ''))) return fail((store.store_name || host) + ' has no draft theme saved yet. Ask Harsh.');
-if (!/^page_builder\/clients\/[a-z0-9-]+\.json$/.test(String(store.client_registry || ''))) return fail((store.store_name || host) + ' has no app copies saved yet. Ask Harsh.');
 
 const note = String(req.note || '').trim();
 return [{ json: {
