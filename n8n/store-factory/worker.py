@@ -1,7 +1,8 @@
-"""The store factory's worker on DTJ's VPS (Harsh, 22 Oct 2026: "everything will be automated ... i would suggest that the n8n
-triggers it and same for the claude"). n8n leaves every AI step as a waiting run ("Request for Claude Code: <step>"); this service
-takes each one within a minute, runs Claude Code on it with nobody at the computer, and the run is answered the way a laptop
-session answered it. People still answer and approve in Telegram.
+"""The store factory's worker on DTJ's VPS (Harsh, 22 Oct 2026: "the n8n triggers it and same for the claude"; 23 Oct 2026: "there
+will be a person watching it, its just because i dont have to tell you here to listen for the call"). n8n leaves every AI step as
+a waiting run ("Request for Claude Code: <step>"); this service takes each one within a minute, asks in Telegram who is watching,
+and once that person taps Start it runs Claude Code on it, answered the way a laptop session answered it. The person follows and
+answers in Telegram (the job's questions, Approve taps and progress bar); nobody has to tell a laptop session to listen.
 
     python n8n/store-factory/worker.py              run as a service (tools/vps/dtj-worker.service)
     python n8n/store-factory/worker.py --once       one round: look at what waits for a person, start one new request, exit
@@ -10,9 +11,11 @@ session answered it. People still answer and approve in Telegram.
 
 How a request runs:
 1. A run of a watched workflow waits at its "Wait for Claude Code" node; the worker reads the request (instructions, resume link).
-2. Claude Code runs headless in this repo (`claude -p`) on DTJ's Claude API key: CLAUDE.md rule 9, an unattended AI step never
-   uses a subscription login, so without ANTHROPIC_API_KEY nothing starts. Each request is capped at DTJ_CLAUDE_MAX_USD (Harsh's
-   number; nothing starts without one). Claude may only run what .claude/vps-settings.json allows; anything else is refused.
+2. Attended (the default, DTJ_WORKER_MODE=attended): the worker asks in Telegram "tap Start if you are watching"; nothing starts
+   without that tap, whose name is recorded. Claude Code then runs in this repo (`claude -p`) on this machine's own Claude login,
+   which CLAUDE.md rule 9 allows because a person is watching. Unattended (DTJ_WORKER_MODE=api, only if Harsh switches it on):
+   no tap, Claude Code in --bare mode on ANTHROPIC_API_KEY only, capped at DTJ_CLAUDE_MAX_USD a request. Either way Claude may
+   only run what .claude/vps-settings.json allows; anything else is refused.
 3. When the job waits for a person in Telegram (store_job.py exits 3), Claude ends its turn with `DTJ_WAIT: <command>`. The worker
    runs that command itself every few minutes (no Claude, no cost) until the person has answered, then resumes the same Claude
    session with what the command printed. Only store_job.py commands are ever run this way, never through a shell.
@@ -57,8 +60,8 @@ WAIT_OK = re.compile(r"^python3? n8n/store-factory/store_job\.py (start|draft|co
 SHELL = re.compile(r"[;&|`$<>\\\n]")
 RESUME_URL = re.compile(r"https?://\S*webhook-waiting/\S+")
 
-HEADLESS = """You are running unattended on DTJ's VPS: n8n/store-factory/worker.py started you and nobody is at this computer.
-Follow CLAUDE.md and the request below exactly, with these changes because you run alone:
+HEADLESS = """You run on DTJ's VPS: n8n/store-factory/worker.py started you. {watch}
+Follow CLAUDE.md and the request below exactly, with these changes because nobody is at this computer:
 - Every question, answer and yes happens in Telegram through the job's own commands (store_job.py and its Approve taps). Never
   ask anyone at this computer for anything and never wait for a login here.
 - When a store_job.py command exits 3 (it waits for a person in Telegram), do not wait yourself and do not run it again: end your
@@ -71,6 +74,9 @@ Follow CLAUDE.md and the request below exactly, with these changes because you r
 
 THE REQUEST
 """
+WATCHED = "{name} tapped Start in Telegram and is watching the job there (its questions, Approve taps and progress bar)."
+ALONE = "Nobody is watching: every yes still comes only through the job's Approve taps in Telegram."
+MODES = ("attended", "api")
 
 
 def now_iso() -> str:
@@ -121,8 +127,10 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
 class Worker:
     def __init__(self, *, call, run: Callable = subprocess.run, tell: Callable[[str], None] = lambda text: None,
                  environ=os.environ, state: Path = STATE, clock=time.time, sleep=time.sleep, out=print, settings: Path = SETTINGS,
-                 claude: str = "claude"):
+                 claude: str = "claude", asker: Callable | None = None):
         self.call, self.run, self.tell, self.environ, self.path = call, run, tell, environ, state
+        self.mode = str(environ.get("DTJ_WORKER_MODE") or "attended").strip().lower()
+        self.asker = asker or _asker
         self.clock, self.sleep, self.out, self.settings, self.claude = clock, sleep, out, settings, claude
         self.s = json.loads(state.read_text(encoding="utf-8")) if state.exists() else {"jobs": {}, "fails": 0, "stopped": ""}
         self.ids: dict[str, str] = {}
@@ -140,7 +148,16 @@ class Worker:
             h.write(f"[{now_iso()}] {hide(text)}\n")
 
     def ready(self) -> str:
-        """Why nothing may start ("" = ready): the API key and the spend cap are Harsh's to give."""
+        """Why nothing may start ("" = ready). Attended: the bot and a chat to ask who watches. Unattended (api): the API key and the
+        spend cap, both Harsh's to give."""
+        if self.mode not in MODES:
+            return f"DTJ_WORKER_MODE must be one of {', '.join(MODES)}"
+        if not self.settings.exists():
+            return f"{self.settings.name} is missing: what Claude may run on the VPS"
+        if self.mode == "attended":
+            if not (self.environ.get("DTJ_TELEGRAM_BOT_TOKEN") and self.environ.get("DTJ_ADMIN_CHAT")):
+                return "DTJ_TELEGRAM_BOT_TOKEN and DTJ_ADMIN_CHAT are needed: the worker asks in Telegram who is watching"
+            return ""
         if not self.environ.get("ANTHROPIC_API_KEY"):
             return ("ANTHROPIC_API_KEY is not set: an unattended Claude step runs on DTJ's Claude API key only, never on a "
                     "subscription login (CLAUDE.md rule 9)")
@@ -149,8 +166,6 @@ class Worker:
                 raise ValueError
         except ValueError:
             return "DTJ_CLAUDE_MAX_USD is not set: the most one request may spend on the Claude API (Harsh's number)"
-        if not self.settings.exists():
-            return f"{self.settings.name} is missing: what Claude may run on the VPS"
         return ""
 
     # ---- n8n
@@ -177,10 +192,18 @@ class Worker:
 
     # ---- Claude
     def claude_turn(self, job: dict, prompt: str) -> None:
-        # --bare: Anthropic auth is strictly ANTHROPIC_API_KEY, the subscription login on this machine is never read (rule 9, made
-        # sure by Claude Code itself); --bare skips CLAUDE.md discovery, so the rulebook is handed in explicitly
-        argv = [self.claude, "-p", "--bare", "--output-format", "json", "--permission-mode", "dontAsk", "--settings", str(self.settings),
-                "--append-system-prompt-file", str(ROOT / "CLAUDE.md"), "--max-budget-usd", str(self.environ["DTJ_CLAUDE_MAX_USD"])]
+        env = dict(self.environ)
+        if self.mode == "api":
+            # --bare: Anthropic auth is strictly ANTHROPIC_API_KEY, the subscription login on this machine is never read (rule 9,
+            # made sure by Claude Code itself); --bare skips CLAUDE.md discovery, so the rulebook is handed in explicitly
+            argv = [self.claude, "-p", "--bare", "--output-format", "json", "--permission-mode", "dontAsk", "--settings",
+                    str(self.settings), "--append-system-prompt-file", str(ROOT / "CLAUDE.md"),
+                    "--max-budget-usd", str(self.environ["DTJ_CLAUDE_MAX_USD"])]
+        else:
+            # attended: this machine's own Claude login (a person tapped Start and watches); an API key in the environment is not
+            # passed on, so the login is what runs (Harsh, 23 Oct 2026: no API key for this)
+            env.pop("ANTHROPIC_API_KEY", None)
+            argv = [self.claude, "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings", str(self.settings)]
         if job.get("session"):
             argv += ["--resume", job["session"]]
         job.update(state="running", turn_started=now_iso())
@@ -188,7 +211,7 @@ class Worker:
         self.log(job["run"], f"claude turn {job.get('turns', 0) + 1} started")
         try:
             done = self.run(argv, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(ROOT),
-                            env=dict(self.environ), timeout=CLAUDE_HOURS * 3600)
+                            env=env, timeout=CLAUDE_HOURS * 3600)
             res = json.loads((done.stdout or "").strip().splitlines()[-1]) if (done.stdout or "").strip() else {}
         except subprocess.TimeoutExpired:
             return self.failed(job, f"Claude ran longer than {CLAUDE_HOURS} hours and was stopped")
@@ -251,9 +274,34 @@ class Worker:
         except Exception as exc:  # noqa: BLE001 - n8n's answer had no request: said, the run stays for a person
             self.failed(job, f"could not read the request: {exc}")
             return True
-        self.out(f"run {job['run']} ({name}): started")
-        self.claude_turn(job, HEADLESS + req["instructions"])
+        job["chat"] = chat_of(req) or str(self.environ.get("DTJ_ADMIN_CHAT") or "")
+        if self.mode == "api":
+            self.begin(job, req, "")
+            return True
+        job["state"] = "asking"
+        self.save()
+        self.watch(job, req)
         return True
+
+    def watch(self, job: dict, req: dict | None = None) -> None:
+        """The attended gate: "tap Start if you are watching", asked once in the request's chat (else the admin chat); Claude starts
+        when someone taps it, never before. Looked at once a round, so nothing else waits for it."""
+        ask = self.asker(f"w{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save)
+        what = {"New Store": "a whole store", "Add Shop": "a new shop", "Page Design": "a product page"}.get(STEPS[job["workflow"]],
+                                                                                                          "a request")
+        got = ask.choose("watch", f"New request for {what} (n8n run {job['run']}). Claude starts on DTJ's VPS as soon as the person "
+                                  "who will watch it taps Start. You follow it here: its questions, the Approve taps and the "
+                                  "progress bar.", [("Start: I'm watching", "start")], 0)
+        if not got:
+            return
+        job["watched_by"] = got.get("by") or "a teammate"
+        self.log(job["run"], f"Start tapped by {job['watched_by']}")
+        self.begin(job, req or self.request(job["run"], job["workflow_id"], job["workflow"]), job["watched_by"])
+
+    def begin(self, job: dict, req: dict, watcher: str) -> None:
+        self.out(f"run {job['run']} ({job['workflow']}): started" + (f", watched by {watcher}" if watcher else ""))
+        watch = WATCHED.format(name=watcher) if watcher else ALONE
+        self.claude_turn(job, HEADLESS.format(watch=watch) + req["instructions"])
 
     def look_at_waits(self) -> None:
         for job in [j for j in self.s["jobs"].values() if j.get("state") == "waiting"]:
@@ -279,7 +327,15 @@ class Worker:
             self.claude_turn(job, f"The command you were waiting on has finished.\n$ {shown}\nexit {code}\n{printed[-4000:]}\n"
                                   "Continue the request from here, under the same rules.")
 
+    def look_at_starts(self) -> None:
+        for job in [j for j in self.s["jobs"].values() if j.get("state") == "asking"]:
+            try:
+                self.watch(job)
+            except Exception as exc:  # noqa: BLE001 - n8n or Telegram did not answer: the next round asks again
+                self.log(job["run"], f"could not look at the Start tap: {exc}")
+
     def round(self) -> None:
+        self.look_at_starts()
         self.look_at_waits()
         self.start_next()
 
@@ -298,10 +354,10 @@ class Worker:
 
     def status(self) -> str:
         jobs = sorted(self.s["jobs"].values(), key=lambda j: j.get("started", ""))
-        lines = [f"stopped: {self.s['stopped']}" if self.s.get("stopped") else "running"]
+        lines = [(f"stopped: {self.s['stopped']}" if self.s.get("stopped") else "running") + f" ({self.mode})"]
         for j in jobs[-30:]:
-            extra = {"waiting": f"for a person since {j.get('wait_since')}", "failed": j.get("why", ""),
-                     "done": f"{j.get('cost_usd', 0)} USD"}.get(j.get("state"), "")
+            extra = {"waiting": f"for a person since {j.get('wait_since')}", "failed": j.get("why", ""), "asking": "for a Start tap",
+                     "done": f"watched by {j['watched_by']}" if j.get("watched_by") else f"{j.get('cost_usd', 0)} USD"}.get(j.get("state"), "")
             lines.append(f"run {j['run']} {j['workflow']}: {j.get('state')} {extra}".rstrip())
         return "\n".join(lines)
 
@@ -316,6 +372,23 @@ class Worker:
         self.save()
         self.out(f"run {run_id} will be taken again on the next round")
         return 0
+
+
+def chat_of(req: dict) -> str:
+    """The Telegram chat the request came from (the person who sent the link), when the request names one."""
+    inner = req.get("request") if isinstance(req.get("request"), dict) else {}
+    for v in (inner.get("telegram_chat_id"), inner.get("chat_id"), req.get("telegram_chat_id")):
+        if re.fullmatch(r"-?\d{3,20}", str(v or "")):
+            return str(v)
+    return ""
+
+
+def _asker(job: str, chat: str, state: dict, save: Callable[[], None]):
+    """The store job's own Telegram questions (bot_ask.Asker: the bot's buttons, answers through n8n's dtj_bot_answers)."""
+    import store_job  # noqa: PLC0415
+    from bot_ask import Asker  # noqa: PLC0415
+    return Asker(job, chat, send=store_job._sender(store_job._token()), rows=store_job._rows, state=state, save=save,
+                 add_row=store_job._add_row)
 
 
 def _tell(text: str) -> None:

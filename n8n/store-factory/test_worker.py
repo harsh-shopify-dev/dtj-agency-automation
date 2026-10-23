@@ -15,7 +15,8 @@ import worker
 
 NS = "WF-NS"
 RESUME = "https://n8n.srv2048145.hstgr.cloud/webhook-waiting/993?signature=ab12"
-ENV = {"ANTHROPIC_API_KEY": "sk-ant-test", "DTJ_CLAUDE_MAX_USD": "5"}
+ENV = {"DTJ_WORKER_MODE": "api", "ANTHROPIC_API_KEY": "sk-ant-test", "DTJ_CLAUDE_MAX_USD": "5"}  # unattended: only if Harsh switches it on
+ATTENDED = {"DTJ_TELEGRAM_BOT_TOKEN": "bot-token", "DTJ_ADMIN_CHAT": "-100200", "ANTHROPIC_API_KEY": "sk-ant-should-not-pass"}
 
 
 class N8n:
@@ -31,7 +32,7 @@ class N8n:
             return {"data": [r for r in self.waiting if r["workflowId"] == args["workflowId"]]}
         if tool == "get_workflow_execution":
             return {"execution": {"data": {"resultData": {"runData": {args["nodeNames"][0]: [{"data": {"main": [[{"json": {
-                "claude_code_stage": "new_store", "resume_url": RESUME,
+                "claude_code_stage": "new_store", "resume_url": RESUME, "request": {"telegram_chat_id": "7051933055"},
                 "instructions": f"DO THIS: store_job.py start ... then reply.py --resume-url \"{RESUME}\""}}]]}}]}}}}}
         raise AssertionError(tool)
 
@@ -66,20 +67,82 @@ class Base(unittest.TestCase):
         self.settings.write_text("{}", encoding="utf-8")
         self.n8n, self.told, self.printed, self.now = N8n(), [], [], [1000.0]
 
-    def worker(self, runs, environ=ENV):
+    def worker(self, runs, environ=ENV, asker=None):
         return worker.Worker(call=self.n8n, run=runs, tell=self.told.append, environ=dict(environ), state=self.tmp / "w" / "jobs.json",
-                             clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings)
+                             clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings,
+                             asker=asker)
 
 
 class Ready(Base):
-    def test_nothing_starts_without_the_api_key_or_the_spend_cap(self):
+    def test_unattended_never_starts_without_the_api_key_or_the_spend_cap(self):
         runs = Runs()
-        self.assertIn("rule 9", self.worker(runs, {"DTJ_CLAUDE_MAX_USD": "5"}).ready())
-        self.assertIn("DTJ_CLAUDE_MAX_USD", self.worker(runs, {"ANTHROPIC_API_KEY": "k"}).ready())
-        self.assertIn("DTJ_CLAUDE_MAX_USD", self.worker(runs, {"ANTHROPIC_API_KEY": "k", "DTJ_CLAUDE_MAX_USD": "0"}).ready())
+        api = {"DTJ_WORKER_MODE": "api"}
+        self.assertIn("rule 9", self.worker(runs, {**api, "DTJ_CLAUDE_MAX_USD": "5"}).ready())
+        self.assertIn("DTJ_CLAUDE_MAX_USD", self.worker(runs, {**api, "ANTHROPIC_API_KEY": "k"}).ready())
+        self.assertIn("DTJ_CLAUDE_MAX_USD", self.worker(runs, {**api, "ANTHROPIC_API_KEY": "k", "DTJ_CLAUDE_MAX_USD": "0"}).ready())
         self.assertEqual(self.worker(runs).ready(), "")
-        self.assertEqual(self.worker(runs, {}).serve(), 2)
+        self.assertEqual(self.worker(runs, api).serve(), 2)
         self.assertEqual(runs.calls, [])
+
+    def test_attended_is_the_default_and_needs_only_the_bot_to_ask_who_watches(self):
+        runs = Runs()
+        self.assertEqual(self.worker(runs, {}).mode, "attended")
+        self.assertIn("who is watching", self.worker(runs, {}).ready())
+        self.assertEqual(self.worker(runs, ATTENDED).ready(), "")  # no API key, no spend cap needed
+        self.assertIn("must be one of", self.worker(runs, {"DTJ_WORKER_MODE": "auto"}).ready())
+
+
+class Asker:
+    """bot_ask.Asker stand-in: the Start question is sent once; `tapped` is who has tapped it (None = nobody yet)."""
+
+    def __init__(self, shared):
+        self.shared = shared
+
+    def __call__(self, job, chat, state, save):
+        self.shared["made"].append((job, chat))
+        return self
+
+    def choose(self, key, text, options, minutes):
+        if key not in self.shared["asked"]:
+            self.shared["asked"].append(key)
+            self.shared["texts"].append((text, [o[0] for o in options], minutes))
+        who = self.shared["tapped"]
+        return {"value": "start", "label": options[0][0], "by": who} if who else None
+
+
+class Attended(Base):
+    """Harsh, 23 Oct 2026: "there will be a person watching it": Claude starts only after a Start tap, on the machine's own login."""
+
+    def test_claude_waits_for_the_start_tap_then_runs_on_the_login_with_the_watcher_named(self):
+        shared = {"made": [], "asked": [], "texts": [], "tapped": None}
+        runs = Runs(claude=[result("Done, answered n8n.")])
+        w = self.worker(runs, ATTENDED, asker=Asker(shared))
+        w.round()
+        job = w.s["jobs"]["993"]
+        self.assertEqual((job["state"], job["chat"]), ("asking", "7051933055"))  # asked in the chat the link came from
+        self.assertEqual(runs.calls, [])  # nothing runs before the tap
+        text, buttons, minutes = shared["texts"][0]
+        self.assertIn("a whole store", text)
+        self.assertEqual((buttons, minutes), (["Start: I'm watching", ], 0))  # never blocks the loop
+        w.round()
+        self.assertEqual(runs.calls, [])
+        shared["tapped"] = "Riya"
+        self.n8n.waiting = []
+        w.round()
+        argv, kw = runs.calls[0]
+        self.assertNotIn("--bare", argv)  # the machine's own Claude login
+        self.assertNotIn("--max-budget-usd", argv)
+        self.assertEqual(argv[:7], ["claude", "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings"])
+        self.assertNotIn("ANTHROPIC_API_KEY", kw["env"])  # an API key in the environment is not passed on
+        self.assertIn("Riya tapped Start in Telegram and is watching", kw["input"])
+        self.assertEqual((job["state"], job["watched_by"]), ("done", "Riya"))
+        self.assertEqual(shared["made"][0], ("w993", "7051933055"))
+        self.assertIn("watched by Riya", w.status())
+
+    def test_without_a_chat_in_the_request_the_admin_chat_is_asked(self):
+        self.assertEqual(worker.chat_of({"request": {"telegram_chat_id": ""}}), "")
+        self.assertEqual(worker.chat_of({"request": {"telegram_chat_id": "-100123"}}), "-100123")
+        self.assertEqual(worker.chat_of({"request": {"telegram_chat_id": "x; drop"}}), "")
 
 
 class Runs_(Base):
@@ -97,7 +160,7 @@ class Runs_(Base):
         self.assertEqual(argv[:9], ["claude", "-p", "--bare", "--output-format", "json", "--permission-mode", "dontAsk", "--settings",
                                     str(self.settings)])
         self.assertEqual(argv[9:13], ["--append-system-prompt-file", str(worker.ROOT / "CLAUDE.md"), "--max-budget-usd", "5"])
-        self.assertIn("unattended on DTJ's VPS", kw["input"])
+        self.assertIn("Nobody is watching", kw["input"])
         self.assertIn("DO THIS: store_job.py start", kw["input"])
         self.assertEqual(kw["env"]["ANTHROPIC_API_KEY"], "sk-ant-test")
         job = w.s["jobs"]["993"]
