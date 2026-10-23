@@ -4,6 +4,7 @@ import base64
 import contextlib
 import io
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -280,8 +281,19 @@ class VpsWay(Base):
         self.assertTrue(side["path"].endswith("p9.png"))
         argv = r.calls[0]
         self.assertEqual(argv[:2], ["bash", str(ai.CODEX_SCRIPT)])
-        self.assertEqual(argv[argv.index("--ref") + 1], str(self.ref))
+        self.assertEqual(argv[argv.index("--ref") + 1], str(self.ref.resolve()))
         self.assertEqual(argv[argv.index("--timeout") + 1], "600")
+        cwd = os.getcwd()  # a relative photo path (brief 12) reaches Codex as an absolute one
+        os.chdir(self.ref.parent)
+        try:
+            r = FakeRunner()
+            ai.make("product", "This exact bottle on a plain light background", "p10.webp", refs=[self.ref.name],
+                    environ={}, read_var=NO_VAR, runner=r, codex_ok=lambda: True)
+        finally:
+            os.chdir(cwd)
+        argv = r.calls[0]
+        self.assertEqual(argv[argv.index("--ref") + 1], str(self.ref.resolve()))
+        self.assertTrue(Path(argv[argv.index("--out") + 1]).is_absolute())
         r = FakeRunner(answer={"ok": False, "error": "no picture from codex (exit 1): usage limit reached"})
         with self.assertRaises(ImagesError) as e:
             ai.make("banner", GOOD, self.tmp / "b9.webp", environ={}, read_var=NO_VAR, runner=r, codex_ok=lambda: True)

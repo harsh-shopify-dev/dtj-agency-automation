@@ -163,13 +163,15 @@ class Progress:
 # data, the facts and words, the build with its design checks), not a measured timing.
 PAGE_STAGES = {
     "brief": ("Reading the brief", 0, 5),
-    "intake": ("Collecting the brand's pictures and details", 5, 20),
-    "product": ("Reading the product and its pictures", 20, 30),
-    "facts": ("Writing the facts, the brand and the words", 30, 55),
+    "intake": ("Collecting the brand's pictures and details", 5, 15),
+    "study": ("Studying the competitors (pictures, words, colours)", 15, 22),
+    "product": ("Reading the product and its pictures", 22, 30),
+    "pictures": ("ChatGPT is making the page's pictures (a few minutes each)", 30, 42),
+    "facts": ("Writing the facts, the brand and the words", 42, 55),
     "build": ("Building the page and running the design checks", 55, 85),
     "check": ("Checking the page on the draft theme", 85, 95),
 }
-ROUND_UNITS = {"build": "round", "intake": "step"}
+ROUND_UNITS = {"build": "round", "intake": "step", "pictures": "picture"}
 
 
 class PageProgress:

@@ -6,6 +6,8 @@
 #     bash tools/vps/codex_image.sh --prompt-file <txt> --out <png> [--ref <photo of our product> ...] [--timeout 600]
 # Prints one JSON line: {"ok": true, "path": <out>, "seconds": N} or {"ok": false, "error": "..."}; exit 0 / 1.
 # CODEX_HOME picks the Codex account (default ~/.codex). Works in its own /tmp/dtj-codex-* folder and removes only that.
+# Every path is made absolute first: Codex runs inside that folder, where a relative path finds nothing (23 Oct 2026, brief 12:
+# three pictures failed with "Please reattach the product photo" after a --ref ../../.work/... passed the check here).
 set -uo pipefail
 export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
 
@@ -14,9 +16,10 @@ fail() { python3 -c 'import json, sys; print(json.dumps({"ok": False, "error": s
 prompt="" out="" timeout=600 refs=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --prompt-file) prompt="${2:-}"; shift 2 ;;
-    --out) out="${2:-}"; shift 2 ;;
-    --ref) [ -s "${2:-}" ] || fail "reference photo missing: ${2:-}"; refs+=(-i "$2"); shift 2 ;;
+    --prompt-file) [ -n "${2:-}" ] && prompt="$(realpath -m -- "$2")"; shift 2 ;;
+    --out) [ -n "${2:-}" ] && out="$(realpath -m -- "$2")"; shift 2 ;;
+    --ref) ref=""; [ -n "${2:-}" ] && ref="$(realpath -m -- "$2")"
+           [ -s "$ref" ] || fail "reference photo missing: ${2:-}"; refs+=(-i "$ref"); shift 2 ;;
     --timeout) timeout="${2:-600}"; shift 2 ;;
     *) fail "unknown argument: $1" ;;
   esac
