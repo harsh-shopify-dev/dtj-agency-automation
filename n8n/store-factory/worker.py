@@ -74,6 +74,8 @@ Follow CLAUDE.md and the request below exactly, with these changes because nobod
 - A step that needs a person at a computer (a Shopify login, an install in the Dev Dashboard, a command the settings refuse): tell
   them in Telegram, leave that step, and say it in the n8n answer.
 - At the end answer n8n yourself (reply.py, as the request says), also when the work stopped or is only partly done.
+- A HANDOFF entry the request asks for goes to .work/handoff/<date>-run-<n8n run>.md (not docs/HANDOFF.md: the laptop merges these
+  into git). Files you make go under /home/ai/dtj-agency-automation/.work/ (use that full path).
 
 THE REQUEST
 """
