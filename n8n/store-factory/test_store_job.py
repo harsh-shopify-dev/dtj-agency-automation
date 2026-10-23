@@ -898,6 +898,43 @@ class PagesAndMenus(Base):
         self.assertIn("- Menus: the main menu and footer menu", hand)  # the footer is still the owner's
 
 
+class NextStep(Base):
+    """Every finished step says what comes next and whether the person has to act (Harsh, 23 Oct 2026)."""
+
+    def test_the_next_line_follows_the_job(self):
+        j = self.job()
+        j.s["plan"] = {"copy": True, "whose": "dtj", "parts": ["chrome", "home", "products", "pages"]}
+        self.assertIn("the draft copy of the theme. An Approve button", j.next_step())
+        j.s["draft"] = {"id": "1"}
+        self.assertIn("adding the products", j.next_step())
+        j.s["copy_result"] = {"finished": True}
+        self.assertIn("DTJ's apps for this store", j.next_step())
+        j.s["apps_approved_by"] = "Harsh (Telegram Approve)"
+        self.assertIn("Next, for you: tap each Install button", j.next_step())
+        j.s["apps_on"] = ["a"] * 7
+        nxt = j.next_step()
+        self.assertIn("nothing to do for you right now. I design header and footer, home page, product pages", nxt)
+        self.assertIn("Approve buttons come here for the header and footer, the pages and menus", nxt)
+        j.s["menus_result"] = {"main-menu": {}}
+        self.assertNotIn("menus", j.next_step().split("I design")[1].split(".")[0])
+        (self.tmp / "royal-dosa" / "answer.json").write_text("{}", encoding="utf-8")
+        self.assertIn("send a product link of this store here", j.next_step())
+
+    def test_the_install_message_ends_with_what_to_do_next(self):
+        apps = [("blocks", "DTJ Blocks", "a" * 32)]
+        j = store_job.Job("royal-dosa", send=self.tg, rows=self.answers, log=self.log, state_dir=self.tmp, out=self.printed.append,
+                          sleep=self.clock.sleep, clock=self.clock, licence=lambda key, state, by: (200, {"app_handle": "dtj-blocks",
+                                                                                                          "licence": "active"}),
+                          org_apps=lambda: apps, stores_row=lambda row: "exists")
+        j.begin(SCAN, CHAT, "Harsh")
+        j.s.update(planned=True, plan={"whose": "dtj", "parts": ["products"]}, apps_approved_by="Harsh (Telegram Approve)",
+                   draft={"id": "1"})
+        self.assertEqual(j.installs(minutes=1), 0)
+        last = self.tg.last()["text"]
+        self.assertIn("All 1 DTJ apps are installed and switched on", last)
+        self.assertIn("Next:", last)
+
+
 class ShopsList(Base):
     """A connected store (draft theme + apps) joins the shops list, so its product links work in the bot (23 Oct 2026)."""
 
