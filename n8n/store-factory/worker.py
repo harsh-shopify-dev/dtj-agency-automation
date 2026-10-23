@@ -58,6 +58,7 @@ PARALLEL = 2               # Claude sessions at the same time (DTJ_WORKER_PARALL
 MAX_WAIT_DAYS = 7          # n8n's own Wait node gives up after 7 days too
 CLAUDE_HOURS = 4           # one Claude turn may take this long (a whole store's pages), then it is stopped
 FAILS_TO_STOP = 3
+TIDY_ROUNDS = 10           # every 10 rounds (about 5 minutes) a Start question whose n8n run was answered elsewhere is closed
 WAIT_LINE = re.compile(r"^DTJ_WAIT:\s*(.+?)\s*$", re.M)
 WAIT_OK = re.compile(r"^python3? n8n/store-factory/(store_job\.py (start|draft|copy|apps|installs|approve|pages|menus)|page_questions\.py) ")
 SHELL = re.compile(r"[;&|`$<>\\\n]")
@@ -459,6 +460,10 @@ class Worker:
 
     def round(self) -> None:
         self._answers = None  # a fresh read of the answers, at most once this round
+        self.read_inbox()
+        self.rounds = getattr(self, "rounds", 0) + 1
+        if self.rounds % TIDY_ROUNDS == 1:
+            self.tidy()
         self.look_at_stops()
         self.look_at_queue()
         self.look_at_starts()
@@ -493,6 +498,7 @@ class Worker:
         for j in jobs[-30:]:
             extra = {"waiting": f"for a person since {j.get('wait_since')}", "failed": j.get("why", ""), "asking": "for a Start tap",
                      "queued": "Start tapped, waiting for a free slot", "interrupted": j.get("why", ""), "stopped": j.get("why", ""),
+                     "closed": j.get("why", ""),
                      "done": f"watched by {j['watched_by']}" if j.get("watched_by") else f"{j.get('cost_usd', 0)} USD"}.get(j.get("state"), "")
             lines.append(f"run {j['run']} {j['workflow']}: {j.get('state')} {extra}".rstrip())
         return "\n".join(lines)
@@ -508,6 +514,43 @@ class Worker:
         self.save()
         self.out(f"run {run_id} will be taken again on the next round")
         return 0
+
+    @property
+    def inbox(self) -> Path:
+        return self.path.parent / "inbox.jsonl"
+
+    def send(self, command: dict) -> int:
+        """A command for the running service (23 Oct 2026: --retry edited jobs.json under the service, whose own copy wrote the old
+        jobs back): it is applied at the start of the service's next round, within about 30 seconds."""
+        self.inbox.parent.mkdir(parents=True, exist_ok=True)
+        with self.inbox.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(command) + "\n")
+        self.out(f"sent to the worker service: {json.dumps(command)} (applied within about {POLL_SECONDS} s)")
+        return 0
+
+    def read_inbox(self) -> None:
+        if not self.inbox.exists():
+            return
+        lines = self.inbox.read_text(encoding="utf-8").splitlines()
+        self.inbox.unlink()
+        for line in lines:
+            try:
+                cmd = json.loads(line)
+            except ValueError:
+                continue
+            if cmd.get("retry"):
+                self.retry(str(cmd["retry"]))
+
+    def tidy(self) -> None:
+        """Start questions and queued jobs whose n8n run no longer waits (answered elsewhere) are closed: nothing more is asked."""
+        for job in [j for j in self.s["jobs"].values() if j.get("state") in ("asking", "queued")]:
+            try:
+                if not self.still_waiting(job):
+                    job.update(state="closed", why="its n8n run was answered elsewhere")
+                    self.log(job["run"], "closed: the n8n run no longer waits")
+            except Exception:  # noqa: BLE001 - n8n did not answer: the next tidy looks again
+                continue
+        self.save()
 
 
 def chat_of(req: dict) -> str:
@@ -583,7 +626,7 @@ def main(argv=None) -> int:
         print(w.status())
         return 0
     if a.retry:
-        return w.retry(a.retry)
+        return w.send({"retry": a.retry})
     if a.once:
         why = w.ready()
         if why:
