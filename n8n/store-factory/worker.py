@@ -131,12 +131,17 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
 class Worker:
     def __init__(self, *, call, run: Callable = subprocess.run, tell: Callable[[str], None] = lambda text: None,
                  environ=os.environ, state: Path = STATE, clock=time.time, sleep=time.sleep, out=print, settings: Path = SETTINGS,
-                 claude: str = "claude", asker: Callable | None = None, threaded: bool = False, replier: Callable | None = None):
+                 claude: str = "claude", asker: Callable | None = None, threaded: bool = False, replier: Callable | None = None,
+                 read_answers: Callable | None = None):
         self.call, self.run, self.tell, self.environ, self.path = call, run, tell, environ, state
         # each Claude session in its own thread, so the loop keeps asking Start for new requests and looking at waits (Harsh,
         # 23 Oct 2026: brief 10 showed nothing while brief 9 was being designed); False = one after another (tests)
         self.threaded, self.lock = threaded, threading.RLock()
         self.procs: dict[str, subprocess.Popen] = {}  # the Claude session of each running job, so Stop can end it
+        # every Start question and Stop button of a round reads ONE copy of the recent answers (23 Oct 2026: a read per question
+        # made n8n answer 429 Too Many Requests, and a Start tap went unseen)
+        self._answers: list | None = None
+        self.read_answers = read_answers or _read_answers
         self.replier = replier or _reply
         try:
             self.parallel = max(1, int(environ.get("DTJ_WORKER_PARALLEL") or PARALLEL))
@@ -335,7 +340,7 @@ class Worker:
     def watch(self, job: dict, req: dict | None = None) -> None:
         """The attended gate: "tap Start if you are watching", asked once in the request's chat (else the admin chat); Claude starts
         when someone taps it, never before. Looked at once a round, so nothing else waits for it."""
-        ask = self.asker(f"w{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save)
+        ask = self._ask(job)
         what = {"New Store": "a whole store", "Add Shop": "a new shop", "Page Design": "a product page"}.get(STEPS[job["workflow"]],
                                                                                                           "a request")
         got = ask.choose("watch", f"New request for {what} (n8n run {job['run']}). Claude starts on DTJ's VPS as soon as the person "
@@ -396,7 +401,7 @@ class Worker:
             if len([j for j in self.s["jobs"].values() if j.get("state") == "running"]) >= self.parallel:
                 return
             try:
-                ask = self.asker(f"w{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save)
+                ask = self._ask(job)
                 ask.tell(f"Starting now (n8n run {job['run']}), watched by {job.get('watched_by') or 'a teammate'}.")
                 self.begin(job, self.request(job["run"], job["workflow_id"], job["workflow"]), job.get("watched_by") or "")
             except Exception as exc:  # noqa: BLE001 - n8n or Telegram did not answer: the next round tries again
@@ -409,10 +414,24 @@ class Worker:
             except Exception as exc:  # noqa: BLE001 - n8n or Telegram did not answer: the next round asks again
                 self.log(job["run"], f"could not look at the Start tap: {exc}")
 
+    def rows(self, job: str) -> list:
+        """This round's answers for one job (the bot's dtj_bot_answers rows), read once per round for every job."""
+        if self._answers is None:
+            try:
+                self._answers = self.read_answers()
+            except Exception as exc:  # noqa: BLE001 - n8n did not answer: no answers this round, the next one reads again
+                self.out(hide(f"answers not read this round: {exc}"))
+                self._answers = []
+        return [r for r in self._answers if r.get("job") == job]
+
+    def _ask(self, job: dict):
+        return self.asker(f"w{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save,
+                          rows=self.rows)
+
     def look_at_stops(self) -> None:
         for job in [j for j in self.s["jobs"].values() if j.get("state") in ("running", "waiting", "queued") and j.get("ask")]:
             try:
-                ask = self.asker(f"w{job['run']}"[:24], job["chat"], job["ask"], self.save)
+                ask = self._ask(job)
                 got = ask.answer("stop")
             except Exception:  # noqa: BLE001 - n8n did not answer: the next round looks again
                 continue
@@ -437,6 +456,7 @@ class Worker:
             ask.tell(f"Stopped by {by}: Claude has stopped and nothing more is done for this job. {sent}")
 
     def round(self) -> None:
+        self._answers = None  # a fresh read of the answers, at most once this round
         self.look_at_stops()
         self.look_at_queue()
         self.look_at_starts()
@@ -515,12 +535,26 @@ def _reply(req: dict, note: str) -> str:
     return "n8n has the answer." if done.returncode == 0 else "n8n was not told (reply.py failed)."
 
 
-def _asker(job: str, chat: str, state: dict, save: Callable[[], None]):
+def _asker(job: str, chat: str, state: dict, save: Callable[[], None], rows: Callable | None = None):
     """The store job's own Telegram questions (bot_ask.Asker: the bot's buttons, answers through n8n's dtj_bot_answers)."""
     import store_job  # noqa: PLC0415
     from bot_ask import Asker  # noqa: PLC0415
-    return Asker(job, chat, send=store_job._sender(store_job._token()), rows=store_job._rows, state=state, save=save,
+    return Asker(job, chat, send=store_job._sender(store_job._token()), rows=rows or store_job._rows, state=state, save=save,
                  add_row=store_job._add_row)
+
+
+def _read_answers() -> list:
+    """The worker's own answers of the last 8 days (Start and Stop taps: jobs w<run>), in one read."""
+    from datetime import timedelta  # noqa: PLC0415
+    import store_job  # noqa: PLC0415
+    from n8n_mcp import call  # noqa: PLC0415
+    from setup_n8n import table_rows  # noqa: PLC0415
+    table = store_job.answers_table()
+    if not table:
+        return []
+    since = (datetime.now(timezone.utc) - timedelta(days=8)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return table_rows(call, table, [{"columnName": "job", "condition": "like", "value": "w%"},
+                                    {"columnName": "createdAt", "condition": "gte", "value": since}])
 
 
 def _tell(text: str) -> None:
