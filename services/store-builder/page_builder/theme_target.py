@@ -35,6 +35,15 @@ SUPPORTED_THEMES = ("Horizon", "Dawn")  # the layouts assemble.py knows (Dawn ad
 THEME_DIRS = ("assets", "blocks", "config", "layout", "locales", "sections", "snippets", "templates")
 Runner = Callable[[Sequence[str], Mapping[str, str]], "subprocess.CompletedProcess[str]"]
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+_HINT = re.compile(r"<claude-code-hint[^>]*/>")
+_NOT_A_THEME_FOLDER = re.compile(r"warning It doesn't seem like you're running this command in a theme directory\.\s*")
+
+
+def _plain(out: str) -> str:
+    """The CLI's words without its box drawing, its hint tag or the "not a theme directory" warning a pull into a new folder
+    always gets (23 Oct 2026, brief 12: the 600 characters of a failed pull held only those, never the error itself)."""
+    words = " ".join(x for x in (ln.strip(" │╭╮╰╯─") for ln in _HINT.sub("", out).splitlines()) if x)
+    return _NOT_A_THEME_FOLDER.sub("", words)
 
 
 def normalise_store(store: str) -> str:
@@ -148,10 +157,9 @@ class ThemeAccess:
                     "owner accepts DTJ's collaborator request (with Themes), then someone runs `shopify theme list --store "
                     f"{self.store}` once in their own terminal and logs in with DTJ's account; or save a Theme Access password as "
                     f"the user variable {token_env_name(self.store)}")
-            raise ThemeError(f"shopify {' '.join(cmd[1:3])} failed ({done.returncode}): {out.strip()[:600]}")
+            raise ThemeError(f"shopify {' '.join(cmd[1:3])} failed ({done.returncode}): {_plain(out)[:600]}")
         if "pushed with errors" in out:  # the CLI exits 0 when Shopify refuses a file (10 Oct 2026: a range value off its step)
-            words = " ".join(x for x in (ln.strip(" │╭╮╰╯─") for ln in out.splitlines()) if x)  # drop the CLI's box drawing
-            raise ThemeError(f"Shopify refused part of the push: {words[:600]}")
+            raise ThemeError(f"Shopify refused part of the push: {_plain(out)[:600]}")
         return self._hide(_ANSI.sub("", done.stdout or ""))
 
     def themes(self, theme_id: str | None = None, role: str | None = None, name: str | None = None) -> list[dict]:
