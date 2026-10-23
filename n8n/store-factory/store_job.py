@@ -536,7 +536,7 @@ class Job:
                 f"sample prices for {len(sample_prices)} products" if sample_prices else "", f"{texts} sample descriptions" if texts else ""]
         a.tell(f"Ready for <b>{esc(br['name'])}</b>: " + (", ".join(x for x in said if x) or "nothing new") + ". Everything sample is "
                "tagged (dtj-sample, dtj-sample-price, dtj-sample-text) and listed in the handover, to replace before launch."
-               + (f"\nSample prices refused for: {esc(', '.join(refused[:10]))}" if refused else ""))
+               + (f"\nSample prices refused for: {esc(', '.join(refused[:10]))}" if refused else "") + "\n" + self.next_step())
         self.out(json.dumps({"products": len(br.get("products") or []), "pictures": len(jobs), "banners": br.get("banners") or [],
                              "sample_prices": len(sample_prices), "descriptions": texts}))
         return 0
@@ -630,6 +630,33 @@ class Job:
         self.out(json.dumps({"study": str(keep)}))
         return 0
 
+    def next_step(self) -> str:
+        """The "Next:" line after every finished step: what comes now and whether the person has to do anything (Harsh, 23 Oct 2026:
+        "it should tell me that what i had to do after installation fix such steps further ahead"). Worked out from the job's state,
+        in the order the skill runs the steps."""
+        s, p = self.s, self.s.get("plan") or {}
+        apps = s.get("apps_total") or 7  # DTJ's seven apps; installs() keeps the real count
+        if (self.dir / "answer.json").exists():  # the job is answered: what the person can do with the store now
+            return ("Next: send a product link of this store here to design its page, or the store's own link for more pages. "
+                    "Nothing else is waiting.")
+        if not s.get("draft"):
+            return "Next: the draft copy of the theme. An Approve button comes here; tap it to go on."
+        if p.get("copy") and not s.get("copy_result"):
+            return "Next: adding the products. An Approve button comes here with what will be added; tap it to go on."
+        if not s.get("apps_approved_by"):
+            return "Next: DTJ's apps for this store. An Approve button comes here; tap it to go on."
+        if p.get("whose") == "dtj" and len(s.get("apps_on") or []) < apps:
+            return ("Next, for you: tap each Install button above while logged in to the store's admin and press Install on Shopify's "
+                    "page. I switch each app on by myself and go on once all are in.")
+        parts = [PARTS[x] for x in p.get("parts") or [] if x != "pages" or not s.get("menus_result")]
+        if parts:
+            taps = [x for x in ("chrome", "collection", "pages") if x in (p.get("parts") or [])]
+            return ("Next: nothing to do for you right now. I design " + ", ".join(parts).lower() + " into the draft. "
+                    + ("Approve buttons come here for " + ", ".join({"chrome": "the header and footer", "collection": "the collection page",
+                                                                    "pages": "the pages and menus"}[x] for x in taps) + "; " if taps else "")
+                    + "product and home pages go straight to the draft and you get their preview links.")
+        return "Next: nothing to do for you. I send the handover: everything in the store and what is left to replace."
+
     def stop(self, why: str) -> int:
         self.s["stopped"] = why
         self.save()
@@ -658,6 +685,7 @@ class Job:
             newest = max(found, key=lambda t: int(t.get("id") or 0))
             s["draft"] = {"id": str(newest["id"]), "name": newest.get("name"), "role": "unpublished", "from": "added by a person"}
             self.save()
+            self.ask.tell(f"Found the Horizon you added (theme {esc(s['draft']['id'])}): it is the draft I design into.\n" + self.next_step())
             self.out(json.dumps(s["draft"]))
             return 0
         live = (s["scan"].get("live_theme") or {}).get("name") or "the live theme"
@@ -676,7 +704,7 @@ class Job:
         self.save()
         self.logged("draft copy of the live theme (theme duplicate, unpublished)", "the store job designs into a draft copy only",
                     made["approved_by"], after=made, evidence={"commands": getattr(self.access, "commands", [])})
-        self.ask.tell(f"Draft copy made: <b>{esc(name)}</b> (theme {esc(made['id'])}, unpublished).")
+        self.ask.tell(f"Draft copy made: <b>{esc(name)}</b> (theme {esc(made['id'])}, unpublished).\n" + self.next_step())
         self.out(json.dumps(made))
         return 0
 
@@ -754,6 +782,8 @@ class Job:
             if st.get("finished"):
                 s["copy_result"] = st
                 self.save()
+                if not st.get("stopped"):
+                    self.ask.tell(self.next_step())
                 self.out(json.dumps(st))
                 return 1 if st.get("stopped") else 0
             if self.ask.clock() >= end:
@@ -889,7 +919,8 @@ class Job:
                     result="failed" if res.get("failed") else "success", after=res)
         a.tell(f"Pages on <b>{esc(s['name'])}</b>: added {esc(', '.join(res.get('created') or []) or 'none')}"
                + (f"; already there, left as they were: {esc(', '.join(res['skipped']))}" if res.get("skipped") else "")
-               + (f"; failed: {esc(', '.join(f['handle'] for f in res['failed']))}" if res.get("failed") else "") + ".")
+               + (f"; failed: {esc(', '.join(f['handle'] for f in res['failed']))}" if res.get("failed") else "") + ".\nNext: the menus. "
+               "An Approve button comes here with the links; tap it to go on.")
         self.out(json.dumps(res))
         return 1 if res.get("failed") else 0
 
@@ -942,7 +973,7 @@ class Job:
                     after={h: r.get("items") for h, r in out.items()})
         a.tell(f"Menus of <b>{esc(s['name'])}</b>: " + "; ".join(
             f"{h}: " + (f"not set ({esc(r['error'][:150])})" if r.get("error") else esc(", ".join(i["title"] for i in r.get("items") or [])))
-            for h, r in out.items()))
+            for h, r in out.items()) + "\n" + self.next_step())
         self.out(json.dumps(out))
         return 1 if failed else 0
 
@@ -970,6 +1001,9 @@ class Job:
         self.save()
         self.logged("DTJ apps for the store (app copies: create, release; install service deploy)", "the store's pages use DTJ's blocks",
                     s["apps_approved_by"])
+        self.ask.tell("Next, for you: 7 Install buttons come here in a few minutes. Tap each one while logged in to the store's admin "
+                      + ("(the store owner taps them for a client's store) " if p["whose"] == "client" else "")
+                      + "and press Install on Shopify's page.")
         self.out(self.apps_command())
         return 0
 
@@ -986,6 +1020,7 @@ class Job:
         if not s.get("apps_approved_by"):
             raise SystemExit("no apps Approve tap yet: run store_job.py apps first")
         apps = self.org_apps()
+        s["apps_total"] = len(apps)
         handle = s["shop"].split(".")[0]
         if not s.get("install_buttons_sent"):
             rows = [[{"text": f"Install {label}", "url": f"https://admin.shopify.com/store/{handle}/oauth/install?client_id={cid}"}]
@@ -1017,8 +1052,8 @@ class Job:
                             after={"app": key})
             self.bar("apps", len(on), len(apps))
             if len(on) == len(apps):
-                self.ask.tell(f"All {len(apps)} DTJ apps are installed and switched on in <b>{esc(s['name'])}</b>.")
                 self.shops_list()
+                self.ask.tell(f"All {len(apps)} DTJ apps are installed and switched on in <b>{esc(s['name'])}</b>.\n" + self.next_step())
                 self.out(json.dumps({"apps_on": on}))
                 return 0
             if self.ask.clock() >= end:
@@ -1072,8 +1107,8 @@ class Job:
         s["shops_list"] = got
         self.save()
         if got == "added":
-            self.ask.tell(f"<b>{esc(row['store_name'])}</b> is on the shops list now: product links of this store sent here are "
-                          "designed straight away.")
+            self.ask.tell(f"<b>{esc(row['store_name'])}</b> is on the shops list now: a product link of this store sent here is "
+                          "designed straight away (tap Start when I ask who is watching).")
 
     def finish(self, status: str, note: str = "") -> int:
         if status not in STATUSES:
