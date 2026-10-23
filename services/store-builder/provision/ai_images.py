@@ -24,9 +24,17 @@ Every picture is a SAMPLE for the design, never proof: the guard refuses a promp
 that keeps words, numbers, labels and logos off the picture (the page adds the words; a picture can never carry a claim). The
 sidecar <picture>.json says so, for the samples list.
 
+Product pages (Harsh, 23 Oct 2026: "a product image is always 1:1 ... there should be 5 - 6 images explaining the product perfectly
+such as whats the prodcuct, why this products, features, benefits, lifestyle like that a pro DTC brand applies the images"):
+  gallery  a square picture for the product's own gallery. It MAY print a few short lines (--word, repeatable, the first is the
+           headline), and only lines that stand in the page's facts.json (--facts) on a fact whose source is not a SAMPLE: the
+           words are checked here, not trusted. Quoted text in the prompt must be one of those lines. Never prices or offers.
+  section  a square picture for a section of the page (story, ingredients, uses, final push): no words, like the others.
+
 Usage (from services/store-builder):
     python -m provision.ai_images --kind banner --prompt "Morning kitchen counter, warm light, fresh herbs" --out <dir>/banner-1.webp
-    ... --kind product | lifestyle      sizes in KINDS
+    ... --kind product | lifestyle | section    sizes in KINDS
+    ... --kind gallery --facts <client>/facts.json --word "High Protein Peri Spread" --word "26g protein per 100g"
     ... --ref <photo of our product>    (repeatable, up to 4)
     ... --backend codex|vps|api|chatgpt|auto  (default auto)
     ... --dry-run                       prints the guarded prompt and the route only (free, nothing is made)
@@ -62,7 +70,8 @@ API_URL = "https://api.openai.com/v1/images/generations"
 # generations call above already uses)
 EDITS_URL = "https://api.openai.com/v1/images/edits"
 MODELS = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")  # fast, most precise
-KINDS = {"banner": "1536x864", "product": "1024x1024", "lifestyle": "1536x1024"}
+KINDS = {"banner": "1536x864", "product": "1024x1024", "lifestyle": "1536x1024", "gallery": "1024x1024", "section": "1024x1024"}
+MAX_WORDS, MAX_WORD_CHARS = 7, 60  # a gallery picture: a headline and a few short lines, readable on a phone
 KEY_NAMES = ("OPENAI_API_KEY", "DTJ_OPENAI_API_KEY")
 CDP_DEFAULT = "http://127.0.0.1:9222"
 VPS_VAR, VPS_DIR_VAR = "DTJ_IMAGE_VPS", "DTJ_IMAGE_VPS_DIR"
@@ -86,7 +95,15 @@ SUFFIX = {
               " page places its headline: the page adds the words, the picture never does.",
     "lifestyle": " A realistic everyday lifestyle photo, natural light, Indian setting where people appear, phone-camera feel,"
                  " no glossy AI look.",
+    "gallery": " One square picture for the product's own gallery on its product page, the way a pro D2C brand explains its"
+               " product picture by picture: the product big and sharp, the brand's colours, the food or the product in action,"
+               " realistic and appetising, never plastic or AI-glossy.",
+    "section": " One square picture for a section of the product page: it shows exactly what that section says, realistic and"
+               " appetising, the product or its use in action, warm natural light, never plastic or AI-glossy.",
 }
+WORDS_LINE = (" Print exactly these words, spelled exactly as written, and no other words: {quoted}. The first is the headline, the"
+              " biggest; the others are smaller. A bold, clean, highly legible font that suits the brand.")
+WORDS_END = " No other words, letters, numbers, logos or watermarks anywhere on the picture: only these lines{label}."
 
 # (why, pattern), case-insensitive. Sizes in a description ("a 250 ml bottle") are allowed: they describe, they do not claim.
 GUARD = [
@@ -109,23 +126,132 @@ GUARD = [
 ]
 
 
+NO_WORDS_RULE = GUARD[-1][0]
+# the printed lines of a gallery picture: facts only, and never a price, an offer, a count of customers or a result claim
+WORD_GUARD = [
+    ("prices and offers never go on a picture (they change; the page shows them)",
+     r"[₹$€£]|\brs\.?\s?\d|\b(off|sale|discount|deal|offer|free|cashback|coupon)\b"),
+    ("no counts of reviews, customers or orders", r"\b\d+\s?(k|lakh|lac|cr|crore)?\+?\s?(reviews?|customers?|orders?|sold|users)\b"),
+    *[(why, pattern) for why, pattern in GUARD[1:4]],
+]
+
+
 class ImagesError(RuntimeError):
     """A picture could not be made; the message is plain and never holds a key."""
 
 
-def guard(prompt: str, kind: str, forbid: tuple[str, ...] | list[str] = (), refs: bool = False) -> str:
+FREE_HEADINGS = ("what's inside", "inside the jar", "inside the pack", "ingredients", "how to use", "how to use it", "ways to use it",
+                 "serving ideas", "nutrition facts")  # plain headings that claim nothing
+
+
+def _norm(text: str) -> str:
+    """For matching a printed line to a fact: lower case, letters, digits and % only, "and" = "&" ("26g" = "26 g")."""
+    return re.sub(r"[^0-9a-z%]+", "", re.sub(r"\band\b|&", " ", (text or "").lower()))
+
+
+def fact_lines(facts: dict) -> list[tuple[str, str]]:
+    """Every text in facts.json with the source of the object it sits in: (normalised text, source). A list of strings takes the
+    source of its parent object; a SAMPLE source stays SAMPLE. A real source is a text too: it quotes the pack ("pack serving
+    ideas: dip for nachos")."""
+    found: list[tuple[str, str]] = []
+
+    def walk(node, source: str) -> None:
+        if isinstance(node, dict):
+            here = str(node.get("source") or source)
+            if node.get("source") and not here.upper().startswith("SAMPLE"):
+                found.append((_norm(here), here))
+            for key, value in node.items():
+                if key != "source":
+                    walk(value, here)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value, source)
+        elif isinstance(node, str) and _norm(node):
+            found.append((_norm(node), source))
+
+    walk(facts, "")
+    return found
+
+
+def check_words(words: list[str] | tuple, facts: dict | None) -> list[dict]:
+    """The printed lines of a gallery picture, each with the fact it stands on, or ValueError with every reason. A line must stand
+    inside one text of facts.json (two texts of one fact count too: "88%" + "peanut butter") whose source is not a SAMPLE."""
+    words = [re.sub(r"\s+", " ", w or "").strip() for w in words]
+    words = [w for w in words if w]
+    if not words:
+        return []
+    if facts is None:
+        raise ValueError("printed words need the page's facts.json (--facts): every line must stand on a fact")
+    why = []
+    if len(words) > MAX_WORDS:
+        why.append(f"{len(words)} lines: at most {MAX_WORDS} on one picture")
+    lines = fact_lines(facts)
+    pairs: dict[str, str] = {}
+    if isinstance(facts, dict):
+        for node in _objects(facts):
+            texts = [(k, _norm(v)) for k, v in node.items() if isinstance(v, str) and k != "source" and _norm(v)]
+            for (_, a), (_, b) in ((x, y) for x in texts for y in texts if x != y):
+                pairs.setdefault(a + b, str(node.get("source") or ""))
+    out = []
+    for w in words:
+        if len(w) > MAX_WORD_CHARS:
+            why.append(f"{w[:30]!r}...: longer than {MAX_WORD_CHARS} characters")
+            continue
+        why += [f"{w!r}: {reason}" for reason, pattern in WORD_GUARD if re.search(pattern, w, re.I)]
+        key = _norm(w)
+        if key in {_norm(h) for h in FREE_HEADINGS}:
+            out.append({"text": w, "source": "a plain heading (claims nothing)"})
+            continue
+        real = [src for text, src in lines if key in text and src and not src.upper().startswith("SAMPLE")]  # a named source only
+        real += [src for text, src in pairs.items() if key == text and src and not src.upper().startswith("SAMPLE")]
+        if not real:
+            sample = any(key in text for text, _src in lines)
+            why.append(f"{w!r}: " + ("stands only on a SAMPLE fact or a text with no source; a picture prints only sourced facts"
+                                    if sample else "is not in facts.json; a picture prints only the page's own facts"))
+            continue
+        out.append({"text": w, "source": real[0]})
+    if why:
+        raise ValueError("refused: " + "; ".join(why))
+    return out
+
+
+def _objects(node):
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from _objects(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _objects(value)
+
+
+def guard(prompt: str, kind: str, forbid: tuple[str, ...] | list[str] = (), refs: bool = False, words: list[str] | tuple = ()) -> str:
     """The prompt with the no-text suffix and the kind's own suffix, or ValueError with every reason it is refused. With reference
     photos of our product (refs=True) the product keeps its own label and nothing else carries words. A prompt that points at the
-    reference ("the product in the reference photo", "this exact bottle") is fine."""
+    reference ("the product in the reference photo", "this exact bottle") is fine. `words` (gallery only, already checked against
+    the facts by check_words): the only text the picture prints; the prompt may then place them ("the headline top-left"), and any
+    quoted text in it must be one of them."""
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {', '.join(KINDS)}")
     text = re.sub(r"\s+", " ", prompt or "").strip()
     if not text:
         raise ValueError("the prompt is empty")
-    why = [reason for reason, pattern in GUARD if re.search(pattern, text, re.I)]
+    words = [re.sub(r"\s+", " ", w).strip() for w in words if w and w.strip()]
+    if words and kind != "gallery":
+        raise ValueError("refused: only a gallery picture prints words (--kind gallery)")
+    rules = [(r, p) for r, p in GUARD if not (words and r == NO_WORDS_RULE)]
+    why = [reason for reason, pattern in rules if re.search(pattern, text, re.I)]
     why += [f"names a brand or person that must not appear ({n})" for n in forbid if n and re.search(r"\b" + re.escape(n) + r"\b", text, re.I)]
+    if words:
+        known = {_norm(w) for w in words}
+        why += [f"quotes {q!r}, which is not one of the printed lines" for q in re.findall(r'["“]([^"”]+)["”]', text)
+                if _norm(q) not in known]
     if why:
         raise ValueError("refused: " + "; ".join(why))
+    if words:
+        quoted = ", ".join(f'"{w}"' for w in words)
+        end = WORDS_END.format(label=" and the product's own label" if refs else "")
+        return text.rstrip(".") + "." + SUFFIX[kind] + (REF_LINE if refs else "") + WORDS_LINE.format(quoted=quoted) + end
     return text.rstrip(".") + "." + SUFFIX[kind] + (REF_LINE + NO_TEXT_REF if refs else NO_TEXT)
 
 
@@ -376,17 +502,22 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
          environ: Mapping[str, str] = os.environ, read_var: Callable[[str], str | None] | None = None,
          cdp_ok: Callable[[str], bool] | None = None, sleep=time.sleep, model: str = MODELS[0], quality: str = "medium",
          forbid: tuple[str, ...] | list[str] = (), refs: list[Path | str] | tuple = (), runner: Runner | None = None,
-         vps_ok: Callable[[str], bool] | None = None, codex_ok: Callable[[], bool] | None = None) -> dict:
+         vps_ok: Callable[[str], bool] | None = None, codex_ok: Callable[[], bool] | None = None,
+         words: list[str] | tuple = (), facts: dict | str | Path | None = None) -> dict:
     """Make one picture at `out` (.webp or .png; another extension becomes .webp) and its sidecar <stem>.json; returns the sidecar.
     `refs`: up to 4 photos of OUR product (jpg, png, webp) the picture must show as they are. ValueError when the prompt is
-    refused, ImagesError when no picture could be made."""
+    refused, ImagesError when no picture could be made. `words` + `facts` (gallery only): the lines it prints, each checked against
+    facts.json (a dict or its path) by check_words."""
     refs = [Path(r).resolve() for r in refs]  # absolute: Codex runs in its own folder, where a relative path finds nothing
     if len(refs) > MAX_REFS:
         raise ImagesError(f"{len(refs)} reference photos: at most {MAX_REFS}")
     bad = [r.name for r in refs if r.suffix.lower() not in REF_TYPES or not r.is_file() or not r.stat().st_size]
     if bad:
         raise ImagesError(f"reference photo missing or not a jpg, png or webp: {', '.join(bad)}")
-    text = guard(prompt, kind, forbid, refs=bool(refs))
+    if isinstance(facts, (str, Path)):
+        facts = json.loads(Path(facts).read_text(encoding="utf-8"))
+    printed = check_words(words, facts)
+    text = guard(prompt, kind, forbid, refs=bool(refs), words=[w["text"] for w in printed])
     out = Path(out).resolve()
     if out.suffix.lower() not in (".webp", ".png"):
         out = out.with_suffix(".webp")
@@ -446,6 +577,8 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
             "made_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "sample": True, "note": NOTE}
     if refs:
         side["refs"] = [str(r) for r in refs]
+    if printed:
+        side["words"] = printed  # each printed line with the fact it stands on: read them on the picture before it is used
     if usage is not None:
         side["usage"] = usage  # token counts as OpenAI states them; no cost is worked out here
     out.with_suffix(".json").write_text(json.dumps(side, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -462,19 +595,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--model", choices=MODELS, default=MODELS[0])
     ap.add_argument("--quality", choices=("low", "medium", "high", "auto"), default="medium")
     ap.add_argument("--forbid", action="append", default=[], help="a name that must not appear (repeatable)")
+    ap.add_argument("--word", action="append", default=[], help="gallery only: a line the picture prints, from facts.json (repeatable; "
+                    "the first is the headline)")
+    ap.add_argument("--facts", help="gallery with --word: the page's facts.json; every printed line must stand on a real fact in it")
     ap.add_argument("--dry-run", action="store_true", help="the guarded prompt and the route only: nothing is made")
     a = ap.parse_args(argv)
     try:
-        text = guard(a.prompt, a.kind, a.forbid, refs=bool(a.ref))
-    except ValueError as exc:
+        facts = json.loads(Path(a.facts).read_text(encoding="utf-8")) if a.facts else None
+        printed = check_words(a.word, facts)
+        text = guard(a.prompt, a.kind, a.forbid, refs=bool(a.ref), words=[w["text"] for w in printed])
+    except (OSError, ValueError) as exc:
         print(f"REFUSED, nothing made: {str(exc).removeprefix('refused: ')}")
         return 2
     if a.dry_run:
         way, why = route() if a.backend == "auto" else (a.backend, "chosen with --backend")
-        print(json.dumps({"prompt": text, "size": KINDS[a.kind], "refs": a.ref, "route": way, "why": why}, indent=1, ensure_ascii=False))
+        print(json.dumps({"prompt": text, "size": KINDS[a.kind], "refs": a.ref, "words": printed, "route": way, "why": why}, indent=1,
+                         ensure_ascii=False))
         return 0
     try:
-        side = make(a.kind, a.prompt, a.out, backend=a.backend, model=a.model, quality=a.quality, forbid=a.forbid, refs=a.ref)
+        side = make(a.kind, a.prompt, a.out, backend=a.backend, model=a.model, quality=a.quality, forbid=a.forbid, refs=a.ref,
+                    words=a.word, facts=facts)
     except ImagesError as exc:
         print(f"could not make the picture: {exc}")
         return 1
