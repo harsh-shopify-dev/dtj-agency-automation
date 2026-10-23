@@ -102,6 +102,9 @@ class Asker:
         self.shared["made"].append((job, chat))
         return self
 
+    def tell(self, text):
+        self.shared.setdefault("told", []).append(text)
+
     def choose(self, key, text, options, minutes):
         if key not in self.shared["asked"]:
             self.shared["asked"].append(key)
@@ -135,6 +138,8 @@ class Attended(Base):
         self.assertEqual(argv[:7], ["claude", "-p", "--output-format", "json", "--permission-mode", "dontAsk", "--settings"])
         self.assertNotIn("ANTHROPIC_API_KEY", kw["env"])  # an API key in the environment is not passed on
         self.assertIn("Riya tapped Start in Telegram and is watching", kw["input"])
+        self.assertIn("Started: Claude is working on a whole store on DTJ's server, watched by Riya. A progress bar follows",
+                      shared["told"][0])
         self.assertEqual((job["state"], job["watched_by"]), ("done", "Riya"))
         self.assertEqual(shared["made"][0], ("w993", "7051933055"))
         self.assertIn("watched by Riya", w.status())
