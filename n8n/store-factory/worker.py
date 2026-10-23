@@ -131,11 +131,13 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
 class Worker:
     def __init__(self, *, call, run: Callable = subprocess.run, tell: Callable[[str], None] = lambda text: None,
                  environ=os.environ, state: Path = STATE, clock=time.time, sleep=time.sleep, out=print, settings: Path = SETTINGS,
-                 claude: str = "claude", asker: Callable | None = None, threaded: bool = False):
+                 claude: str = "claude", asker: Callable | None = None, threaded: bool = False, replier: Callable | None = None):
         self.call, self.run, self.tell, self.environ, self.path = call, run, tell, environ, state
         # each Claude session in its own thread, so the loop keeps asking Start for new requests and looking at waits (Harsh,
         # 23 Oct 2026: brief 10 showed nothing while brief 9 was being designed); False = one after another (tests)
         self.threaded, self.lock = threaded, threading.RLock()
+        self.procs: dict[str, subprocess.Popen] = {}  # the Claude session of each running job, so Stop can end it
+        self.replier = replier or _reply
         try:
             self.parallel = max(1, int(environ.get("DTJ_WORKER_PARALLEL") or PARALLEL))
         except ValueError:
@@ -232,8 +234,9 @@ class Worker:
         self.log(job["run"], f"claude turn {job.get('turns', 0) + 1} started")
         done = None
         try:
-            done = self.run(argv, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(ROOT),
-                            env=env, timeout=CLAUDE_HOURS * 3600)
+            done = self._claude(job, argv, prompt, env)
+            if job.get("state") == "stopped":  # a person tapped Stop while it ran: already answered and said
+                return None
             res = json.loads((done.stdout or "").strip().splitlines()[-1]) if (done.stdout or "").strip() else {}
         except subprocess.TimeoutExpired:
             with self.lock:
@@ -242,6 +245,24 @@ class Worker:
             res = {}
         with self.lock:
             return self._after(job, res, done)
+
+    def _claude(self, job: dict, argv: list, prompt: str, env: dict):
+        """Claude Code as a process the Stop button can end (the service); an injected `run` in tests."""
+        if self.run is not subprocess.run:
+            return self.run(argv, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(ROOT),
+                            env=env, timeout=CLAUDE_HOURS * 3600)
+        proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                encoding="utf-8", errors="replace", cwd=str(ROOT), env=env)
+        self.procs[job["run"]] = proc
+        try:
+            out, err = proc.communicate(prompt, timeout=CLAUDE_HOURS * 3600)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            raise
+        finally:
+            self.procs.pop(job["run"], None)
+        return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
     def _after(self, job: dict, res: dict, done) -> None:
         """What a finished turn means: a wait for a person, done (n8n answered), or failed."""
@@ -334,6 +355,9 @@ class Worker:
         # as i will not understand whats happening")
         ask.tell(f"Started: Claude is working on {what} on DTJ's server, watched by {job['watched_by']}. A progress bar follows here "
                  "and moves at every step; questions and Approve buttons come here too. Nothing to do for you until then.")
+        # a way out at any time (Harsh, 23 Oct 2026: "i sent this command but it should have stopped i guess", after /stop)
+        ask.ask("stop", "To stop this job at any time, tap Stop. Claude stops at once and n8n is told who stopped it.",
+                [("Stop this job", "stop")])
         self.begin(job, req or self.request(job["run"], job["workflow_id"], job["workflow"]), job["watched_by"])
 
     def begin(self, job: dict, req: dict, watcher: str) -> None:
@@ -385,7 +409,35 @@ class Worker:
             except Exception as exc:  # noqa: BLE001 - n8n or Telegram did not answer: the next round asks again
                 self.log(job["run"], f"could not look at the Start tap: {exc}")
 
+    def look_at_stops(self) -> None:
+        for job in [j for j in self.s["jobs"].values() if j.get("state") in ("running", "waiting", "queued") and j.get("ask")]:
+            try:
+                ask = self.asker(f"w{job['run']}"[:24], job["chat"], job["ask"], self.save)
+                got = ask.answer("stop")
+            except Exception:  # noqa: BLE001 - n8n did not answer: the next round looks again
+                continue
+            if got:
+                self.stop(job, got.get("by") or "a teammate", ask)
+
+    def stop(self, job: dict, by: str, ask=None) -> None:
+        """A person tapped Stop: Claude ends, n8n hears the run was stopped (nothing more is done), the person hears it."""
+        with self.lock:
+            job.update(state="stopped", why=f"stopped by {by} in Telegram", stopped_at=now_iso())
+            job.pop("wait", None)
+            self.save()
+        proc = self.procs.get(job["run"])
+        if proc and proc.poll() is None:
+            proc.kill()
+        self.log(job["run"], f"stopped by {by}")
+        try:
+            sent = self.replier(self.request(job["run"], job["workflow_id"], job["workflow"]), f"Stopped by {by} in Telegram.")
+        except Exception as exc:  # noqa: BLE001 - n8n did not take the answer: its own Wait node ends the run later
+            sent = f"n8n was not told ({str(exc)[:120]})"
+        if ask:
+            ask.tell(f"Stopped by {by}: Claude has stopped and nothing more is done for this job. {sent}")
+
     def round(self) -> None:
+        self.look_at_stops()
         self.look_at_queue()
         self.look_at_starts()
         self.look_at_waits()
@@ -418,7 +470,7 @@ class Worker:
         lines = [(f"stopped: {self.s['stopped']}" if self.s.get("stopped") else "running") + f" ({self.mode})"]
         for j in jobs[-30:]:
             extra = {"waiting": f"for a person since {j.get('wait_since')}", "failed": j.get("why", ""), "asking": "for a Start tap",
-                     "queued": "Start tapped, waiting for a free slot", "interrupted": j.get("why", ""),
+                     "queued": "Start tapped, waiting for a free slot", "interrupted": j.get("why", ""), "stopped": j.get("why", ""),
                      "done": f"watched by {j['watched_by']}" if j.get("watched_by") else f"{j.get('cost_usd', 0)} USD"}.get(j.get("state"), "")
             lines.append(f"run {j['run']} {j['workflow']}: {j.get('state')} {extra}".rstrip())
         return "\n".join(lines)
@@ -443,6 +495,24 @@ def chat_of(req: dict) -> str:
         if re.fullmatch(r"-?\d{3,20}", str(v or "")):
             return str(v)
     return ""
+
+
+STOPPED = {"page_design": {"page_status": "could not build"}, "new_store": {"store_status": "partly done"},
+           "add_shop": {"shop_status": "could not add"}}
+
+
+def _reply(req: dict, note: str) -> str:
+    """Answer a stopped job's n8n run with reply.py (the resume link only on its command line, never in a file)."""
+    import tempfile  # noqa: PLC0415
+    body = dict(STOPPED.get(str(req.get("claude_code_stage") or ""), {}), note=note)
+    if len(body) < 2:
+        return "n8n was not told (unknown step)"
+    with tempfile.TemporaryDirectory() as tmp:
+        f = Path(tmp) / "stopped.json"
+        f.write_text(json.dumps(body), encoding="utf-8")
+        done = subprocess.run([sys.executable, str(HERE / "reply.py"), "--resume-url", req["resume_url"], "--body", str(f)],
+                              capture_output=True, text=True, timeout=120, cwd=str(ROOT))
+    return "n8n has the answer." if done.returncode == 0 else "n8n was not told (reply.py failed)."
 
 
 def _asker(job: str, chat: str, state: dict, save: Callable[[], None]):

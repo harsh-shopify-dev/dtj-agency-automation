@@ -105,6 +105,12 @@ class Asker:
     def tell(self, text):
         self.shared.setdefault("told", []).append(text)
 
+    def ask(self, key, text, options):
+        self.shared.setdefault("offered", []).append((key, [o[0] for o in options]))
+
+    def answer(self, key):
+        return {"value": "stop", "by": self.shared["stopper"]} if key == "stop" and self.shared.get("stopper") else None
+
     def choose(self, key, text, options, minutes):
         if key not in self.shared["asked"]:
             self.shared["asked"].append(key)
@@ -189,6 +195,27 @@ class Attended(Base):
             if t.name == "run-993":
                 t.join(5)
         self.assertEqual(w.s["jobs"]["993"]["state"], "done")
+
+    def test_stop_ends_the_job_tells_n8n_and_the_person(self):
+        shared = {"made": [], "asked": [], "texts": [], "tapped": "Riya"}
+        cmd = 'python n8n/store-factory/store_job.py approve --job royal-dosa --key ok_header --text "x"'
+        runs = Runs(claude=[result(f"Asked.\nDTJ_WAIT: {cmd}")], waits=[3])
+        replied = []
+        w = worker.Worker(call=self.n8n, run=runs, tell=self.told.append, environ=dict(ATTENDED), state=self.tmp / "s" / "jobs.json",
+                          clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings,
+                          asker=Asker(shared), replier=lambda req, note: replied.append((req["claude_code_stage"], note)) or "n8n has the answer.")
+        w.round()
+        job = w.s["jobs"]["993"]
+        self.assertEqual(job["state"], "waiting")
+        self.assertIn(("stop", ["Stop this job"]), shared["offered"])
+        shared["stopper"] = "Harsh"
+        self.now[0] += worker.WAIT_EVERY
+        w.round()
+        self.assertEqual((job["state"], job["why"]), ("stopped", "stopped by Harsh in Telegram"))
+        self.assertEqual(replied, [("new_store", "Stopped by Harsh in Telegram.")])
+        self.assertIn("Stopped by Harsh: Claude has stopped", shared["told"][-1])
+        self.assertEqual(len(runs.calls), 1)  # the wait was never looked at again
+        self.assertEqual(worker.STOPPED["page_design"], {"page_status": "could not build"})
 
     def test_without_a_chat_in_the_request_the_admin_chat_is_asked(self):
         self.assertEqual(worker.chat_of({"request": {"telegram_chat_id": ""}}), "")
