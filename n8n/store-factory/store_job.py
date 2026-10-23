@@ -15,6 +15,7 @@ n8n's "Store Factory: New Store"; the runbook is the skill dtj-new-store.
                                                                    prices question when some have none, a read-only plan kept on the
                                                                    install service, an Approve tap (it starts n8n's Store Factory:
                                                                    Brand Copy, which does the writes), then it waits
+    python n8n/store-factory/store_job.py study --job <job> --file <study.md>     the competitor study (one heading per focus)
     python n8n/store-factory/store_job.py pages --job <job> --file <pages.json>   About, Contact, FAQ (new pages only), its own tap
     python n8n/store-factory/store_job.py menus --job <job>       the main menu and the footer, one tap
     python n8n/store-factory/store_job.py activate --job <job> --approved-by "<name> (<where>)"
@@ -78,6 +79,13 @@ PICTURE_CHOICES = {
     "site": [("Only banners", "banners"), ("No new pictures", "none")],
     "self": [("Only banners", "banners"), ("No new pictures", "none")],
 }
+# the competitor study (Harsh, 23 Oct 2026: "in the telegram add an option for competitor website analysis and a block that asks
+# what to focus on, then i can answer images, copy writing, color palette, etc."): what the person may pick
+FOCUS = {"pictures": "Pictures (banners, product photos, lifestyle shots)", "copy": "Copywriting (headlines, product text, tone)",
+         "palette": "Colour palette and fonts", "layout": "Layout and sections (home and product pages)",
+         "pricing": "Offers and pricing", "trust": "Trust (reviews shown, badges, delivery and return promises)"}
+MAX_RIVALS = 5
+URL_RE = re.compile(r"https?://[^\s<>\"']+", re.I)
 MIN_COMPETITORS = 3  # pictures are made only after at least 3 of the niche's D2C brands were read (Harsh asked for the top 5)
 PRICE_LINE = re.compile(r"^(.+?)\s*[=:\-\u2013]\s*(?:rs\.?|inr|\u20b9|\$)?\s*(\d{1,9}(?:\.\d{1,2})?)\s*$", re.I)
 CLAIM_WORDS = re.compile(r"\b(clinically|certified|certificate|cure[sd]?|guarantee[d]?|doctor|dermatologist|award|no\.?\s*1|number one|"
@@ -252,6 +260,9 @@ class Job:
         if not got:
             return WAITING
         p["pictures"] = got["value"]
+        stopped = self.study_questions(minutes)
+        if stopped is not None:
+            return stopped
         got = a.choose("whose", f"Whose store is <b>{esc(sc['name'])}</b> ({esc(sc['myshopify_domain'])})?",
                        [("A client's store", "client"), ("DTJ's own store", "dtj")], minutes)
         if not got:
@@ -371,8 +382,12 @@ class Job:
                    "drive": f"Add <b>{esc(br['name'])}</b>'s products from the Drive folder, then design: ",
                    "samples": f"Make {br['product_count']} sample products for <b>{esc(br['name'])}</b> with ChatGPT pictures, then "
                               "design: "}.get(p["source"], "") if p["copy"] else ""
+        rivals = p.get("competitors") or {}
+        study = ("" if rivals.get("how", "no") == "no" else
+                 f" Competitor study ({'your links' if rivals['how'] == 'send' else 'I find them'}): "
+                 f"{esc(', '.join(FOCUS[f].split(' (')[0].lower() for f in rivals.get('focus') or []))}.")
         a.tell(f"Plan for <b>{esc(s['name'])}</b>: {copying}{esc(', '.join(PARTS[x] for x in p['parts']))}. Product pages: "
-               f"{esc(products)}. Offer: {esc(p['offer'] or 'none')}.\nBefore anything is made or written I send an Approve button: "
+               f"{esc(products)}. Offer: {esc(p['offer'] or 'none')}.{study}\nBefore anything is made or written I send an Approve button: "
                "the draft copy, " + ("the products (every one ACTIVE), " if p["copy"] else "") + "the app copies, the header and "
                "footer, the collection page. Product and home pages go to the draft without one (Harsh's standing rule). Nothing is "
                "published.")
@@ -522,6 +537,80 @@ class Job:
                + (f"\nSample prices refused for: {esc(', '.join(refused[:10]))}" if refused else ""))
         self.out(json.dumps({"products": len(br.get("products") or []), "pictures": len(jobs), "banners": br.get("banners") or [],
                              "sample_prices": len(sample_prices), "descriptions": texts}))
+        return 0
+
+    def study_questions(self, minutes: float) -> int | None:
+        """Competitor websites to study first (the person's links, or ones the session finds: D2C brands of the niche that grow on
+        Meta ads, never the giants), and what the study is for. None = answered, else the exit code."""
+        a, p = self.ask, self.s["plan"]
+        got = a.choose("rivals", "Should I study competitor websites first? I read their home page, best sellers, prices, pictures "
+                                 "and colours. It is a study only: nothing of theirs is copied into the store.",
+                       [("Yes: I'll send their links", "send"), ("Yes: find them yourself", "find"), ("No study", "no")], minutes)
+        if not got:
+            return WAITING
+        rivals = p.setdefault("competitors", {})
+        rivals["how"] = got["value"]
+        if rivals["how"] == "no":
+            rivals.update(links=[], focus=[])
+            return None
+        if rivals["how"] == "send" and not rivals.get("links"):
+            got = a.type_in("rival_links", f"Send up to {MAX_RIVALS} competitor website links, one per line.", minutes,
+                            "https://competitor.com")
+            if not got:
+                return WAITING
+            links = list(dict.fromkeys(u.rstrip(".,)") for u in URL_RE.findall(got["value"])))[:MAX_RIVALS]
+            if not links:
+                if a.forget("rival_links") >= 3:
+                    rivals.update(how="find", links=[])
+                    a.tell("No link came through three times: I find the competitors myself.")
+                else:
+                    a.tell("I found no website link in that message. Send the links again, one per line (https://...).")
+                    return self.study_questions(minutes)
+            else:
+                rivals["links"] = links
+        got = a.choose("focus", "What should the competitor study focus on?",
+                       [("Everything", "all"), ("Choose one by one", "each")], minutes)
+        if not got:
+            return WAITING
+        if got["value"] == "all":
+            rivals["focus"] = list(FOCUS)
+        else:
+            focus = []
+            for key, label in FOCUS.items():
+                one = a.choose(f"focus_{key}", f"Study their {label[0].lower()}{label[1:]}?", [("Yes", "yes"), ("No", "no")], minutes)
+                if not one:
+                    return WAITING
+                if one["value"] == "yes":
+                    focus.append(key)
+            if not focus:
+                rivals.update(how="no", focus=[])
+                a.tell("Nothing picked: no competitor study.")
+                return None
+            rivals["focus"] = focus
+        self.save()
+        return None
+
+    def study(self, path: Path) -> int:
+        """The study the session wrote (skill dtj-new-store, step 1a): a short Markdown page, one part per focus the person picked,
+        each saying what the competitors do and what WE do differently. Kept with the job (the design steps read it) and its short
+        form sent to Telegram."""
+        self.need_plan()
+        s, rivals = self.s, self.s["plan"].get("competitors") or {}
+        if rivals.get("how", "no") == "no":
+            raise SystemExit("no competitor study was asked for this store")
+        text = Path(path).read_text(encoding="utf-8").strip()
+        missing = [FOCUS[f].split(" (")[0] for f in rivals.get("focus") or []
+                   if not re.search(rf"^#+\s*{re.escape(FOCUS[f].split(' (')[0])}", text, re.I | re.M)]
+        if missing or len(text) < 200:
+            raise SystemExit("the study needs a heading for each focus the person picked (" + ", ".join(missing or ["more text"]) + ")")
+        keep = self.dir / "study.md"
+        keep.parent.mkdir(parents=True, exist_ok=True)
+        keep.write_text(text + "\n", encoding="utf-8")
+        s["study"] = str(keep)
+        self.save()
+        short = re.sub(r"\n{3,}", "\n\n", re.sub(r"^#+\s*", "", text, flags=re.M))
+        self.ask.tell(f"Competitor study for <b>{esc(s['name'])}</b>:\n{esc(short[:3200])}" + ("\n..." if len(short) > 3200 else ""))
+        self.out(json.dumps({"study": str(keep)}))
         return 0
 
     def stop(self, why: str) -> int:
@@ -979,6 +1068,8 @@ class Job:
             lines.append(f"- Added: {done.get('products', 0)} products (every one ACTIVE), {done.get('collections', 0)} collections, "
                          f"{done.get('policies', 0)} policy pages")
         lines += [f"- {w['part']}: {w['preview']}" for w in s.get("written") or []] or ["- No page written yet"]
+        if s.get("study"):
+            lines.append(f"- Competitor study: {s['study']}")
         if s.get("pages_result"):
             lines.append(f"- Pages added: {', '.join(s['pages_result'].get('created') or []) or 'none'}")
         menus_set = [h for h, r in (s.get("menus_result") or {}).items() if not r.get("error")]
@@ -1355,6 +1446,9 @@ def main(argv=None) -> int:
     asf.add_argument("--job", required=True)
     asf.add_argument("--file", required=True, type=Path, help='{"products": [{"title", "description", "collection", "pictures": [..]}], '
                                                              '"banners": [..]}')
+    sd = sub.add_parser("study")
+    sd.add_argument("--job", required=True)
+    sd.add_argument("--file", required=True, type=Path, help="the study (Markdown): one heading per focus the person picked")
     pg = sub.add_parser("pages")
     pg.add_argument("--job", required=True)
     pg.add_argument("--file", required=True, type=Path, help='{"pages": [{"handle", "title", "body_html", "template_suffix", "sample"}]}')
@@ -1442,6 +1536,8 @@ def main(argv=None) -> int:
         return job.activate(a.approved_by, job.handles())
     if a.cmd == "pages":
         return job.pages(a.file, a.minutes)
+    if a.cmd == "study":
+        return job.study(a.file)
     if a.cmd == "menus":
         return job.menus(a.minutes)
     if a.cmd == "apps":

@@ -127,6 +127,8 @@ class Questions(Base):
         self.assertEqual([r[0]["text"] for r in pictures["reply_markup"]["inline_keyboard"]], ["Only banners", "No new pictures"])
         self.answers.tap(self.tg, "No new pictures")
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)
+        self.answers.tap(self.tg, "No study")
+        self.assertEqual(j.plan(minutes=1), store_job.WAITING)
         self.assertIn("Whose store is <b>Royal Dosa</b>", self.tg.questions()[-1]["text"])
         self.answers.tap(self.tg, "A client's store")
         self.assertEqual(j.plan(minutes=1), store_job.WAITING)
@@ -177,6 +179,8 @@ class Questions(Base):
         j.plan(minutes=1)
         self.answers.tap(self.tg, "No new pictures")
         j.plan(minutes=1)
+        self.answers.tap(self.tg, "No study")
+        j.plan(minutes=1)
         self.assertFalse(j.s["plan"]["copy"])
         self.assertIn("Whose store is", self.tg.questions()[-1]["text"])
 
@@ -199,7 +203,7 @@ class Questions(Base):
     def test_a_theme_the_builder_does_not_know_asks_for_horizon_first(self):
         j = self.job(scan={**SCAN, "live_theme": {"name": "Impact", "schema_name": "Impact"}})
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "DTJ's own store"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertIn("Add theme > Horizon (do NOT publish it)", self.tg.questions()[-1]["text"])
@@ -209,7 +213,7 @@ class Questions(Base):
     def test_a_dawn_store_gets_product_pages_only(self):
         j = self.job(scan={**SCAN, "live_theme": {"name": "Dawn", "schema_name": "Dawn"}})
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "DTJ's own store"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.answers.tap(self.tg, "Product pages only, on Dawn")
@@ -220,7 +224,7 @@ class Questions(Base):
     def test_picked_products_by_link_or_name_and_unknown_ones_are_said(self):
         j = self.job()
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "No", "I'll pick them"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "DTJ's own store", "Choose one by one", "No", "No", "No", "Yes", "No", "I'll pick them"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.answers.type(self.tg, "https://royaldosa.com/products/sambar?variant=1\nidli mix\nchocolate cake")
@@ -234,7 +238,7 @@ class Approvals(Base):
     def planned(self, access=None):
         j = self.job(access)
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertTrue(j.s.get("planned"))
@@ -267,7 +271,7 @@ class Approvals(Base):
         access = FakeAccess(added=[{"id": 700, "name": "Horizon", "role": "unpublished"}])
         j = self.job(access, scan={**SCAN, "live_theme": {"name": "Impact", "schema_name": "Impact"}})
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Done: Horizon is added", "Only product pages", "Top 3 best sellers",
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "DTJ's own store", "Done: Horizon is added", "Only product pages", "Top 3 best sellers",
                       "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
@@ -347,7 +351,7 @@ class BrandCopy(Base):
         j.plan(minutes=1)
         self.answers.type(self.tg, "https://glowco.com")
         j.plan(minutes=1)
-        for label in ("No new pictures", "DTJ's own store", "Everything", "All 2 products", "No offer"):
+        for label in ("No new pictures", "No study", "DTJ's own store", "Everything", "All 2 products", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         return j
@@ -479,7 +483,7 @@ class BrandCopy(Base):
     def test_nothing_to_copy_when_the_store_is_the_brand(self):
         j = self.job()
         j.plan(minutes=1)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "DTJ's own store", "Only product pages", "Top 3 best sellers", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "DTJ's own store", "Only product pages", "Top 3 best sellers", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         self.assertEqual(j.copy(minutes=1), 0)
@@ -550,7 +554,7 @@ class NewStore(Base):
             j.plan(minutes=1)
         self.answers.type(self.tg, DRIVE)
         j.plan(minutes=1)
-        for label in (pictures, "DTJ's own store", "Everything", "All 2 products", "No offer"):
+        for label in (pictures, "No study", "DTJ's own store", "Everything", "All 2 products", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         return j
@@ -572,7 +576,7 @@ class NewStore(Base):
         self.assertIn("<b>Senso Foods</b>: 2 products", said)
         self.assertIn("1 products have no price", said)
         self.assertIn("- Ginger Chai has no pictures", said)
-        for label in ("No: the folder's pictures are enough", "DTJ's own store", "Everything", "All 2 products", "No offer"):
+        for label in ("No: the folder's pictures are enough", "No study", "DTJ's own store", "Everything", "All 2 products", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         p = j.s["plan"]
@@ -669,7 +673,7 @@ class NewStore(Base):
         self.answers.type(self.tg, "masala tea and tea gifts")
         j.plan(minutes=1)
         self.assertIn("sample price", self.tg.questions()[-1]["text"])
-        for label in ("6", "Product pictures and banners", "DTJ's own store", "Everything", "The first 3", "No offer"):
+        for label in ("6", "Product pictures and banners", "No study", "DTJ's own store", "Everything", "The first 3", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         p = j.s["plan"]
@@ -736,6 +740,68 @@ class NewStore(Base):
         priced = store_job.priced(out, {"ginger-chai": "199"})
         g = priced["products"][1]
         self.assertEqual((g["variants"][0]["price"], g["tags"], g["price_needed"]), ("199", [], False))
+
+
+class CompetitorStudy(Base):
+    """Harsh, 23 Oct 2026: "an option for competitor website analysis and a block that asks what to focus on"."""
+
+    def to_rivals(self, j):
+        j.plan(minutes=1)
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        self.assertIn("study competitor websites first", self.tg.questions()[-1]["text"])
+
+    def test_links_sent_and_focus_picked_one_by_one(self):
+        j = self.job()
+        self.to_rivals(j)
+        self.answers.tap(self.tg, "Yes: I'll send their links")
+        j.plan(minutes=1)
+        self.answers.type(self.tg, "no link here")
+        self.assertEqual(j.plan(minutes=1), store_job.WAITING)
+        self.assertTrue(any("found no website link" in d["text"] for _, d in self.tg.sent))
+        self.answers.type(self.tg, "https://bluetea.co.in\nhttps://www.sleepyowl.co/ and https://bluetea.co.in, http://x.example).")
+        j.plan(minutes=1)
+        self.answers.tap(self.tg, "Choose one by one")
+        j.plan(minutes=1)
+        self.assertIn("Study their pictures (banners", self.tg.questions()[-1]["text"])
+        for answer in ("Yes", "Yes", "Yes", "No", "No", "No"):
+            self.answers.tap(self.tg, answer)
+            j.plan(minutes=1)
+        rivals = j.s["plan"]["competitors"]
+        self.assertEqual(rivals, {"how": "send", "links": ["https://bluetea.co.in", "https://www.sleepyowl.co/", "http://x.example"],
+                                  "focus": ["pictures", "copy", "palette"]})
+        self.assertIn("Whose store is", self.tg.questions()[-1]["text"])
+
+    def test_find_them_and_everything_then_the_study_is_kept_and_sent(self):
+        j = self.job()
+        self.to_rivals(j)
+        for label in ("Yes: find them yourself", "Everything", "DTJ's own store", "Everything except product pages", "No offer"):
+            self.answers.tap(self.tg, label)
+            j.plan(minutes=1)
+        self.assertEqual(j.s["plan"]["competitors"]["focus"], list(store_job.FOCUS))
+        self.assertIn("Competitor study (I find them): pictures, copywriting, colour palette and fonts", self.tg.last()["text"])
+        f = self.tmp / "study.md"
+        f.write_text("# Pictures\nWarm beige backgrounds.\n# Copywriting\nShort lines.\n", encoding="utf-8")
+        with self.assertRaises(SystemExit) as short:
+            j.study(f)  # a heading is missing for most of the focus
+        self.assertIn("Colour palette and fonts", str(short.exception))
+        body = "".join(f"## {store_job.FOCUS[k].split(' (')[0]}\nThey do this; we do that, in our own words and pictures.\n" for k in store_job.FOCUS)
+        f.write_text(body, encoding="utf-8")
+        self.assertEqual(j.study(f), 0)
+        self.assertTrue((self.tmp / "royal-dosa" / "study.md").exists())
+        self.assertIn("Competitor study for <b>Royal Dosa</b>", self.tg.last()["text"])
+        self.assertIn("Competitor study:", j.handover())
+
+    def test_no_study_skips_the_focus(self):
+        j = self.job()
+        self.to_rivals(j)
+        self.answers.tap(self.tg, "No study")
+        j.plan(minutes=1)
+        self.assertEqual(j.s["plan"]["competitors"], {"how": "no", "links": [], "focus": []})
+        self.assertIn("Whose store is", self.tg.questions()[-1]["text"])
+        with self.assertRaises(SystemExit):
+            j.study(self.tmp / "none.md")
 
 
 class PagesAndMenus(Base):
@@ -903,7 +969,7 @@ class Installs(Base):
         j.begin(SCAN, CHAT, "Harsh")
         j.plan(minutes=1)
         names = ['Use "Royal Dosa"'] if whose == "A client's store" else []
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", whose, *names, "Everything except product pages", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", whose, *names, "Everything except product pages", "No offer"):
             self.answers.tap(self.tg, label)
             j.plan(minutes=1)
         return j
@@ -953,7 +1019,7 @@ class RealActionLog(unittest.TestCase):
                           log=ActionLog(tmp / "action-log.jsonl", "royal-dosa", automation="store-job"), sleep=lambda s: None, clock=Clock())
         j.begin(SCAN, CHAT, "Harsh")
         j.plan(minutes=0)
-        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
+        for label in ("Redesign an existing brand", "Already in this store", "No new pictures", "No study", "A client's store", 'Use "Royal Dosa"', "Everything except product pages", "No offer"):
             answers.tap(tg, label)
             j.plan(minutes=0)
         j.approve("ok_header", "Write the header", minutes=0)
