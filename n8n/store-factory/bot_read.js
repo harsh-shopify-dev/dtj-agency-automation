@@ -41,7 +41,9 @@ const asked = msg.reply_to_message || {};
 // a typed answer to a store job's question: a reply to it, whose last line is "(job <job>, answer <key>)" (store_job.py)
 const forJob = asked.from && asked.from.is_bot ? String(asked.text || '').match(/\(job ([a-z0-9][a-z0-9-]{1,23}), answer ([a-z0-9_]{1,20})\)\s*$/) : null;
 if (forJob && text && !text.startsWith('/')) {
-  return [{ json: { ...base, kind: 'answer', job: forJob[1], key: forJob[2], choice: '', arg: text.slice(0, 500) } }];
+  // a message about a finished page may be longer than a store job's answer (Harsh, 24 Oct 2026: the page chat)
+  const room = forJob[2] === 'chat' ? 1500 : 500;
+  return [{ json: { ...base, kind: 'answer', job: forJob[1], key: forJob[2], choice: '', arg: text.slice(0, room) } }];
 }
 const forBrief = asked.from && asked.from.is_bot ? String(asked.text || '').match(/brand's own for brief (\d{1,9})\?/) : null;
 if (forBrief && text && !text.startsWith('/')) return [{ json: { ...base, kind: 'site', row_id: Number(forBrief[1]), arg: text.slice(0, 200) } }];

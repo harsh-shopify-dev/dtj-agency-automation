@@ -80,6 +80,21 @@ Follow CLAUDE.md and the request below exactly, with these changes because nobod
 
 THE REQUEST
 """
+# a person's message about a finished page (Harsh, 24 Oct 2026: "once we build the page i can also chat with you there"): it
+# continues the page's own Claude session; a reply to any message that ends "(job page-<brief>, answer chat)" lands here
+CHAT_JOB = re.compile(r"^page-(\d{1,9})$")
+CHAT = """{name} wrote in Telegram about the page of brief {brief}: "{text}"
+Do it now, on this page only, the way you built it (CLAUDE.md and the factory's rules still apply):
+- Change the page's own files under /home/ai/dtj-agency-automation/.work/clients/n8n-{brief}-*/ (facts.json, brand.json,
+  copy-answer.json, pictures with provision.gallery_photos / gallery_compose); never hand-edit template.json; every fact keeps its
+  source, and samples stay marked SAMPLE.
+- Rebuild and write the DRAFT with the same page_builder.ship_draft command as before (draft theme only), then look at the result.
+- Before a long step (a rebuild, new pictures) tell {name}: python n8n/store-factory/page_chat.py --brief {brief} --chat {chat} --say
+  "Working on it: <the step>, about <N> minutes". When done, the same command with what changed in plain words and the preview link.
+- Anything beyond this page's draft (the product itself or its gallery, the store's settings or menus, the live theme, publishing,
+  an app release) needs {name}'s clear yes in Telegram, by name: when this message is not that yes, ask with page_chat.py and stop.
+- A question you need answered: ask with page_chat.py and end your turn; the answer comes back as the next message.
+"""
 WATCHED = "{name} tapped Start in Telegram and is watching the job there (its questions, Approve taps and progress bar)."
 ALONE = "Nobody is watching: every yes still comes only through the job's Approve taps in Telegram."
 MODES = ("attended", "api")
@@ -135,7 +150,7 @@ class Worker:
     def __init__(self, *, call, run: Callable = subprocess.run, tell: Callable[[str], None] = lambda text: None,
                  environ=os.environ, state: Path = STATE, clock=time.time, sleep=time.sleep, out=print, settings: Path = SETTINGS,
                  claude: str = "claude", asker: Callable | None = None, threaded: bool = False, replier: Callable | None = None,
-                 read_answers: Callable | None = None):
+                 read_answers: Callable | None = None, read_chats: Callable | None = None, say: Callable | None = None):
         self.call, self.run, self.tell, self.environ, self.path = call, run, tell, environ, state
         # each Claude session in its own thread, so the loop keeps asking Start for new requests and looking at waits (Harsh,
         # 23 Oct 2026: brief 10 showed nothing while brief 9 was being designed); False = one after another (tests)
@@ -146,6 +161,7 @@ class Worker:
         self._answers: list | None = None
         self.read_answers = read_answers or _read_answers
         self.replier = replier or _reply
+        self.read_chats, self.say = read_chats or _read_chats, say or _say
         try:
             self.parallel = max(1, int(environ.get("DTJ_WORKER_PARALLEL") or PARALLEL))
         except ValueError:
@@ -280,6 +296,14 @@ class Worker:
             job["cost_usd"] = round(job.get("cost_usd", 0) + res["total_cost_usd"], 4)
         text = str(res.get("result") or "")
         self.log(job["run"], f"claude turn ended ({res.get('subtype') or 'no result'}): {text[-1500:]}")
+        chat = job.pop("chat_turn", None)
+        if chat:  # a page chat turn: the session answered in Telegram itself; its n8n run was answered long ago
+            if not res or res.get("is_error"):
+                why = str(res.get("result") or res.get("subtype") or "no answer from Claude Code")[:300]
+                self.say(chat["chat"], chat["brief"], f"I could not finish that change: {why}")
+            job["state"] = "done"
+            self.save()
+            return None
         if not res or res.get("is_error"):
             # Claude Code's own words first (22 Oct 2026, a test run: is_error with subtype "success" and the result "Not logged in")
             why = str(res.get("result") or res.get("subtype") or ((done.stderr or "")[-300:] if done else "") or "no answer from Claude Code")
@@ -332,6 +356,7 @@ class Worker:
             self.failed(job, f"could not read the request: {exc}")
             return True
         job["chat"] = chat_of(req) or str(self.environ.get("DTJ_ADMIN_CHAT") or "")
+        job["brief"] = brief_of(req)  # a page's chat finds its session by the brief number
         if self.mode == "api":
             self.begin(job, req, "")
             return True
@@ -396,6 +421,48 @@ class Worker:
             job.pop("wait_since", None)
             self.claude_turn(job, f"The command you were waiting on has finished.\n$ {shown}\nexit {code}\n{printed[-4000:]}\n"
                                   "Continue the request from here, under the same rules.")
+
+    def look_at_chats(self) -> None:
+        """A person's messages about a finished page: each continues that page's Claude session, one turn at a time per page."""
+        try:
+            rows = self.read_chats()
+        except Exception as exc:  # noqa: BLE001 - n8n did not answer: the next round reads again
+            self.out(f"page chat: could not read the messages ({exc})")
+            rows = []
+        seen = self.s.setdefault("chat_seen", [])
+        new = False
+        for row in sorted(rows, key=lambda r: int(r.get("id") or 0)):
+            rid, m = str(row.get("id")), CHAT_JOB.match(str(row.get("job") or ""))
+            text = str(row.get("value") or "").strip()
+            if rid in seen or not m or row.get("key") != "chat" or not text:
+                continue
+            seen.append(rid)
+            new = True
+            msg = {"brief": m.group(1), "text": text[:1500], "by": str(row.get("by") or "someone"), "chat": str(row.get("chat_id") or "")}
+            job = self.page_job(msg["brief"])
+            if not job:
+                self.say(msg["chat"], msg["brief"], f"I have no page session for brief {msg['brief']} on DTJ's server, so I cannot "
+                                                    "change it from here. Ask Harsh.")
+                continue
+            job.setdefault("chat_queue", []).append(msg)
+            self.log(job["run"], f"page chat from {msg['by']}: {msg['text'][:200]}")
+        if new:
+            del seen[:-500]
+            self.save()
+        for job in [j for j in self.s["jobs"].values() if j.get("chat_queue")]:
+            if job.get("state") in ("running", "waiting", "asking", "queued"):
+                continue  # one turn at a time per page: the next message waits for this one
+            if len([j for j in self.s["jobs"].values() if j.get("state") == "running"]) >= self.parallel:
+                return
+            msg = job["chat_queue"].pop(0)
+            job["chat_turn"] = msg
+            self.say(msg["chat"], msg["brief"], f"Got it, {msg['by']}: working on it now. I answer here when the page is updated.")
+            self.claude_turn(job, CHAT.format(name=msg["by"], brief=msg["brief"], text=msg["text"].replace('"', "'"), chat=msg["chat"]))
+
+    def page_job(self, brief: str) -> dict | None:
+        """The newest job of that brief with a Claude session to continue."""
+        jobs = [j for j in self.s["jobs"].values() if str(j.get("brief") or "") == str(brief) and j.get("session")]
+        return max(jobs, key=lambda j: j.get("started", ""), default=None)
 
     def look_at_queue(self) -> None:
         """A queued job (Start tapped, every slot busy) begins when a slot is free, the oldest first."""
@@ -468,6 +535,7 @@ class Worker:
         self.look_at_queue()
         self.look_at_starts()
         self.look_at_waits()
+        self.look_at_chats()
         self.start_next()
 
     def after_restart(self) -> None:
@@ -540,6 +608,10 @@ class Worker:
                 continue
             if cmd.get("retry"):
                 self.retry(str(cmd["retry"]))
+            page = cmd.get("page") or {}
+            if page.get("run") and str(page["run"]) in self.s["jobs"]:  # a run from before jobs kept their brief (brief 12, run 1421)
+                self.s["jobs"][str(page["run"])]["brief"] = str(page.get("brief") or "")
+                self.save()
 
     def tidy(self) -> None:
         """Start questions and queued jobs whose n8n run no longer waits (answered elsewhere) are closed: nothing more is asked."""
@@ -551,6 +623,13 @@ class Worker:
             except Exception:  # noqa: BLE001 - n8n did not answer: the next tidy looks again
                 continue
         self.save()
+
+
+def brief_of(req: dict) -> str:
+    """The brief (dtj_client_intake row) a page request is for, when the request names one."""
+    inner = req.get("request") if isinstance(req.get("request"), dict) else {}
+    v = str(inner.get("row_id") or "")
+    return v if re.fullmatch(r"\d{1,9}", v) else ""
 
 
 def chat_of(req: dict) -> str:
@@ -602,6 +681,26 @@ def _read_answers() -> list:
                                     {"columnName": "createdAt", "condition": "gte", "value": since}])
 
 
+def _read_chats() -> list:
+    """People's messages about finished pages (dtj_bot_answers rows "page-<brief>" / "chat") of the last 2 days, in one read."""
+    from datetime import timedelta  # noqa: PLC0415
+    import store_job  # noqa: PLC0415
+    from n8n_mcp import call  # noqa: PLC0415
+    from setup_n8n import table_rows  # noqa: PLC0415
+    table = store_job.answers_table()
+    if not table:
+        return []
+    since = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return table_rows(call, table, [{"columnName": "job", "condition": "like", "value": "page-%"},
+                                    {"columnName": "createdAt", "condition": "gte", "value": since}])
+
+
+def _say(chat: str, brief: str, text: str) -> None:
+    """One message about a page in its chat (page_chat.py), ending with the reply line."""
+    import page_chat  # noqa: PLC0415
+    page_chat.send(chat, brief, text)
+
+
 def _tell(text: str) -> None:
     """The admin chat in Telegram (DTJ_ADMIN_CHAT), through the DTJ bot."""
     token, chat = os.environ.get("DTJ_TELEGRAM_BOT_TOKEN", ""), os.environ.get("DTJ_ADMIN_CHAT", "")
@@ -617,6 +716,7 @@ def main(argv=None) -> int:
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--retry", metavar="RUN")
+    ap.add_argument("--page", nargs=2, metavar=("RUN", "BRIEF"), help="link an older page run to its brief, for the page chat")
     a = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -627,6 +727,8 @@ def main(argv=None) -> int:
         return 0
     if a.retry:
         return w.send({"retry": a.retry})
+    if a.page:
+        return w.send({"page": {"run": a.page[0], "brief": a.page[1]}})
     if a.once:
         why = w.ready()
         if why:

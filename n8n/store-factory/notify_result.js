@@ -16,4 +16,8 @@ if (r.page_status === 'written to draft') {
   text = 'The page for ' + esc(handle) + ' was not finished (' + esc(r.page_status || 'no answer') + ')'
     + (r.page_note ? ': ' + esc(String(r.page_note).slice(0, 600)) : '.') + '\nHarsh will take a look.';
 }
+// a reply to this message reaches the page's own Claude session on the VPS (Harsh, 24 Oct 2026: "once we build the page i can also
+// chat with you there"): page_chat.py and worker.py read the last line
+const id = String(brief.id || '').trim();
+if (/^\d{1,9}$/.test(id)) text += '\n\nReply to this message to change something on the page.\n(job page-' + id + ', answer chat)';
 return [{ json: { chat_id: chat, text } }];

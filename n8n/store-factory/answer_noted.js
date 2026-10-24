@@ -11,5 +11,8 @@ if (saved.error) {
 let text;
 if (a.value === 'Approve') text = 'Approved by ' + esc(a.by) + '. The laptop goes on with exactly that.';
 else if (a.value === 'Skip') text = 'Skipped: that stays undone.';
+else if (a.key === 'chat' && /^page-\d{1,9}$/.test(String(a.job))) {  // a message about a finished page (page_chat.py)
+  text = 'Noted for brief ' + esc(String(a.job).slice(5)) + '. Claude picks it up within a minute and answers here.';
+}
 else text = 'Noted: ' + esc(String(a.value).slice(0, 200));
 return [{ json: { chat_id: a.chat_id, text } }];

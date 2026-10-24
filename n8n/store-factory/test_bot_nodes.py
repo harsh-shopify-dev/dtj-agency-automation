@@ -93,6 +93,8 @@ class Bot(unittest.TestCase):
         self.assertIn("ready in the draft theme", out[0]["json"]["text"])
         self.assertIn("preview_theme_id=1&amp;view=dtj-v", out[0]["json"]["text"])
         self.assertIn("Samples to replace before it goes live: 34", out[0]["json"]["text"])
+        chat = run_node("notify_result.js", done, {"Load Brief": {**brief, "id": 12}})["out"][0]["json"]["text"]
+        self.assertTrue(chat.endswith("Reply to this message to change something on the page.\n(job page-12, answer chat)"))
         failed = run_node("notify_result.js", {"page_status": "could not build", "page_note": "no Theme Access password"}, {"Load Brief": brief})["out"]
         self.assertIn("was not finished (could not build): no Theme Access password", failed[0]["json"]["text"])
         self.assertEqual(run_node("notify_result.js", done, {"Load Brief": {"telegram_chat_id": ""}})["out"], [])  # not from Telegram
