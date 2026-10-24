@@ -22,6 +22,29 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 24 Oct 2026 (later): PAGE CHAT IN TELEGRAM; PROPERI RE-WRITTEN AROUND PROTEIN (PRs #73-#77, account A)
+- **Page chat (new, live):** after a page's "page ready" message, a person just types a change in Telegram (a reply works too).
+  The bot saves it in dtj_bot_answers (job `page-<brief>`, key `chat`; `page_chat.py` marks the chat open so plain text counts),
+  the VPS worker resumes THAT page's own Claude session (`worker.py look_at_chats`, one turn at a time per page) and the session
+  answers with `python n8n/store-factory/page_chat.py --brief N --chat C --say "..."`. A product link still starts a new page.
+  Anything beyond the page's draft (product, settings, menus, live theme, publishing, app releases) needs the person's yes in the
+  chat. Older runs are linked with `worker.py --page <run> <brief>` (done for brief 12 = run 1421).
+  VERIFIED: 220 store-factory tests; bot published (code identical); the first "chat is open" messages reached Harsh.
+  NOT YET VERIFIED: a full live chat turn (Harsh's first message arrived before the plain-text routing was live; he resends it).
+- **PROPERI (brief 12), Harsh's review ("sounds like a chutney page"):** all copy now leads with protein and nutrition (26 g protein
+  per 100 g, about 8 g per tablespoon, 0 g added sugar, 88% peanuts; NoCheat's own line "Nutrition that fits your life"); peri peri
+  is the twist. Gallery pictures 2, 5, 6 re-worded and swapped on the product. Badge: icon colour fixed, then the shield removed
+  (it fits a promise, not "High protein"; a protein icon would need a DTJ Blocks app release = Harsh's yes).
+- **Builder rules added for every brand:** badge icon visible on its badge (#73); gallery headlines wrap and keep "8 g" together
+  (#74); the badge shield only on promise badges (#75).
+- **How to work (Harsh, 23-24 Oct 2026), for every session and teammate:** product pictures are always square; a product gets a
+  5-6 picture explaining gallery (what, why, numbers, what's inside, how to use, lifestyle) made the MojoVibe way
+  (`.claude/skills/dtj-pdp-factory/references/product-gallery.md`); run slow work (pictures, builds) in the background and write
+  the copy meanwhile; hand the client's page over first, fix the automation right after; a protein / nutrition product leads with
+  its nutrition, never with "snack" copy.
+- **OPEN:** Harsh's Senso whole-store request (dtj-testing): start it by sending the store link to the bot; the protein icon option
+  (app release); the X icon in the footer; the store menu items "footer-client-services" / "footer-company" (admin).
+
 ## 24 Oct 2026: PROPERI PAGE READY FOR THE CLIENT (NoCheat on elevate-with-harsh, brief 12; PRs #62-#71, account A)
 - **The page (DRAFT theme 188893495469 "DTJ master 4.2.0 test 1"; the live theme untouched):**
   https://elevate-with-harsh.myshopify.com/products/properi-spread?preview_theme_id=188893495469&view=dtj-properi-spread
