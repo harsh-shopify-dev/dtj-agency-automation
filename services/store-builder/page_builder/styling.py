@@ -275,8 +275,11 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("star_color", r["rating_star"])  # rating gold, darkened only as far as 3:1 on the page needs (direction.py)
         put("badge_bg", r["band"])
         # the ink only when it reads on the band (24 Oct 2026, NoCheat: ink #24090B on the maroon band was 2.35:1, the review's R03)
-        put("badge_color", r["text"] if style.contrast(r["text"], r["band"]) >= 4.5 else best_text_on(r["band"]))
-        put("badge_icon_color", acc)
+        words = r["text"] if style.contrast(r["text"], r["band"]) >= 4.5 else best_text_on(r["band"])
+        put("badge_color", words)
+        # the icon must show on the badge (24 Oct 2026, NoCheat: the maroon accent on the maroon badge, so "no icon"): the first brand
+        # colour at 3:1 on it, else the badge's words
+        put("badge_icon_color", next((c for c in (acc, r["accent_fill"], r["button_bg"]) if style.contrast(c, r["band"]) >= 3), words))
         put("text_size", 13)
         put("item_gap", 8)
         put("avatar_size", 24)  # five photos (rule L14) + badge + stars must fit one phone line without cutting the badge (9 Oct 2026)
