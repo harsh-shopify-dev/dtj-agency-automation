@@ -71,7 +71,13 @@ class Nodes(unittest.TestCase):
         self.assertIn("page step --stage build --done <this round: 1, 2 or 3> --total 3" + state, text)
         # the study and ChatGPT's pictures move the bar too (Harsh, 23 Oct 2026: "telegram told nothing next")
         self.assertIn("page step --stage study" + state, text)
-        self.assertIn("page step --stage pictures --done <pictures made> --total <pictures planned>" + state, text)
+        # the gallery photos start in the background with their own progress, and the copy is written meanwhile (24 Oct 2026)
+        self.assertIn("python -m provision.gallery_photos --plan ../../.work/clients/n8n-12-radiance-serum/gallery/plan.json --out "
+                      "../../.work/clients/n8n-12-radiance-serum/gallery/photos --detach --progress "
+                      "../../.work/clients/n8n-12-radiance-serum/progress.json", text)
+        self.assertIn("Do steps 4 and 5 (facts, brand, copy) meanwhile", text)
+        self.assertIn("python -m provision.gallery_compose", text)
+        self.assertLess(text.index("--detach"), text.index("4. Facts and brand"))
         self.assertIn("python -m page_builder.progress page done" + state, text)
         self.assertIn('page stopped --note "<why, in plain words>"' + state, text)
         # in the order of the work: start, brief, intake, product, facts, build, check, done (the done line before reply.py)
