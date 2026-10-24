@@ -125,6 +125,26 @@ def _blocks_of(sec, cat, extras) -> tuple[dict, list]:
     return blocks, keys
 
 
+# Buy it now is Shopify's own button (no colour setting): the product section's custom CSS colours it, as specific as Horizon's own
+# rule needs (a single class lost to base.css on 24 Oct 2026); the sticky bar's Add to cart follows the block's colours
+BUY_NOW = "button.shopify-payment-button__button.shopify-payment-button__button--unbranded"
+STICKY_CART = "button.sticky-add-to-cart__button.add-to-cart-button"
+
+
+def _buy_button_colours(template: dict, d) -> None:
+    """Horizon: Add to cart in the page's button colour (the block's own custom style), Buy it now in the brand colour."""
+    c = styling.buy_button_colours(d.roles)
+    buttons = product_column(template)["blocks"].get(BUY_BUTTONS) or {}
+    cart = (buttons.get("blocks") or {}).get("add-to-cart")
+    if cart is not None:
+        cart.setdefault("settings", {}).update(style_class="button-custom", custom_button_background=c["cart_bg"],
+                                               custom_button_text=c["cart_text"], custom_button_border=c["cart_bg"])
+    paint = lambda sel, bg, fg: (f"{sel},{sel}:hover{{background-color:{bg} !important;color:{fg} !important;"  # noqa: E731
+                                 f"border-color:{bg} !important}}")
+    template["sections"]["main"]["custom_css"] = [paint(BUY_NOW, c["now_bg"], c["now_text"]),
+                                                  paint(STICKY_CART, c["cart_bg"], c["cart_text"])]
+
+
 def _horizon_template(built, flat, bb, cat, extras=None) -> dict:
     template = copy.deepcopy(json.loads((HERE / "base" / "product-base.json").read_text(encoding="utf-8")))
     details = template["sections"]["main"]["blocks"]["product-details"]
@@ -375,6 +395,7 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
         template = _dawn_template(base_template, built, flat, bb, cat, extras)
     else:
         template = _horizon_template(built, flat, bb, cat, extras)
+        _buy_button_colours(template, direction)
 
     model = PageModel(brand, facts, direction, cat, built, flat, roles, ctx.prov, template, ctx.demo, demo_pictures=demo_pictures, extras=extras,
                       people_photos=people_used)

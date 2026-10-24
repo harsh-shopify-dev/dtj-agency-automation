@@ -66,6 +66,16 @@ def apply_home_type(sec: Section, cat: Catalog) -> None:
         put("heading_size", step[1])
 
 
+def buy_button_colours(r: dict) -> dict:
+    """The theme's own buy buttons in the page's palette (Harsh, 24 Oct 2026: "update the button colors too for add to cart keep the
+    yellow and buy it now red (the same color palette applied to the page)"): Add to cart in the page's button colour (the CTAs'),
+    Buy it now in the brand colour when its words read on it and it differs from the first button, else in ink."""
+    cart_bg, cart_text = r["button_bg"], r["button_text"]
+    brand_ok = style.contrast(r["on_band"], r["band"]) >= 4.5 and style.contrast(r["band"], cart_bg) >= 1.5
+    now_bg = r["band"] if brand_ok else r["dark"]
+    return {"cart_bg": cart_bg, "cart_text": cart_text, "now_bg": now_bg, "now_text": best_text_on(now_bg)}
+
+
 def strip_tick(tick: str, r: dict, dark: bool, band: bool, accent_band: bool, band_bg: str) -> str:
     """The moving strip's tick colour: kept unless it matches the strip's words on a coloured strip; then the first of the brand's
     colours that shows on the strip (3:1) and differs from the words (1.5:1, the design check's "same colour" line)."""

@@ -748,6 +748,19 @@ class StandardPageTests(unittest.TestCase):
         icons = by_kind["why_features"]
         self.assertEqual((icons["icon_bg"], icons["icon_color"]), (d.roles["tint_card"], d.roles["on_card"]))  # white badges on the band
 
+    def test_the_theme_buy_buttons_take_the_page_palette(self):
+        # Harsh, 24 Oct 2026: "add to cart keep the yellow and buy it now red (the same color palette applied to the page)"
+        r = self.build(vibe="electric")
+        d, t = r.model.direction.roles, r.template
+        cart = t["sections"]["main"]["blocks"]["product-details"]["blocks"]["buy_buttons_eYQEYi"]["blocks"]["add-to-cart"]["settings"]
+        self.assertEqual((cart["style_class"], cart["custom_button_background"], cart["custom_button_text"]),
+                         ("button-custom", d["button_bg"], d["button_text"]))
+        css = " ".join(t["sections"]["main"]["custom_css"])
+        self.assertIn("button.shopify-payment-button__button.shopify-payment-button__button--unbranded", css)
+        now = css.split("background-color:")[1].split(" ")[0]
+        self.assertGreaterEqual(style_contrast(now, css.split("color:")[2].split(" ")[0]), 4.5)  # Buy it now's words read on it
+        self.assertGreaterEqual(style_contrast(now, d["button_bg"]), 1.5)  # and it is not the Add to cart colour
+
     def test_white_words_on_an_electric_page_sit_on_ink_never_on_the_brand_colour(self):
         # Harsh, 10 Oct 2026: white story points, white FAQ answers, white strip ticks; white on the brand cyan was 2.2:1
         r = self.build(vibe="electric")
