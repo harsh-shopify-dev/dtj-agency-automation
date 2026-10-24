@@ -26,6 +26,7 @@
       "Bash(python n8n/store-factory/store_job.py:*)",
       "Bash(python n8n/store-factory/reply.py:*)",
       "Bash(python n8n/store-factory/page_questions.py:*)",
+      "Bash(python n8n/store-factory/page_chat.py:*)",
       "Bash(python -m page_builder.progress:*)",
       "Bash(python -m page_builder.fetch_product:*)",
       "Bash(python -m page_builder.ship_draft:*)",

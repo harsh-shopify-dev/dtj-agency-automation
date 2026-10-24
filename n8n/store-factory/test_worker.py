@@ -348,5 +348,60 @@ class Runs_(Base):
         self.assertNotIn("signature", worker.hide(f"curl {RESUME} done"))
 
 
+class PageChat(Base):
+    """Harsh, 24 Oct 2026: "once we build the page i can also chat with you there": a reply to a page's message continues that page's
+    own Claude session (resumed), one turn at a time per page, and the session answers in Telegram itself."""
+
+    def chat_worker(self, runs, rows, said):
+        return worker.Worker(call=self.n8n, run=runs, tell=self.told.append, environ=dict(ATTENDED), state=self.tmp / "c" / "jobs.json",
+                             clock=lambda: self.now[0], sleep=lambda s: None, out=self.printed.append, settings=self.settings,
+                             read_answers=lambda: [], read_chats=lambda: rows, say=lambda chat, brief, text: said.append((chat, brief, text)))
+
+    def test_a_reply_resumes_the_pages_session_and_each_message_is_handled_once(self):
+        said, rows = [], [{"id": 7, "job": "page-12", "key": "chat", "value": "Make the hero about protein", "by": "Harsh",
+                           "chat_id": "7051933055"}]
+        runs = Runs(claude=[result("Changed the hero; told Harsh.", session="s-12")])
+        w = self.chat_worker(runs, rows, said)
+        self.n8n.waiting = []
+        w.s["jobs"]["1421"] = {"run": "1421", "workflow": "Store Factory: Page Design", "workflow_id": NS, "state": "done",
+                               "started": "2026-10-23T13:16:06Z", "session": "s-12", "brief": "12", "chat": "7051933055"}
+        w.round()
+        argv, kw = runs.calls[0]
+        self.assertEqual(argv[argv.index("--resume") + 1], "s-12")  # the page's own session, with everything it knows
+        self.assertIn('Harsh wrote in Telegram about the page of brief 12: "Make the hero about protein"', kw["input"])
+        self.assertIn("page_chat.py --brief 12 --chat 7051933055", kw["input"])
+        self.assertIn("needs Harsh's clear yes", kw["input"])
+        self.assertEqual(said[0][:2], ("7051933055", "12"))
+        self.assertIn("working on it now", said[0][2])
+        self.assertEqual(w.s["jobs"]["1421"]["state"], "done")
+        w.round()
+        self.assertEqual(len(runs.calls), 1)  # the same message is never handled twice
+
+    def test_a_page_without_a_session_is_said_and_an_older_run_can_be_linked(self):
+        said, rows = [], [{"id": 8, "job": "page-99", "key": "chat", "value": "Bigger price", "by": "Riya", "chat_id": "555"}]
+        w = self.chat_worker(Runs(), rows, said)
+        self.n8n.waiting = []
+        w.round()
+        self.assertIn("I have no page session for brief 99", said[0][2])
+        w.s["jobs"]["1400"] = {"run": "1400", "workflow": "Store Factory: Page Design", "workflow_id": NS, "state": "done",
+                               "started": "a", "session": "s-99"}
+        w.save()
+        cli = self.chat_worker(Runs(), [], [])
+        cli.send({"page": {"run": "1400", "brief": "99"}})
+        w.read_inbox()
+        self.assertEqual(w.page_job("99")["run"], "1400")
+
+    def test_a_failed_chat_turn_is_said_in_the_chat(self):
+        said, rows = [], [{"id": 9, "job": "page-12", "key": "chat", "value": "Swap the hero", "by": "Harsh", "chat_id": "70"}]
+        w = self.chat_worker(Runs(claude=[result("Not logged in", error=True)]), rows, said)
+        self.n8n.waiting = []
+        w.s["jobs"]["1421"] = {"run": "1421", "workflow": "Store Factory: Page Design", "workflow_id": NS, "state": "done",
+                               "started": "b", "session": "s-12", "brief": "12", "chat": "70"}
+        w.round()
+        self.assertIn("I could not finish that change: Not logged in", said[-1][2])
+        self.assertEqual(w.s["jobs"]["1421"]["state"], "done")
+        self.assertEqual(w.s.get("fails", 0), 0)  # a chat turn never stops new pages from starting
+
+
 if __name__ == "__main__":
     unittest.main()
