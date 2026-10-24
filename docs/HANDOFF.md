@@ -22,6 +22,33 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 24 Oct 2026: PROPERI PAGE READY FOR THE CLIENT (NoCheat on elevate-with-harsh, brief 12; PRs #62-#71, account A)
+- **The page (DRAFT theme 188893495469 "DTJ master 4.2.0 test 1"; the live theme untouched):**
+  https://elevate-with-harsh.myshopify.com/products/properi-spread?preview_theme_id=188893495469&view=dtj-properi-spread
+  (template `product.dtj-properi-spread`). Review pass, design checks 11/11, lint 0; checked on the real page at 375 and 1280 px:
+  every section shows, no broken picture, no sideways scroll; Add to cart yellow #FFC94A, Buy it now maroon #9E1B22, videos play.
+- **Product properi-spread changed (Harsh's yes, 23 Oct "full access, test store"):** 6 new square gallery pictures attached and moved
+  first (NoCheat's 9 photos kept after them); logged in `.work/stores/elevate-with-harsh/action-log.jsonl`. The first AI set (busy,
+  "AI SLOP") was never attached; it stays in elevate's Files (`g1-hero.png` ... `g6-bite.png`, `ai-*.png`): delete them in admin if wanted.
+- **On the page:** gallery = AI studio photos + words set by code (`provision/gallery_compose.py`); section photos (toast, paratha, pack);
+  "Why it beats plain peanut butter" = 6 transparent cut-outs (Harsh's Go Mints sample); "NoCheat in real life" = 6 videos from
+  nocheatnutrition.com (ProPeri reel, ProPeri how-to-use, and 4 reels of other NoCheat products as SAMPLE stand-ins, Harsh: "its fine if
+  they are not product related right now"). Header and footer written too (Harsh: "update the header and footer color too"): maroon bar
+  and footer, real social links, 2 SAMPLE bar lines from NoCheat's own site (free shipping; 48 h damaged-jar replacement), backups in
+  `.work/clients/n8n-12-properi-spread/chrome-run/*/backup-*`.
+- **What NoCheat must send or sign off:** `.work/clients/n8n-12-properi-spread/content-needed.md` on the VPS (real reviews and rating,
+  stories, ProPeri videos, sign-off of the AI pictures and the DTJ COPY lines, the shipping and replacement promises for this store).
+- **Built for every brand (all merged and on the VPS):** photo paths made absolute for Codex (#62); Playwright Chromium for the VPS review
+  and readable CLI errors (#63); the gallery method + `references/product-gallery.md` + theme folders for unattended pulls (#64); badge,
+  strip-tick and buy-button colours from the palette (#65-#68, #70); pictures made in parallel with the copy (`provision/gallery_photos.py
+  --detach/--wait/--progress`), transparent cut-outs (`ai_images --transparent`) and the n8n Page Design text for both (#69, published);
+  videos into Files (`store_files`, #70); bold brands' header and footer in the brand colour (#71). Briefs 7-9's VPS notes (password page,
+  missing permissions, CLI sign-in) are all resolved by these and the 23 Oct PRs.
+- **NOT DONE / OPEN:** (1) a Telegram Approve tap + tool that puts a brief's gallery first in the product's gallery from the VPS (the VPS CLI
+  store auth has files scopes only; today it ran from the laptop); (2) the X/Twitter icon did not show (Horizon's setting name); (3) the
+  store's menus still hold "footer-client-services" / "footer-company" (admin, a person's fix); (4) brief 12's n8n run 1421 was answered
+  "could not build" on 23 Oct, so its brief row does not show today's finished page.
+
 ## 23 Oct 2026 (evening): THE VPS WORKER IS LIVE (PRs #43-#56, account A)
 - **The VPS (srv2048145, user `ai`):**
   - the repo at ~/dtj-agency-automation, updated from the laptop with git bundles over ssh (no GitHub login there);
