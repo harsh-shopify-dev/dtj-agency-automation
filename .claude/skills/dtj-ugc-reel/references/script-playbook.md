@@ -12,7 +12,9 @@ How to use it:
 
 **AI people (ASCI synthetically generated content guidelines, in force about 29 Dec 2026; CCPA 2022 endorsement rules apply now):**
 an AI character is a presenter, demonstrator or cartoon, NEVER a customer telling results ("I used it for years, now only this");
-every reel with an AI person or AI scene carries the on-screen label "Video created using AI". Set `"ai_label": true` in script.json.
+every reel with an AI person or AI scene is labelled as AI. The label is NOT burned into the video: it is applied at posting
+with Instagram's / Meta's own AI label (Harsh, 25 Oct 2026; ASCI accepts the platform's label). Set `"ai_label": true` in
+script.json to confirm the posting team will apply it.
 
 ## The DTJ playbook: rules, beat templates, wording and pre-flight
 
@@ -97,7 +99,7 @@ Lines in quotes show the *register*, not approved claims. Anything in [brackets]
 | 17 | Disease and body | No cure, treat, prevent, weight, fat, sugar control, period, immunity or detox outcome |
 | 18 | Before/after | No body before/after; no AI image that exaggerates a result |
 | 19 | AI people | AI characters present, demonstrate or act a cartoon role; none poses as a customer or founder |
-| 20 | Labels | "Video created using AI" on AI people or scenes; "Ad/Collaboration" on creator posts for the ASCI time window |
+| 20 | Labels | AI label applied at posting (Instagram / Meta AI label), not burned in; "Ad/Collaboration" on creator posts for the ASCI time window |
 | 21 | Targeting | Supplement-like or wellness products set to 18+; no audience or conversion named after a condition |
 | 22 | Batch diversity | This script differs from its siblings in persona, format or storyline, not just the first line |
 

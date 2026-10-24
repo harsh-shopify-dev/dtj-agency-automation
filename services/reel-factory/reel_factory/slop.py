@@ -98,8 +98,8 @@ def check(script: dict, style: dict | None = None) -> dict:
         for m in re.finditer(pat, plain, re.I):
             policy.append({"said": m.group(0), "rule": rule, "instead": fix})
     if not script.get("ai_label"):
-        policy.append({"said": "(script)", "rule": "every AI reel shows 'Video created using AI' (ASCI AI guidelines)",
-                       "instead": "set \"ai_label\": true and add the label in the edit"})
+        policy.append({"said": "(script)", "rule": "every AI reel is posted with the platform's AI label (ASCI AI guidelines)",
+                       "instead": "set \"ai_label\": true: the AI label is applied in Instagram / Meta at posting, not in the edit"})
     spoken = [l for l in lines if l.strip()]
     if spoken:
         hook = re.split(r"(?<=[.!?।,])\s+", spoken[0].strip())[0]       # the first phrase is what lands in the first ~3 s

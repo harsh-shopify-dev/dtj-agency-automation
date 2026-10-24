@@ -23,7 +23,9 @@ Decisions this runbook carries (Harsh, 20-21 Oct 2026):
 
 **Scripts (Harsh, 22 Oct 2026: "master the script writing"): read `references/script-playbook.md` before writing ANY script.**
 It holds the 12 rules, 12 timed beat templates, the do/don't wording table and the 22-point pre-flight from DTJ's research.
-AI characters are presenters/demonstrators/cartoons, never customers telling results; every AI reel carries "Video created using AI".
+AI characters are presenters/demonstrators/cartoons, never customers telling results. **No AI label is burned into the video**
+(Harsh, 25 Oct 2026: "we will add it in instagram reels and in meta we will apply the ai label"): the person posting turns on
+Instagram's / Meta's own AI label. Say so in every delivery message.
 
 **Realism (Harsh, 21 Oct 2026: Higgsfield-level, no AI slop): read `references/realism.md` before writing script.json.**
 Start pictures and prompts are written as real phone footage; the edit adds the measured phone look; `job edit` refuses
@@ -62,6 +64,18 @@ Start pictures and prompts are written as real phone footage; the edit adds the 
 8. **Answer** (`result`, then reply.py). `reel ready` only when every shot passed and you watched it; otherwise `needs a look`
    with what a person must check; `could not make` with the reason (a sign-in, a refusal, credits).
 9. Dated entry in `docs/HANDOFF.md`; tell the person on duty in plain words where the file is and what to look at.
+
+## Copying a reference edit exactly (music only, no voiceover; mahalaxmi-02, 24-25 Oct 2026)
+**Follow `references/remake-a-reference-edit.md` step by step** (exact commands, ChatGPT and Flow prompts, checks,
+Do / Don't, timings, lessons log). Tools: `services/reel-factory/tools/remake/`. In short:
+1. Cut list from the reference; **measure its motion per frame** (`measure_motion.py`: zoom, shift, turn, blur, brightness).
+2. One reference frame per shot, the other brand's marks erased first; ChatGPT recreates each frame with only our pack
+   swapped (never from a written description: "AI slop"). Garbled small packs get the real pack pasted (`fixpack.py`).
+3. Flow clips only where something really moves; graphic/stylised shots stay stills.
+4. **Edit by replaying the measured motion** (`recut.py`, `"move": "ref"`): the reference's arrivals, mirror shrinks, zoom
+   punches and blur land on the same frames. Effects measurement cannot copy (light leaks, flashes, glitch, text) come from
+   the HyperFrames catalog (`npx hyperframes catalog --query ...`) before anything is hand-built.
+5. Compare reference and ours frame by frame at the cuts before delivering; add what you learned to the lessons log.
 
 ## script.json
 ```json

@@ -43,7 +43,7 @@ class Policy(unittest.TestCase):
 
     def test_product_name_and_label(self):
         self.assertEqual(self.rules("Khaane ke baad ek cup Senso Detox Green Tea Kahwa, bas itna."), [])
-        self.assertTrue(any("Video created using AI" in r for r in self.rules("Khaane ke baad ek cup, bas itna.", ai_label=False)))
+        self.assertTrue(any("AI label" in r for r in self.rules("Khaane ke baad ek cup, bas itna.", ai_label=False)))
 
 
 class Features(unittest.TestCase):
