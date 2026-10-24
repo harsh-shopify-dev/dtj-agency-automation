@@ -43,7 +43,8 @@ SIZE = 1080
 LAYOUTS = ("pack", "top", "bottom", "numbers", "tiles", "stack")
 FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/{folder}/{file}"
 FONT_FILES = {"Shrikhand": {"400": "Shrikhand-Regular.ttf"}, "Poppins": {"600": "Poppins-SemiBold.ttf", "700": "Poppins-Bold.ttf"}}
-UNIT_GAP = re.compile(r"(?<=\d) (?=(g|kg|mg|ml|l)\b)")  # the space between a number and its unit
+UNIT = re.compile(r"(\d) (g|kg|mg|ml|l)\b")  # a number and its unit stay on one line, kept together by a span (24 Oct 2026: the
+# display font draws a no-break space far wider than a space, "8   g")
 DEFAULT_BRAND = {"primary": "#9E1B22", "accent": "#FFC94A", "ink": "#24090B", "heading_font": "Shrikhand", "body_font": "Poppins"}
 
 
@@ -88,7 +89,7 @@ def lines_of(pic: dict) -> list[str]:
 
 
 CSS = """
-*{box-sizing:border-box}html,body{margin:0;padding:0}
+*{box-sizing:border-box}html,body{margin:0;padding:0}.nb{white-space:nowrap}
 body{width:1080px;height:1080px;overflow:hidden;font-family:'B',sans-serif;-webkit-font-smoothing:antialiased}
 .c{position:relative;width:1080px;height:1080px;overflow:hidden;background:var(--ground)}
 .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -159,12 +160,13 @@ def page(pic: dict, brand: dict, base: Path, faces: str) -> str:
                "sticker-bg": accent if dark else primary, "sticker-fg": primary if dark else accent, "ring": accent if dark else "#FFFFFF",
                "pill-bg": accent, "pill-fg": primary}
     style = ";".join(f"--{k}:{v}" for k, v in colours.items())
-    e = lambda s: html.escape(UNIT_GAP.sub("\u00a0", s or ""))  # noqa: E731 - "100 g" never breaks over two lines
+    e = lambda s: UNIT.sub(r'<span class="nb">\1 \2</span>', html.escape(s or ""))  # noqa: E731 - "100 g" never breaks
     head, sub = e(pic.get("headline")), e(pic.get("sub"))
     maxh = {"pack": 330, "top": 240, "bottom": 360, "numbers": 200, "tiles": 170, "stack": 560}[layout]
-    if layout == "stack":  # one sentence per line: "Spread it." / "Dip it." / "Stuff it."
+    if layout == "stack":  # one sentence per line: "Spread it." / "Dip it." / "Stuff it."; one sentence alone wraps as usual
         parts = [p.strip() for p in (pic.get("headline") or "").replace(". ", ".|").split("|") if p.strip()]
-        head = "".join(f"<em>{e(p)}</em>" for p in parts)
+        if len(parts) > 1:
+            head = "".join(f"<em>{e(p)}</em>" for p in parts)
     text = f'<div class="t"><h1 data-maxh="{maxh}">{head}</h1>' + (f'<p class="sub">{sub}</p>' if sub else "") + "</div>"
     body = ""
     if pic.get("photo"):

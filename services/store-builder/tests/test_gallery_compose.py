@@ -66,6 +66,10 @@ class Compose(unittest.TestCase):
     def test_a_stacked_headline_puts_one_sentence_per_line(self):
         doc = gc.page({"name": "s", "layout": "stack", "headline": "Spread it. Dip it. Stuff it.", "items": []}, gc.DEFAULT_BRAND, self.tmp, "")
         self.assertIn("<em>Spread it.</em><em>Dip it.</em><em>Stuff it.</em>", doc)
+        one = gc.page({"name": "s", "layout": "stack", "headline": "Protein in every meal.", "items": []}, gc.DEFAULT_BRAND, self.tmp, "")
+        self.assertNotIn("<em>", one)  # one sentence wraps as usual instead of shrinking to fit one line
+        unit = gc.page({"name": "b", "layout": "bottom", "headline": "8 g protein per tablespoon", "items": []}, gc.DEFAULT_BRAND, self.tmp, "")
+        self.assertIn('<span class="nb">8 g</span> protein', unit)  # the number keeps its unit, with a normal space
 
 
 if __name__ == "__main__":
