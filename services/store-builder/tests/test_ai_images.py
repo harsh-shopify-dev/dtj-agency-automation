@@ -468,6 +468,66 @@ class References(Base):
             ai.guard("This exact bottle with 20% off", "product", refs=True)  # the guard still applies
 
 
+FACTS = {  # a slice of a real page's facts.json (brief 12, NoCheat ProPeri, 23 Oct 2026)
+    "trust_points": [{"text": "High protein spread", "source": "pack: HIGH PROTEIN PERI SPREAD"},
+                     {"text": "No added preservatives", "source": "pack Nope List (product picture 4)"}],
+    "key_facts": [{"value": "26 g", "label": "Protein per 100 g", "source": "nutrition table: protein 26.0 g per 100 g"},
+                  {"value": "88%", "label": "Peanut butter", "source": "pack ingredients: Peanut Butter 88.00%"}],
+    "story_2": {"heading": "Roti, but", "accent": "spicier.", "bullets": ["Black pepper and paprika kick"],
+                "source": "DTJ COPY (basis: pack serving ideas)"},
+    "benefits": [{"title": "Snack-time dip", "text": "Nachos, sorted.", "source": "pack serving ideas: dip for nachos, veggie dip"}],
+    "rating": {"value": "4.6", "source": "SAMPLE: no reviews yet"},
+    "reviews": [{"quote": "Tastes like a proper snack", "source": "SAMPLE: replace before live"}],
+    "media": [{"role": "pack", "alt": "Creamy. Spicy. Protein-packed."}],
+}
+
+
+class GalleryWords(unittest.TestCase):
+    # Harsh, 23 Oct 2026: product pictures are square and explain the product, like a pro D2C brand's gallery (words on them)
+    def test_lines_must_stand_on_a_sourced_fact(self):
+        ok = ai.check_words(["High Protein Peri Spread", "26g protein per 100g", "88% peanut butter", "Roti, but spicier.",
+                             "Black pepper & paprika", "Dip for nachos", "What's inside"], FACTS)
+        self.assertEqual([w["source"] for w in ok], [
+            "pack: HIGH PROTEIN PERI SPREAD", "nutrition table: protein 26.0 g per 100 g", "pack ingredients: Peanut Butter 88.00%",
+            "DTJ COPY (basis: pack serving ideas)", "DTJ COPY (basis: pack serving ideas)", "pack serving ideas: dip for nachos, veggie dip",
+            "a plain heading (claims nothing)"])
+
+    def test_samples_unsourced_text_prices_counts_and_claims_are_refused(self):
+        for line, why in (("4.6", "SAMPLE"), ("Tastes like a proper snack", "SAMPLE"), ("Creamy. Spicy. Protein-packed.", "no source"),
+                          ("Burns fat fast", "not in facts.json"), ("Rs 499 only", "prices and offers"),
+                          ("Loved by 10k customers", "no counts"), ("Clinically proven protein", "no claims")):
+            with self.subTest(line=line), self.assertRaises(ValueError) as e:
+                ai.check_words([line], FACTS)
+            self.assertIn(why, str(e.exception))
+        with self.assertRaises(ValueError) as e:
+            ai.check_words(["High Protein Peri Spread"], None)
+        self.assertIn("facts.json", str(e.exception))
+
+    def test_only_a_gallery_prints_words_and_the_prompt_quotes_only_them(self):
+        text = ai.guard('The jar big on maroon, the headline "High Protein Peri Spread" top-left', "gallery", refs=True,
+                        words=["High Protein Peri Spread"])
+        self.assertIn('Print exactly these words, spelled exactly as written, and no other words: "High Protein Peri Spread"', text)
+        self.assertTrue(text.endswith("only these lines and the product's own label."))
+        self.assertEqual(ai.KINDS["gallery"], "1024x1024")
+        self.assertEqual(ai.KINDS["section"], "1024x1024")
+        with self.assertRaises(ValueError) as e:
+            ai.guard('the headline "Best in India" top-left', "gallery", words=["High Protein Peri Spread"])
+        self.assertIn("'Best in India', which is not one of the printed lines", str(e.exception))
+        with self.assertRaises(ValueError):
+            ai.guard("A toast", "section", words=["High Protein Peri Spread"])  # a section picture never prints words
+        with self.assertRaises(ValueError):
+            ai.guard("The jar with the headline on top", "gallery")  # no lines given: the no-words rule stands
+
+    def test_make_records_each_line_with_its_fact(self):
+        r = FakeRunner()
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        side = ai.make("gallery", "The jar big on a maroon ground", tmp / "g1.png", environ={}, read_var=NO_VAR, runner=r,
+                       codex_ok=lambda: True, words=["High Protein Peri Spread"], facts=FACTS)
+        self.assertEqual(side["words"], [{"text": "High Protein Peri Spread", "source": "pack: HIGH PROTEIN PERI SPREAD"}])
+        self.assertEqual(side["size"], "1024x1024")
+
+
 class Cli(Base):
     def run_cli(self, *argv):
         buf = io.StringIO()
