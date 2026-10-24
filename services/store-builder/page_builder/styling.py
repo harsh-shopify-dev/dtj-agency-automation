@@ -241,7 +241,8 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
     elif b == "social-proof":
         put("star_color", r["rating_star"])  # rating gold, darkened only as far as 3:1 on the page needs (direction.py)
         put("badge_bg", r["band"])
-        put("badge_color", r["text"])
+        # the ink only when it reads on the band (24 Oct 2026, NoCheat: ink #24090B on the maroon band was 2.35:1, the review's R03)
+        put("badge_color", r["text"] if style.contrast(r["text"], r["band"]) >= 4.5 else best_text_on(r["band"]))
         put("badge_icon_color", acc)
         put("text_size", 13)
         put("item_gap", 8)
