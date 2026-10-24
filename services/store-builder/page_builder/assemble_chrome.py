@@ -95,6 +95,10 @@ def build_chrome(brand: dict, facts: dict, chrome: dict | None, header_group: di
     d = direction_mod.derive(brand, logo_path)
     r = d.roles
     col = {k: r[v] for k, v in CHROME_COLOURS.items()}
+    # a bold brand's pages carry the brand colour itself on their bands, so its bar and footer do too (Harsh, 24 Oct 2026, NoCheat:
+    # "update the header and footer color too", the maroon of the page, not its near-black ink), when the light words read on it
+    if d.vibe in direction_mod.BOLD_VIBES and not d.dark_mode and contrast(r["on_band"], r["band"]) >= 4.5:
+        col.update(announcement=r["band"], announcement_text=r["on_band"], footer=r["band"], footer_text=r["on_band"])
     header, footer = copy.deepcopy(header_group), copy.deepcopy(footer_group)
     changes, problems, prov, removed = [], [], {}, []
 
