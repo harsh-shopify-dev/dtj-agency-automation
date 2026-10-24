@@ -75,6 +75,16 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(all(v >= 4.5 for v in res.report["contrast"].values()), res.report["contrast"])
         self.assertEqual((hs["logo_position"], hs["show_search"]), ("left", True))  # the theme's own layout choices are kept
 
+    def test_a_bold_brand_wears_its_own_colour_on_the_bar_and_the_footer(self):
+        # Harsh, 24 Oct 2026 (NoCheat, playful): the header and footer in the page's maroon, not its near-black ink
+        bold = {**brand(), "vibe": "playful", "voice": "playful", "colors": {"primary": "#9E1B22", "accent": "#FFC94A",
+                                                                             "background": "#FFFFFF", "text": "#24090B"}}
+        res = build_chrome(bold, facts(), {}, copy.deepcopy(HEADER), copy.deepcopy(FOOTER))
+        roles = direction.derive(bold, None).roles
+        self.assertEqual(res.header["sections"]["header_announcements_9jGBFp"]["settings"]["background_color"], roles["band"])
+        self.assertEqual(res.footer["sections"]["footer"]["settings"]["background_color"], roles["band"])
+        self.assertTrue(all(v >= 4.5 for v in res.report["contrast"].values()), res.report["contrast"])
+
     def test_the_announcement_lines_come_from_the_facts_with_their_source(self):
         res = build()
         sec = res.header["sections"]["header_announcements_9jGBFp"]
