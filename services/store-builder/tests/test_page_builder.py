@@ -748,6 +748,12 @@ class StandardPageTests(unittest.TestCase):
         icons = by_kind["why_features"]
         self.assertEqual((icons["icon_bg"], icons["icon_color"]), (d.roles["tint_card"], d.roles["on_card"]))  # white badges on the band
 
+    def test_the_shield_only_on_a_promise_badge(self):
+        # Harsh, 24 Oct 2026: "the shield is totally unrelated with the badge saying high protein"
+        from page_builder.sections import SHIELD_WORDS
+        self.assertFalse(SHIELD_WORDS.search("High protein"))
+        self.assertTrue(SHIELD_WORDS.search("Lab tested") and SHIELD_WORDS.search("7-day returns"))
+
     def test_the_badge_icon_shows_on_its_badge(self):
         # 24 Oct 2026, NoCheat: the icon was the maroon of the maroon badge ("NO ICON IN THE HIGH PROTEIN")
         for vibe in ("electric", "playful", None):
