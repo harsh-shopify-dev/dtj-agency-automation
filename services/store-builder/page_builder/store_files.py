@@ -35,16 +35,21 @@ from provision.gql import check_operation  # noqa: E402
 from provision.stage3 import UploadError, upload_staged  # noqa: E402
 
 PICTURES = (".jpg", ".jpeg", ".png", ".webp")
+# videos too (Harsh, 24 Oct 2026: "download the review videos the website has and apply those"): the page's video section
+# reads them from Files (shopify://files/videos/<name>); Shopify needs a minute or two to process one
+VIDEOS = (".mp4", ".mov", ".webm")
 MAX_PICTURES = 12
 SCOPES = "write_files,read_files"
-EXISTING = "query Existing($q: String!) { files(first: 10, query: $q) { nodes { ... on MediaImage { id fileStatus image { url } } } } }"
+EXISTING = ("query Existing($q: String!) { files(first: 10, query: $q) { nodes { ... on MediaImage { id fileStatus image { url } } "
+            "... on Video { id fileStatus filename } } } }")
 STAGE = """mutation Stage($input: [StagedUploadInput!]!) {
   stagedUploadsCreate(input: $input) { stagedTargets { url resourceUrl parameters { name value } } userErrors { field message } }
 }"""
 CREATE = """mutation Create($files: [FileCreateInput!]!) {
   fileCreate(files: $files) { files { id fileStatus } userErrors { field message } }
 }"""
-STATUS = "query Status($ids: [ID!]!) { nodes(ids: $ids) { ... on MediaImage { id fileStatus image { url } } } }"
+STATUS = ("query Status($ids: [ID!]!) { nodes(ids: $ids) { ... on MediaImage { id fileStatus image { url } } "
+          "... on Video { id fileStatus filename } } }")
 Runner = Callable[[Sequence[str]], "subprocess.CompletedProcess[str]"]
 
 
@@ -98,7 +103,8 @@ class Store:
 
 
 def pictures(folder: Path, only: list[str] | None = None, limit: int = MAX_PICTURES) -> list[Path]:
-    found = sorted((p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in PICTURES), key=lambda p: str(p.relative_to(folder)).lower())
+    found = sorted((p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in PICTURES + VIDEOS),
+                   key=lambda p: str(p.relative_to(folder)).lower())
     if only:
         wanted = {o.strip().lower() for o in only if o.strip()}
         found = [p for p in found if p.name.lower() in wanted]
@@ -116,6 +122,15 @@ def store_name(path: Path, taken: set[str]) -> str:
     return name
 
 
+def _kind(name: str) -> str:
+    return "VIDEO" if Path(name).suffix.lower() in VIDEOS else "IMAGE"
+
+
+def _node_name(node: dict) -> str:
+    """The file name the store gives a picture (from its URL) or a video (its filename)."""
+    return node.get("filename") or _url_name((node.get("image") or {}).get("url", ""))
+
+
 def _url_name(url: str) -> str:
     """The file name in a store URL, exactly as the store spells it (compare it lower-cased)."""
     return urlparse(url or "").path.rsplit("/", 1)[-1]
@@ -125,20 +140,20 @@ def upload(store: Store, folder: Path, approved_by: str, only: list[str] | None 
            dry_run: bool = False, sleep: Callable[[float], None] = time.sleep, out=print, log_dir: Path | None = None) -> list[dict]:
     files = pictures(folder, only, limit)
     if not files:
-        raise StoreError(f"no pictures (jpg, png, webp) in {folder}")
+        raise StoreError(f"no pictures (jpg, png, webp) or videos (mp4, mov, webm) in {folder}")
     taken: set[str] = set()
     plan = [{"local": str(p.relative_to(folder)), "path": p, "file": store_name(p, taken)} for p in files]
     log = ActionLog((log_dir or folder) / "action-log.jsonl", client_id=store.store, automation="store-files")
     for item in plan:  # already in the store? (a re-run, or an old store that has the pictures)
         nodes = store.run(EXISTING, {"q": f"filename:{item['file']}"}).get("files", {}).get("nodes", [])
-        item["status"] = "already there" if any(_url_name((n.get("image") or {}).get("url", "")).lower() == item["file"].lower() for n in nodes) else "to upload"
+        item["status"] = "already there" if any(_node_name(n).lower() == item["file"].lower() for n in nodes) else "to upload"
     todo = [i for i in plan if i["status"] == "to upload"]
     if dry_run or not todo:
         for i in todo:
             i["status"] = "would upload"
         return plan
     staged = store.run(STAGE, {"input": [{"filename": i["file"], "mimeType": mimetypes.guess_type(i["file"])[0] or "image/jpeg",
-                                           "httpMethod": "POST", "resource": "IMAGE", "fileSize": str(i["path"].stat().st_size)}
+                                           "httpMethod": "POST", "resource": _kind(i["file"]), "fileSize": str(i["path"].stat().st_size)}
                                           for i in todo]})["stagedUploadsCreate"]
     if staged.get("userErrors"):
         raise StoreError(f"the store refused the upload: {staged['userErrors']}")
@@ -154,28 +169,29 @@ def upload(store: Store, folder: Path, approved_by: str, only: list[str] | None 
             i["status"] = f"failed: {exc}"[:200]
     sent = [i for i in todo if i.get("resource")]
     if sent:
-        made = store.run(CREATE, {"files": [{"originalSource": i["resource"], "contentType": "IMAGE",
+        made = store.run(CREATE, {"files": [{"originalSource": i["resource"], "contentType": _kind(i["file"]),
                                              "alt": re.sub(r"[-_]+", " ", Path(i["file"]).stem)[:120]} for i in sent]})["fileCreate"]
         if made.get("userErrors"):
             raise StoreError(f"the store refused the files: {made['userErrors']}")
         for i, f in zip(sent, made["files"]):
             i["id"] = f["id"]
         waiting = {i["id"]: i for i in sent}
-        for _ in range(15):  # the store makes each picture ready within seconds
+        rounds = 90 if any(_kind(i["file"]) == "VIDEO" for i in sent) else 15
+        for _ in range(rounds):  # the store makes each picture ready within seconds, a video within a few minutes
             for node in store.run(STATUS, {"ids": list(waiting)}).get("nodes", []):
                 if node and node.get("fileStatus") in ("READY", "FAILED"):
                     item = waiting.pop(node["id"])
                     item["status"] = "uploaded" if node["fileStatus"] == "READY" else "failed: the store could not process it"
-                    if node["fileStatus"] == "READY" and (node.get("image") or {}).get("url"):
-                        item["file"] = _url_name(node["image"]["url"]) or item["file"]
+                    if node["fileStatus"] == "READY" and _node_name(node):
+                        item["file"] = _node_name(node)
             if not waiting:
                 break
             sleep(2)
         for i in waiting.values():
-            i["status"] = "failed: still processing after 30 s (run again: it is skipped once ready)"
+            i["status"] = f"failed: still processing after {rounds * 2} s (run again: it is skipped once ready)"
     for i in todo:
         ok = i["status"] == "uploaded"
-        log.record(tier=2, mode="approve", target=f"{store.store} Files: {i['file']}", action="upload a picture to the store's Files",
+        log.record(tier=2, mode="approve", target=f"{store.store} Files: {i['file']}", action=f"upload a {'video' if _kind(i['file']) == 'VIDEO' else 'picture'} to the store's Files",
                    reason="brand intake pictures for a DTJ page (Telegram: upload the brand's pictures)", result="success" if ok else "failed",
                    approved_by=approved_by, after={"file": i["file"]} if ok else None, error=None if ok else i["status"][:300])
         out(f"  {i['file']}: {i['status']}")
