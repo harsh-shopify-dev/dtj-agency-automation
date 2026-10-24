@@ -75,7 +75,12 @@ def strip_tick(tick: str, r: dict, dark: bool, band: bool, accent_band: bool, ba
     words = r["on_dark"] if dark else r["on_accent"] if accent_band else r["on_band"]
     if style.contrast(tick, words) >= 1.5:
         return tick
-    for colour in (r["accent"], r["band"], r["dark"], r["tint_card"], "#FFFFFF"):
+    # the accent fill too: on a playful page the "accent" can be the brand colour itself and the second colour lives in the fill
+    # (NoCheat: accent maroon = the strip, accent fill yellow)
+    for colour in (r["accent"], r["accent_fill"], r.get("accent_on_band"), r.get("accent_on_dark"), r["band"], r["dark"],
+                   r["tint_card"], "#FFFFFF"):
+        if not colour:
+            continue
         if style.contrast(colour, bg) >= 3 and style.contrast(colour, words) >= 1.5:
             return colour
     return tick

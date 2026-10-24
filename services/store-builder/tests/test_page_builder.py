@@ -760,7 +760,11 @@ class StandardPageTests(unittest.TestCase):
         faq = by_kind["faq"]
         self.assertEqual((faq["item_bg"], faq["q_color"], faq["a_color"], faq["toggle_color"]),
                          (d.roles["dark"], d.roles["on_dark"], d.roles["on_dark"], d.roles["accent_on_dark"]))
-        self.assertEqual(by_kind["trust_marquee"]["accent_color"], d.roles["tint_card"])  # white ticks on the brand band
+        # the strip's ticks stand apart from its words and show on the band (white ticks, unless the words are white too:
+        # design check H03, 24 Oct 2026)
+        tick = by_kind["trust_marquee"]["accent_color"]
+        self.assertGreaterEqual(style_contrast(tick, by_kind["trust_marquee"].get("text_color") or d.roles["on_band"]), 1.5)
+        self.assertGreaterEqual(style_contrast(tick, d.roles["band"]), 3)
         self.assertEqual(by_kind["benefit_strip_2"]["accent_color"], d.roles["on_accent"])  # the accent band keeps its own checked colour
         calm = {s.kind: s.settings for s in self.build().model.sections}
         self.assertNotIn("item_bg", calm["faq"])  # calm pages keep their soft look
