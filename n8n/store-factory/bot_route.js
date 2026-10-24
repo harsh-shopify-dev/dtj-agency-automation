@@ -45,9 +45,11 @@ try {
   const last = marks[marks.length - 1];
   if (last && last.choice === 'open') openQ = last;
 } catch (e) { openQ = null; }  // the step is not there (an older bot): only a reply counts
-if (openQ && (msg.kind === 'link' || msg.kind === 'nolink') && String(msg.text || '').trim()) {
+// a page chat (page_chat.py marks it open): a plain message goes to the page's Claude session; a product link still starts a page
+const pageChat = Boolean(openQ) && /^page-[0-9]{1,9}$/.test(String(openQ.job));
+if (openQ && (msg.kind === 'nolink' || (msg.kind === 'link' && !pageChat)) && String(msg.text || '').trim()) {
   return [{ json: { action: 'answer', chat_id: msg.chat_id, job: openQ.job, key: openQ.key, choice: '',
-    value: String(msg.text).trim().slice(0, 500), by: myName, at: new Date().toISOString() } }];
+    value: String(msg.text).trim().slice(0, pageChat ? 1500 : 500), by: myName, at: new Date().toISOString() } }];
 }
 if (msg.kind === 'answer') {
   const value = String(msg.arg || '').trim();

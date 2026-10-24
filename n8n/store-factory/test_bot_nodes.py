@@ -796,6 +796,13 @@ class PlainAnswers(unittest.TestCase):
         self.assertEqual(self.route(update("/commands", user=333), [self.OPEN])["action"], "reply")  # a command stays a command
         self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [])["action"], "store")
 
+    def test_an_open_page_chat_takes_plain_text_but_a_link_still_starts_its_own_work(self):
+        # 24 Oct 2026: Harsh wrote a new message, not a reply, after the page message, and the bot asked him for a product link
+        page = {**self.OPEN, "job": "page-12", "key": "chat"}
+        out = self.route(update("We have to create a full website for senso in the dtj testing theme", user=333), [page])
+        self.assertEqual({k: out[k] for k in ("action", "job", "key")}, {"action": "answer", "job": "page-12", "key": "chat"})
+        self.assertNotEqual(self.route(update("https://sensofoods.com/", user=333), [page])["action"], "answer")
+
 
 class WholeStoreDeploy(unittest.TestCase):
     def test_the_open_question_check_sits_before_who_is_it(self):

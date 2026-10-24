@@ -32,13 +32,28 @@ def _post(url: str, data: dict):
     return post(url, data)
 
 
-def send(chat: str, brief: str, say: str, token: str | None = None, post=_post) -> bool:
+def _mark(chat: str, brief: str) -> None:
+    """The open mark the bot reads (as for a store job's typed question): a plain message in this chat, not only a reply, then goes to
+    this page (24 Oct 2026: Harsh wrote a new message instead of a reply and the bot asked him for a product link)."""
+    from datetime import datetime, timezone  # noqa: PLC0415
+    import store_job  # noqa: PLC0415
+    store_job._add_row({"job": f"page-{brief}", "key": "chat", "value": "", "choice": "open", "by": "", "chat_id": str(chat),
+                        "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")})
+
+
+def send(chat: str, brief: str, say: str, token: str | None = None, post=_post, mark=_mark) -> bool:
     token = token if token is not None else os.environ.get("DTJ_TELEGRAM_BOT_TOKEN", "")
     if not (token and re.fullmatch(r"-?\d{3,20}", str(chat or "")) and re.fullmatch(r"\d{1,9}", str(brief or ""))):
         return False
     status, _answer = post(f"https://api.telegram.org/bot{token}/sendMessage",
                            {"chat_id": str(chat), "text": text_for(str(brief), say), "disable_web_page_preview": False})
-    return status == 200
+    if status != 200:
+        return False
+    try:
+        mark(str(chat), str(brief))
+    except Exception:  # noqa: BLE001 - without the mark only a reply to the message reaches the page, as before
+        pass
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:

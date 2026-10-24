@@ -12,20 +12,22 @@ READ = re.compile(r"\(job ([a-z0-9][a-z0-9-]{1,23}), answer ([a-z0-9_]{1,20})\)\
 
 class Send(unittest.TestCase):
     def test_the_message_ends_with_the_reply_line_the_bot_reads(self):
-        sent = []
+        sent, marks = [], []
         ok = page_chat.send("7051933055", "12", "Hero now leads with protein.\nPreview: https://x", token="t",
-                            post=lambda url, data: sent.append((url, data)) or (200, {}))
+                            post=lambda url, data: sent.append((url, data)) or (200, {}), mark=lambda c, b: marks.append((c, b)))
         self.assertTrue(ok)
         url, data = sent[0]
         self.assertTrue(url.endswith("/bott/sendMessage"))
         self.assertEqual(READ.search(data["text"]).groups(), ("page-12", "chat"))
         self.assertTrue(data["text"].startswith("Hero now leads with protein."))
+        self.assertEqual(marks, [("7051933055", "12")])  # the chat is marked open: a plain message then reaches this page too
 
     def test_nothing_is_sent_without_a_token_or_with_a_wrong_chat_or_brief(self):
         post = lambda url, data: (_ for _ in ()).throw(AssertionError("sent"))  # noqa: E731
-        self.assertFalse(page_chat.send("7051933055", "12", "x", token="", post=post))
-        self.assertFalse(page_chat.send("not-a-chat", "12", "x", token="t", post=post))
-        self.assertFalse(page_chat.send("7051933055", "12; rm", "x", token="t", post=post))
+        mark = lambda c, b: (_ for _ in ()).throw(AssertionError("marked"))  # noqa: E731
+        self.assertFalse(page_chat.send("7051933055", "12", "x", token="", post=post, mark=mark))
+        self.assertFalse(page_chat.send("not-a-chat", "12", "x", token="t", post=post, mark=mark))
+        self.assertFalse(page_chat.send("7051933055", "12; rm", "x", token="t", post=post, mark=mark))
 
 
 if __name__ == "__main__":
