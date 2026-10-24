@@ -42,6 +42,8 @@
       "Bash(python -m provision.niche_assets:*)",
       "Bash(python -m provision.drive_assets:*)",
       "Bash(python -m provision.ai_images:*)",
+      "Bash(python -m provision.gallery_photos:*)",
+      "Bash(python -m provision.gallery_compose:*)",
       "Bash(python -m provision.brand_copy plan:*)",
       "Bash(python services/install-catcher/tools/add_shop.py:*)",
       "Bash(python services/install-catcher/tools/add_client.py:*)",

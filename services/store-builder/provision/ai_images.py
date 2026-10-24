@@ -34,6 +34,7 @@ such as whats the prodcuct, why this products, features, benefits, lifestyle lik
 Usage (from services/store-builder):
     python -m provision.ai_images --kind banner --prompt "Morning kitchen counter, warm light, fresh herbs" --out <dir>/banner-1.webp
     ... --kind product | lifestyle | section    sizes in KINDS
+    ... --transparent                   a cut-out on a see-through background (always .png; the result is checked)
     ... --kind gallery --facts <client>/facts.json --word "High Protein Peri Spread" --word "26g protein per 100g"
     ... --ref <photo of our product>    (repeatable, up to 4)
     ... --backend codex|vps|api|chatgpt|auto  (default auto)
@@ -111,6 +112,11 @@ SUFFIX = {
 WORDS_LINE = (" Print exactly these words, spelled exactly as written, and no other words: {quoted}. The first is the headline, the"
               " biggest; the others are smaller. A bold, clean, highly legible font that suits the brand.")
 WORDS_END = " No other words, letters, numbers, logos or watermarks anywhere on the picture: only these lines{label}."
+# a cut-out (Harsh, 24 Oct 2026: "you can also tell chatgpt to generate an image without background"); Codex on the VPS returned a
+# real alpha PNG for it on the first try (44% of the pixels see-through), so no background remover is needed
+CUTOUT = (" A clean cut-out of the subject on a TRANSPARENT background: a PNG with an alpha channel, nothing behind the subject,"
+          " no backdrop, no floor, no shadow. The subject sharp and whole, true colours, real texture, no CGI or AI-glossy look.")
+MIN_CLEAR = 0.05  # less than 5% see-through = the background came back solid
 
 # (why, pattern), case-insensitive. Sizes in a description ("a 250 ml bottle") are allowed: they describe, they do not claim.
 GUARD = [
@@ -232,7 +238,8 @@ def _objects(node):
             yield from _objects(value)
 
 
-def guard(prompt: str, kind: str, forbid: tuple[str, ...] | list[str] = (), refs: bool = False, words: list[str] | tuple = ()) -> str:
+def guard(prompt: str, kind: str, forbid: tuple[str, ...] | list[str] = (), refs: bool = False, words: list[str] | tuple = (),
+          transparent: bool = False) -> str:
     """The prompt with the no-text suffix and the kind's own suffix, or ValueError with every reason it is refused. With reference
     photos of our product (refs=True) the product keeps its own label and nothing else carries words. A prompt that points at the
     reference ("the product in the reference photo", "this exact bottle") is fine. `words` (gallery only, already checked against
@@ -255,11 +262,25 @@ def guard(prompt: str, kind: str, forbid: tuple[str, ...] | list[str] = (), refs
                 if _norm(q) not in known]
     if why:
         raise ValueError("refused: " + "; ".join(why))
+    suffix = CUTOUT if transparent else SUFFIX[kind]  # a cut-out has no backdrop, so the kind's backdrop words would fight it
     if words:
         quoted = ", ".join(f'"{w}"' for w in words)
         end = WORDS_END.format(label=" and the product's own label" if refs else "")
-        return text.rstrip(".") + "." + SUFFIX[kind] + (REF_LINE if refs else "") + WORDS_LINE.format(quoted=quoted) + end
-    return text.rstrip(".") + "." + SUFFIX[kind] + (REF_LINE + NO_TEXT_REF if refs else NO_TEXT)
+        return text.rstrip(".") + "." + suffix + (REF_LINE if refs else "") + WORDS_LINE.format(quoted=quoted) + end
+    return text.rstrip(".") + "." + suffix + (REF_LINE + NO_TEXT_REF if refs else NO_TEXT)
+
+
+def clear_share(path: Path) -> float | None:
+    """The part of a picture that is fully see-through (0.0 for a picture without an alpha channel); None when Pillow cannot read it."""
+    try:
+        from PIL import Image  # noqa: PLC0415 - only a transparent picture needs it
+        with Image.open(path) as im:
+            if "A" not in im.getbands():
+                return 0.0
+            alpha = im.getchannel("A")
+            return alpha.histogram()[0] / (im.width * im.height)
+    except Exception:  # noqa: BLE001 - not installed or not a picture Pillow knows: the check is skipped, not failed
+        return None
 
 
 # ------------------------------------------------------------------------------------------------ which way the pictures are made
@@ -510,11 +531,12 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
          cdp_ok: Callable[[str], bool] | None = None, sleep=time.sleep, model: str = MODELS[0], quality: str = "medium",
          forbid: tuple[str, ...] | list[str] = (), refs: list[Path | str] | tuple = (), runner: Runner | None = None,
          vps_ok: Callable[[str], bool] | None = None, codex_ok: Callable[[], bool] | None = None,
-         words: list[str] | tuple = (), facts: dict | str | Path | None = None) -> dict:
+         words: list[str] | tuple = (), facts: dict | str | Path | None = None, transparent: bool = False) -> dict:
     """Make one picture at `out` (.webp or .png; another extension becomes .webp) and its sidecar <stem>.json; returns the sidecar.
     `refs`: up to 4 photos of OUR product (jpg, png, webp) the picture must show as they are. ValueError when the prompt is
     refused, ImagesError when no picture could be made. `words` + `facts` (gallery only): the lines it prints, each checked against
-    facts.json (a dict or its path) by check_words."""
+    facts.json (a dict or its path) by check_words. `transparent`: a cut-out on a see-through background (always a .png), checked
+    after it is made (ImagesError when the background came back solid)."""
     refs = [Path(r).resolve() for r in refs]  # absolute: Codex runs in its own folder, where a relative path finds nothing
     if len(refs) > MAX_REFS:
         raise ImagesError(f"{len(refs)} reference photos: at most {MAX_REFS}")
@@ -524,10 +546,10 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
     if isinstance(facts, (str, Path)):
         facts = json.loads(Path(facts).read_text(encoding="utf-8"))
     printed = check_words(words, facts)
-    text = guard(prompt, kind, forbid, refs=bool(refs), words=[w["text"] for w in printed])
+    text = guard(prompt, kind, forbid, refs=bool(refs), words=[w["text"] for w in printed], transparent=transparent)
     out = Path(out).resolve()
-    if out.suffix.lower() not in (".webp", ".png"):
-        out = out.with_suffix(".webp")
+    if out.suffix.lower() not in (".webp", ".png") or (transparent and out.suffix.lower() != ".png"):
+        out = out.with_suffix(".png" if transparent else ".webp")
     out.parent.mkdir(parents=True, exist_ok=True)
     if backend == "auto":
         backend, why = route(environ, read_var, cdp_ok, vps_ok, codex_ok)
@@ -555,6 +577,8 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
         if refs:  # our product's photos: the edits call (multipart image[]); "background" is left to the model there
             body.pop("background")
             body["image"] = [str(r) for r in refs]
+        if transparent:
+            body["background"] = "transparent"
         answer = _call_api(body, key, post or _post, sleep)
         try:
             out.write_bytes(base64.b64decode(answer["data"][0]["b64_json"]))
@@ -582,6 +606,11 @@ def make(kind: str, prompt: str, out: Path | str, *, backend: str = "auto", post
     out = _fix_suffix(out)
     side = {"path": str(out), "kind": kind, "prompt": text, "backend": backend, "model": made_with, "size": size,
             "made_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "sample": True, "note": NOTE}
+    if transparent:
+        share = clear_share(out)
+        if share is not None and share < MIN_CLEAR:
+            raise ImagesError(f"asked for a transparent background, but {share:.0%} of the picture is see-through: make it again")
+        side["transparent"] = share  # the part of the picture that is fully see-through (None: Pillow could not read it)
     if refs:
         side["refs"] = [str(r) for r in refs]
     if printed:
@@ -605,12 +634,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--word", action="append", default=[], help="gallery only: a line the picture prints, from facts.json (repeatable; "
                     "the first is the headline)")
     ap.add_argument("--facts", help="gallery with --word: the page's facts.json; every printed line must stand on a real fact in it")
+    ap.add_argument("--transparent", action="store_true", help="a cut-out on a see-through background (a .png, checked after)")
     ap.add_argument("--dry-run", action="store_true", help="the guarded prompt and the route only: nothing is made")
     a = ap.parse_args(argv)
     try:
         facts = json.loads(Path(a.facts).read_text(encoding="utf-8")) if a.facts else None
         printed = check_words(a.word, facts)
-        text = guard(a.prompt, a.kind, a.forbid, refs=bool(a.ref), words=[w["text"] for w in printed])
+        text = guard(a.prompt, a.kind, a.forbid, refs=bool(a.ref), words=[w["text"] for w in printed], transparent=a.transparent)
     except (OSError, ValueError) as exc:
         print(f"REFUSED, nothing made: {str(exc).removeprefix('refused: ')}")
         return 2
@@ -621,7 +651,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     try:
         side = make(a.kind, a.prompt, a.out, backend=a.backend, model=a.model, quality=a.quality, forbid=a.forbid, refs=a.ref,
-                    words=a.word, facts=facts)
+                    words=a.word, facts=facts, transparent=a.transparent)
     except ImagesError as exc:
         print(f"could not make the picture: {exc}")
         return 1
