@@ -348,6 +348,17 @@ class PushRefusalTests(unittest.TestCase):
             access.push_product_template("1", tt.Path("."), "templates/product.x.json")
         self.assertIn("overlay_opacity", str(caught.exception))
 
+    def test_a_pull_folder_looks_like_a_theme_so_the_cli_runs_without_a_person(self):
+        import subprocess
+        import tempfile
+        seen = []
+        access = tt.ThemeAccess("x.myshopify.com", None, runner=lambda cmd, env: seen.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""),
+                                login=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            access.pull("1", ["templates/product.json"], tt.Path(tmp) / "pull")
+            self.assertEqual(sorted(p.name for p in (tt.Path(tmp) / "pull").iterdir()), ["config", "layout", "sections", "templates"])
+        self.assertNotIn("--force", seen[0])
+
     def test_a_failed_pull_says_the_cli_error_not_its_boxes(self):
         import subprocess
         import tempfile

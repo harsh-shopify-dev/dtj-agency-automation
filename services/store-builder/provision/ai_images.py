@@ -70,7 +70,8 @@ API_URL = "https://api.openai.com/v1/images/generations"
 # generations call above already uses)
 EDITS_URL = "https://api.openai.com/v1/images/edits"
 MODELS = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")  # fast, most precise
-KINDS = {"banner": "1536x864", "product": "1024x1024", "lifestyle": "1536x1024", "gallery": "1024x1024", "section": "1024x1024"}
+KINDS = {"banner": "1536x864", "product": "1024x1024", "lifestyle": "1536x1024", "gallery": "1024x1024", "section": "1024x1024",
+         "studio": "1024x1024"}
 MAX_WORDS, MAX_WORD_CHARS = 7, 60  # a gallery picture: a headline and a few short lines, readable on a phone
 KEY_NAMES = ("OPENAI_API_KEY", "DTJ_OPENAI_API_KEY")
 CDP_DEFAULT = "http://127.0.0.1:9222"
@@ -100,6 +101,12 @@ SUFFIX = {
                " realistic and appetising, never plastic or AI-glossy.",
     "section": " One square picture for a section of the product page: it shows exactly what that section says, realistic and"
                " appetising, the product or its use in action, warm natural light, never plastic or AI-glossy.",
+    # the gallery's photos (Harsh, 24 Oct 2026: the busy first set was "AI SLOP"; MojoVibe's standard): words come later, by code
+    "studio": " Editorial studio photography for a premium D2C brand's product gallery: ONE subject only, a perfectly plain seamless"
+              " paper backdrop in one flat colour, one hard key light from the top-left with a soft rim light and one crisp clean"
+              " shadow. Nothing else in the frame: no flying ingredients, no floating pieces, no crumbs, no splashes, no props, no"
+              " table edge, no garnish. A real camera photo (100mm macro lens, f/8), true colours, natural texture, sharp detail,"
+              " no CGI, no AI-glossy or plastic look.",
 }
 WORDS_LINE = (" Print exactly these words, spelled exactly as written, and no other words: {quoted}. The first is the headline, the"
               " biggest; the others are smaller. A bold, clean, highly legible font that suits the brand.")

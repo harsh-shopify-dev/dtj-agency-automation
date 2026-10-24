@@ -39,6 +39,18 @@ _HINT = re.compile(r"<claude-code-hint[^>]*/>")
 _NOT_A_THEME_FOLDER = re.compile(r"warning It doesn't seem like you're running this command in a theme directory\.\s*")
 
 
+THEME_FOLDERS = ("config", "layout", "sections", "templates")
+
+
+def as_theme_folder(path: Path) -> Path:
+    """The four folders the Shopify CLI looks for (24 Oct 2026, CLI 4.9.4 on the VPS: without a person to answer, a pull into a new
+    folder stops with "must run from a theme directory"; it has no --force). Empty folders: with --only and --nodelete nothing more
+    is read or written."""
+    for name in THEME_FOLDERS:
+        (path / name).mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def _plain(out: str) -> str:
     """The CLI's words without its box drawing, its hint tag or the "not a theme directory" warning a pull into a new folder
     always gets (23 Oct 2026, brief 12: the 600 characters of a failed pull held only those, never the error itself)."""
@@ -196,8 +208,8 @@ class ThemeAccess:
                 "from_live_name": live[0].get("name")}
 
     def pull(self, theme_id: str, files: Sequence[str], dest: Path) -> Path:
-        dest.mkdir(parents=True, exist_ok=True)
-        cmd = ["shopify", "theme", "pull", "--store", self.store, "--theme", str(theme_id), "--path", str(dest), "--nodelete"]
+        as_theme_folder(dest)
+        cmd =["shopify", "theme", "pull", "--store", self.store, "--theme", str(theme_id), "--path", str(dest), "--nodelete"]
         for f in files:
             cmd += ["--only", f]
         self._cli(cmd)
@@ -208,6 +220,7 @@ class ThemeAccess:
         if not PAGE_FILES.fullmatch(file):
             raise ThemeError(f"{file!r} is not a file the page builder writes (a product or collection template, templates/index.json, "
                              "or the header / footer group)")
+        as_theme_folder(staging)
         cmd = push_files_cmd(self.store, str(staging), str(theme_id), [file]) + ["--json"]
         assert "--allow-live" not in cmd and "--publish" not in cmd and "--live" not in cmd
         return parse_pushed_theme(self._cli(cmd))
