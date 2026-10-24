@@ -748,6 +748,15 @@ class StandardPageTests(unittest.TestCase):
         icons = by_kind["why_features"]
         self.assertEqual((icons["icon_bg"], icons["icon_color"]), (d.roles["tint_card"], d.roles["on_card"]))  # white badges on the band
 
+    def test_the_badge_icon_shows_on_its_badge(self):
+        # 24 Oct 2026, NoCheat: the icon was the maroon of the maroon badge ("NO ICON IN THE HIGH PROTEIN")
+        for vibe in ("electric", "playful", None):
+            r = self.build(vibe=vibe) if vibe else self.build()
+            blocks = r.template["sections"]["main"]["blocks"]["product-details"]["blocks"]
+            proof = next((b["settings"] for k, b in blocks.items() if "social_proof" in k), {})
+            if "badge_icon_color" in proof:
+                self.assertGreaterEqual(style_contrast(proof["badge_icon_color"], proof["badge_bg"]), 3, vibe)
+
     def test_the_theme_buy_buttons_take_the_page_palette(self):
         # Harsh, 24 Oct 2026: "add to cart keep the yellow and buy it now red (the same color palette applied to the page)"
         r = self.build(vibe="electric")
