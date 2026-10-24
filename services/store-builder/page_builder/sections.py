@@ -4,6 +4,7 @@ Nothing here writes marketing copy: text comes from facts (verbatim, with its so
 from __future__ import annotations
 
 import html
+import re
 from dataclasses import dataclass, field
 
 from .catalog import IMAGE_PREFIX, VIDEO_PREFIX, Catalog
@@ -129,6 +130,8 @@ class Ctx:
 TICKS = 4  # every tick-mark list on a page has exactly this many points (rule L13)
 AVATARS = 5  # the rating line shows exactly this many round photos, or none (rule L14; Harsh, 9 Oct 2026)
 
+
+SHIELD_WORDS = re.compile(r"\b(tested|guarantee[ds]?|warranty|returns?|refunds?|safe|secure|trusted|licensed|certified|verified|genuine|authentic)\b", re.I)
 
 def _slots(n_max, items):
     return list(enumerate(items[:n_max], 1))
@@ -498,6 +501,9 @@ def buybox_blocks(ctx: Ctx) -> dict:
             ctx.put(s, "rating_value", f["rating"]["value"], "fact", f["rating"]["source"])
         if sp.get("badge"):
             ctx.put(s, "badge_text", sp["badge"]["text"], "fact", sp["badge"]["source"])
+            # the block's only icon is a shield: it fits a promise ("Lab tested", "7-day returns"), not a label like "High protein"
+            # (Harsh, 24 Oct 2026: "the shield is totally unrelated with the badge saying high protein")
+            s.settings["badge_icon"] = bool(SHIELD_WORDS.search(sp["badge"]["text"]))
         for i, line in _slots(2, sp.get("lines", [])):
             ctx.put(s, f"proof_text_{i}", line["text"], "fact", line["source"])
         n = 0
