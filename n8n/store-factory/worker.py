@@ -94,6 +94,9 @@ Do it now, on this page only, the way you built it (CLAUDE.md and the factory's 
 - Anything beyond this page's draft (the product itself or its gallery, the store's settings or menus, the live theme, publishing,
   an app release) needs {name}'s clear yes in Telegram, by name: when this message is not that yes, ask with page_chat.py and stop.
 - A question you need answered: ask with page_chat.py and end your turn; the answer comes back as the next message.
+- A message about something else (another product, a whole store, a question): change nothing; answer it with page_chat.py in plain
+  words: what you can do from here, and what starts it (a product link sent to the bot starts a page; a store's link starts a whole
+  store, with its questions here).
 """
 WATCHED = "{name} tapped Start in Telegram and is watching the job there (its questions, Approve taps and progress bar)."
 ALONE = "Nobody is watching: every yes still comes only through the job's Approve taps in Telegram."
