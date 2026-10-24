@@ -23,3 +23,11 @@ Captions at the top on the pack shots (s3-s6, s8). Watched at 1.25 fps: lines in
 Fixed on the way: Whisper echoes its prompt on Gujarati/silence (shots with no line now have no speech); a person's trim is
 never moved by beat-sync; caption font fallback for Indian scripts; language gu.
 Time: ~2 h 10 m of work (log in the session); ~45 min avoidable (Flow sign-out, checking all 16 takes, the edit bug).
+
+## Playbook check (23 Oct 2026) - proposed presenter lines, NOT yet remade
+The script checks (slop.py) flag shots 1, 3, 8 as an AI person speaking as a customer (CCPA 2022 endorsements; ASCI AI-content
+guidelines from about 29 Dec 2026). Proposed replacements (presenter, not customer), each 8 s:
+- s1: "શાકમાં ના રંગ આવે, ના સુગંધ? તો વાંક મસાલાનો છે." (No colour, no aroma in the sabzi? Then the masala is to blame.)
+- s3: "આ છે મહાલક્ષ્મી મસાલા, ૧૯૬૦ થી ગુજરાતના રસોડામાં વપરાય છે." (These are Mahalaxmi masalas, used in Gujarati kitchens since 1960.)
+- s8: "રંગ અને સુગંધ બંને જોઈએ? તો એક વાર મહાલક્ષ્મી ટ્રાય કરો!" (Want both colour and aroma? Try Mahalaxmi once!)
+Also add the on-screen label "Video created using AI". Remaking s1, s3, s8 costs about 72 Flow credits; waiting on Harsh.
