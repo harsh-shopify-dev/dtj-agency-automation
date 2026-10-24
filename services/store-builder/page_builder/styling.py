@@ -66,6 +66,21 @@ def apply_home_type(sec: Section, cat: Catalog) -> None:
         put("heading_size", step[1])
 
 
+def strip_tick(tick: str, r: dict, dark: bool, band: bool, accent_band: bool, band_bg: str) -> str:
+    """The moving strip's tick colour: kept unless it matches the strip's words on a coloured strip; then the first of the brand's
+    colours that shows on the strip (3:1) and differs from the words (1.5:1, the design check's "same colour" line)."""
+    if not (dark or band or accent_band):
+        return tick
+    bg = r["dark"] if dark else r["accent_fill"] if accent_band else band_bg
+    words = r["on_dark"] if dark else r["on_accent"] if accent_band else r["on_band"]
+    if style.contrast(tick, words) >= 1.5:
+        return tick
+    for colour in (r["accent"], r["band"], r["dark"], r["tint_card"], "#FFFFFF"):
+        if style.contrast(colour, bg) >= 3 and style.contrast(colour, words) >= 1.5:
+            return colour
+    return tick
+
+
 def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = False) -> None:
     r, s = d.roles, sec.settings
 
@@ -114,14 +129,11 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
 
     b = sec.block
     if b == "marquee":
-        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning. When the
-        # words on the band are white too, white ticks blend in (24 Oct 2026, NoCheat's maroon band: design check H03): then the
-        # accent, as long as it shows on the band.
+        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning. On any
+        # coloured strip whose ticks would match its words (24 Oct 2026, NoCheat: white on white over maroon, ink on ink over yellow;
+        # design check H03) the first brand colour that shows on the strip (3:1) and differs from the words (1.5:1) is used.
         tick = r["tint_card"] if band and bold else acc
-        words = r["on_band"] if band else head
-        if band and bold and style.contrast(tick, words) < 1.5 and style.contrast(r["accent"], band_bg) >= 3:
-            tick = r["accent"]
-        put("accent_color", tick)
+        put("accent_color", strip_tick(tick, r, dark, band, accent_band, band_bg))
         put("text_size", MARQUEE["text"])
         put("icon_size", MARQUEE["icon"])
         put("gap", MARQUEE["gap"])
