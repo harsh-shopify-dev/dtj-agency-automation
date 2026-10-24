@@ -114,8 +114,14 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
 
     b = sec.block
     if b == "marquee":
-        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning
-        put("accent_color", r["tint_card"] if band and bold else acc)
+        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning. When the
+        # words on the band are white too, white ticks blend in (24 Oct 2026, NoCheat's maroon band: design check H03): then the
+        # accent, as long as it shows on the band.
+        tick = r["tint_card"] if band and bold else acc
+        words = r["on_band"] if band else head
+        if band and bold and style.contrast(tick, words) < 1.5 and style.contrast(r["accent"], band_bg) >= 3:
+            tick = r["accent"]
+        put("accent_color", tick)
         put("text_size", MARQUEE["text"])
         put("icon_size", MARQUEE["icon"])
         put("gap", MARQUEE["gap"])
