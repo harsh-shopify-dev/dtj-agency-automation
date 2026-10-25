@@ -49,6 +49,10 @@ approved_by "Harsh (chat, 26 Oct 2026)". The live theme (test-data) and the pass
   (ship_draft: review pass, lint 0, design checks pass, 0 samples, 0 test pictures; galleries first on the products, tiny 80x80 icons
   detached from the turmeric product, files kept), theme settings (Playfair Display headings, Poppins body, Senso logo, round buttons;
   backup ~/work/settings_data.backup-20261026.json on the VPS).
+- **Phone banners (Harsh: "generate banner images separately for mobile version"):** a tall 1024 x 1536 picture per hero slide
+  (senso-h-hero-phone, senso-h-pour-phone, senso-h-office-phone: product high, lower half empty for the words the slideshow lays
+  on phones), new picture kind `banner_mobile` (PR #89) and a rule in the dtj-home-page skill; only the hero was rewritten
+  (`ship_home --sections hero`), the other 6 sections read back unchanged.
 - **Pages and menus:** About us and FAQ made (Contact kept as it was); main menu: Shop all, Masala chai, Chai lattes, Golden milk,
   Coffee, Vending machines, About us, Contact; footer: About us, Contact, FAQ, Search, Your Privacy Choices.
 - **Facts rules kept:** no reviews, ratings or customer photos (none are real); no guarantee or shipping terms (Senso states none);
