@@ -49,3 +49,29 @@ waits for a person, the worker checks for the answer itself and wakes Claude whe
   links hidden.
 - `python n8n/store-factory/worker.py --retry <run>` takes a failed request again. It also lifts a stop after 3 failures.
 - To update: `git -C ~/dtj-agency-automation pull`, then `systemctl --user restart dtj-worker`.
+
+## Reel machine (Harsh, 25 Oct 2026: reels are made on this VPS)
+**What it is.** A Chrome on a virtual screen (`:99`) with its own profile (`~/dtj/chrome-reel`). Claude drives it like a
+person (real clicks, through the Playwright MCP) over Chrome's DevTools port, which listens on `127.0.0.1:9222` only. A
+remote view of that screen (noVNC on `127.0.0.1:6080` only) lets a person sign in once and watch a run. Pictures come from
+Codex (above), so only Google Flow needs a sign-in. Three user services: `dtj-xvfb`, `dtj-reel-chrome`, `dtj-novnc`. All reel
+work runs in `dtj-reel.slice`: at most 1.5 of the 2 cores and lower priority (`Nice=10`), so n8n always keeps half a core.
+Start a reel job inside it: `systemd-run --user --slice=dtj-reel.slice --nice=10 -p OOMScoreAdjust=500 -- <command>`.
+
+**Set it up once.**
+1. As root: `bash /home/ai/dtj-agency-automation/tools/vps/setup_reel.sh --apt` (the virtual screen, the remote view,
+   Chrome, fonts, ffmpeg and the libraries the caption renderer's Chrome needs; `ai` has no sudo).
+2. As `ai`: `bash ~/dtj-agency-automation/tools/vps/setup_reel.sh` (the reel Python with CPU torch in `~/dtj/reel-venv`, the
+   caption renderer's `npm ci`, then it starts the three services). `--check` only reports. After `su - ai` the script sets
+   `XDG_RUNTIME_DIR` itself; for your own `systemctl --user` commands run `export XDG_RUNTIME_DIR=/run/user/$(id -u)` first.
+
+**Sign in to Google Flow (a person, once; nobody types a password for you).**
+1. On your laptop, open a tunnel and keep that window open: `ssh -L 6080:localhost:6080 root@srv2048145.hstgr.cloud`
+2. In your laptop's browser open http://localhost:6080/vnc.html?autoconnect=1&resize=scale. You see the reel Chrome.
+3. In that Chrome, open https://labs.google/fx/tools/flow and sign in with DTJ's Google account yourself (2-step code too).
+   Open a Flow project once to check it works, then close the browser tab on your laptop (not the reel Chrome) and the tunnel.
+The sign-in stays in `~/dtj/chrome-reel`. Port 6080 and 9222 are never opened to the internet: always use the tunnel.
+
+**Every day.** `bash tools/vps/setup_reel.sh --check` (all ok?). `curl -s http://127.0.0.1:9222/json/version` (Chrome answers).
+If someone closed the reel Chrome: `systemctl --user start dtj-reel-chrome`. Logs: `journalctl --user -u dtj-reel-chrome -n 50`.
+Flow logged out: repeat the sign-in above.

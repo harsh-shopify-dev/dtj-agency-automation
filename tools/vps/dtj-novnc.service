@@ -1,6 +1,9 @@
-# The remote view of screen :99, for a person's one-time sign-in and to watch a run: x11vnc shares the screen on a private
-# socket (no TCP port at all) and websockify serves noVNC on 127.0.0.1:6080 ONLY. Reach it from a laptop through an SSH
+# The remote view of screen :99, for a person's one-time sign-in and to watch a run: x11vnc shares the screen on
+# 127.0.0.1:5999 and websockify serves noVNC on 127.0.0.1:6080, both loopback ONLY. Reach it from a laptop through an SSH
 # tunnel (tools/vps/README.md, "Reel machine"); never bind it to a public address. If either half stops, both restart.
+# -no6 matters: Ubuntu's x11vnc also listens on [::]:5900 (public, no password) unless told not to; -unixsock with
+# -rfbport 0 does not stop that (seen 25 Oct 2026). A loopback-only [::1]:5900 stays, which is fine.
+# setup_reel.sh --check fails on any public 59xx/6080/9222 listener.
 # A systemd USER service of the user ai; tools/vps/setup_reel.sh copies it to ~/.config/systemd/user/ and starts it.
 [Unit]
 Description=DTJ reel remote view (noVNC on 127.0.0.1:6080)
@@ -12,7 +15,7 @@ Type=simple
 Slice=dtj-reel.slice
 Nice=10
 OOMScoreAdjust=500
-ExecStart=/bin/bash -c 'rm -f %t/dtj-vnc.sock; /usr/bin/x11vnc -display :99 -rfbport 0 -unixsock %t/dtj-vnc.sock -forever -shared -nopw -quiet & /usr/bin/websockify --web /usr/share/novnc 127.0.0.1:6080 --unix-target=%t/dtj-vnc.sock & wait -n; exit 1'
+ExecStart=/bin/bash -c '/usr/bin/x11vnc -display :99 -localhost -no6 -noipv6 -rfbport 5999 -forever -shared -nopw -quiet & /usr/bin/websockify --web /usr/share/novnc 127.0.0.1:6080 127.0.0.1:5999 & wait -n; exit 1'
 Restart=on-failure
 RestartSec=5
 

@@ -40,12 +40,14 @@ else echo "No NVIDIA GPU: CPU torch (Whisper and LaMa will be slow: minutes per 
 "$VENV/bin/pip" install -r "$HERE/requirements.txt"
 (cd "$HERE/captions-remotion" && npm ci)
 
-cat > "$HOME/dtj/reel-chrome.sh" <<'EOF'
+if [ $APT = 1 ]; then   # DTJ's VPS runs the reel Chrome as a service instead (tools/vps/dtj-reel-chrome.service)
+  cat > "$HOME/dtj/reel-chrome.sh" <<'EOF'
 #!/usr/bin/env bash
 # The reel Chrome: its own profile (Google + ChatGPT stay signed in), reachable by reel_factory on 127.0.0.1:9222 only.
 exec google-chrome --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 --user-data-dir="$HOME/dtj/chrome-reel" \
   --no-first-run --start-maximized https://flow.google.com/ https://chatgpt.com/ "$@"
 EOF
-chmod +x "$HOME/dtj/reel-chrome.sh"
+  chmod +x "$HOME/dtj/reel-chrome.sh"
+fi
 report
-echo "Next: run ~/dtj/reel-chrome.sh on the VPS desktop and sign in to Google (Flow) and ChatGPT once, by hand."
+if [ $APT = 1 ]; then echo "Next: run ~/dtj/reel-chrome.sh on the VPS desktop and sign in to Google (Flow) and ChatGPT once, by hand."; fi
