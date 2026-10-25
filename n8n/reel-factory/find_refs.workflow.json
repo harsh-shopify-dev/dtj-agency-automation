@@ -793,11 +793,11 @@
    },
    "onError": "continueRegularOutput",
    "webhookId": "d1afc420-201a-4777-9810-7acd5fb80f8b",
-   "disabled": true,
+   "disabled": false,
    "credentials": {
     "telegramApi": {
-     "id": "gM49WI7trRUFpcNv",
-     "name": "DTJ Page Bot"
+     "id": "mpRsTzq8PCAysP3P",
+     "name": "DTJ Reel Bot"
     }
    }
   },
@@ -846,11 +846,11 @@
    },
    "onError": "continueRegularOutput",
    "webhookId": "e176157a-08fd-4d2e-a37c-ac93d81722fa",
-   "disabled": true,
+   "disabled": false,
    "credentials": {
     "telegramApi": {
-     "id": "gM49WI7trRUFpcNv",
-     "name": "DTJ Page Bot"
+     "id": "mpRsTzq8PCAysP3P",
+     "name": "DTJ Reel Bot"
     }
    }
   },
