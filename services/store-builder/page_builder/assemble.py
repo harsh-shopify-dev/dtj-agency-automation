@@ -131,6 +131,20 @@ BUY_NOW = "button.shopify-payment-button__button.shopify-payment-button__button-
 STICKY_CART = "button.sticky-add-to-cart__button.add-to-cart-button"
 
 
+# Horizon's base.css greys every <summary> on hover in the theme's own text colour ("summary:hover"), which beats the FAQ block's
+# question colour: on dark question boxes the question vanished under the mouse (Harsh, 25 Oct 2026). The section's custom CSS puts
+# the block's own colour back (a fix inside the block itself waits for the next DTJ Sections release).
+FAQ_HOVER = ".dtj-faq__q:hover{color:var(--fq-q-color,inherit)}"
+
+
+def _keep_faq_colour_on_hover(template: dict) -> None:
+    for sec in template["sections"].values():
+        if any("dtj-faq" in str(b.get("type", "")) for b in (sec.get("blocks") or {}).values()):
+            css = sec.setdefault("custom_css", [])
+            if FAQ_HOVER not in css:
+                css.append(FAQ_HOVER)
+
+
 def _buy_button_colours(template: dict, d) -> None:
     """Horizon: Add to cart in the page's button colour (the block's own custom style), Buy it now in the brand colour."""
     c = styling.buy_button_colours(d.roles)
@@ -396,6 +410,7 @@ def build_pdp(brand: dict, facts: dict, *, logo_path: Path | None = None, catalo
     else:
         template = _horizon_template(built, flat, bb, cat, extras)
         _buy_button_colours(template, direction)
+        _keep_faq_colour_on_hover(template)
 
     model = PageModel(brand, facts, direction, cat, built, flat, roles, ctx.prov, template, ctx.demo, demo_pictures=demo_pictures, extras=extras,
                       people_photos=people_used)

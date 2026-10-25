@@ -763,6 +763,14 @@ class StandardPageTests(unittest.TestCase):
             if "badge_icon_color" in proof:
                 self.assertGreaterEqual(style_contrast(proof["badge_icon_color"], proof["badge_bg"]), 3, vibe)
 
+    def test_the_faq_question_keeps_its_colour_on_hover(self):
+        # Harsh, 25 Oct 2026: "on hover the text gets hidden": Horizon's summary:hover beat the block's question colour
+        r = self.build(vibe="electric")
+        faq = [s for s in r.template["sections"].values()
+               if any("dtj-faq" in str(b.get("type", "")) for b in (s.get("blocks") or {}).values())]
+        self.assertTrue(faq)
+        self.assertIn(".dtj-faq__q:hover{color:var(--fq-q-color,inherit)}", faq[0]["custom_css"])
+
     def test_the_theme_buy_buttons_take_the_page_palette(self):
         # Harsh, 24 Oct 2026: "add to cart keep the yellow and buy it now red (the same color palette applied to the page)"
         r = self.build(vibe="electric")
