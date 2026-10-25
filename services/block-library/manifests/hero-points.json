@@ -17,10 +17,14 @@
     { "type": "text", "id": "eyebrow", "label": "Eyebrow label", "info": "Small uppercase pill. Empty = hidden." },
     { "type": "checkbox", "id": "show_star", "label": "Star inside the eyebrow", "default": true },
     { "type": "inline_richtext", "id": "subheading", "label": "Subheading", "info": "Bold is allowed. Empty = hidden." },
-    { "type": "textarea", "id": "benefits", "label": "Benefits", "info": "One benefit per line, up to 8. Empty = hidden." },
+    { "type": "textarea", "id": "benefits", "label": "Benefits", "info": "One benefit per line, up to 8. Empty = hidden. \"protein | 26 g protein per 100 g\" picks a line's icon: protein, peanut, no-sugar, chilli, flame, fibre, leaf, no-colour, no-preservative, jar, shield, heart, star, truck, return, lock." },
     { "type": "select", "id": "columns", "label": "Columns", "default": "1", "options": [{ "value": "1", "label": "1 column" }, { "value": "2", "label": "2 columns" }], "info": "2 columns reads left to right, then down: 1 2 / 3 4." },
     { "type": "checkbox", "id": "stack_mobile", "label": "Use 1 column on phones", "default": false, "info": "Only matters with 2 columns. Off = keep 2 columns on phones too." },
     { "type": "color", "id": "accent_color", "label": "Accent color", "info": "Eyebrow pill, star and tick circles. Empty = same as the text." },
+    { "type": "select", "id": "icon_style", "label": "Icon style", "default": "tick", "options": [{ "value": "tick", "label": "Tick on a filled circle" }, { "value": "ring", "label": "Line icon in a ring" }], "info": "Ring = a line icon per benefit inside a thin coloured ring (pick icons with \"icon | text\")." },
+    { "type": "color", "id": "ring_color", "label": "Ring color", "info": "Ring style only. Empty = the accent color." },
+    { "type": "color", "id": "ring_glyph_color", "label": "Ring icon color", "info": "Ring style only. Empty = same as the text." },
+    { "type": "color", "id": "ring_fill", "label": "Ring fill", "info": "Ring style only. Empty = transparent." },
     { "type": "color", "id": "eyebrow_color", "label": "Eyebrow text color", "info": "Empty = same as the text." },
     { "type": "header", "content": "Sizes and gaps" },
     { "type": "range", "id": "eyebrow_size", "label": "Eyebrow text size", "min": 9, "max": 16, "step": 1, "unit": "px", "default": 11 },
@@ -33,5 +37,5 @@
   ],
   "data_needs": [],
   "reference_image": null,
-  "test": { "sample": { "eyebrow": "Eyebrow sample", "subheading": "Sub <strong>sample</strong> line", "benefits": "First benefit\nSecond benefit" }, "expect": ["Eyebrow sample", "sample</strong> line", "First benefit", "Second benefit", "dtj-ci__disc", "dtj-hero-points"] }
+  "test": { "sample": { "eyebrow": "Eyebrow sample", "subheading": "Sub <strong>sample</strong> line", "benefits": "First benefit\nSecond benefit\nprotein | Protein line" }, "expect": ["Eyebrow sample", "sample</strong> line", "First benefit", "Second benefit", "dtj-ci__disc", "dtj-hero-points", "Protein line", "M6.5 7v10"] }
 }

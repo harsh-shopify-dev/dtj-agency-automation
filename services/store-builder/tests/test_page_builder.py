@@ -763,6 +763,33 @@ class StandardPageTests(unittest.TestCase):
             if "badge_icon_color" in proof:
                 self.assertGreaterEqual(style_contrast(proof["badge_icon_color"], proof["badge_bg"]), 3, vibe)
 
+    def test_buy_box_points_get_a_matching_line_icon_in_a_ring(self):
+        # Harsh, 25 Oct 2026, NoCheat's buy box: "we need icons like this"
+        from page_builder.sections import point_icon
+        self.assertEqual([point_icon(x) for x in ("High protein in every spoon", "Bold peri peri kick", "No added sugar or preservatives",
+                                                  "No artificial colours", "Source of dietary fibre", "Free delivery")],
+                         ["protein", "chilli", "no-sugar", "no-colour", "fibre", ""])
+        r = self.build(vibe="electric")
+        blocks = r.template["sections"]["main"]["blocks"]["product-details"]["blocks"]
+        pts = next(b["settings"] for k, b in blocks.items() if "hero_points" in k)
+        if pts.get("icon_style") == "ring":
+            lines = pts["benefits"].splitlines()
+            self.assertTrue(any(" | " in ln for ln in lines))
+            self.assertTrue(pts.get("ring_color") and pts.get("ring_glyph_color"))
+
+    def test_a_shop_without_the_point_icons_release_keeps_plain_ticks(self):
+        from page_builder import catalog
+        reg = catalog.registry()
+        tpl = {"sections": {"main": {"blocks": {"p": {"type": f"shopify://apps/dtj-blocks/blocks/dtj-hero-points/{reg['dtj-blocks']['uuid']}",
+               "settings": {"benefits": "protein | High protein\nPlain point", "icon_style": "ring", "ring_color": "#9E1B22", "check_size": 34}}}}}}
+        old = {"dtj-blocks": {"handle": "dtj-blocks-x", "uuid": "0" * 36}}
+        s = catalog.to_client(tpl, old)["sections"]["main"]["blocks"]["p"]["settings"]
+        self.assertEqual((s["benefits"], s["check_size"]), ("High protein\nPlain point", 20))
+        self.assertNotIn("icon_style", s)
+        new = {"dtj-blocks": {**old["dtj-blocks"], "features": ["point_icons"]}}
+        s = catalog.to_client(tpl, new)["sections"]["main"]["blocks"]["p"]["settings"]
+        self.assertEqual((s["icon_style"], s["benefits"].splitlines()[0]), ("ring", "protein | High protein"))
+
     def test_the_faq_question_keeps_its_colour_on_hover(self):
         # Harsh, 25 Oct 2026: "on hover the text gets hidden": Horizon's summary:hover beat the block's question colour
         r = self.build(vibe="electric")

@@ -1,25 +1,49 @@
 {%- comment -%}
   The master theme's bullet icon: ONE solid circle with a tick drawn inside it (not a circled icon inside a circle).
-  Usage: {% render 'dtj-check-icon', name: 'check', image: image_or_blank, size: 26 %}
+  Usage: {% render 'dtj-check-icon', name: 'check', image: image_or_blank, size: 26, style: 'disc' %}
   - image given: shows that image (custom icon) instead of the drawn one.
   - name: check (the tick from the master theme's dtj-bullet-points), or a glyph drawn inside the same circle:
-    shield, truck, return, lock, star, heart. Unknown names fall back to the tick.
-  Colours come from CSS variables set by the block (--dtj-circle-color, --dtj-check-color); see src/_check-item.css.
-  The caller passes everything in: a snippet cannot see block settings (library rule 7).
+    shield, truck, return, lock, star, heart; and the food and nutrition set (Harsh, 25 Oct 2026, NoCheat's buy box: "we need
+    icons like this"): protein (a dumbbell), peanut, no-sugar, chilli, flame, fibre, leaf, no-colour, no-preservative, jar.
+    Unknown names fall back to the tick.
+  - style: disc (default: the glyph on a filled circle) or ring (a line icon inside a thin coloured ring, NoCheat's look).
+  Colours come from CSS variables set by the block (--dtj-circle-color, --dtj-check-color, --dtj-ring-color, --dtj-ring-glyph);
+  see src/_check-item.css. The caller passes everything in: a snippet cannot see block settings (library rule 7).
 {%- endcomment -%}
+{%- capture dtj_glyph -%}
+  {%- case name -%}
+    {%- when 'shield' -%}<path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>
+    {%- when 'truck' -%}<path d="M3 6h11v10H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/>
+    {%- when 'return' -%}<path d="M4 9h11a5 5 0 010 10H8"/><path d="M8 5L4 9l4 4"/>
+    {%- when 'lock' -%}<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>
+    {%- when 'star' -%}<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/>
+    {%- when 'heart' -%}<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/>
+    {%- when 'protein' -%}<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>
+    {%- when 'peanut' -%}<path d="M12 3.5c2.6 0 4.5 2 4.5 4.3 0 1.5-.8 2.5-.8 3.7s.8 2.2.8 3.7c0 2.4-1.9 4.3-4.5 4.3s-4.5-1.9-4.5-4.3c0-1.5.8-2.5.8-3.7s-.8-2.2-.8-3.7c0-2.3 1.9-4.3 4.5-4.3z"/><path d="M10.2 7.6h.01M13.8 9.2h.01M10.2 14.6h.01M13.8 16.2h.01"/>
+    {%- when 'no-sugar' -%}<path d="M12 4l7 4v8l-7 4-7-4V8z"/><path d="M5 8l7 4 7-4M12 12v8"/><path d="M3.5 3.5l17 17"/>
+    {%- when 'chilli' -%}<path d="M15.5 7.5c2.2.4 3.4 2.1 2.6 4.6-1.4 4.3-6.6 7.9-13.1 7.9 3.6-2.2 5.7-5.4 6.5-9.3.5-2.3 2.1-3.6 4-3.2z"/><path d="M15.5 7.5c.2-1.8 1.3-3 3-3.5"/>
+    {%- when 'flame' -%}<path d="M12 21c3.9 0 6.5-2.6 6.5-6.2 0-4.1-3.2-6.3-4.3-10.3-2 1.6-3.1 3.8-3 6-1.1-.6-1.9-1.7-2.2-3C7.3 9.1 5.5 11.6 5.5 14.8 5.5 18.4 8.1 21 12 21z"/>
+    {%- when 'fibre' -%}<path d="M12 21V7"/><path d="M12 7c-1.8-.9-2.8-2.5-2.8-4.5 1.8.6 2.8 2.2 2.8 4.5zm0 0c1.8-.9 2.8-2.5 2.8-4.5-1.8.6-2.8 2.2-2.8 4.5z"/><path d="M12 12.5c-2.1-.6-3.4-2.1-3.6-4.2 2.1.3 3.4 1.8 3.6 4.2zm0 0c2.1-.6 3.4-2.1 3.6-4.2-2.1.3-3.4 1.8-3.6 4.2z"/><path d="M12 17.5c-2.1-.6-3.4-2.1-3.6-4.2 2.1.3 3.4 1.8 3.6 4.2zm0 0c2.1-.6 3.4-2.1 3.6-4.2-2.1.3-3.4 1.8-3.6 4.2z"/>
+    {%- when 'leaf' -%}<path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14z"/><path d="M5 19l8-8"/>
+    {%- when 'no-colour' -%}<path d="M12 3.5s6 6.4 6 10.5a6 6 0 01-12 0c0-4.1 6-10.5 6-10.5z"/><path d="M3.5 3.5l17 17"/>
+    {%- when 'no-preservative' -%}<path d="M9 3h6M10 3v6l-5 9a2 2 0 001.8 3h10.4a2 2 0 001.8-3l-5-9V3"/><path d="M3.5 3.5l17 17"/>
+    {%- when 'jar' -%}<path d="M8 3h8v3H8z"/><path d="M7 6h10a2 2 0 012 2v11a2 2 0 01-2 2H7a2 2 0 01-2-2V8a2 2 0 012-2z"/><path d="M5 11h14"/>
+  {%- endcase -%}
+{%- endcapture -%}
 {%- if image and image != blank -%}
   <img class="dtj-ci__img" src="{{ image | image_url: width: 96 }}" alt="" width="{{ size | default: 26 }}" height="{{ size | default: 26 }}" loading="lazy">
+{%- elsif style == 'ring' -%}
+  <svg class="dtj-ci__svg dtj-ci__svg--ring" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+    <circle class="dtj-ci__ring" cx="12" cy="12" r="11"/>
+    <g class="dtj-ci__line" transform="translate(3.6 3.6) scale(.7)">
+      {%- if dtj_glyph != blank -%}{{ dtj_glyph }}{%- else -%}<path d="M7 12.5l3.5 3.5L17 9"/>{%- endif -%}
+    </g>
+  </svg>
 {%- else -%}
   <svg class="dtj-ci__svg" viewBox="0 0 20 20" focusable="false" aria-hidden="true">
     <circle class="dtj-ci__disc" cx="10" cy="10" r="10"/>
-    {%- case name -%}
-      {%- when 'shield' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></g>
-      {%- when 'truck' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M3 6h11v10H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></g>
-      {%- when 'return' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M4 9h11a5 5 0 010 10H8"/><path d="M8 5L4 9l4 4"/></g>
-      {%- when 'lock' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></g>
-      {%- when 'star' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/></g>
-      {%- when 'heart' -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)"><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/></g>
-      {%- else -%}<path class="dtj-ci__glyph" d="M6 10.5L8.5 13L14 7"/>
-    {%- endcase -%}
+    {%- if dtj_glyph != blank -%}<g class="dtj-ci__glyph dtj-ci__glyph--scaled" transform="translate(4 4) scale(.5)">{{ dtj_glyph }}</g>
+    {%- else -%}<path class="dtj-ci__glyph" d="M6 10.5L8.5 13L14 7"/>
+    {%- endif -%}
   </svg>
 {%- endif -%}

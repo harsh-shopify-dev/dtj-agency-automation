@@ -100,6 +100,17 @@ def load_client_registry(path: str | Path) -> dict:
     return apps
 
 
+def plain_ticks(settings: dict) -> dict:
+    """A shop whose DTJ Blocks copy predates the point icons (25 Oct 2026) would print "protein | ..." as text: its points keep the
+    plain tick. A shop's registry entry says "features": ["point_icons"] once its copy is released with them."""
+    out = {k: v for k, v in settings.items() if k not in ("icon_style", "ring_color", "ring_glyph_color", "ring_fill")}
+    if "benefits" in out:
+        out["benefits"] = "\n".join(ln.split("|", 1)[1].strip() if "|" in ln else ln for ln in str(out["benefits"]).splitlines())
+    if out.get("check_size") == 34:
+        out["check_size"] = 20
+    return out
+
+
 def to_client(template: dict, client: dict, reg: dict | None = None) -> dict:
     """The same page with every DTJ block pointing at the client's copy of its app. Any DTJ block the client registry does not cover stops it."""
     reg = reg or registry()
@@ -114,6 +125,8 @@ def to_client(template: dict, client: dict, reg: dict | None = None) -> dict:
                 if app not in client:
                     raise ValueError(f"the client registry has no copy of {app} (block {m['block']})")
                 out["type"] = f"shopify://apps/{client[app]['handle']}/blocks/{m['block']}/{client[app]['uuid']}"
+                if m["block"] == "dtj-hero-points" and "point_icons" not in client[app].get("features", []):
+                    out["settings"] = plain_ticks(out.get("settings") or {})
             return out
         if isinstance(node, list):
             return [walk(v) for v in node]
