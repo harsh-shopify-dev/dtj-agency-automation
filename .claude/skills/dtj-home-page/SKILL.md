@@ -146,6 +146,10 @@ starting `SAMPLE`, or `demo: true` on our own dev store) is listed for replaceme
 - **Pictures:** everything else comes from the client: their own site, their files, what they send. Each picture role in `media`
   must be a file already in the store's Files (`shopify://shop_images/<file>`).
 - **The hero picture:** a multi-product store ALWAYS gets the full-image banner hero (Harsh, 14 Oct 2026: "for multi product page stores we will never use this hero section we will use the full image banner"). Pick a WIDE picture from the store's Files with an empty side for the words; a square pack shot puts the headline on the product. If the store has none, ask the client for one. Only a one-product shop may set `"layout": "split"` in `hero`. With 2-3 good banner photos, add `hero.slides` for a slideshow hero: banner 1 carries the main message (most shoppers never wait for banner 2); banners 2-3 point to a category each.
+- **A separate phone banner for every slide** (Harsh, 26 Oct 2026: "generate banner images separately for mobile version"): on phones
+  the words sit on the LOWER part of the picture (`mobile_layout: overlay`), so each slide gets its own tall picture
+  (`image_mobile_role`; picture kind `banner_mobile`, 1024 x 1536): the subject in the upper half, the lower half a calm plain area
+  for the headline and button. Never a square or a wide picture with the subject low: the words would land on the product.
 - **What can't be collected:** write down what is missing; don't invent it.
 
 ### H2. The plan: show it in plain words
