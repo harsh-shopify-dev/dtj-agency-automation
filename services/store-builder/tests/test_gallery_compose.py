@@ -69,7 +69,20 @@ class Compose(unittest.TestCase):
         one = gc.page({"name": "s", "layout": "stack", "headline": "Protein in every meal.", "items": []}, gc.DEFAULT_BRAND, self.tmp, "")
         self.assertNotIn("<em>", one)  # one sentence wraps as usual instead of shrinking to fit one line
         unit = gc.page({"name": "b", "layout": "bottom", "headline": "8 g protein per tablespoon", "items": []}, gc.DEFAULT_BRAND, self.tmp, "")
-        self.assertIn('<span class="nb">8 g</span> protein', unit)  # the number keeps its unit, with a normal space
+        self.assertIn('<i class="nb">8 g</i> protein', unit)  # the number keeps its unit, with a normal space
+
+    def test_numbers_keep_every_digit_with_the_unit_and_four_tiles_sit_two_by_two(self):
+        # 26 Oct 2026 (Senso): "14 g" printed as "1" over "4 g" and a pill's "100 ml" left its pill (a <span> took .num span / .shot span)
+        nums = gc.page({"name": "n", "layout": "numbers", "headline": "x", "items": [{"value": "14 g", "label": "in every sachet"},
+                        {"value": "100 ml", "label": "hot water"}]}, gc.DEFAULT_BRAND, self.tmp, "")
+        self.assertIn('<b><i class="nb">14 g</i></b>', nums)
+        self.assertIn('<b><i class="nb">100 ml</i></b>', nums)
+        self.assertNotIn('<span class="nb">', nums)
+        tiles = [{"photo": "pack.png", "label": n} for n in ("Tea", "Milk", "Clove", "Ginger")]
+        four = gc.page({"name": "t", "layout": "tiles", "headline": "What's inside", "items": tiles}, gc.DEFAULT_BRAND, self.tmp, "")
+        self.assertIn('<div class="grid g2">', four)
+        three = gc.page({"name": "t", "layout": "tiles", "headline": "What's inside", "items": tiles[:3]}, gc.DEFAULT_BRAND, self.tmp, "")
+        self.assertIn('<div class="grid">', three)
 
 
 if __name__ == "__main__":
