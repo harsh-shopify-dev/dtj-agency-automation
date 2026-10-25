@@ -10,7 +10,10 @@ n8n workflow into dtj_bot_answers, read with the store factory's Asker (n8n/stor
     python n8n/reel-factory/reel_job.py final    --job r42 --file <final.mp4> [--round 1]
     python n8n/reel-factory/reel_job.py person   --job r42 --what "<what a person must do, e.g. sign in to Flow>" [--round 1]
     python n8n/reel-factory/reel_job.py tell     --job r42 --text "<a message>"
+    python n8n/reel-factory/reel_job.py photos   --job r42 --ids tg:<file_id>,... --out <job>/inputs   (photos sent to the bot)
     python n8n/reel-factory/reel_job.py finish   --job r42 (--ok | --stopped) [--note "..."]
+    plan / pictures / final take --watch <job>/watch/<gate>.verdict.json: the watcher's card is sent first; a BLOCKED verdict
+    is refused (exit 2) so a person only ever sees work the watcher let through.
 
 plan / pictures / final send what is to be judged (text, an album of numbered pictures, the video) with two buttons: "Approve" and
 "Change something"; "Change something" then asks what to change (typed, for pictures "3, 7: the box is too small"). They print ONE
@@ -33,8 +36,10 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / "n8n" / "store-factory"))
 sys.path.insert(0, str(ROOT / "services" / "store-builder"))
+sys.path.insert(0, str(ROOT / "services" / "reel-factory"))
 import tg_media  # noqa: E402
 from bot_ask import Asker  # noqa: E402
+from reel_factory.watch_card import card  # noqa: E402 - no heavy imports
 
 STATE_DIR = ROOT / ".work" / "reels" / "telegram"
 WAITING = 3
@@ -94,6 +99,7 @@ class ReelJob:
         self.ask = Asker(job, self.s.get("chat", ""), send=send or _sender(tok), rows=rows, state=self.s, save=self.save,
                          sleep=sleep or time.sleep, clock=clock or time.monotonic, add_row=add_row)
         self._progress = progress
+        self.watch: Path | None = None      # the watcher's verdict for this round (<job>/watch/<gate>.verdict.json)
 
     def save(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -143,10 +149,18 @@ class ReelJob:
         self.s["shown"][key] = True
         self.save()
 
-    def review(self, kind: str, rnd: int, show, minutes: float) -> int:
-        """Show the thing once, then Approve / Change something, then (Change) what to change."""
+    def review(self, kind: str, rnd: int, show, minutes: float, watch: Path | None = None) -> int:
+        """Show the thing once (with the watcher's card first, when there is a verdict), then Approve / Change something, then
+        (Change) what to change. A BLOCKED verdict is never shown to a person: the maker fixes it first (dtj-reel-watcher)."""
         key, how = f"{kind}{rnd}", f"{kind}{rnd}n"
+        verdict = json.loads(watch.read_text(encoding="utf-8")) if watch and watch.exists() else None
+        if verdict and verdict.get("verdict") == "block":
+            self.out(json.dumps({"error": "the watcher blocked this round: fix the blocking issues first", "blocking": verdict.get("blocking", [])},
+                                ensure_ascii=False))
+            return 2
         if not self._sent(key):
+            if verdict:
+                self.ask.tell(card(verdict))
             show()
             self._shown(key)
         got = self.ask.choose(key, f"{WHAT[kind].capitalize()} (round {rnd}): Approve, or tap Change something.\n"
@@ -170,7 +184,7 @@ class ReelJob:
         def show():
             for start in range(0, len(text), 3800):        # Telegram's message limit is 4096
                 self.ask.tell(text[start:start + 3800])
-        return self.review("plan", rnd, show, minutes)
+        return self.review("plan", rnd, show, minutes, self.watch)
 
     def pictures(self, folder: Path, names: list[str], rnd: int, minutes: float) -> int:
         files = [folder / n for n in names] if names else sorted(p for p in folder.iterdir()
@@ -184,7 +198,7 @@ class ReelJob:
             sent = self.media.album(self.tok, self.s.get("chat", ""), files, [f"{i + 1}. {p.stem}" for i, p in enumerate(files)])
             if len(sent) < len(files):
                 self.ask.tell(f"Telegram took {len(sent)} of {len(files)} pictures; the rest are on the VPS in {folder}.")
-        return self.review("pictures", rnd, show, minutes)
+        return self.review("pictures", rnd, show, minutes, self.watch)
 
     def final(self, file: Path, rnd: int, minutes: float) -> int:
         if not file.exists():
@@ -195,7 +209,7 @@ class ReelJob:
             got = self.media.video(self.tok, self.s.get("chat", ""), file, f"{self.s.get('title', 'Reel')}: round {rnd}")
             if not got:
                 self.ask.tell(f"The video did not reach Telegram; it is on the VPS: {file}")
-        return self.review("final", rnd, show, minutes)
+        return self.review("final", rnd, show, minutes, self.watch)
 
     def person(self, what: str, rnd: int, minutes: float) -> int:
         key = f"person{rnd}"
@@ -206,6 +220,16 @@ class ReelJob:
         self.out(json.dumps({"ok": True, "by": got["by"]}, ensure_ascii=False))
         return 0
 
+    def photos(self, ids: list[str], out: Path) -> int:
+        """Photos sent to the reel bot (tg:<file_id> in the request) downloaded into the job's inputs."""
+        got, failed = [], []
+        for fid in ids:
+            fid = fid.removeprefix("tg:")
+            p = self.media.download(self.tok, fid, out)
+            (got if p else failed).append(str(p) if p else fid[-12:])
+        self.out(json.dumps({"saved": got, "failed": failed}))
+        return 0 if got and not failed else 1
+
     def finish(self, ok: bool, note: str) -> int:
         self.out(self.progress.finish(ok, note))
         return 0
@@ -213,7 +237,7 @@ class ReelJob:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["start", "step", "plan", "pictures", "final", "person", "tell", "finish"])
+    ap.add_argument("command", choices=["start", "step", "plan", "pictures", "final", "person", "tell", "photos", "finish"])
     ap.add_argument("--job", required=True, help="r<dtj_reel_jobs row id>")
     ap.add_argument("--chat", default="")
     ap.add_argument("--title", default="")
@@ -226,14 +250,18 @@ def main(argv=None) -> int:
     ap.add_argument("--round", type=int, default=1)
     ap.add_argument("--what", default="")
     ap.add_argument("--text", default="")
+    ap.add_argument("--ids", default="", help="photos: tg:<file_id> list, comma separated")
+    ap.add_argument("--out", type=Path, help="photos: where to save them")
     ap.add_argument("--ok", action="store_true")
     ap.add_argument("--stopped", action="store_true")
     ap.add_argument("--note", default="")
     ap.add_argument("--minutes", type=float, default=MINUTES)
+    ap.add_argument("--watch", type=Path, help="the watcher's verdict for this round (tools/vps/watcher.sh)")
     a = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     j = ReelJob(a.job)
+    j.watch = a.watch
     if a.command != "start" and not j.s.get("chat"):
         print(json.dumps({"error": "run start first (no chat for this job)"}))
         return 2
@@ -251,6 +279,8 @@ def main(argv=None) -> int:
         return j.person(a.what, a.round, a.minutes)
     if a.command == "tell":
         return j.tell(a.text)
+    if a.command == "photos":
+        return j.photos([i for i in a.ids.split(",") if i], a.out)
     return j.finish(a.ok and not a.stopped, a.note)
 
 

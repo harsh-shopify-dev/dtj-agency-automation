@@ -21,7 +21,8 @@ case "$gate" in g1|g2|g3|g4) (cd "$ROOT/services/reel-factory" && nice -n 10 "$P
 SKILL="$ROOT/.claude/skills/dtj-reel-watcher"
 RUBRIC=$(ls "$SKILL/references/" | grep -i "rubric-$gate-" | head -1); [ "$gate" = "a0" ] && RUBRIC="audience-intelligence.md"
 ASK="You are the reel watcher (skill dtj-reel-watcher). Gate: $gate, round $rnd. Job folder: $job.
-Read $SKILL/SKILL.md, then $SKILL/references/$RUBRIC and $SKILL/references/golden-set.md, then the job's files the rubric names
+Read $SKILL/SKILL.md, then $SKILL/references/$RUBRIC, $SKILL/references/golden-set.md and calibration-log.md, then the real product
+pictures in $job/inputs/ (the pack as it is printed), then the job's files the rubric names
 and $W/$gate.json if it exists (measured numbers). You did not make this work; judge only what is in front of you. Answer with
 ONE JSON object exactly as SKILL.md says (gate, round, judge, score, verdict, blocking, issues, ideas, for_person) and nothing else."
 
@@ -33,7 +34,8 @@ else echo '{"skipped": "claude not installed"}' > "$W/$gate.claude.raw"; fi
 
 # 3. Codex, with the pictures of this gate
 imgs=()
-for f in "$W/g2_pairs.jpg" "$W"/sheet_*.jpg "$job"/checks/*_4fps.jpg; do [ -s "$f" ] && imgs+=(-i "$f"); done
+# the real pack first (its printing is the truth, calibration 25 Oct 2026), then this gate's sheets
+for f in "$job"/inputs/*.png "$job"/inputs/*.jpg "$W/g2_pairs.jpg" "$W"/sheet_*.jpg "$job"/checks/*_4fps.jpg; do [ -s "$f" ] && imgs+=(-i "$f"); done
 if command -v codex >/dev/null 2>&1; then
   tmp=$(mktemp -d /tmp/dtj-watch-XXXXXXXX)
   (cd "$tmp" && timeout 900 codex exec --skip-git-repo-check -s read-only "${imgs[@]}" -- \

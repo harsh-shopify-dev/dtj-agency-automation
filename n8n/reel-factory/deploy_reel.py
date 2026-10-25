@@ -27,11 +27,11 @@ from n8n_mcp import PROJECT, call  # noqa: E402
 
 NAME = "Reel Factory: New Reel"
 TABLE = "dtj_reel_jobs"
-CREDENTIAL = "DTJ Page Bot"   # the Telegram API credential the store factory already uses
+CREDENTIAL = "DTJ Reel Bot"   # the reel factory's own Telegram bot (Harsh, 25 Oct 2026: "we will create a new telegram bot")
 CODE_NODES = {"Take the Reel Request": "take_reel_request.js", "Request for Claude Code: Reel": "request_reel.js",
               "Claude Code Reply: Reel": "reply_reel.js", "Tell the Requester": "tell_reel_requester.js"}
 COLUMNS = json.loads((HERE / "tables.json").read_text(encoding="utf-8"))[TABLE]["columns"]
-SAVE_COLS = [c for c in COLUMNS if c["name"] in ("submitted_at", "status", "product_name", "brand_name", "product_images",
+SAVE_COLS = [c for c in COLUMNS if c["name"] in ("submitted_at", "status", "reel_type", "product_name", "audience", "brand_name", "product_images",
                                                   "reference_reels", "language", "music", "facts", "notes", "requested_by",
                                                   "telegram_chat_id", "raw_json", "reel_status")]
 RECORD_COLS = [c for c in COLUMNS if c["name"] in ("reel_status", "final_path", "job_folder", "duration_s", "lufs", "generations",
@@ -45,14 +45,30 @@ STICKY = ("## Reel factory: new UGC reel\n"
           "trigger in n8n\" (or \"listen for reel requests\"). Claude makes the reel in the logged-in browser (ChatGPT, Google Flow), "
           "checks every take, removes the Flow sparkle, edits, captions, and posts the result here. Nothing is posted to Meta.\n\n"
           "Source in git: `n8n/reel-factory/` and `services/reel-factory/`.")
+# a plain-English note on every node (shown under it on the canvas; Harsh, 25 Oct 2026: "add notes for each node what they are doing")
+NOTES = {
+    "New UGC Reel": "The n8n form (needs an n8n login) to ask for a reel by hand: remake or UGC, product, pictures, reference reels, audience, language, facts.",
+    "From Another Workflow": "Where the reel bot's /remake and /reel arrive (Reel Factory: Telegram Bot): the same fields plus the person's Telegram chat.",
+    "Take the Reel Request": "Checks the request and makes the job row: a remake needs exactly one reference reel; a UGC reel needs a language and approved facts; every link must be https, a VPS path or a photo sent to the bot. A refusal keeps its reason.",
+    "Save Reel Job": "Saves the job in dtj_reel_jobs. Its row id is the job id in Telegram (r<id>).",
+    "Accepted?": "Only a complete request goes on; a refused one stops here, with the reason on its row.",
+    "Request for Claude Code: Reel": "Writes Claude's full task list for this reel type (remake or UGC): the VPS folders and tools, the watcher's check before each of the 3 Telegram approvals (plan, pictures, final reel), and how to answer n8n. The VPS worker reads it.",
+    "Wait for Claude Code: Reel": "Pauses (up to 3 days). The VPS worker asks 'tap Start if you are watching' in the reel bot; after the tap Claude makes the reel and answers this step with reply.py.",
+    "Claude Code Reply: Reel": "Reads Claude's answer (reel ready / needs a look / could not make, the file, length, loudness, credits used) and refuses half answers.",
+    "Record Reel": "Writes the result on the job's row in dtj_reel_jobs.",
+    "Tell the Requester": "For a reel asked in Telegram: one short message with the result and where the file is. Nothing is posted anywhere.",
+    "Send Result": "Sends that message to the requester's chat (through the reel bot once its 'DTJ Reel Bot' credential is attached)."
+}
 FIELDS = [
+    ("reel_type", "Reel type", "dropdown", True, ""),
     ("product_name", "Product name", "text", True, "e.g. Senso Instant Detox Green Tea Kahwa"),
+    ("audience", "Audience (who it is for)", "text", False, "e.g. Gujarati home cooks 30-50, Gen Z urban India"),
     ("brand_name", "Brand name", "text", False, ""),
     ("product_images", "Product pictures (links, one per line)", "textarea", True, "https://... (front of the pack, label readable)"),
     ("reference_reels", "Winning reference reels (links, one per line)", "textarea", True, "https://... (mp4 or a Drive link anyone can open)"),
-    ("language", "Language", "dropdown", True, ""),
+    ("language", "Language", "dropdown", False, ""),
     ("music", "Background music (licensed; link)", "text", False, "leave empty for no music"),
-    ("facts", "Approved facts (only these may be said)", "textarea", True, "pack text, the product page's claims, offers the client approved"),
+    ("facts", "Approved facts (only these may be said)", "textarea", False, "UGC: pack text, the product page's claims, offers the client approved"),
     ("notes", "Notes for the reel", "textarea", False, ""),
     ("requested_by", "Your name", "text", True, ""),
 ]
@@ -65,9 +81,20 @@ def form_fields() -> list[dict]:
         if ph:
             f["placeholder"] = ph
         if ftype == "dropdown":
-            f["fieldOptions"] = {"values": [{"option": o} for o in ("English", "Hindi", "Hinglish")]}
+            opts = ("Remake a reference edit", "UGC script reel") if name == "reel_type" else ("English", "Hindi", "Hinglish", "Gujarati")
+            f["fieldOptions"] = {"values": [{"option": o} for o in opts]}
         out.append(f)
     return out
+
+
+def _schema(cols):
+    return [{"id": c["name"], "displayName": c["name"], "required": False, "defaultMatch": False, "display": True,
+             "type": c["type"], "canBeUsedToMatch": True} for c in cols]
+
+
+def save_columns() -> dict:
+    return {"mappingMode": "defineBelow", "value": {c["name"]: f"={{{{ $json.row.{c['name']} }}}}" for c in SAVE_COLS},
+            "matchingColumns": [], "schema": _schema(SAVE_COLS)}
 
 
 def sdk_code(table_id: str) -> str:
@@ -82,7 +109,7 @@ def sdk_code(table_id: str) -> str:
     rec_values["reel_updated_at"] = "={{ $now.toISO() }}"
 
     def code_node(var, name, pos):
-        return (f"const {var} = node({{ type: 'n8n-nodes-base.code', version: 2, config: {{ name: {json.dumps(name)}, position: {pos}, "
+        return (f"const {var} = node({{ type: 'n8n-nodes-base.code', version: 2, config: {{ name: {json.dumps(name)}, position: {pos}, notes: {json.dumps(NOTES[name])}, notesInFlow: true, "
                 f"parameters: {{ mode: 'runOnceForAllItems', language: 'javaScript', jsCode: {js[name]} }} }} }});\n")
     inputs = ", ".join(f"{{ name: '{n}', type: 'string' }}" for n, *_ in FIELDS) + ", { name: 'chat_id', type: 'string' }"
     return (
@@ -160,6 +187,11 @@ def main(argv=None) -> int:
             wf_id = found[0]["id"]
             ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": (HERE / f).read_text(encoding="utf-8")}}
                    for n, f in CODE_NODES.items()]
+            # the fields that came later (25 Oct 2026: reel type, audience, Gujarati): the form, the bot's inputs, what is saved
+            ops += [{"type": "setNodeParameter", "nodeName": "New UGC Reel", "path": "/formFields/values", "value": form_fields()},
+                    {"type": "setNodeParameter", "nodeName": "From Another Workflow", "path": "/workflowInputs/values",
+                     "value": [{"name": n, "type": "string"} for n, *_ in FIELDS] + [{"name": "chat_id", "type": "string"}]},
+                    {"type": "setNodeParameter", "nodeName": "Save Reel Job", "path": "/columns", "value": save_columns()}]
             print("exists: refreshing its code nodes", call("update_workflow", {"workflowId": wf_id, "operations": ops}))
         else:
             check = call("validate_workflow", {"code": code})

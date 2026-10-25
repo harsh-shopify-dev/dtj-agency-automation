@@ -111,6 +111,27 @@ class ReelJobTest(unittest.TestCase):
         self.assertEqual(self.j().plan(plan, 1, 0.1), reel_job.WAITING)
 
 
+class WatcherTest(ReelJobTest):
+    def verdict(self, v):
+        p = Path(self.tmp) / "g2.verdict.json"
+        p.write_text(json.dumps(v), encoding="utf-8")
+        return p
+
+    def test_card_comes_first_and_block_is_refused(self):
+        d = Path(self.tmp) / "imgs"
+        d.mkdir()
+        (d / "p01.png").write_bytes(b"x")
+        j = self.j()
+        j.watch = self.verdict({"gate": "g2", "round": 1, "verdict": "block", "blocking": [{"item": "picture 1", "issue": "Ramdev logo"}]})
+        self.assertEqual(j.pictures(d, [], 1, 0.1), 2)
+        self.assertFalse(any("Watcher" in dd.get("text", "") for m, dd in self.bot.sent))   # nothing shown to the person
+        j = self.j()
+        j.watch = self.verdict({"gate": "g2", "round": 1, "verdict": "pass", "score": 91, "ideas": [{"idea": "add a pack close-up"}]})
+        self.assertEqual(j.pictures(d, [], 1, 0.1), reel_job.WAITING)
+        texts = [dd.get("text", "") for m, dd in self.bot.sent]
+        self.assertTrue(any(t.startswith("Watcher (G2, round 1): PASS, 91/100") for t in texts))
+
+
 class MediaTest(unittest.TestCase):
     def test_album_groups_of_ten(self):
         import tg_media

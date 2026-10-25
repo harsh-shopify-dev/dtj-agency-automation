@@ -8,7 +8,7 @@ Look at every picture next to its cleaned reference frame (`watch/g2_pairs.jpg`)
 |---|---|---|
 | 1 | Matches its reference frame: same angle, crop, props, light, depth of field (layout_similarity >= 0.55 and it looks the same) | 25 |
 | 2 | Real-photo look, no AI slop: no glossy/HDR sheen, no plastic skin, no extra props, embers or clutter the reference lacks, no warped hands or cutlery | 25 |
-| 3 | Pack exactly the real one: logo, name, words in the right script, colours, proportions (pack_text match >= 0.6; zoom to check small packs) | 20 |
+| 3 | Pack exactly the real one: logo, name, words in the right script, colours, proportions (pack_text match >= 0.6; zoom to check small packs). Compare with the REAL pack picture (`inputs/` / the request's product pictures), never with how you think the name is spelled: the pack's own printing wins even when it looks like a typo (Mahalaxmi's box prints "MAIHALAXMI®"). No pack picture in the job = say so, do not judge spelling | 20 |
 | 4 | No other brand anywhere (foreign_marks empty; their logo corner, "Available on" strips, store names) | 15 |
 | 5 | One look across the set: bright shots match each other, red/stylised shots match each other (grade distance small) | 15 |
 

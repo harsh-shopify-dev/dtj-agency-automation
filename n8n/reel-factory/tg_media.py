@@ -95,6 +95,25 @@ def smaller(path: Path, run=subprocess.run) -> Path:
     return out if out.exists() and out.stat().st_size <= MAX_BYTES else path
 
 
+def download(token: str, file_id: str, out_dir: Path, opener=urllib.request.urlopen) -> Path | None:
+    """A photo someone sent to the bot (its file_id, "tg:<id>" in the request) saved into out_dir; None when Telegram refuses."""
+    if not token:
+        return None
+    try:
+        with opener(f"https://api.telegram.org/bot{token}/getFile?file_id={file_id}", timeout=30) as r:
+            info = json.loads(r.read() or b"{}")
+        path = (info.get("result") or {}).get("file_path") or ""
+        if not info.get("ok") or not path:
+            return None
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / f"tg_{file_id[-12:]}{Path(path).suffix or '.jpg'}"
+        with opener(f"https://api.telegram.org/file/bot{token}/{path}", timeout=60) as r:
+            dest.write_bytes(r.read())
+        return dest
+    except (urllib.error.URLError, OSError, ValueError):
+        return None                          # never repeat the URL: it carries the token
+
+
 def video(token: str, chat: str, path: Path, caption: str = "", post=_post, run=subprocess.run) -> dict:
     f = smaller(path, run)
     return upload(token, "sendVideo", {"chat_id": chat, "caption": caption[:1000], "supports_streaming": "true"},

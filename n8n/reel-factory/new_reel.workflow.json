@@ -4,7 +4,23 @@
  "description": "Reel factory: a product and winning reference reels -> Claude Code on the reel VPS makes a finished 9:16 UGC ad (ChatGPT + Google Flow in the browser, checks, LaMa, edit, captions). Records the result on dtj_reel_jobs.",
  "nodes": [
   {
-   "id": "22e993b8-a002-40a6-b4c9-24c2782d132b",
+   "id": "054df779-ef23-4936-a5b2-84835f7f7ca1",
+   "name": "Sticky Note 43728bb5",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -420
+   ],
+   "parameters": {
+    "content": "## Reel factory: new reel\nA reel is asked for from the **reel bot** (/remake, /reel) or this form. The job is saved in **dtj_reel_jobs** and the run pauses at **Wait for Claude Code: Reel**.\n\nOn DTJ's VPS the worker (n8n/store-factory/worker.py) asks in the reel bot **tap Start if you are watching**; then Claude Code makes the reel there (Codex pictures, Google Flow in the VPS Chrome, the edit). The **reel watcher** judges every step and a person approves the plan, the pictures and the final reel in Telegram. Nothing is posted to Meta.\n\nSource in git: `n8n/reel-factory/` (deploy_reel.py), `services/reel-factory/`, skills dtj-ugc-reel and dtj-reel-watcher.",
+    "color": 5,
+    "width": 760,
+    "height": 380
+   }
+  },
+  {
+   "id": "f80f5eee-4018-4cbe-96d4-16b32cca6ce1",
    "name": "New UGC Reel",
    "type": "n8n-nodes-base.formTrigger",
    "typeVersion": 2.6,
@@ -19,11 +35,34 @@
     "formFields": {
      "values": [
       {
+       "fieldName": "reel_type",
+       "fieldLabel": "Reel type",
+       "fieldType": "dropdown",
+       "requiredField": true,
+       "fieldOptions": {
+        "values": [
+         {
+          "option": "Remake a reference edit"
+         },
+         {
+          "option": "UGC script reel"
+         }
+        ]
+       }
+      },
+      {
        "fieldName": "product_name",
        "fieldLabel": "Product name",
        "fieldType": "text",
        "requiredField": true,
        "placeholder": "e.g. Senso Instant Detox Green Tea Kahwa"
+      },
+      {
+       "fieldName": "audience",
+       "fieldLabel": "Audience (who it is for)",
+       "fieldType": "text",
+       "requiredField": false,
+       "placeholder": "e.g. Gujarati home cooks 30-50, Gen Z urban India"
       },
       {
        "fieldName": "brand_name",
@@ -49,7 +88,7 @@
        "fieldName": "language",
        "fieldLabel": "Language",
        "fieldType": "dropdown",
-       "requiredField": true,
+       "requiredField": false,
        "fieldOptions": {
         "values": [
          {
@@ -60,6 +99,9 @@
          },
          {
           "option": "Hinglish"
+         },
+         {
+          "option": "Gujarati"
          }
         ]
        }
@@ -75,8 +117,8 @@
        "fieldName": "facts",
        "fieldLabel": "Approved facts (only these may be said)",
        "fieldType": "textarea",
-       "requiredField": true,
-       "placeholder": "pack text, the product page's claims, offers the client approved"
+       "requiredField": false,
+       "placeholder": "UGC: pack text, the product page's claims, offers the client approved"
       },
       {
        "fieldName": "notes",
@@ -104,10 +146,11 @@
      }
     }
    },
-   "webhookId": "fa4ae1a6-0e5b-4624-b489-118ff01f656a"
+   "notes": "The n8n form (needs an n8n login) to ask for a reel by hand: remake or UGC, product, pictures, reference reels, audience, language, facts.",
+   "webhookId": "fbe728d9-7266-47f0-87ad-a30e60163dd2"
   },
   {
-   "id": "ac8e3eb5-88d6-4f54-8419-089654b325d2",
+   "id": "5e181ffb-0de6-4f43-a4b9-422c9d0851fc",
    "name": "Take the Reel Request",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
@@ -118,11 +161,12 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Take the Reel Request\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// Input: the form (\"New UGC Reel\") or another workflow (later: the Telegram bot's /reel). Output: { ok, problems, row } for dtj_reel_jobs.\n// Links only (one per line): pictures and reels must be reachable by the reel worker on the VPS (Drive \"anyone with the link\",\n// the store's CDN, or a path on the VPS). Nothing is invented here: facts are the client's own words, kept as typed.\nconst j = $input.first().json || {};\nconst pick = (...keys) => { for (const k of keys) { if (j[k] != null && String(j[k]).trim()) return String(j[k]).trim(); } return ''; };\nconst lines = (s) => String(s || '').split(/[\\r\\n]+/).map((x) => x.trim()).filter(Boolean);\nconst okLink = (s) => /^https:\\/\\/\\S+$/.test(s) || /^([A-Za-z]:[\\\\/]|\\/)\\S/.test(s);\nconst langs = { english: 'en', en: 'en', hindi: 'hi', hi: 'hi', hinglish: 'hinglish' };\n\nconst product = pick('product_name', 'Product name');\nconst images = lines(pick('product_images', 'Product pictures (links, one per line)'));\nconst refs = lines(pick('reference_reels', 'Winning reference reels (links, one per line)'));\nconst language = langs[pick('language', 'Language').toLowerCase()] || '';\nconst music = pick('music', 'Background music (licensed; link)');\nconst facts = pick('facts', 'Approved facts (only these may be said)');\nconst problems = [];\nif (!product) problems.push('no product name');\nif (!images.length) problems.push('no product picture link');\nif (!refs.length) problems.push('no reference reel link');\nif (!language) problems.push('language must be English, Hindi or Hinglish');\nif (!facts) problems.push('no approved facts (the reel may only say what is in them)');\nconst bad = [...images, ...refs, ...(music ? [music] : [])].filter((x) => !okLink(x));\nif (bad.length) problems.push('not a https link or a VPS path: ' + bad.slice(0, 3).join(', '));\nif (images.length > 5) problems.push('at most 5 product pictures');\nif (refs.length > 5) problems.push('at most 5 reference reels');\n\nreturn [{ json: {\n  ok: problems.length === 0,\n  problems: problems.join('; '),\n  row: {\n    submitted_at: new Date().toISOString(),\n    status: problems.length ? 'refused' : 'new',\n    product_name: product.slice(0, 200),\n    brand_name: pick('brand_name', 'Brand name').slice(0, 200),\n    product_images: images.join('\\n'),\n    reference_reels: refs.join('\\n'),\n    language,\n    music,\n    facts: facts.slice(0, 4000),\n    notes: pick('notes', 'Notes for the reel').slice(0, 2000),\n    requested_by: pick('requested_by', 'Your name') || 'form',\n    telegram_chat_id: pick('chat_id'),\n    raw_json: JSON.stringify(j).slice(0, 8000),\n    reel_status: problems.length ? 'refused: ' + problems.join('; ') : 'waiting for Claude Code',\n  },\n} }];\n"
-   }
+    "jsCode": "// n8n Code node \"Take the Reel Request\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// Input: the form (\"New UGC Reel\") or another workflow (the reel bot's /remake and /reel, 25 Oct 2026). Output: { ok, problems, row }\n// for dtj_reel_jobs. Links only (one per line): pictures and reels must be reachable by the reel worker on the VPS (Drive \"anyone\n// with the link\", the store's CDN or product page, a path on the VPS, or tg:<file_id> = a photo sent to the reel bot, which\n// reel_job.py photos downloads on the VPS). Nothing is invented here: facts are the client's own words, kept as typed.\n// Two kinds (Harsh, 25 Oct 2026): \"remake\" copies ONE reference edit shot for shot (music only: no language, no facts needed);\n// \"ugc\" is a script reel spoken in a language, saying only the approved facts.\nconst j = $input.first().json || {};\nconst pick = (...keys) => { for (const k of keys) { if (j[k] != null && String(j[k]).trim()) return String(j[k]).trim(); } return ''; };\nconst lines = (s) => String(s || '').split(/[\\r\\n]+/).map((x) => x.trim()).filter(Boolean);\nconst okLink = (s) => /^https:\\/\\/\\S+$/.test(s) || /^([A-Za-z]:[\\\\/]|\\/)\\S/.test(s) || /^tg:[\\w-]{10,200}$/.test(s);\nconst langs = { english: 'en', en: 'en', hindi: 'hi', hi: 'hi', hinglish: 'hinglish', gujarati: 'gu', gu: 'gu' };\nconst types = { remake: 'remake', 'remake a reference edit': 'remake', ugc: 'ugc', 'ugc script reel': 'ugc' };\n\nconst reelType = types[pick('reel_type', 'Reel type').toLowerCase()] || (pick('reel_type', 'Reel type') ? '' : 'ugc');\nconst product = pick('product_name', 'Product name');\nconst audience = pick('audience', 'Audience (who it is for)');\nconst images = lines(pick('product_images', 'Product pictures (links, one per line)'));\nconst refs = lines(pick('reference_reels', 'Winning reference reels (links, one per line)'));\nconst language = langs[pick('language', 'Language').toLowerCase()] || (reelType === 'remake' ? 'none' : '');\nconst music = pick('music', 'Background music (licensed; link)');\nconst facts = pick('facts', 'Approved facts (only these may be said)');\nconst problems = [];\nif (!reelType) problems.push('reel type must be remake or ugc');\nif (!product) problems.push('no product name');\nif (!images.length) problems.push('no product picture (a link, a product page or a photo sent to the bot)');\nif (!refs.length) problems.push('no reference reel link');\nif (reelType === 'remake' && refs.length > 1) problems.push('a remake copies exactly one reference reel');\nif (!language) problems.push('language must be English, Hindi, Hinglish or Gujarati');\nif (!facts && reelType === 'ugc') problems.push('no approved facts (the reel may only say what is in them)');\nconst bad = [...images, ...refs, ...(music ? [music] : [])].filter((x) => !okLink(x));\nif (bad.length) problems.push('not a https link, a VPS path or a bot photo: ' + bad.slice(0, 3).join(', '));\nif (images.length > 8) problems.push('at most 8 product pictures');\nif (refs.length > 5) problems.push('at most 5 reference reels');\n\nreturn [{ json: {\n  ok: problems.length === 0,\n  problems: problems.join('; '),\n  row: {\n    submitted_at: new Date().toISOString(),\n    status: problems.length ? 'refused' : 'new',\n    reel_type: reelType,\n    product_name: product.slice(0, 200),\n    audience: audience.slice(0, 300),\n    brand_name: pick('brand_name', 'Brand name').slice(0, 200),\n    product_images: images.join('\\n'),\n    reference_reels: refs.join('\\n'),\n    language,\n    music,\n    facts: facts.slice(0, 4000),\n    notes: pick('notes', 'Notes for the reel').slice(0, 2000),\n    requested_by: pick('requested_by', 'Your name') || 'form',\n    telegram_chat_id: pick('chat_id'),\n    raw_json: JSON.stringify(j).slice(0, 8000),\n    reel_status: problems.length ? 'refused: ' + problems.join('; ') : 'waiting for Claude Code',\n  },\n} }];\n"
+   },
+   "notes": "Checks the request and makes the job row: a remake needs exactly one reference reel; a UGC reel needs a language and approved facts; every link must be https, a VPS path or a photo sent to the bot. A refusal keeps its reason."
   },
   {
-   "id": "0bb6b3f6-a1ba-4ec6-8ca0-0daa52ae1883",
+   "id": "4dcb60d7-1420-4420-bbe4-3c8fff83134f",
    "name": "From Another Workflow",
    "type": "n8n-nodes-base.executeWorkflowTrigger",
    "typeVersion": 1.2,
@@ -135,7 +179,15 @@
     "workflowInputs": {
      "values": [
       {
+       "name": "reel_type",
+       "type": "string"
+      },
+      {
        "name": "product_name",
+       "type": "string"
+      },
+      {
+       "name": "audience",
        "type": "string"
       },
       {
@@ -176,10 +228,11 @@
       }
      ]
     }
-   }
+   },
+   "notes": "Where the reel bot's /remake and /reel arrive (Reel Factory: Telegram Bot): the same fields plus the person's Telegram chat."
   },
   {
-   "id": "9b90b8c1-8ed3-4d6e-95d8-f780cbb81dc7",
+   "id": "a89d26e7-462f-444d-b94a-2be0a50468b0",
    "name": "Save Reel Job",
    "type": "n8n-nodes-base.dataTable",
    "typeVersion": 1.1,
@@ -202,6 +255,8 @@
       "submitted_at": "={{ $json.row.submitted_at }}",
       "status": "={{ $json.row.status }}",
       "product_name": "={{ $json.row.product_name }}",
+      "audience": "={{ $json.row.audience }}",
+      "reel_type": "={{ $json.row.reel_type }}",
       "brand_name": "={{ $json.row.brand_name }}",
       "product_images": "={{ $json.row.product_images }}",
       "reference_reels": "={{ $json.row.reference_reels }}",
@@ -237,6 +292,24 @@
       {
        "id": "product_name",
        "displayName": "product_name",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "audience",
+       "displayName": "audience",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "reel_type",
+       "displayName": "reel_type",
        "required": false,
        "defaultMatch": false,
        "display": true,
@@ -344,10 +417,11 @@
       }
      ]
     }
-   }
+   },
+   "notes": "Saves the job in dtj_reel_jobs. Its row id is the job id in Telegram (r<id>)."
   },
   {
-   "id": "7463b293-c8a8-48ad-b56d-9eeffe9939a2",
+   "id": "b48defd3-83fc-4d8e-b8ec-11c8d9f35e6d",
    "name": "Accepted?",
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
@@ -374,10 +448,11 @@
      ],
      "combinator": "and"
     }
-   }
+   },
+   "notes": "Only a complete request goes on; a refused one stops here, with the reason on its row."
   },
   {
-   "id": "21c62a7b-e301-40f6-9102-415d83be88d3",
+   "id": "effb99c6-babb-4583-90fa-1026f64f901a",
    "name": "Request for Claude Code: Reel",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
@@ -388,11 +463,12 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Request for Claude Code: Reel\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. A Claude Code session on the reel VPS (logged in to Claude, ChatGPT and Google\n// Flow in the reel Chrome) finds this waiting run, reads `instructions` and does everything in it, then answers resume_url.\n// Harsh's decision (20 Oct 2026): no API; Claude and ChatGPT run on the VPS, Flow is driven in that browser.\n// CLAUDE.md rule 9: a subscription Claude Code session is the AI step only while a person is on duty (\"listen\" mode).\nconst row = $input.first().json;\nif (!row || !row.id) throw new Error('No reel job row (dtj_reel_jobs id) reached this step');\nconst resumeUrl = $execution.resumeUrl;\nconst slug = String(row.product_name || 'reel').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'reel';\nconst folder = 'n8n-' + row.id + '-' + slug;\nconst J = '../../.work/reels/' + folder;\nconst list = (s) => String(s || '').split('\\n').filter(Boolean);\nconst request = {\n  job_id: row.id, product_name: row.product_name, brand_name: row.brand_name || '', product_images: list(row.product_images),\n  reference_reels: list(row.reference_reels), language: row.language, music: row.music || '', facts: row.facts || '',\n  notes: row.notes || '', requested_by: row.requested_by || '',\n};\nconst langName = { en: 'English', hi: 'Hindi', hinglish: 'Hinglish' }[row.language] || row.language;\n\nconst lines = [\n  'DTJ REEL FACTORY - make one finished 9:16 UGC ad reel for this product, copying the winning reference reel(s) closely.',\n  'You are the AI step: a Claude Code session on DTJ\\'s reel VPS. Nobody has briefed you; everything you need is below and in the repo.',\n  '',\n  'JOB',\n  '- Job row: id ' + row.id + ' in the n8n data table dtj_reel_jobs | Asked by: ' + (row.requested_by || '?'),\n  '- Product: ' + row.product_name + (row.brand_name ? ' (' + row.brand_name + ')' : ''),\n  '- Language: ' + langName + ' | Reference reels: ' + list(row.reference_reels).length + ' | Product pictures: ' + list(row.product_images).length,\n  '- Music: ' + (row.music ? row.music + ' (must be licensed for paid ads; if unsure, say so in the note)' : 'none given: no music bed'),\n  '- Approved facts (the ONLY claims the reel may make): ' + String(row.facts || '').replace(/\\s+/g, ' ').slice(0, 1500),\n  '- Notes: ' + (row.notes || '(none)'),\n  '',\n  'DO THIS, IN ORDER (every reel_factory command from services/reel-factory, with the reel Python)',\n  '1. Work in the repo (dtj-agency-automation). Read CLAUDE.md. Load the skill dtj-ugc-reel (the runbook) and follow it. Stay on the current git branch; do not commit.',\n  '2. Save `request` from this node as ' + J + '/request.in.json, then:',\n  '   python -m reel_factory.job new --job ' + J + ' --request ' + J + '/request.in.json',\n  '   python -m reel_factory.job refs --job ' + J,\n  '   Watch every reference: look at refs/<n>/hook.jpg and every sheet_*.jpg, read breakdown.json (words, cuts, pace).',\n  '3. Write ' + J + '/script.json as the skill says (character, shots with exact lines, image and video prompts; product shots say how the product stays). Then:',\n  '   python -m reel_factory.job lint --job ' + J + '   (exit 0 needed; it also prints the Flow credits for one round)',\n  '4. python -m reel_factory.job character --job ' + J + '   (ChatGPT, fresh chats). LOOK at images/character.png and images/hero.png: a real-person look, no AI-slop set, the exact product readable.',\n  '5. python -m reel_factory.job images --job ' + J + '   LOOK at checks/images_sheet.jpg and pick one start picture per shot: python -m reel_factory.job pick --job ' + J + ' --shot s1 --image <file>',\n  '6. python -m reel_factory.job clips --job ' + J + '   (2 takes per shot, sparkle removed with LaMa, checked). LOOK at every picked take\\'s 4 fps sheet: a drop, float, smear, extra hand or a wrong product = reject; fix that shot\\'s video_prompt and run clips --shots <id> again (at most 2 extra rounds per shot).',\n  '7. python -m reel_factory.job edit --job ' + J + '   then WATCH final/reel_final.mp4 (a 4 fps sheet) and read the words: captions at the bottom mark, nothing on a face, the product name right.',\n  '8. python -m reel_factory.job result --job ' + J + '   and answer this n8n run with it (also when the reel could not be made), from the repo root:',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body .work/reels/' + folder + '/result.json',\n  '9. Add a dated entry to docs/HANDOFF.md (what was made, where the file is, what needs a look). Tell the person on duty in plain words.',\n  '',\n  'RULES',\n  '- Never invent a number, review, result or claim: only the approved facts above. lint refuses numbers that are not in them.',\n  '- The character is made from a written description in a FRESH ChatGPT chat, never from the reference creator\\'s face.',\n  '- No password, token or key in any file or chat. If Google or ChatGPT asks for a sign-in or a human check, stop and answer n8n with reel_status \"could not make\" and the note \"needs a person: <what>\".',\n  '- Do not post the reel anywhere and do not start an ad: the reel goes to a person, who decides (Tier 2).',\n  '- Flow credits: stop after 3 rounds on one shot and answer \"needs a look\" with what went wrong.',\n];\n\nreturn [{ json: { claude_code_stage: 'reel', resume_url: resumeUrl, instructions: lines.join('\\n'), request, job_folder: '.work/reels/' + folder } }];\n"
-   }
+    "jsCode": "// n8n Code node \"Request for Claude Code: Reel\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. On DTJ's VPS, n8n/store-factory/worker.py finds it, asks in the reel bot\n// \"tap Start if you are watching\" and then runs Claude Code with `instructions` (Harsh, 25 Oct 2026: \"create the full n8n ai\n// workflow and use claude on VPS\"). A person watches and approves in Telegram (plan, pictures, final reel); the reel watcher\n// (skill dtj-reel-watcher, tools/vps/watcher.sh) judges every step before the person is asked. No API (rule 9: attended).\nconst row = $input.first().json;\nif (!row || !row.id) throw new Error('No reel job row (dtj_reel_jobs id) reached this step');\nconst resumeUrl = $execution.resumeUrl;\nconst slug = String(row.product_name || 'reel').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'reel';\nconst folder = 'n8n-' + row.id + '-' + slug;\nconst ROOT = '/home/ai/dtj-agency-automation';\nconst J = ROOT + '/.work/reels/' + folder;\nconst RJ = 'python n8n/reel-factory/reel_job.py';\nconst JOB = 'r' + row.id;\nconst list = (s) => String(s || '').split('\\n').filter(Boolean);\nconst type = row.reel_type === 'remake' ? 'remake' : 'ugc';\nconst request = {\n  job_id: row.id, reel_type: type, product_name: row.product_name, brand_name: row.brand_name || '', audience: row.audience || '',\n  product_images: list(row.product_images), reference_reels: list(row.reference_reels), language: row.language, music: row.music || '',\n  facts: row.facts || '', notes: row.notes || '', requested_by: row.requested_by || '', telegram_chat_id: row.telegram_chat_id || '',\n};\nconst langName = { en: 'English', hi: 'Hindi', hinglish: 'Hinglish', gu: 'Gujarati', none: 'none (music only)' }[row.language] || row.language;\nconst chat = row.telegram_chat_id || '';\nconst gate = (g, n) => [\n  `   WATCHER: bash tools/vps/watcher.sh ${g} ${J} <round>   (fresh Claude + Codex judges; writes ${J}/watch/${g}.verdict.json).`,\n  `   verdict \"block\" = fix every blocking issue yourself and run the watcher again (round +1), at most 2 extra rounds; then ask:`,\n  `   ${RJ} ${n} --job ${JOB} --watch ${J}/watch/${g}.verdict.json --round <round> ...   (exit 3 = waiting: end your turn with`,\n  `   DTJ_WAIT: <that exact command>). {\"ok\": true} = go on; {\"ok\": false, \"note\"} = make those changes, then the watcher and this ask again (round +1).`,\n];\n\nconst common = [\n  'DTJ REEL FACTORY - ' + (type === 'remake'\n    ? 'REMAKE ONE REFERENCE EDIT shot for shot for this product (music only, no voiceover).'\n    : 'make one finished 9:16 UGC script reel for this product, copying the winning reference reel(s) closely.'),\n  'You are the AI step on DTJ\\'s VPS (worker.py started you; a person watches in the reel bot). Everything you need is below and in the repo.',\n  '',\n  'JOB',\n  '- Row ' + row.id + ' in dtj_reel_jobs | type: ' + type + ' | asked by: ' + (row.requested_by || '?') + ' | Telegram chat: ' + (chat || 'none (admin chat)'),\n  '- Product: ' + row.product_name + (row.brand_name ? ' (' + row.brand_name + ')' : '') + ' | audience: ' + (row.audience || 'not given: ask in plan text'),\n  '- Language: ' + langName + ' | reference reels: ' + list(row.reference_reels).join(' ') + ' | product pictures: ' + list(row.product_images).length,\n  '- Music: ' + (row.music || (type === 'remake' ? 'the reference reel\\'s own soundtrack (extract it), unless a person says otherwise' : 'none given: no music bed')),\n  '- Approved facts (the ONLY claims): ' + (String(row.facts || '').replace(/\\s+/g, ' ').slice(0, 1500) || '(none: no claims at all)'),\n  '- Notes: ' + (row.notes || '(none)'),\n  '- Job folder: ' + J + '   (use full paths; reel code ONLY through bash tools/vps/reel.sh; pictures through bash tools/vps/codex_image.sh;',\n  '  Google Flow in the reel Chrome through the Playwright MCP tools (mcp__playwright__*); downloads through bash tools/vps/reel.sh remake fetch|reference)',\n  '',\n  'START',\n  '0. Read CLAUDE.md. Load the skills dtj-ugc-reel and dtj-reel-watcher. Save `request` from this node as ' + J + '/request.in.json.',\n  `   ${RJ} start --job ${JOB} --chat \"${chat}\" --title \"Reel: ${String(row.product_name).replace(/\"/g, '')} (${type})\"`,\n  `   Move the bar at every step: ${RJ} step --job ${JOB} --stage <refs|plan|pictures|clips|edit|final> --done <n> --total <m>`,\n  `   Product pictures: https links -> bash tools/vps/reel.sh remake fetch <link> ${J}/inputs/pack<N>.png (a product PAGE: read it with WebFetch, take its main pack image link);`,\n  `   tg:<id> -> ${RJ} photos --job ${JOB} --ids <id,...> --out ${J}/inputs`,\n  '   If Flow shows a sign-in or a human check: ' + RJ + ' person --job ' + JOB + ' --what \"sign in to Google Flow in the VPS remote view (ssh -L 6080:localhost:6080 ...)\"; never type a password.',\n];\n\nconst remake = [\n  '',\n  'REMAKE (follow .claude/skills/dtj-ugc-reel/references/remake-a-reference-edit.md step by step; it wins over this summary)',\n  `1. bash tools/vps/reel.sh remake reference <the reference link> ${J}/inputs/reference.mp4   (Instagram = Apify, capped). No music given:`,\n  `   ffmpeg -y -v error -i ${J}/inputs/reference.mp4 -vn -c:a libmp3lame -q:a 2 ${J}/music/reference.mp3`,\n  `2. Cut list: ffmpeg scene detection (select='gt(scene,0.12)'), plan.md + cut.json; anchors; bash tools/vps/reel.sh remake measure_motion ${J}/inputs/reference.mp4 ${J}/cut.json <anchors> ${J}/refs/ref_motion.json`,\n  `3. One frame per shot; LOOK for another brand's marks; bash tools/vps/reel.sh remake clean_brand ${J}/refs/clean <frames> --box ...; marks templates:`,\n  `   bash tools/vps/reel.sh watch marks --job ${J} --from <a raw frame> --box ...`,\n  '4. Audience: if the request names one, check .claude/skills/dtj-reel-watcher/audiences/<slug>.md is 14 days old or newer (else say so in the plan).',\n  '5. G1 PLAN: write ' + J + '/plan.md (one line per reference shot: time, what, our picture, still or Flow clip, effect) and cut.json.',\n  ...gate('g1', 'plan --file ' + J + '/plan.md'),\n  '6. Pictures: per shot, Codex with the cleaned frame + the pack: bash tools/vps/codex_image.sh --prompt-file <txt> --out ' + J + '/images/pNN.png --ref <clean frame> --ref <pack>',\n  '   (the runbook\\'s exact prompt; never a written description). Garbled small packs: bash tools/vps/reel.sh remake fixpack ...',\n  ...gate('g2', 'pictures --dir ' + J + '/images'),\n  '7. Flow clips (Frames, 9:16, 6 s, x1) ONLY for shots that really move; Playwright MCP: upload with browser_file_upload, prompt, generate, read the',\n  '   clip\\'s signed video URL on its page, bash tools/vps/reel.sh remake fetch <url> ' + J + '/clips/raw/pNN.mp4; bash tools/vps/reel.sh sparkle <raw> ' + J + '/clips/pNN.mp4',\n  '   WATCHER: bash tools/vps/watcher.sh g3 ' + J + ' <round>; a clip it blocks is made again (at most 3 rounds per shot, then a still with edit motion).',\n  `8. Edit: cut.json every shot \"move\": \"ref\", label \"\" (no burned-in AI line); bash tools/vps/reel.sh remake recut ${J}/cut.json`,\n  ...gate('g4', 'final --file <the final mp4>'),\n];\n\nconst ugc = [\n  '',\n  'UGC (follow .claude/skills/dtj-ugc-reel/SKILL.md and references/script-playbook.md)',\n  `1. bash tools/vps/reel.sh job new --job ${J} --request ${J}/request.in.json ; bash tools/vps/reel.sh job refs --job ${J} ; LOOK at every sheet.`,\n  `2. G1 SCRIPT: write ${J}/script.json; bash tools/vps/reel.sh job lint --job ${J} (exit 0) ; bash tools/vps/reel.sh slop ${J}/script.json`,\n  '   Write a plain summary of the script (lines per shot) to ' + J + '/plan.md for the person.',\n  ...gate('g1', 'plan --file ' + J + '/plan.md'),\n  `3. Pictures (character, hero, start pictures) with Codex (bash tools/vps/codex_image.sh ...) or bash tools/vps/reel.sh job character|images --job ${J} --cdp http://127.0.0.1:9222`,\n  ...gate('g2', 'pictures --dir ' + J + '/images'),\n  `4. bash tools/vps/reel.sh job clips --job ${J} --cdp http://127.0.0.1:9222 (or Flow by hand in the Playwright MCP); WATCHER g3 per round.`,\n  `5. bash tools/vps/reel.sh job edit --job ${J}`,\n  ...gate('g4', 'final --file ' + J + '/final/reel_final.mp4'),\n];\n\nconst end = [\n  '',\n  'FINISH',\n  `9. Write ${J}/result.json: {\"reel_status\": \"reel ready\" | \"needs a look\" | \"could not make\", \"final_path\", \"job_folder\", \"duration_s\", \"lufs\",`,\n  '   \"generations\", \"credits_used\", \"note\"} (\"reel ready\" only after the person\\'s final Approve). Answer n8n from ' + ROOT + ':',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body ' + J + '/result.json',\n  `   ${RJ} finish --job ${JOB} --ok --note \"<one line>\"   (or --stopped)`,\n  `10. WATCHER G5 (process): bash tools/vps/watcher.sh g5 ${J} 1 ; send its card: ${RJ} tell --job ${JOB} --text \"<the card>\".`,\n  '    New lessons go to ' + ROOT + '/.work/handoff/<date>-run-<n8n run>.md (the laptop merges them into the runbook\\'s lessons log).',\n  '',\n  'RULES',\n  '- Never invent a number, review, result, price, year or claim: only the approved facts. No other brand\\'s name or mark anywhere.',\n  '- No password, token or key in any file or chat. Nothing is posted anywhere and no ad is started (Tier 2: a person decides).',\n  '- Flow credits: only after the pictures Approve; at most 3 rounds per shot.',\n];\n\nconst lines = [...common, ...(type === 'remake' ? remake : ugc), ...end];\nreturn [{ json: { claude_code_stage: 'reel', resume_url: resumeUrl, instructions: lines.join('\\n'), request, job_folder: J } }];\n"
+   },
+   "notes": "Writes Claude's full task list for this reel type (remake or UGC): the VPS folders and tools, the watcher's check before each of the 3 Telegram approvals (plan, pictures, final reel), and how to answer n8n. The VPS worker reads it."
   },
   {
-   "id": "594ceac3-74f6-4faf-8987-0d02247701d7",
+   "id": "bfcde19f-c38b-4c81-b010-6b93536bd807",
    "name": "Wait for Claude Code: Reel",
    "type": "n8n-nodes-base.wait",
    "typeVersion": 1.1,
@@ -409,10 +485,11 @@
     "resumeUnit": "days",
     "options": {}
    },
-   "webhookId": "430aaf91-903d-4e35-bfd8-f096d70f3d6a"
+   "notes": "Pauses (up to 3 days). The VPS worker asks 'tap Start if you are watching' in the reel bot; after the tap Claude makes the reel and answers this step with reply.py.",
+   "webhookId": "4fd9b053-f688-44fb-89da-d8edca71a941"
   },
   {
-   "id": "4a8c8356-9130-40a3-b987-89ec15e0475a",
+   "id": "b1c2cc89-e3cc-48de-bbc7-0cad0329ffd2",
    "name": "Claude Code Reply: Reel",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
@@ -424,10 +501,11 @@
     "mode": "runOnceForAllItems",
     "language": "javaScript",
     "jsCode": "// n8n Code node \"Claude Code Reply: Reel\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same rules as\n// n8n/store-factory/reply.py (stage \"reel\"), which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['reel ready', 'needs a look', 'could not make'];\nlet status = allowed.includes(b.reel_status) ? b.reel_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst path = String(b.final_path || '');\nconst pathOk = /\\.mp4$/i.test(path) && !/[\\r\\n]/.test(path);\nif (status === 'reel ready' && !pathOk) status = 'reply not understood (no final file)';\nconst num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi ? v : null);\nreturn [{ json: {\n  row_id: $('Request for Claude Code: Reel').first().json.request.job_id,\n  reel_status: status,\n  final_path: pathOk ? path.slice(0, 400) : '',\n  job_folder: String(b.job_folder || '').slice(0, 400),\n  duration_s: num(b.duration_s, 0, 180),\n  lufs: num(b.lufs, -60, 0),\n  generations: Number.isInteger(b.generations) && b.generations >= 0 ? b.generations : null,\n  credits_used: num(b.credits_used, 0, 100000),\n  reel_note: String(b.note || '').slice(0, 1000),\n} }];\n"
-   }
+   },
+   "notes": "Reads Claude's answer (reel ready / needs a look / could not make, the file, length, loudness, credits used) and refuses half answers."
   },
   {
-   "id": "e3fff0b9-5000-4f9b-b5c8-f93b2d7826fb",
+   "id": "aa7200eb-7643-4eb2-980d-a68c6a418193",
    "name": "Record Reel",
    "type": "n8n-nodes-base.dataTable",
    "typeVersion": 1.1,
@@ -552,10 +630,11 @@
       }
      ]
     }
-   }
+   },
+   "notes": "Writes the result on the job's row in dtj_reel_jobs."
   },
   {
-   "id": "b8591434-8dc9-4d53-afba-c371ba55defe",
+   "id": "d00c28bb-27a3-49e0-bbec-1e569aec72f7",
    "name": "Tell the Requester",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
@@ -567,10 +646,11 @@
     "mode": "runOnceForAllItems",
     "language": "javaScript",
     "jsCode": "// n8n Code node \"Tell the Requester\" in \"Reel Factory: New Reel\" (mode: Run Once for All Items).\n// When the reel was asked for from Telegram (the job has a telegram_chat_id), send the result back. Output: [] or one { chat_id, text }.\nconst job = $('Save Reel Job').first().json || {};\nconst chat = String(job.telegram_chat_id || '').trim();\nif (!chat) return [];\nconst r = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet text;\nif (r.reel_status === 'reel ready') {\n  text = 'Your reel for ' + esc(job.product_name) + ' is ready (' + esc(r.duration_s) + ' s). File on the reel VPS:\\n' + esc(r.final_path)\n    + '\\nNothing was posted. A person watches it and decides where it goes.';\n} else {\n  text = 'The reel for ' + esc(job.product_name) + ' is not finished (' + esc(r.reel_status || 'no answer') + ')'\n    + (r.reel_note ? ': ' + esc(String(r.reel_note).slice(0, 600)) : '.');\n}\nreturn [{ json: { chat_id: chat, text } }];\n"
-   }
+   },
+   "notes": "For a reel asked in Telegram: one short message with the result and where the file is. Nothing is posted anywhere."
   },
   {
-   "id": "1d4d16f1-5118-4d1d-81df-d7797458be58",
+   "id": "e7a146f3-6fee-4a59-bac7-e128734a6ca1",
    "name": "Send Result",
    "type": "n8n-nodes-base.telegram",
    "typeVersion": 1.2,
@@ -589,28 +669,13 @@
      "disable_web_page_preview": true
     }
    },
-   "webhookId": "b49668d6-9cd0-44cd-8200-7338a570d1af",
+   "notes": "Sends that message to the requester's chat (through the reel bot once its 'DTJ Reel Bot' credential is attached).",
+   "webhookId": "5683dac0-588b-467b-9bab-76d922c46100",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
      "name": "DTJ Page Bot"
     }
-   }
-  },
-  {
-   "id": "054df779-ef23-4936-a5b2-84835f7f7ca1",
-   "name": "Sticky Note 43728bb5",
-   "type": "n8n-nodes-base.stickyNote",
-   "typeVersion": 1,
-   "position": [
-    -40,
-    -420
-   ],
-   "parameters": {
-    "content": "## Reel factory: new UGC reel\nFill the form **New UGC Reel** (links to the product pictures and to 1-5 winning reels, the language, the approved facts). The job is saved in **dtj_reel_jobs**, then the run pauses at **Wait for Claude Code: Reel**.\n\nOn the reel VPS, the person on duty runs Claude Code in the dtj-agency-automation folder and says \"handle the Claude Code trigger in n8n\" (or \"listen for reel requests\"). Claude makes the reel in the logged-in browser (ChatGPT, Google Flow), checks every take, removes the Flow sparkle, edits, captions, and posts the result here. Nothing is posted to Meta.\n\nSource in git: `n8n/reel-factory/` and `services/reel-factory/`.",
-    "color": 5,
-    "width": 760,
-    "height": 380
    }
   }
  ],
