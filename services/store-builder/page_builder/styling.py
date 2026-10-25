@@ -287,6 +287,9 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("accent_color", acc)
         if b == "hero-points":
             put("eyebrow_color", head)
+            if s.get("icon_style") == "ring":  # the brand colour's ring, the icon in the words' colour (NoCheat's look)
+                put("ring_color", acc if style.contrast(acc, r["bg"]) >= 3 else r["text"])
+                put("ring_glyph_color", r["text"])
         if b == "testimonials":
             put("star_color", r["rating_star"])
             put("avatar_text_color", best_text_on(acc))  # the initial on the accent circle: black or white by contrast, not Canvas

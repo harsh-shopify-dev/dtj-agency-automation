@@ -9,15 +9,23 @@
     {%- assign hp_line = line | strip -%}
     {%- if hp_line != blank and hp_count < 8 -%}
       {%- assign hp_count = hp_count | plus: 1 -%}
-      <li class="dtj-ci">
-        <span class="dtj-ci__icon" aria-hidden="true">{% render 'dtj-check-icon', name: 'check', size: bs.check_size %}</span>
-        <span class="dtj-ci__text">{{ hp_line | escape }}</span>
+      {%- comment -%} "icon | text" picks a line's icon (protein, peanut, no-sugar, chilli, flame, fibre, leaf, no-colour, no-preservative, jar...): Harsh, 25 Oct 2026 {%- endcomment -%}
+      {%- assign hp_icon = 'check' -%}
+      {%- assign hp_text = hp_line -%}
+      {%- if hp_line contains '|' -%}
+        {%- assign hp_parts = hp_line | split: '|' -%}
+        {%- assign hp_icon = hp_parts.first | strip | downcase -%}
+        {%- assign hp_text = hp_parts.last | strip -%}
+      {%- endif -%}
+      <li class="dtj-ci{% if bs.icon_style == 'ring' %} dtj-ci--ring{% endif %}">
+        <span class="dtj-ci__icon" aria-hidden="true">{% render 'dtj-check-icon', name: hp_icon, size: bs.check_size, style: bs.icon_style %}</span>
+        <span class="dtj-ci__text">{{ hp_text | escape }}</span>
       </li>
     {%- endif -%}
   {%- endfor -%}
 {%- endcapture -%}
 {%- if hp_eyebrow != blank or hp_sub != blank or hp_items contains '<li' -%}
-  <div class="dtj-b dtj-hero-points{% if hp_cols == 2 and bs.stack_mobile %} dtj-hero-points--stack{% endif %}" data-columns="{{ hp_cols }}" style="{{ dtj_std_style | strip_newlines }} --hp-cols: {{ hp_cols }}; --hp-gap: {{ bs.gap }}px; --hp-tick-gap: {{ bs.tick_gap }}px; --hp-col-gap: {{ bs.column_gap }}px; --hp-eyebrow-size: {{ bs.eyebrow_size }}px; --hp-sub-size: {{ bs.subheading_size }}px; --hp-tick-size: {{ bs.tick_size }}px; --dtj-ci-size: {{ bs.check_size }}px; --dtj-ci-gap: 10px;{% if bs.accent_color != blank %} --hp-accent: {{ bs.accent_color }};{% endif %}{% if bs.eyebrow_color != blank %} --hp-eyebrow-color: {{ bs.eyebrow_color }};{% endif %}" {{ block.shopify_attributes }}>
+  <div class="dtj-b dtj-hero-points{% if hp_cols == 2 and bs.stack_mobile %} dtj-hero-points--stack{% endif %}" data-columns="{{ hp_cols }}" style="{{ dtj_std_style | strip_newlines }} --hp-cols: {{ hp_cols }}; --hp-gap: {{ bs.gap }}px; --hp-tick-gap: {{ bs.tick_gap }}px; --hp-col-gap: {{ bs.column_gap }}px; --hp-eyebrow-size: {{ bs.eyebrow_size }}px; --hp-sub-size: {{ bs.subheading_size }}px; --hp-tick-size: {{ bs.tick_size }}px; --dtj-ci-size: {{ bs.check_size }}px; --dtj-ci-gap: 10px;{% if bs.accent_color != blank %} --hp-accent: {{ bs.accent_color }};{% endif %}{% if bs.eyebrow_color != blank %} --hp-eyebrow-color: {{ bs.eyebrow_color }};{% endif %}{% if bs.ring_color != blank %} --dtj-ring-color: {{ bs.ring_color }};{% endif %}{% if bs.ring_glyph_color != blank %} --dtj-ring-glyph: {{ bs.ring_glyph_color }};{% endif %}{% if bs.ring_fill != blank %} --dtj-ring-fill: {{ bs.ring_fill }};{% endif %}" {{ block.shopify_attributes }}>
     {%- if hp_eyebrow != blank -%}
       <span class="dtj-hero-points__eyebrow">
         {%- if bs.show_star -%}
