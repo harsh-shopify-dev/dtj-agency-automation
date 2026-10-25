@@ -61,10 +61,29 @@ def star_mask(shape: tuple[int, int], stars: list[tuple[int, int, int]], grow: i
     return cv2.dilate(mp[P:P + H, P:P + W], np.ones((2 * grow + 1, 2 * grow + 1), np.uint8))
 
 
+def lama():
+    """LaMa on the GPU when there is one, else the CPU (the VPS has none: 25 Oct 2026, ~0.7 s a frame on its 1.5 cores).
+    simple-lama-inpainting 0.1.0 (what pip gives on the VPS) loads the model straight onto CUDA and fails without a GPU, so the
+    model load is told the device there."""
+    import torch  # noqa: PLC0415
+    from simple_lama_inpainting import SimpleLama   # downloads big-lama.pt once (~196 MB) to the torch cache
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    try:
+        return SimpleLama(device=dev)
+    except (TypeError, RuntimeError):
+        load = torch.jit.load
+        torch.jit.load = lambda path, *a, **k: load(path, map_location=dev)
+        try:
+            m = SimpleLama()
+        finally:
+            torch.jit.load = load
+        m.device = dev
+        return m
+
+
 class Remover:
     def __init__(self):
-        from simple_lama_inpainting import SimpleLama   # downloads big-lama.pt once (~196 MB) to the torch cache
-        self.lama = SimpleLama()
+        self.lama = lama()
 
     def frame(self, img: np.ndarray, stars: list[tuple[int, int, int]]) -> np.ndarray:
         x0, y0, S = WINDOW

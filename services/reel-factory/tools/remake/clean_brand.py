@@ -3,9 +3,10 @@ import sys
 from pathlib import Path
 import numpy as np
 from PIL import Image
-from simple_lama_inpainting import SimpleLama
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from reel_factory.watermark import lama
 BOXES = [(520, 118, 675, 210), (40, 1058, 475, 1135)]   # in a 720x1280 frame
-lama = SimpleLama()
+lama = lama()
 out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
 for p in sys.argv[2:]:
     im = Image.open(p).convert('RGB'); w, h = im.size; k = w / 720
