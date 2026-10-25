@@ -43,8 +43,9 @@ SIZE = 1080
 LAYOUTS = ("pack", "top", "bottom", "numbers", "tiles", "stack")
 FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/{folder}/{file}"
 FONT_FILES = {"Shrikhand": {"400": "Shrikhand-Regular.ttf"}, "Poppins": {"600": "Poppins-SemiBold.ttf", "700": "Poppins-Bold.ttf"}}
-UNIT = re.compile(r"(\d) (g|kg|mg|ml|l)\b")  # a number and its unit stay on one line, kept together by a span (24 Oct 2026: the
-# display font draws a no-break space far wider than a space, "8   g")
+UNIT = re.compile(r"(\d+(?:[.,]\d+)?) (g|kg|mg|ml|l)\b")  # a number and its unit stay on one line, kept together by an <i> (24 Oct
+# 2026: the display font draws a no-break space far wider than a space, "8   g"; 26 Oct 2026: a <span> took the label and pill styles
+# of .num span / .shot span, so "14 g" printed as "1" over a small "4 g" and a pill's "100 ml" jumped out of it)
 DEFAULT_BRAND = {"primary": "#9E1B22", "accent": "#FFC94A", "ink": "#24090B", "heading_font": "Shrikhand", "body_font": "Poppins"}
 
 
@@ -89,7 +90,7 @@ def lines_of(pic: dict) -> list[str]:
 
 
 CSS = """
-*{box-sizing:border-box}html,body{margin:0;padding:0}.nb{white-space:nowrap}
+*{box-sizing:border-box}html,body{margin:0;padding:0}.nb{white-space:nowrap;font-style:normal}
 body{width:1080px;height:1080px;overflow:hidden;font-family:'B',sans-serif;-webkit-font-smoothing:antialiased}
 .c{position:relative;width:1080px;height:1080px;overflow:hidden;background:var(--ground)}
 .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -109,6 +110,7 @@ h1{font-family:'H',serif;font-weight:400;margin:0;line-height:1.04;color:var(--h
 .num.l{left:72px}.num.r{right:72px;text-align:right}.num.y0{top:420px}.num.y1{top:720px}
 .tiles .t{top:110px;text-align:center}.tiles h1{font-size:96px}
 .grid{position:absolute;left:60px;right:60px;top:290px;bottom:56px;display:grid;grid-template-columns:repeat(3,1fr);align-content:start;row-gap:40px}
+.grid.g2{grid-template-columns:repeat(2,1fr);left:190px;right:190px}
 .tile{display:flex;flex-direction:column;align-items:center}
 .tile img{width:250px;height:250px;border-radius:50%;object-fit:cover;border:7px solid var(--ring);box-shadow:0 8px 24px rgba(0,0,0,.14)}
 .tile span{margin-top:16px;font-weight:700;font-size:28px;line-height:1.15;text-align:center;color:var(--words);max-width:300px}
@@ -160,7 +162,7 @@ def page(pic: dict, brand: dict, base: Path, faces: str) -> str:
                "sticker-bg": accent if dark else primary, "sticker-fg": primary if dark else accent, "ring": accent if dark else "#FFFFFF",
                "pill-bg": accent, "pill-fg": primary}
     style = ";".join(f"--{k}:{v}" for k, v in colours.items())
-    e = lambda s: UNIT.sub(r'<span class="nb">\1 \2</span>', html.escape(s or ""))  # noqa: E731 - "100 g" never breaks
+    e = lambda s: UNIT.sub(r'<i class="nb">\1 \2</i>', html.escape(s or ""))  # noqa: E731 - "100 g" never breaks
     head, sub = e(pic.get("headline")), e(pic.get("sub"))
     maxh = {"pack": 330, "top": 240, "bottom": 360, "numbers": 200, "tiles": 170, "stack": 560}[layout]
     if layout == "stack":  # one sentence per line: "Spread it." / "Dip it." / "Stuff it."; one sentence alone wraps as usual
@@ -180,7 +182,7 @@ def page(pic: dict, brand: dict, base: Path, faces: str) -> str:
             side, row = ("l" if i % 2 == 0 else "r"), f"y{i // 2}"
             body += f'<div class="num {side} {row}"><b>{e(it.get("value"))}</b><span>{e(it.get("label"))}</span></div>'
     if layout == "tiles":
-        body += '<div class="grid">' + "".join(
+        body += f'<div class="grid{" g2" if len(items) == 4 else ""}">' + "".join(  # four tiles sit 2 x 2, not 3 + 1
             f'<div class="tile"><img src="{_img(it["photo"], base)}" alt=""><span>{e(_label(it))}</span></div>' for it in items[:6]) + "</div>"
     if layout == "stack":
         body += '<div class="col">' + "".join(
