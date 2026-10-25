@@ -22,6 +22,20 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 25 Oct 2026: PROPERI polish + DTJ Blocks dtj-blocks-28 RELEASED (PRs #79-#82, account A)
+- **App release (Harsh's yes in chat: "yes, release DTJ Blocks"):** DTJ Blocks **dtj-blocks-28** (DTJ's own app, `services/block-library`,
+  `shopify app deploy --allow-updates`): DTJ Hero Points can show a line icon per point ("icon | text": protein, peanut, no-sugar,
+  chilli, flame, fibre, leaf, no-colour, no-preservative, jar) in a ring (`icon_style: ring`). Existing pages unchanged (ticks).
+  The builder picks icons by words (`sections.point_icon`) ONLY for shops whose registry says `"features": ["point_icons"]`
+  (elevate set; client copies such as dtj-testing keep ticks until their own copy is released and the flag is added).
+- **PROPERI page (brief 12), all on the DRAFT:** desktop gallery = one big square picture with thumbnails, half width (builder
+  default, #79); NoCheat's 9 photos detached from the product (still in Files); "88% peanut butter" card = a plain clear jar
+  filled with peanuts; copy audit: the fiery flavour now has its own story section, strip lines and FAQ (NoCheat's own words:
+  "Bold flavour and purposeful nutrition", "a little kick"; no invented heat level); buy box points with icons; FAQ questions no
+  longer vanish on hover (Horizon's `summary:hover`; builder adds section CSS, #80).
+- **OPEN for NoCheat / Harsh:** "No palm oil" and a heat level ("extreme fiery") only if NoCheat confirms them; the store menu items
+  "footer-client-services" / "footer-company" and the store name "DTJ" (Shopify admin).
+
 ## 24 Oct 2026 (later): PAGE CHAT IN TELEGRAM; PROPERI RE-WRITTEN AROUND PROTEIN (PRs #73-#77, account A)
 - **Page chat (new, live):** after a page's "page ready" message, a person just types a change in Telegram (a reply works too).
   The bot saves it in dtj_bot_answers (job `page-<brief>`, key `chat`; `page_chat.py` marks the chat open so plain text counts),
