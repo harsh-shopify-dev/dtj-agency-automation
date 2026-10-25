@@ -8,12 +8,18 @@ from __future__ import annotations
 
 import html as htmllib
 import json
+import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 CANDIDATES = (r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
               r"C:\Program Files\Google\Chrome\Application\chrome.exe", "/usr/bin/chromium", "/usr/bin/google-chrome")
+# Linux (DTJ's VPS, 23 Oct 2026, brief 12: no browser was found, so no page could be built there): Playwright's own Chromium is used
+# when no other one is installed, and DTJ_BROWSER can name any. Chromium's sandbox cannot start there for the unprivileged `ai` user
+# (it crashes at once), so on Linux it runs without it; it only opens the page files the builder itself wrote.
+SANDBOX = ["--no-sandbox"] if sys.platform.startswith("linux") else []
 MAX_HEIGHT = 16000  # px: taller pages are cut in the screenshot (the measurements still cover the whole page)
 
 PROBE = r"""<script>(function(){
@@ -68,16 +74,23 @@ def _answers(exe: Path) -> bool:
     """Headless Edge can exit at once with no output on some machines (seen 9 Oct 2026: Edge 154 printed nothing while Chrome worked),
     so a browser is only used after it has rendered a one-line page."""
     try:
-        r = subprocess.run([str(exe), "--headless=new", "--disable-gpu", "--dump-dom", "data:text/html,<p>pb-ok</p>"],
+        r = subprocess.run([str(exe), "--headless=new", "--disable-gpu", *SANDBOX, "--dump-dom", "data:text/html,<p>pb-ok</p>"],
                            capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
     except (OSError, subprocess.TimeoutExpired):
         return False
     return "pb-ok" in r.stdout
 
 
+def candidates(environ=os.environ, home: Path | None = None) -> list[Path]:
+    """DTJ_BROWSER first, then the usual places, then Playwright's Chromium (newest first)."""
+    named = [Path(environ["DTJ_BROWSER"])] if environ.get("DTJ_BROWSER") else []
+    playwright = sorted((home or Path.home()).glob(".cache/ms-playwright/chromium-*/chrome-linux*/chrome"), reverse=True)
+    return [*named, *(Path(p) for p in CANDIDATES), *playwright]
+
+
 def find_browser() -> Path | None:
     if "exe" not in _WORKING:
-        _WORKING["exe"] = next((Path(p) for p in CANDIDATES if Path(p).is_file() and _answers(Path(p))), None)
+        _WORKING["exe"] = next((p for p in candidates() if p.is_file() and _answers(p)), None)
     return _WORKING["exe"]
 
 
@@ -104,7 +117,7 @@ class EdgeBrowser:
         height, tall enough that sections waiting to scroll into view are already in view."""
         probe_doc = doc.replace("</body>", probe + "</body>", 1)
         frame = self._frame(probe_doc, width, height, f"measure-{width}.html")
-        r = subprocess.run([str(self.exe), "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--window-size={max(width, 500) + 20},2000",
+        r = subprocess.run([str(self.exe), "--headless=new", "--disable-gpu", *SANDBOX, "--hide-scrollbars", f"--window-size={max(width, 500) + 20},2000",
                             "--virtual-time-budget=6000", "--dump-dom", frame.resolve().as_uri()],
                            capture_output=True, text=True, timeout=self.timeout, encoding="utf-8", errors="replace")
         m = re.search(r"PBRESULT(.*?)PBEND", htmllib.unescape(r.stdout), re.S)
@@ -116,7 +129,7 @@ class EdgeBrowser:
         height = min(max(height, 400), MAX_HEIGHT)
         frame = self._frame(doc, width, height, f"shot-{width}.html")
         out_png.parent.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run([str(self.exe), "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--force-device-scale-factor={scale}",
+        r = subprocess.run([str(self.exe), "--headless=new", "--disable-gpu", *SANDBOX, "--hide-scrollbars", f"--force-device-scale-factor={scale}",
                             f"--window-size={max(width, 500)},{height}", "--virtual-time-budget=6000", f"--screenshot={out_png.resolve()}",
                             frame.resolve().as_uri()], capture_output=True, text=True, timeout=self.timeout)
         if not out_png.is_file():

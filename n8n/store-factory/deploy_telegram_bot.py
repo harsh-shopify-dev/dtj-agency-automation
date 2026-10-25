@@ -28,6 +28,11 @@ Telegram Message -> Read the Message -> Load Bot Users -> Load Shops -> Who Is I
                    yes -> Ask About Pictures ("upload the brand's pictures to the shop?": Yes / No buttons)
                    no  -> Send
     pictures -> Note the Pictures (dtj_client_intake.upload_assets, upload_assets_by) -> Pictures Noted -> Send
+    addshop -> Start Add Shop (Store Factory: Add Shop, does not wait) -> Add Shop Started -> Send   (admins only)
+    store   -> Start New Store (Store Factory: New Store, does not wait) -> Store Started -> Send   (an admin's store link)
+    answer  -> Save the Answer (dtj_bot_answers: a store job's tap or typed reply) -> Answer Noted -> Send
+                                                                                    -> Copy Approved? -> Start Brand Copy
+               (an Approve tap under a brand copy starts Store Factory: Brand Copy: the copy runs in n8n, no laptop step)
     reply   -> Send
 Read the Message -> Is It a Button? -> Answer the Button (stops the button's spinner)
 Page Design: Claude Code Reply -> Tell the Requester -> Send Result (only for briefs that came from Telegram).
@@ -66,7 +71,13 @@ CODE_NODES = {"Read the Message": "bot_read.js", "Who Is It": "bot_route.js", "W
               "Pick the Shop": "bot_switch.js", "Licence Calls": "licence_calls.js", "Licence Report": "licence_report.js",
               "Intake Started": "intake_started.js", "Stop Plan": "stop_plan.js", "Stop Report": "stop_report.js",
               "Intake Question": "intake_question.js", "Choice Noted": "choice_noted.js", "Website Noted": "website_noted.js",
-              "Pictures Noted": "pictures_noted.js"}
+              "Pictures Noted": "pictures_noted.js", "Add Shop Started": "add_shop_started.js", "Store Started": "store_started.js",
+              "Answer Noted": "answer_noted.js"}
+ADD_SHOP = "Store Factory: Add Shop"  # made by deploy_add_shop.py; the bot only starts it
+NEW_STORE = "Store Factory: New Store"  # made by deploy_new_store.py; the bot only starts it
+BRAND_COPY = "Store Factory: Brand Copy"  # made by deploy_brand_copy.py; started by the brand copy's Approve tap
+ANSWERS = "dtj_bot_answers"  # a store job's answers (bot_ask.py reads them); made by setup_n8n.py --apply from tables.json
+ANSWER_COLS = ("job", "key", "value", "choice", "by", "chat_id", "at")
 SWITCH_NODES = ("Ask the Switch", "Ask for the Shop List")  # the HTTP steps that carry the bot's key
 NOTIFY_JS = "notify_result.js"
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
@@ -473,6 +484,134 @@ def pictures_ops(telegram_id: str | None) -> list[dict]:
     return ops
 
 
+def addshop_ops(add_shop_id: str) -> list[dict]:
+    """/addshop <shop>.myshopify.com <client name> (21 Oct 2026, Harsh: "one step process from telegram"), admins only: an eighth
+    rule on "What to Do" starts "Store Factory: Add Shop" without waiting (a laptop's Claude Code does the work and answers there);
+    the reply branch moves to the fallback output after it."""
+    inputs = ["shop", "label", "requested_by", "chat_id"]
+    schema = [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True, "canBeUsedToMatch": True,
+               "type": "string"} for k in inputs]
+    return [
+        {"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}}
+        for n, f in (("Read the Message", "bot_read.js"), ("Who Is It", "bot_route.js"))
+    ] + [
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
+                   for v in ("design", "switch", "intake", "stop", "brief", "site", "pictures", "addshop")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 7, "target": "Send"},
+        _add("Start Add Shop", "n8n-nodes-base.executeWorkflow", 1.3, [1320, 1680], {
+            "workflowId": {"__rl": True, "mode": "list", "value": add_shop_id, "cachedResultName": ADD_SHOP},
+            "workflowInputs": {"mappingMode": "defineBelow", "value": {k: f"={{{{ $json.{k} }}}}" for k in inputs}, "matchingColumns": [],
+                               "schema": schema, "attemptToConvertTypes": False, "convertFieldsToString": True},
+            "mode": "once", "options": {"waitForSubWorkflow": False}}),
+        {"type": "setNodeSettings", "nodeName": "Start Add Shop", "settings": {"onError": "continueRegularOutput"}},
+        _add("Add Shop Started", "n8n-nodes-base.code", 2, [1560, 1680], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                         "jsCode": code("add_shop_started.js")}),
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 7, "target": "Start Add Shop"},
+        {"type": "addConnection", "source": "Start Add Shop", "target": "Add Shop Started"},
+        {"type": "addConnection", "source": "Add Shop Started", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 8, "target": "Send"},
+    ]
+
+
+def store_ops(new_store_id: str, answers_id: str) -> list[dict]:
+    """A whole store from one link (21 Oct 2026, Harsh: "i just share the brand store link and it starts designing the store and it asks
+    the specific questions it needs"): a ninth rule on "What to Do" starts "Store Factory: New Store" for an admin's store link; a tenth
+    saves a store job's answers (button taps and typed replies) in dtj_bot_answers, where the laptop reads them. The reply branch moves
+    to the fallback output after them."""
+    inputs = ["link", "note", "requested_by", "chat_id"]
+    schema = lambda keys: [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True,  # noqa: E731
+                            "canBeUsedToMatch": True, "type": "string"} for k in keys]
+    return [
+        {"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}}
+        for n, f in (("Read the Message", "bot_read.js"), ("Who Is It", "bot_route.js"))
+    ] + [
+        {"type": "setNodeParameter", "nodeName": "What to Do", "path": "/rules/values",
+         "value": [{"conditions": _action_is(v), "renameOutput": True, "outputKey": v}
+                   for v in ("design", "switch", "intake", "stop", "brief", "site", "pictures", "addshop", "store", "answer")]},
+        {"type": "removeConnection", "source": "What to Do", "sourceIndex": 8, "target": "Send"},
+        _add("Start New Store", "n8n-nodes-base.executeWorkflow", 1.3, [1320, 1920], {
+            "workflowId": {"__rl": True, "mode": "list", "value": new_store_id, "cachedResultName": NEW_STORE},
+            "workflowInputs": {"mappingMode": "defineBelow", "value": {k: f"={{{{ $json.{k} }}}}" for k in inputs}, "matchingColumns": [],
+                               "schema": schema(inputs), "attemptToConvertTypes": False, "convertFieldsToString": True},
+            "mode": "once", "options": {"waitForSubWorkflow": False}}),
+        {"type": "setNodeSettings", "nodeName": "Start New Store", "settings": {"onError": "continueRegularOutput"}},
+        _add("Store Started", "n8n-nodes-base.code", 2, [1560, 1920], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                      "jsCode": code("store_started.js")}),
+        _add("Save the Answer", "n8n-nodes-base.dataTable", 1.1, [1320, 2160], {
+            "resource": "row", "operation": "insert",
+            "dataTableId": {"__rl": True, "mode": "list", "value": answers_id, "cachedResultName": ANSWERS},
+            "columns": {"mappingMode": "defineBelow", "value": {k: f"={{{{ $json.{k} }}}}" for k in ANSWER_COLS}, "matchingColumns": [],
+                        "schema": schema(ANSWER_COLS)},
+            "options": {}}),
+        {"type": "setNodeSettings", "nodeName": "Save the Answer", "settings": {"onError": "continueRegularOutput", "alwaysOutputData": True}},
+        _add("Answer Noted", "n8n-nodes-base.code", 2, [1560, 2160], {"mode": "runOnceForAllItems", "language": "javaScript",
+                                                                     "jsCode": code("answer_noted.js")}),
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 8, "target": "Start New Store"},
+        {"type": "addConnection", "source": "Start New Store", "target": "Store Started"},
+        {"type": "addConnection", "source": "Store Started", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 9, "target": "Save the Answer"},
+        {"type": "addConnection", "source": "Save the Answer", "target": "Answer Noted"},
+        {"type": "addConnection", "source": "Answer Noted", "target": "Send"},
+        {"type": "addConnection", "source": "What to Do", "sourceIndex": 10, "target": "Send"},
+    ]
+
+
+def copy_ops(brand_copy_id: str) -> list[dict]:
+    """The brand copy's Approve tap runs the copy in n8n (21 Oct 2026, Harsh: "all this steps must be done in the telegram bot"):
+    after "Save the Answer", a tap on Approve under the question ok_copy starts "Store Factory: Brand Copy" (it does not wait) with the
+    job, the tapper's name and the chat. Every other answer goes on as before."""
+    who = "$('Who Is It').first().json"
+    inputs = {"job": f"={{{{ {who}.job }}}}", "approved_by": f"={{{{ {who}.by + ' (Telegram Approve)' }}}}",
+              "chat_id": f"={{{{ {who}.chat_id }}}}"}
+    schema = [{"id": k, "displayName": k, "required": False, "defaultMatch": False, "display": True, "canBeUsedToMatch": True,
+               "type": "string"} for k in inputs]
+    return [
+        _add("Copy Approved?", "n8n-nodes-base.if", 2.2, [1560, 2400], {
+            "conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose"},
+                           "conditions": [{"leftValue": f"={{{{ {who}.key === 'ok_copy' && {who}.value === 'Approve' }}}}", "rightValue": True,
+                                           "operator": {"type": "boolean", "operation": "true", "singleValue": True}}],
+                           "combinator": "and"}, "options": {}}),
+        _add("Start Brand Copy", "n8n-nodes-base.executeWorkflow", 1.3, [1800, 2400], {
+            "workflowId": {"__rl": True, "mode": "list", "value": brand_copy_id, "cachedResultName": BRAND_COPY},
+            "workflowInputs": {"mappingMode": "defineBelow", "value": inputs, "matchingColumns": [], "schema": schema,
+                               "attemptToConvertTypes": False, "convertFieldsToString": True},
+            "mode": "once", "options": {"waitForSubWorkflow": False}}),
+        {"type": "setNodeSettings", "nodeName": "Start Brand Copy", "settings": {"onError": "continueRegularOutput"}},
+        {"type": "addConnection", "source": "Save the Answer", "target": "Copy Approved?"},
+        {"type": "addConnection", "source": "Copy Approved?", "sourceIndex": 0, "target": "Start Brand Copy"},
+    ]
+
+
+def open_question_ops(answers_id: str) -> list[dict]:
+    """A plain message answers the store job's open typed question (22 Oct 2026): "Load Open Questions" (the laptop's open /
+    closed marks for this chat in dtj_bot_answers: rows with an empty value) goes between "Load Shops" and "Who Is It"."""
+    return [
+        {"type": "updateNodeParameters", "nodeName": "Who Is It", "parameters": {"jsCode": code("bot_route.js")}},
+        _add("Load Open Questions", "n8n-nodes-base.dataTable", 1.1, [720, 300], {
+            "resource": "row", "operation": "get", "dataTableId": {"__rl": True, "mode": "list", "value": answers_id, "cachedResultName": ANSWERS},
+            "matchType": "allConditions",
+            "filters": {"conditions": [{"keyName": "chat_id", "condition": "eq", "keyValue": "={{ $('Read the Message').first().json.chat_id }}"},
+                                       {"keyName": "value", "condition": "isEmpty"}]},
+            "returnAll": True}),
+        {"type": "setNodeSettings", "nodeName": "Load Open Questions", "settings": {"executeOnce": True, "alwaysOutputData": True,
+                                                                                    "onError": "continueRegularOutput"}},
+        {"type": "removeConnection", "source": "Load Shops", "target": "Who Is It"},
+        {"type": "addConnection", "source": "Load Shops", "target": "Load Open Questions"},
+        {"type": "addConnection", "source": "Load Open Questions", "target": "Who Is It"},
+    ]
+
+
+def find_table_id(name: str) -> str | None:
+    found = [t for t in call("search_data_tables", {"query": name, "limit": 100}).get("data", []) if t.get("name") == name]
+    return found[0]["id"] if found else None
+
+
+def find_workflow_id(name: str) -> str | None:
+    found = [w for w in call("search_workflows", {"query": name}).get("data", []) if w.get("name") == name]
+    return found[0]["id"] if found else None
+
+
 def page_design_ops(live: dict) -> list[dict]:
     notify = code(NOTIFY_JS)
     if "Tell the Requester" in live:
@@ -489,8 +628,7 @@ def page_design_ops(live: dict) -> list[dict]:
 
 
 def find_bot() -> str | None:
-    found = [w for w in call("search_workflows", {"query": NAME}).get("data", []) if w.get("name") == NAME]
-    return found[0]["id"] if found else None
+    return find_workflow_id(NAME)
 
 
 def attach_credential() -> int:
@@ -538,7 +676,9 @@ def main(argv=None) -> int:
         for label, ops in (("switch", switch_ops({"Start a Page?"}, "telegram-credential-id")), ("directory", directory_ops("key-id")),
                            ("intake", intake_ops("github-key-id")), ("stop", stop_ops("github-key-id", "telegram-credential-id")),
                            ("choice", choice_ops("telegram-credential-id")), ("site", site_ops("telegram-credential-id")),
-                           ("pictures", pictures_ops("telegram-credential-id"))):
+                           ("pictures", pictures_ops("telegram-credential-id")), ("addshop", addshop_ops("add-shop-workflow-id")),
+                           ("store", store_ops("new-store-workflow-id", "answers-table-id")), ("copy", copy_ops("brand-copy-workflow-id")),
+                           ("open questions", open_question_ops("answers-table-id"))):
             for op in ops:
                 print(f"{label} op: {op['type']} {op.get('nodeName') or (op.get('node') or {}).get('name') or ''} "
                       f"{op.get('source', '')} {op.get('target', '')}".rstrip())
@@ -577,6 +717,22 @@ def main(argv=None) -> int:
                 ops = pictures_ops(credential_id(CREDENTIAL, "telegramApi"))
                 print("adding the pictures question:", call("update_workflow", {"workflowId": bot, "operations": ops,
                       "versionName": "Ask: upload the brand's pictures"}).get("appliedOperations"), "operation(s)")
+            elif "Start Add Shop" not in live_bot and find_workflow_id(ADD_SHOP):
+                ops = addshop_ops(find_workflow_id(ADD_SHOP))
+                print("adding /addshop:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "Admins: /addshop (Store Factory: Add Shop)"}).get("appliedOperations"), "operation(s)")
+            elif "Start New Store" not in live_bot and find_workflow_id(NEW_STORE) and find_table_id(ANSWERS):
+                ops = store_ops(find_workflow_id(NEW_STORE), find_table_id(ANSWERS))
+                print("adding the whole store from a link:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "A store link starts the whole store; its answers"}).get("appliedOperations"), "operation(s)")
+            elif "Load Open Questions" not in live_bot and "Start Brand Copy" in live_bot and find_table_id(ANSWERS):
+                ops = open_question_ops(find_table_id(ANSWERS))
+                print("adding the open-question check:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "A plain message answers an open typed question"}).get("appliedOperations"), "operation(s)")
+            elif "Start Brand Copy" not in live_bot and find_workflow_id(BRAND_COPY):
+                ops = copy_ops(find_workflow_id(BRAND_COPY))
+                print("adding the brand copy's Approve tap:", call("update_workflow", {"workflowId": bot, "operations": ops,
+                      "versionName": "The brand copy's Approve tap runs it"}).get("appliedOperations"), "operation(s)")
             else:
                 ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code(f)}} for n, f in CODE_NODES.items() if n in live_bot]
                 print("refreshing the code nodes:", call("update_workflow", {"workflowId": bot, "operations": ops}).get("appliedOperations"))

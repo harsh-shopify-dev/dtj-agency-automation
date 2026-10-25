@@ -4,14 +4,6 @@
  "description": "Store factory Telegram bot: a team member sends a product link, the bot starts Store Factory: New Page and replies.",
  "nodes": [
   {
-   "id": "6afe2067-57c9-498a-9239-72f010ba2544",
-   "name": "Telegram Message",
-   "type": "n8n-nodes-base.telegramTrigger",
-   "typeVersion": 1.5,
-   "position": [
-    0,
-    120
-   ],
    "parameters": {
     "updates": [
      "message",
@@ -19,6 +11,14 @@
     ],
     "additionalFields": {}
    },
+   "id": "6afe2067-57c9-498a-9239-72f010ba2544",
+   "name": "Telegram Message",
+   "type": "n8n-nodes-base.telegramTrigger",
+   "typeVersion": 1.5,
+   "position": [
+    0,
+    128
+   ],
    "webhookId": "94179fbb-0513-47f6-99cc-c55dcf365237",
    "credentials": {
     "telegramApi": {
@@ -28,31 +28,20 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Read the Message\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns one Telegram update into: who wrote, in which chat, and what they want: help, a page from a product link, an admin command\n// (/shops, /status, /on, /off, /addshop), a brand intake (/intake), /stop (running brand intakes), a tap on one of the bot's buttons,\n// or an answer to a store job's question (a tap or a typed reply). A store's own link (no /products/ in it) is a whole store (Who Is It).\nconst update = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s);\nconst cq = update.callback_query;\nif (cq) {  // a tap on a button the bot sent (the confirm / cancel buttons of /on and /off)\n  const chat = (cq.message || {}).chat || {};\n  const from = cq.from || {};\n  const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\n  const base = { chat_id: esc(chat.id), chat_type: esc(chat.type), user_id: esc(from.id), name, text: '', callback_id: esc(cq.id) };\n  if (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n  // a store job's question or Approve button (21 Oct 2026, store_job.py / bot_ask.py): \"a:<job>:<key>:<n>\"; the answer is the\n  // label of the tapped button, read from the message it sits under\n  const ans = esc(cq.data).match(/^a:([a-z0-9][a-z0-9-]{1,23}):([a-z0-9_]{1,20}):(\\d{1,2})$/);\n  if (ans) {\n    const keys = [].concat(...(((cq.message || {}).reply_markup || {}).inline_keyboard || []));\n    const tapped = keys.find((k) => k && k.callback_data === cq.data) || {};\n    return [{ json: { ...base, kind: 'answer', job: ans[1], key: ans[2], choice: ans[3], arg: esc(tapped.text).slice(0, 100) } }];\n  }\n  return [{ json: { ...base, kind: 'button', data: esc(cq.data).slice(0, 64) } }];\n}\nconst msg = update.message || update;\nconst chat = msg.chat || {};\nconst from = msg.from || {};\nconst text = String(msg.text || '').trim();\nconst name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\nconst base = { chat_id: String(chat.id || ''), chat_type: String(chat.type || ''), user_id: String(from.id || ''), name, text, callback_id: '' };\n\n// group chats, channels, other bots and empty updates are ignored: the bot only talks one to one\nif (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n\n// a message that looks like a password, token or key is never used (the person is asked to delete it)\nconst secret = /\\bshp(at|ca|ss|tka)_[0-9a-z]{8,}/i.test(text) || /\\b[0-9]{8,10}:[A-Za-z0-9_-]{30,}\\b/.test(text)\n  || /\\b[0-9a-f]{32,}\\b/i.test(text) || /\\beyJ[A-Za-z0-9_-]{20,}\\./.test(text) || /\\bsk-ant-[A-Za-z0-9_-]{10,}/.test(text);\nif (secret) return [{ json: { ...base, kind: 'secret' } }];\n\n// a reply to the bot's \"Which website is the brand's own for brief N?\" (19 Oct 2026): the brand's website for that brief\nconst asked = msg.reply_to_message || {};\n// a typed answer to a store job's question: a reply to it, whose last line is \"(job <job>, answer <key>)\" (store_job.py)\nconst forJob = asked.from && asked.from.is_bot ? String(asked.text || '').match(/\\(job ([a-z0-9][a-z0-9-]{1,23}), answer ([a-z0-9_]{1,20})\\)\\s*$/) : null;\nif (forJob && text && !text.startsWith('/')) {\n  // a message about a finished page may be longer than a store job's answer (Harsh, 24 Oct 2026: the page chat)\n  const room = forJob[2] === 'chat' ? 1500 : 500;\n  return [{ json: { ...base, kind: 'answer', job: forJob[1], key: forJob[2], choice: '', arg: text.slice(0, room) } }];\n}\nconst forBrief = asked.from && asked.from.is_bot ? String(asked.text || '').match(/brand's own for brief (\\d{1,9})\\?/) : null;\nif (forBrief && text && !text.startsWith('/')) return [{ json: { ...base, kind: 'site', row_id: Number(forBrief[1]), arg: text.slice(0, 200) } }];\n\nif (/^\\/(start|help)\\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];\n\n// every command the bot knows, one line each (19 Oct 2026, Harsh: \"create a command so it can show all the commands\")\nif (/^\\/(commands|menu)(?:@[A-Za-z0-9_]+)?\\s*$/i.test(text)) return [{ json: { ...base, kind: 'commands' } }];\n\n// a brand intake before a redesign: /intake <the store's address> (19 Oct 2026; runs on GitHub, the Drive link comes back here)\nconst intake = text.match(/^\\/intake(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nif (intake) return [{ json: { ...base, kind: 'intake', arg: String(intake[1] || '').trim().slice(0, 200) } }];\n\n// add a client shop (21 Oct 2026, Harsh: \"one step process from telegram ... i will provide the shopify domain of the store\"):\n// /addshop <store>.myshopify.com <the client's name>\nconst addshop = text.match(/^\\/addshop(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nif (addshop) return [{ json: { ...base, kind: 'addshop', arg: String(addshop[1] || '').trim().slice(0, 200) } }];\n\n// stop a running brand intake: /stop lists them, each with a Stop button (19 Oct 2026)\nif (/^\\/stop(?:@[A-Za-z0-9_]+)?\\s*$/i.test(text)) return [{ json: { ...base, kind: 'stop' } }];\n\n// admin commands: /shops, /status <shop>, /on <shop>, /off <shop> (the bot's @name may follow the command)\nconst cmd = text.match(/^\\/(shops|status|on|off)(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nif (cmd) return [{ json: { ...base, kind: 'command', command: cmd[1].toLowerCase(), arg: String(cmd[2] || '').trim().slice(0, 100) } }];\n\n// the first link in the message; everything else is the note for the designer\nconst m = text.match(/https?:\\/\\/[^\\s<>\"]+/i) || text.match(/\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/[^\\s<>\"]*/i);\nif (!m) return [{ json: { ...base, kind: 'nolink' } }];\nconst product_link = m[0].replace(/[).,;!?]+$/, '');\nconst note = (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length)).replace(/\\s+/g, ' ').trim().slice(0, 1500);\nreturn [{ json: { ...base, kind: 'link', product_link, note } }];\n"
+   },
    "id": "f26ea1de-c250-4e3b-9039-f830619322be",
    "name": "Read the Message",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
     240,
-    120
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Read the Message\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns one Telegram update into: who wrote, in which chat, and what they want: help, a page from a product link, an admin command\n// (/shops, /status, /on, /off), a brand intake (/intake), /stop (running brand intakes) or a tap on one of the bot's buttons.\nconst update = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s);\nconst cq = update.callback_query;\nif (cq) {  // a tap on a button the bot sent (the confirm / cancel buttons of /on and /off)\n  const chat = (cq.message || {}).chat || {};\n  const from = cq.from || {};\n  const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\n  const base = { chat_id: esc(chat.id), chat_type: esc(chat.type), user_id: esc(from.id), name, text: '', callback_id: esc(cq.id) };\n  if (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n  return [{ json: { ...base, kind: 'button', data: esc(cq.data).slice(0, 64) } }];\n}\nconst msg = update.message || update;\nconst chat = msg.chat || {};\nconst from = msg.from || {};\nconst text = String(msg.text || '').trim();\nconst name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'there';\nconst base = { chat_id: String(chat.id || ''), chat_type: String(chat.type || ''), user_id: String(from.id || ''), name, text, callback_id: '' };\n\n// group chats, channels, other bots and empty updates are ignored: the bot only talks one to one\nif (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n\n// a message that looks like a password, token or key is never used (the person is asked to delete it)\nconst secret = /\\bshp(at|ca|ss|tka)_[0-9a-z]{8,}/i.test(text) || /\\b[0-9]{8,10}:[A-Za-z0-9_-]{30,}\\b/.test(text)\n  || /\\b[0-9a-f]{32,}\\b/i.test(text) || /\\beyJ[A-Za-z0-9_-]{20,}\\./.test(text) || /\\bsk-ant-[A-Za-z0-9_-]{10,}/.test(text);\nif (secret) return [{ json: { ...base, kind: 'secret' } }];\n\n// a reply to the bot's \"Which website is the brand's own for brief N?\" (19 Oct 2026): the brand's website for that brief\nconst asked = msg.reply_to_message || {};\nconst forBrief = asked.from && asked.from.is_bot ? String(asked.text || '').match(/brand's own for brief (\\d{1,9})\\?/) : null;\nif (forBrief && text && !text.startsWith('/')) return [{ json: { ...base, kind: 'site', row_id: Number(forBrief[1]), arg: text.slice(0, 200) } }];\n\nif (/^\\/(start|help)\\b/i.test(text) || !text) return [{ json: { ...base, kind: 'help' } }];\n\n// every command the bot knows, one line each (19 Oct 2026, Harsh: \"create a command so it can show all the commands\")\nif (/^\\/(commands|menu)(?:@[A-Za-z0-9_]+)?\\s*$/i.test(text)) return [{ json: { ...base, kind: 'commands' } }];\n\n// a brand intake before a redesign: /intake <the store's address> (19 Oct 2026; runs on GitHub, the Drive link comes back here)\nconst intake = text.match(/^\\/intake(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nif (intake) return [{ json: { ...base, kind: 'intake', arg: String(intake[1] || '').trim().slice(0, 200) } }];\n\n// stop a running brand intake: /stop lists them, each with a Stop button (19 Oct 2026)\nif (/^\\/stop(?:@[A-Za-z0-9_]+)?\\s*$/i.test(text)) return [{ json: { ...base, kind: 'stop' } }];\n\n// admin commands: /shops, /status <shop>, /on <shop>, /off <shop> (the bot's @name may follow the command)\nconst cmd = text.match(/^\\/(shops|status|on|off)(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nif (cmd) return [{ json: { ...base, kind: 'command', command: cmd[1].toLowerCase(), arg: String(cmd[2] || '').trim().slice(0, 100) } }];\n\n// the first link in the message; everything else is the note for the designer\nconst m = text.match(/https?:\\/\\/[^\\s<>\"]+/i) || text.match(/\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/[^\\s<>\"]*/i);\nif (!m) return [{ json: { ...base, kind: 'nolink' } }];\nconst product_link = m[0].replace(/[).,;!?]+$/, '');\nconst note = (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length)).replace(/\\s+/g, ' ').trim().slice(0, 1500);\nreturn [{ json: { ...base, kind: 'link', product_link, note } }];\n"
-   }
+    128
+   ]
   },
   {
-   "id": "58be6924-4738-4ecc-b040-be84db78bd54",
-   "name": "Load Bot Users",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    480,
-    120
-   ],
    "parameters": {
-    "resource": "row",
     "operation": "get",
     "dataTableId": {
      "__rl": true,
@@ -71,33 +60,31 @@
     },
     "returnAll": true
    },
+   "id": "58be6924-4738-4ecc-b040-be84db78bd54",
+   "name": "Load Bot Users",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    128
+   ],
    "executeOnce": true,
    "alwaysOutputData": true
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Output: one item with action\n//   addshop -> an admin adds a client shop (Store Factory: Add Shop: the laptop's Claude Code does it)\n//   store  -> an admin's store link (no /products/): the whole store (Store Factory: New Store: questions, apps, every page)\n//   answer -> a tap or typed reply to a store job's question: saved in dtj_bot_answers (\"Save the Answer\")\n//   design -> start a page (Store Factory: New Page)\n//   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list (\"Pick the Shop\")\n//   intake -> start a brand intake on GitHub (\"Start Brand Intake\")\n//   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs (\"List Intakes\"), then \"Stop Plan\"\n//   brief  -> the answer to \"collect the brand's data first?\" after a page was started: saved on the brief (\"Note the Choice\")\n//   site   -> the reply with the brand's own website for a brief: saved on the brief (\"Note the Website\")\n//   pictures -> the answer to \"upload the brand's pictures to the shop?\": saved on the brief (\"Note the Pictures\")\n//   reply  -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\n// an answer to a store job's question or Approve button (21 Oct 2026): saved in dtj_bot_answers (\"Save the Answer\"), where the\n// laptop's store_job.py reads it. Anyone on the bot (an Approve tap is that person's yes, with their name: CLAUDE.md rule 2).\n// a plain message while one of the store job's typed questions is open in this chat is its answer (22 Oct 2026: Harsh sent the\n// brand's link as a new message, not a reply, and the bot took it for a second store). \"Load Open Questions\" holds the laptop's\n// open / closed marks for this chat; the newest one decides.\nlet openQ = null;\ntry {\n  const marks = $('Load Open Questions').all().map((i) => i.json)\n    .filter((r) => r && String(r.chat_id) === msg.chat_id && !String(r.value || '').trim() && ['open', 'closed'].includes(r.choice));\n  marks.sort((a, b) => (String(a.at).slice(0, 19) < String(b.at).slice(0, 19) ? -1 : 1));\n  const last = marks[marks.length - 1];\n  if (last && last.choice === 'open') openQ = last;\n} catch (e) { openQ = null; }  // the step is not there (an older bot): only a reply counts\n// a page chat (page_chat.py marks it open): a plain message goes to the page's Claude session; a product link still starts a page\nconst pageChat = Boolean(openQ) && /^page-[0-9]{1,9}$/.test(String(openQ.job));\nif (openQ && (msg.kind === 'nolink' || (msg.kind === 'link' && !pageChat)) && String(msg.text || '').trim()) {\n  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: openQ.job, key: openQ.key, choice: '',\n    value: String(msg.text).trim().slice(0, pageChat ? 1500 : 500), by: myName, at: new Date().toISOString() } }];\n}\nif (msg.kind === 'answer') {\n  const value = String(msg.arg || '').trim();\n  if (!value) return reply('I could not read that answer. Tap the button again, or reply to the question with your answer.');\n  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: msg.job, key: msg.key, choice: String(msg.choice || ''), value,\n    by: myName, at: new Date().toISOString() } }];\n}\n// /commands: every command, one line each; the admin ones only for admins (Harsh, 19 Oct 2026: \"create a command so it can show\n// all the commands in the bot available\"). Keep this list in step with bot_read.js when a command is added.\nif (msg.kind === 'commands') {\n  const lines = [\n    'Everything I can do:',\n    '',\n    '<b>Pages</b>',\n    'a product link: start a product page in the shop\\'s draft theme (anything after the link is a note for the designer). '\n      + 'I then ask whether to collect the brand\\'s data first, and from which website.',\n    '',\n    '<b>Brand data</b>',\n    '/intake shop.com: collect a shop\\'s pictures, videos, colours and details into Google Drive, with a live progress bar',\n    '/stop: the brand intakes running now, each with a Stop button',\n    '',\n    '<b>Help</b>',\n    '/help: how to send a product link, with an example',\n    '/commands: this list',\n  ];\n  if (isAdmin) {\n    lines.push('', '<b>Admin: the DTJ apps on each shop</b>',\n      '/shops: every shop on the switch and whether its DTJ apps are on',\n      '/status shop: one shop\\'s DTJ apps',\n      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)',\n      '/addshop name.myshopify.com Client Name: add a client shop (the seven DTJ app copies, then seven Install buttons for you)',\n      'a store\\'s own link (https://brand.com, no /products/): design the whole store; I ask a few questions here first');\n  }\n  return reply(lines.join('\\n'));\n}\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + '\\n\\nBefore a redesign: /intake shop.com collects the shop\\'s pictures, videos, colours and details into Google Drive.'\n    + ' /stop shows the intakes running now, each with a Stop button.'\n    + '\\n\\n/commands lists everything I can do.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\n// a brand intake (19 Oct 2026, Harsh: \"scrapes everything and uploads to the google drive\"): GitHub Actions runs it (\"Brand intake\"\n// workflow on the repo's default branch) and answers in this chat with the Drive folder's link. Anyone on the bot may ask.\nif (msg.kind === 'intake') {\n  const store = /^(https?:\\/\\/)?([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(\\/\\S*)?$/.test(msg.arg) ? msg.arg : '';\n  if (!store) {\n    return reply('Send the shop\\'s address after /intake, for example:\\n/intake freesoul.com\\n\\n'\n      + 'I read the shop\\'s public pages (pictures and videos of up to 20 products, logo, colours, fonts, policies) and send you the '\n      + 'Google Drive folder here in a few minutes.');\n  }\n  return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,\n    body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];\n}\n// the brand's own website for a brief (19 Oct 2026, Harsh: \"it didnt asked for the brand website link?\"): the shop a product link\n// comes from is not always the brand's own site (DTJ's demo shop carries other brands), so after \"Yes, collect it first\" the bot asks.\nif (msg.kind === 'site') {\n  const arg = String(msg.arg || '').trim();\n  if (/^(same|yes|ok|okay)$/i.test(arg)) return reply('OK: for brief ' + esc(msg.row_id) + ' the designer will read the shop itself.');\n  const m = arg.match(/^(?:https?:\\/\\/)?((?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?:[/?#]\\S*)?$/);\n  if (!m) {\n    return reply('That does not look like a website address. Reply to my question again with the brand\\'s own website, '\n      + 'for example senso.in, or reply: same');\n  }\n  const host = m[1].toLowerCase().replace(/^www\\./, '');\n  return [{ json: { action: 'site', chat_id: msg.chat_id, row_id: msg.row_id, website: 'https://' + host, by: myName } }];\n}\n// \"upload the brand's pictures to the shop?\" (19 Oct 2026, Harsh: \"it should ask either upload the assets from google drive to\n// the store\"): a Yes is that person's approval for this one upload (store_files.py --approved-by). Anyone on the bot.\nif (msg.kind === 'button' && /^brief:(upload|keep):/.test(String(msg.data || ''))) {\n  const p = String(msg.data).match(/^brief:(upload|keep):(\\d{1,9})$/);\n  if (!p) return reply('That button is not valid any more.');\n  return [{ json: { action: 'pictures', chat_id: msg.chat_id, row_id: Number(p[2]), upload_assets: p[1] === 'upload' ? 'yes' : 'no',\n    by: myName } }];\n}\n// \"collect the brand's data first?\" (19 Oct 2026, Harsh: \"it should ask me if it should run the scraper or not and using the data\n// available it should start designing\"): the Yes / No buttons under \"Intake Question\" carry the brief's row id. Anyone on the bot.\nif (msg.kind === 'button' && String(msg.data || '').startsWith('brief:')) {\n  const b = String(msg.data).match(/^brief:(intake|skip):(\\d{1,9})$/);\n  if (!b) return reply('That button is not valid any more.');\n  return [{ json: { action: 'brief', chat_id: msg.chat_id, row_id: Number(b[2]), brand_intake: b[1] === 'intake' ? 'yes' : 'no', by: myName } }];\n}\n// stopping a brand intake (19 Oct 2026, Harsh: \"add a stop feature so it can stop any ongoing specific task\"; he chose brand intakes\n// only): /stop lists the intakes running on GitHub, each with a Stop button; the Stop button under an intake's progress bar stops\n// that run. \"Stop Plan\" checks that the run is a brand intake that is still going before anything is cancelled. Anyone on the bot.\nif (msg.kind === 'stop') return [{ json: { action: 'stop', mode: 'list', chat_id: msg.chat_id, run_id: '', by: myName } }];\nif (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {\n  const s = String(msg.data).match(/^stop:intake:(\\d{1,20})$/);\n  if (!s) return reply('That button is not valid any more.');\n  return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];\n}\n// adding a client shop (21 Oct 2026, Harsh: \"one step process from telegram\"): admins only. The laptop's Claude Code makes, links and\n// releases the seven app copies and the install links (Store Factory: Add Shop); the person then taps seven Install buttons here.\nif (msg.kind === 'addshop') {\n  if (!isAdmin) return reply('Only an admin can add a shop.');\n  const a = String(msg.arg || '').match(/^(?:https?:\\/\\/)?(?:admin\\.shopify\\.com\\/store\\/([a-z0-9][a-z0-9-]*)|([a-z0-9][a-z0-9-]*)\\.myshopify\\.com)\\/?(?:\\s+([\\s\\S]+))?$/i);\n  if (!a) {\n    return reply('Send the shop\\'s ORIGINAL Shopify address and the client\\'s name, for example:\\n/addshop royal-dosa.myshopify.com Royal Dosa\\n\\n'\n      + 'The address is in the shop\\'s admin: admin.shopify.com/store/&lt;name&gt; means &lt;name&gt;.myshopify.com. I make, link and release the '\n      + 'seven DTJ app copies, then send you seven Install buttons for the store owner to tap.');\n  }\n  const shop = ((a[1] || a[2]) + '.myshopify.com').toLowerCase();\n  const label = String(a[3] || '').replace(/\\s+/g, ' ').trim().slice(0, 60);\n  if (!label) return reply('And the client\\'s name, for the app names. For example:\\n/addshop ' + esc(shop) + ' Royal Dosa');\n  return [{ json: { action: 'addshop', chat_id: msg.chat_id, shop, label, requested_by: myName } }];\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only). Which shops exist is the install catcher's to say, so the shop is matched in \"Pick the Shop\".\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  const ask = { action: 'switch', chat_id: msg.chat_id, actor: myName, admins: otherAdmins, command: msg.command, arg: msg.arg || '',\n    state: '', client: '' };\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    return [{ json: { ...ask, command: 'tap', state: b[1] === 'on' ? 'active' : 'inactive', client: b[2] } }];\n  }\n  if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  return [{ json: ask }];\n}\n\n// ---- a store's own link (no /products/ in it): the whole store (21 Oct 2026, Harsh: \"i just share the brand store link and it starts\n// designing the store and it asks the specific questions it needs along with the app installation\"). Admins only: it makes app copies.\nif (!/\\/products\\//i.test(msg.product_link)) {\n  if (!isAdmin) {\n    return reply('That is a store\\'s own link. For one product page, send a product link (it has /products/ in it). '\n      + 'A whole store is started by an admin.');\n  }\n  const link = msg.product_link.match(/^(?:https?:\\/\\/)?(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?:[/?#][^\\s]*)?$/) ? msg.product_link : '';\n  if (!link) return reply('That does not look like a store\\'s address. Send it like this: https://brand.com');\n  return [{ json: { action: 'store', chat_id: msg.chat_id, link: /^https?:\\/\\//i.test(link) ? link : 'https://' + link,\n    note: msg.note || '', requested_by: myName } }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
+   },
    "id": "e2ee1b6f-7b92-4472-a5d3-d1c33308e115",
    "name": "Who Is It",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    840,
-    120
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Who Is It\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told\n// when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).\n// Output: one item with action\n//   design -> start a page (Store Factory: New Page)\n//   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list (\"Pick the Shop\")\n//   intake -> start a brand intake on GitHub (\"Start Brand Intake\")\n//   stop   -> /stop or a Stop tap: GitHub's list of brand intake runs (\"List Intakes\"), then \"Stop Plan\"\n//   brief  -> the answer to \"collect the brand's data first?\" after a page was started: saved on the brief (\"Note the Choice\")\n//   site   -> the reply with the brand's own website for a brief: saved on the brief (\"Note the Website\")\n//   pictures -> the answer to \"upload the brand's pictures to the shop?\": saved on the brief (\"Note the Pictures\")\n//   reply  -> just answer\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\nconst users = $('Load Bot Users').all().map((i) => i.json).filter((u) => u && u.telegram_user_id && u.active !== false);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\nconst roleOf = (u) => String((u && u.role) || '').toLowerCase().trim();\nconst BUTTON_SECONDS = 120;\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here, or in any chat.');\n}\nif (!me) {\n  return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: '\n    + esc(msg.user_id));\n}\nconst isAdmin = roleOf(me) === 'admin';\nconst myName = me.name || msg.name;\n// /commands: every command, one line each; the admin ones only for admins (Harsh, 19 Oct 2026: \"create a command so it can show\n// all the commands in the bot available\"). Keep this list in step with bot_read.js when a command is added.\nif (msg.kind === 'commands') {\n  const lines = [\n    'Everything I can do:',\n    '',\n    '<b>Pages</b>',\n    'a product link: start a product page in the shop\\'s draft theme (anything after the link is a note for the designer). '\n      + 'I then ask whether to collect the brand\\'s data first, and from which website.',\n    '',\n    '<b>Brand data</b>',\n    '/intake shop.com: collect a shop\\'s pictures, videos, colours and details into Google Drive, with a live progress bar',\n    '/stop: the brand intakes running now, each with a Stop button',\n    '',\n    '<b>Help</b>',\n    '/help: how to send a product link, with an example',\n    '/commands: this list',\n  ];\n  if (isAdmin) {\n    lines.push('', '<b>Admin: the DTJ apps on each shop</b>',\n      '/shops: every shop on the switch and whether its DTJ apps are on',\n      '/status shop: one shop\\'s DTJ apps',\n      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)');\n  }\n  return reply(lines.join('\\n'));\n}\nif (msg.kind === 'help') {\n  return reply('Hi ' + esc(myName) + '! Send me a product link from the shop\\'s website and I will start a full '\n    + 'product page in the shop\\'s draft theme.\\n\\nExample:\\nhttps://myshop.com/products/my-product lead with the glow, real rating 4.6 on Judge.me\\n\\n'\n    + '- The link must have /products/ in it (not a Shopify admin link).\\n'\n    + '- Anything after the link is a note for the designer.\\n'\n    + '- I send you the preview link here when the page is ready. Nothing goes live without Harsh.'\n    + '\\n\\nBefore a redesign: /intake shop.com collects the shop\\'s pictures, videos, colours and details into Google Drive.'\n    + ' /stop shows the intakes running now, each with a Stop button.'\n    + '\\n\\n/commands lists everything I can do.'\n    + (isAdmin ? '\\n\\nAdmin: /shops lists every shop the switch reaches and whether its DTJ apps are on, /status shop shows one shop, '\n      + '/off shop and /on shop switch all its DTJ apps (you confirm with a button).' : ''));\n}\n// a brand intake (19 Oct 2026, Harsh: \"scrapes everything and uploads to the google drive\"): GitHub Actions runs it (\"Brand intake\"\n// workflow on the repo's default branch) and answers in this chat with the Drive folder's link. Anyone on the bot may ask.\nif (msg.kind === 'intake') {\n  const store = /^(https?:\\/\\/)?([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(\\/\\S*)?$/.test(msg.arg) ? msg.arg : '';\n  if (!store) {\n    return reply('Send the shop\\'s address after /intake, for example:\\n/intake freesoul.com\\n\\n'\n      + 'I read the shop\\'s public pages (pictures and videos of up to 20 products, logo, colours, fonts, policies) and send you the '\n      + 'Google Drive folder here in a few minutes.');\n  }\n  return [{ json: { action: 'intake', chat_id: msg.chat_id, store, requested_by: myName,\n    body: { ref: 'chore/initial-import', inputs: { store, requested_by: myName, telegram_chat_id: msg.chat_id } } } }];\n}\n// the brand's own website for a brief (19 Oct 2026, Harsh: \"it didnt asked for the brand website link?\"): the shop a product link\n// comes from is not always the brand's own site (DTJ's demo shop carries other brands), so after \"Yes, collect it first\" the bot asks.\nif (msg.kind === 'site') {\n  const arg = String(msg.arg || '').trim();\n  if (/^(same|yes|ok|okay)$/i.test(arg)) return reply('OK: for brief ' + esc(msg.row_id) + ' the designer will read the shop itself.');\n  const m = arg.match(/^(?:https?:\\/\\/)?((?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?:[/?#]\\S*)?$/);\n  if (!m) {\n    return reply('That does not look like a website address. Reply to my question again with the brand\\'s own website, '\n      + 'for example senso.in, or reply: same');\n  }\n  const host = m[1].toLowerCase().replace(/^www\\./, '');\n  return [{ json: { action: 'site', chat_id: msg.chat_id, row_id: msg.row_id, website: 'https://' + host, by: myName } }];\n}\n// \"upload the brand's pictures to the shop?\" (19 Oct 2026, Harsh: \"it should ask either upload the assets from google drive to\n// the store\"): a Yes is that person's approval for this one upload (store_files.py --approved-by). Anyone on the bot.\nif (msg.kind === 'button' && /^brief:(upload|keep):/.test(String(msg.data || ''))) {\n  const p = String(msg.data).match(/^brief:(upload|keep):(\\d{1,9})$/);\n  if (!p) return reply('That button is not valid any more.');\n  return [{ json: { action: 'pictures', chat_id: msg.chat_id, row_id: Number(p[2]), upload_assets: p[1] === 'upload' ? 'yes' : 'no',\n    by: myName } }];\n}\n// \"collect the brand's data first?\" (19 Oct 2026, Harsh: \"it should ask me if it should run the scraper or not and using the data\n// available it should start designing\"): the Yes / No buttons under \"Intake Question\" carry the brief's row id. Anyone on the bot.\nif (msg.kind === 'button' && String(msg.data || '').startsWith('brief:')) {\n  const b = String(msg.data).match(/^brief:(intake|skip):(\\d{1,9})$/);\n  if (!b) return reply('That button is not valid any more.');\n  return [{ json: { action: 'brief', chat_id: msg.chat_id, row_id: Number(b[2]), brand_intake: b[1] === 'intake' ? 'yes' : 'no', by: myName } }];\n}\n// stopping a brand intake (19 Oct 2026, Harsh: \"add a stop feature so it can stop any ongoing specific task\"; he chose brand intakes\n// only): /stop lists the intakes running on GitHub, each with a Stop button; the Stop button under an intake's progress bar stops\n// that run. \"Stop Plan\" checks that the run is a brand intake that is still going before anything is cancelled. Anyone on the bot.\nif (msg.kind === 'stop') return [{ json: { action: 'stop', mode: 'list', chat_id: msg.chat_id, run_id: '', by: myName } }];\nif (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {\n  const s = String(msg.data).match(/^stop:intake:(\\d{1,20})$/);\n  if (!s) return reply('That button is not valid any more.');\n  return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];\n}\nif (msg.kind === 'nolink') {\n  return reply('Please send a product link from the shop\\'s website (it has /products/ in it). You can add a note after the link.');\n}\n\n// ---- the app switch (admins only). Which shops exist is the install catcher's to say, so the shop is matched in \"Pick the Shop\".\nif (msg.kind === 'command' || msg.kind === 'button') {\n  if (!isAdmin) return reply('Only an admin can see or switch the DTJ apps of a shop.');\n  const otherAdmins = users.filter((u) => roleOf(u) === 'admin' && String(u.telegram_user_id).trim() !== msg.user_id)\n    .map((u) => String(u.telegram_user_id).trim());\n  const ask = { action: 'switch', chat_id: msg.chat_id, actor: myName, admins: otherAdmins, command: msg.command, arg: msg.arg || '',\n    state: '', client: '' };\n  if (msg.kind === 'button') {\n    if (msg.data === 'lic:cancel') return reply('Cancelled. Nothing was switched.');\n    const b = msg.data.match(/^lic:(on|off):([a-z0-9-]+):(\\d{9,11})$/);\n    if (!b) return reply('That button is not valid any more. Send the command again.');\n    const age = Math.floor(Date.now() / 1000) - Number(b[3]);\n    if (age < 0 || age > BUTTON_SECONDS) return reply('That button has expired (it works for 2 minutes). Send the command again.');\n    return [{ json: { ...ask, command: 'tap', state: b[1] === 'on' ? 'active' : 'inactive', client: b[2] } }];\n  }\n  if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');\n  return [{ json: ask }];\n}\n\n// ---- a product link: start a page\nconst designers = users.filter((u) => ['designer', 'admin'].includes(roleOf(u))).map((u) => String(u.telegram_user_id).trim());\nreturn [{ json: {\n  action: 'design', chat_id: msg.chat_id, product_link: msg.product_link, note: msg.note,\n  requested_by: myName + ' (Telegram)', requester_name: myName, requester_id: msg.user_id,\n  designers: [...new Set(designers)],\n} }];\n"
-   }
+    848,
+    128
+   ]
   },
   {
-   "id": "6336ada2-f931-4e54-93d4-fc52209c15b1",
-   "name": "Ask New Page",
-   "type": "n8n-nodes-base.executeWorkflow",
-   "typeVersion": 1.3,
-   "position": [
-    1200,
-    0
-   ],
    "parameters": {
     "workflowId": {
      "__rl": true,
@@ -155,13 +142,23 @@
      "attemptToConvertTypes": false,
      "convertFieldsToString": true
     },
-    "mode": "once",
     "options": {
      "waitForSubWorkflow": true
     }
-   }
+   },
+   "id": "6336ada2-f931-4e54-93d4-fc52209c15b1",
+   "name": "Ask New Page",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    1200,
+    0
+   ]
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Write the Answers\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Store Factory: New Page\" ran: one message for the person who asked and, when a page was started, one for each designer\n// (a designer who asked gets both in one message). Every item is { chat_id, text } for the \"Send\" node (HTML mode, text escaped).\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!res.ok) return [{ json: { chat_id: ask.chat_id, text: esc(res.message || 'That did not work. Please ask Harsh.') } }];\n\nconst what = (res.handle ? res.handle : 'your page') + (res.store_name ? ' on ' + res.store_name : '');\nconst toDesigner = 'New page waiting (brief ' + esc(res.row_id) + ') from ' + esc(ask.requester_name) + ': ' + esc(what) + '.\\n'\n  + 'Open Claude Code in the dtj-agency-automation folder and type:\\nhandle the Claude Code trigger in n8n';\nconst askerIsDesigner = (ask.designers || []).includes(ask.requester_id);\nconst out = [{ json: { chat_id: ask.chat_id, text: 'Got it: designing ' + esc(what) + ' (brief ' + esc(res.row_id) + ').\\n'\n  + (askerIsDesigner ? '\\n' + toDesigner : 'A designer will start it on their laptop. A progress bar shows up here when they do, and I will send you the preview link here when it is ready.') } }];\nfor (const d of ask.designers || []) {\n  if (d !== ask.requester_id) out.push({ json: { chat_id: d, text: toDesigner } });\n}\nreturn out;\n"
+   },
    "id": "eace2d9c-a71b-4e90-ab84-6ff62878e60a",
    "name": "Write the Answers",
    "type": "n8n-nodes-base.code",
@@ -169,35 +166,28 @@
    "position": [
     1440,
     0
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Write the Answers\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Store Factory: New Page\" ran: one message for the person who asked and, when a page was started, one for each designer\n// (a designer who asked gets both in one message). Every item is { chat_id, text } for the \"Send\" node (HTML mode, text escaped).\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!res.ok) return [{ json: { chat_id: ask.chat_id, text: esc(res.message || 'That did not work. Please ask Harsh.') } }];\n\nconst what = (res.handle ? res.handle : 'your page') + (res.store_name ? ' on ' + res.store_name : '');\nconst toDesigner = 'New page waiting (brief ' + esc(res.row_id) + ') from ' + esc(ask.requester_name) + ': ' + esc(what) + '.\\n'\n  + 'Open Claude Code in the dtj-agency-automation folder and type:\\nhandle the Claude Code trigger in n8n';\nconst askerIsDesigner = (ask.designers || []).includes(ask.requester_id);\nconst out = [{ json: { chat_id: ask.chat_id, text: 'Got it: designing ' + esc(what) + ' (brief ' + esc(res.row_id) + ').\\n'\n  + (askerIsDesigner ? '\\n' + toDesigner : 'A designer will start it on their laptop. A progress bar shows up here when they do, and I will send you the preview link here when it is ready.') } }];\nfor (const d of ask.designers || []) {\n  if (d !== ask.requester_id) out.push({ json: { chat_id: d, text: toDesigner } });\n}\nreturn out;\n"
-   }
+   ]
   },
   {
+   "parameters": {
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "disable_web_page_preview": true,
+     "parse_mode": "HTML"
+    }
+   },
    "id": "ad064599-3518-4f36-97f6-9633868a07d9",
    "name": "Send",
    "type": "n8n-nodes-base.telegram",
    "typeVersion": 1.2,
    "position": [
-    2760,
-    120
+    2768,
+    128
    ],
-   "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
-    "chatId": "={{ $json.chat_id }}",
-    "text": "={{ $json.text }}",
-    "additionalFields": {
-     "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
-    }
-   },
-   "onError": "continueRegularOutput",
    "webhookId": "0706eecb-b8f8-44f3-8185-8354cfce045f",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -206,32 +196,23 @@
    }
   },
   {
+   "parameters": {
+    "content": "## DTJ page bot (Telegram)\nA team member sends a product link (and a note) to the bot in a private chat. Only people in the data table **dtj_bot_users** (active) may use it; anyone else gets their Telegram number to send to Harsh. Roles: requester, designer (also told when a page waits for Claude Code), admin.\n\nThe link goes to **Store Factory: New Page**; the answer comes back here. When the page is done, **Store Factory: Page Design** sends the preview link to the person who asked.\n\nCredential: Telegram API **DTJ Page Bot** (the token is pasted by Harsh in n8n, never in git or chat). Source in git: `n8n/store-factory/`.",
+    "height": 300,
+    "width": 980,
+    "color": 5
+   },
    "id": "55c5c861-e79d-445d-9bd8-9d73a7d70d3b",
    "name": "Sticky Note c4b26d98",
    "type": "n8n-nodes-base.stickyNote",
    "typeVersion": 1,
    "position": [
-    -40,
-    -300
-   ],
-   "parameters": {
-    "content": "## DTJ page bot (Telegram)\nA team member sends a product link (and a note) to the bot in a private chat. Only people in the data table **dtj_bot_users** (active) may use it; anyone else gets their Telegram number to send to Harsh. Roles: requester, designer (also told when a page waits for Claude Code), admin.\n\nThe link goes to **Store Factory: New Page**; the answer comes back here. When the page is done, **Store Factory: Page Design** sends the preview link to the person who asked.\n\nCredential: Telegram API **DTJ Page Bot** (the token is pasted by Harsh in n8n, never in git or chat). Source in git: `n8n/store-factory/`.",
-    "color": 5,
-    "width": 980,
-    "height": 300
-   }
+    -48,
+    -304
+   ]
   },
   {
-   "id": "54469a56-1f55-45bc-a5f5-a8bdf91bdb81",
-   "name": "Load Shops",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    600,
-    120
-   ],
    "parameters": {
-    "resource": "row",
     "operation": "get",
     "dataTableId": {
      "__rl": true,
@@ -250,18 +231,18 @@
     },
     "returnAll": true
    },
+   "id": "54469a56-1f55-45bc-a5f5-a8bdf91bdb81",
+   "name": "Load Shops",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    608,
+    128
+   ],
    "alwaysOutputData": true,
    "executeOnce": true
   },
   {
-   "id": "60ef5a59-8bcd-4fa8-be7c-1114c9aa6d23",
-   "name": "What to Do",
-   "type": "n8n-nodes-base.switch",
-   "typeVersion": 3.2,
-   "position": [
-    1080,
-    120
-   ],
    "parameters": {
     "rules": {
      "values": [
@@ -270,7 +251,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -292,7 +274,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -314,7 +297,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -336,7 +320,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -358,7 +343,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -380,7 +366,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -402,7 +389,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -418,6 +406,75 @@
        },
        "renameOutput": true,
        "outputKey": "pictures"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 1
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "addshop",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "addshop"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 1
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "store",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "store"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 1
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "answer",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "answer"
       }
      ]
     },
@@ -425,32 +482,30 @@
      "fallbackOutput": "extra",
      "renameFallbackOutput": "reply"
     }
-   }
+   },
+   "id": "60ef5a59-8bcd-4fa8-be7c-1114c9aa6d23",
+   "name": "What to Do",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1088,
+    128
+   ]
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Licence Calls\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// One request per app of every shop \"Pick the Shop\" chose, for the install catcher's /licence (the HTTP step \"Ask the Switch\" sends\n// each one with the bot's key from the n8n credential \"DTJ Catcher Bot Key\"). The apps come from the catcher's own list, so client\n// copies (<client>-blocks / -sections / -sections2) and DTJ's original apps on organization stores are asked the same way.\nconst a = $input.first().json || {};\nconst ts = Math.floor(Date.now() / 1000);\nconst out = [];\nfor (const s of a.shops || []) {\n  for (const p of s.apps || []) {\n    const body = a.state === 'status'\n      ? { app: p.app, state: 'status', ts }\n      : { app: p.app, state: a.state, ts, approved_by: a.approved_by, reason: a.reason || '' };\n    out.push({ json: { app: p.app, label: String(p.label || p.app).split(' - ')[0], client: s.client, body: JSON.stringify(body) } });\n  }\n}\nreturn out;\n"
+   },
    "id": "73ddabbe-a8f9-470d-a6cc-0e56a1669b08",
    "name": "Licence Calls",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    2040,
+    2048,
     240
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Licence Calls\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// One request per app of every shop \"Pick the Shop\" chose, for the install catcher's /licence (the HTTP step \"Ask the Switch\" sends\n// each one with the bot's key from the n8n credential \"DTJ Catcher Bot Key\"). The apps come from the catcher's own list, so client\n// copies (<client>-blocks / -sections / -sections2) and DTJ's original apps on organization stores are asked the same way.\nconst a = $input.first().json || {};\nconst ts = Math.floor(Date.now() / 1000);\nconst out = [];\nfor (const s of a.shops || []) {\n  for (const p of s.apps || []) {\n    const body = a.state === 'status'\n      ? { app: p.app, state: 'status', ts }\n      : { app: p.app, state: a.state, ts, approved_by: a.approved_by, reason: a.reason || '' };\n    out.push({ json: { app: p.app, label: String(p.label || p.app).split(' - ')[0], client: s.client, body: JSON.stringify(body) } });\n  }\n}\nreturn out;\n"
-   }
+   ]
   },
   {
-   "id": "11e40d82-ed29-4ee5-8c65-8f9357cb4a77",
-   "name": "Ask the Switch",
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.2,
-   "position": [
-    2280,
-    240
-   ],
    "parameters": {
     "method": "POST",
     "url": "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence",
@@ -466,7 +521,6 @@
      ]
     },
     "sendBody": true,
-    "contentType": "json",
     "specifyBody": "json",
     "jsonBody": "={{ $json.body }}",
     "options": {
@@ -479,6 +533,14 @@
      "timeout": 60000
     }
    },
+   "id": "11e40d82-ed29-4ee5-8c65-8f9357cb4a77",
+   "name": "Ask the Switch",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2288,
+    240
+   ],
    "onError": "continueRegularOutput",
    "credentials": {
     "httpHeaderAuth": {
@@ -488,32 +550,20 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Licence Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns the catcher's answers (full responses: statusCode + body, one per app, in the order of \"Licence Calls\") into the message for\n// the admin who asked, grouped per shop, and, after a switch, a note to every other admin. Every item out is { chat_id, text } for\n// the \"Send\" step.\nconst a = $('Pick the Shop').first().json;\nconst calls = $('Licence Calls').all().map((i) => i.json);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst word = (v) => (v === 'active' ? 'ON' : v === 'inactive' ? 'OFF' : v ? String(v) : 'not set (blocks hidden)');\nconst rows = $input.all().map((it, i) => {\n  const r = it.json || {};\n  const code = Number(r.statusCode || (r.error ? 0 : 200));\n  const body = parse(r.body !== undefined ? r.body : r);\n  const call = calls[i] || {};\n  return { label: call.label || 'App ' + (i + 1), client: call.client || '', code, body, error: String(body.error || '') };\n});\nconst line = (r) => {\n  if (r.code === 200 && a.state === 'status') return r.label + ': ' + word(r.body.licence);\n  if (r.code === 200) return r.label + ': ' + word(r.body.before) + ' -> ' + word(r.body.after) + (r.body.verified ? ' (checked)' : ' (NOT confirmed)');\n  if (r.code === 404 && /no store key|has not installed/i.test(r.error)) return r.label + ': not installed on the shop';\n  if (r.code === 404 && /organization/i.test(r.error)) return r.label + ': DTJ\\'s app is not installed there, or the shop is outside DTJ\\'s Shopify organization';\n  if (r.code === 404) return r.label + ': not connected (' + esc(r.error || 'not installed') + ')';\n  if (r.code === 401) return r.label + ': the bot\\'s key was refused (ask Harsh to check the credential \"DTJ Catcher Bot Key\")';\n  return r.label + ': failed (' + esc(r.error || ('HTTP ' + r.code)) + ')';\n};\nconst block = (s) => rows.filter((r) => r.client === s.client).map(line).join('\\n');\nconst head = (s) => esc(s.name) + ' (' + esc(s.shop) + (s.kind === 'dtj apps' ? ', DTJ\\'s own apps' : '') + ')';\nconst fit = (text) => (text.length > 4000 ? text.slice(0, 3990) + '\\n...' : text);  // Telegram's limit is 4096 characters\n\nif (a.listing) {\n  const parts = (a.shops || []).map((s) => head(s) + '\\n' + block(s));\n  const rest = (a.missing || []).length ? '\\n\\nSet up for pages, but not on the switch yet: ' + a.missing.map(esc).join(', ') + ' (ask Harsh).' : '';\n  const example = (a.shops || [])[0] ? '\\n\\nUse a name with /status, /on or /off, for example: /status ' + esc(a.shops[0].name) : '';\n  return [{ json: { chat_id: a.chat_id, text: fit('Shops on the switch:\\n\\n' + parts.join('\\n\\n') + rest + example) } }];\n}\nconst shop = (a.shops || [])[0] || { name: '?', shop: '?', client: '' };\nif (a.state === 'status') return [{ json: { chat_id: a.chat_id, text: fit('DTJ apps on ' + head(shop) + ':\\n' + block(shop)) } }];\n\nconst ok = rows.length > 0 && rows.every((r) => r.code === 200 && r.body.verified);\nconst word2 = a.state === 'active' ? 'ON' : 'OFF';\nconst lines = block(shop);\nconst top = ok ? 'Done: all DTJ apps on ' + esc(shop.name) + ' are ' + word2 + '.' : 'Not everything switched on ' + esc(shop.name) + '. Check the lines below.';\nconst out = [{ json: { chat_id: a.chat_id, text: fit(top + '\\n' + lines) } }];\nfor (const id of a.admins || []) {\n  out.push({ json: { chat_id: id, text: fit(esc(a.actor) + ' switched ' + word2 + ' the DTJ apps on ' + esc(shop.name) + ' via Telegram.\\n' + lines) } });\n}\nreturn out;\n"
+   },
    "id": "c8679e9a-e961-4a9a-9b49-0df47607a2d0",
    "name": "Licence Report",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    2520,
+    2528,
     240
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Licence Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Turns the catcher's answers (full responses: statusCode + body, one per app, in the order of \"Licence Calls\") into the message for\n// the admin who asked, grouped per shop, and, after a switch, a note to every other admin. Every item out is { chat_id, text } for\n// the \"Send\" step.\nconst a = $('Pick the Shop').first().json;\nconst calls = $('Licence Calls').all().map((i) => i.json);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst word = (v) => (v === 'active' ? 'ON' : v === 'inactive' ? 'OFF' : v ? String(v) : 'not set (blocks hidden)');\nconst rows = $input.all().map((it, i) => {\n  const r = it.json || {};\n  const code = Number(r.statusCode || (r.error ? 0 : 200));\n  const body = parse(r.body !== undefined ? r.body : r);\n  const call = calls[i] || {};\n  return { label: call.label || 'App ' + (i + 1), client: call.client || '', code, body, error: String(body.error || '') };\n});\nconst line = (r) => {\n  if (r.code === 200 && a.state === 'status') return r.label + ': ' + word(r.body.licence);\n  if (r.code === 200) return r.label + ': ' + word(r.body.before) + ' -> ' + word(r.body.after) + (r.body.verified ? ' (checked)' : ' (NOT confirmed)');\n  if (r.code === 404 && /no store key|has not installed/i.test(r.error)) return r.label + ': not installed on the shop';\n  if (r.code === 404 && /organization/i.test(r.error)) return r.label + ': DTJ\\'s app is not installed there, or the shop is outside DTJ\\'s Shopify organization';\n  if (r.code === 404) return r.label + ': not connected (' + esc(r.error || 'not installed') + ')';\n  if (r.code === 401) return r.label + ': the bot\\'s key was refused (ask Harsh to check the credential \"DTJ Catcher Bot Key\")';\n  return r.label + ': failed (' + esc(r.error || ('HTTP ' + r.code)) + ')';\n};\nconst block = (s) => rows.filter((r) => r.client === s.client).map(line).join('\\n');\nconst head = (s) => esc(s.name) + ' (' + esc(s.shop) + (s.kind === 'dtj apps' ? ', DTJ\\'s own apps' : '') + ')';\nconst fit = (text) => (text.length > 4000 ? text.slice(0, 3990) + '\\n...' : text);  // Telegram's limit is 4096 characters\n\nif (a.listing) {\n  const parts = (a.shops || []).map((s) => head(s) + '\\n' + block(s));\n  const rest = (a.missing || []).length ? '\\n\\nSet up for pages, but not on the switch yet: ' + a.missing.map(esc).join(', ') + ' (ask Harsh).' : '';\n  const example = (a.shops || [])[0] ? '\\n\\nUse a name with /status, /on or /off, for example: /status ' + esc(a.shops[0].name) : '';\n  return [{ json: { chat_id: a.chat_id, text: fit('Shops on the switch:\\n\\n' + parts.join('\\n\\n') + rest + example) } }];\n}\nconst shop = (a.shops || [])[0] || { name: '?', shop: '?', client: '' };\nif (a.state === 'status') return [{ json: { chat_id: a.chat_id, text: fit('DTJ apps on ' + head(shop) + ':\\n' + block(shop)) } }];\n\nconst ok = rows.length > 0 && rows.every((r) => r.code === 200 && r.body.verified);\nconst word2 = a.state === 'active' ? 'ON' : 'OFF';\nconst lines = block(shop);\nconst top = ok ? 'Done: all DTJ apps on ' + esc(shop.name) + ' are ' + word2 + '.' : 'Not everything switched on ' + esc(shop.name) + '. Check the lines below.';\nconst out = [{ json: { chat_id: a.chat_id, text: fit(top + '\\n' + lines) } }];\nfor (const id of a.admins || []) {\n  out.push({ json: { chat_id: id, text: fit(esc(a.actor) + ' switched ' + word2 + ' the DTJ apps on ' + esc(shop.name) + ' via Telegram.\\n' + lines) } });\n}\nreturn out;\n"
-   }
+   ]
   },
   {
-   "id": "a985fa79-c33e-4d81-91f4-898799e5d3d8",
-   "name": "Ask to Confirm",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    2040,
-    420
-   ],
    "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
     "chatId": "={{ $json.chat_id }}",
     "text": "={{ $json.text }}",
     "replyMarkup": "inlineKeyboard",
@@ -541,12 +591,20 @@
     },
     "additionalFields": {
      "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
+     "disable_web_page_preview": true,
+     "parse_mode": "HTML"
     }
    },
-   "onError": "continueRegularOutput",
+   "id": "a985fa79-c33e-4d81-91f4-898799e5d3d8",
+   "name": "Ask to Confirm",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2048,
+    432
+   ],
    "webhookId": "2a942740-50a5-4810-a7ac-b0563d0235b3",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -555,20 +613,13 @@
    }
   },
   {
-   "id": "ac62abc1-c7f2-4311-9cdb-4a811ebe56cd",
-   "name": "Is It a Button?",
-   "type": "n8n-nodes-base.if",
-   "typeVersion": 2.2,
-   "position": [
-    480,
-    320
-   ],
    "parameters": {
     "conditions": {
      "options": {
       "caseSensitive": true,
       "leftValue": "",
-      "typeValidation": "strict"
+      "typeValidation": "strict",
+      "version": 1
      },
      "conditions": [
       {
@@ -581,10 +632,24 @@
       }
      ],
      "combinator": "and"
-    }
-   }
+    },
+    "options": {}
+   },
+   "id": "ac62abc1-c7f2-4311-9cdb-4a811ebe56cd",
+   "name": "Is It a Button?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    480,
+    320
+   ]
   },
   {
+   "parameters": {
+    "resource": "callback",
+    "queryId": "={{ $json.callback_id }}",
+    "additionalFields": {}
+   },
    "id": "b8e33cdd-db8d-4c8a-b090-700feb2a4813",
    "name": "Answer the Button",
    "type": "n8n-nodes-base.telegram",
@@ -593,14 +658,8 @@
     720,
     320
    ],
-   "parameters": {
-    "resource": "callback",
-    "operation": "answerQuery",
-    "queryId": "={{ $json.callback_id }}",
-    "additionalFields": {}
-   },
-   "onError": "continueRegularOutput",
    "webhookId": "5b579ba6-1e28-40bf-a2e1-8c9242666dbf",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -609,14 +668,6 @@
    }
   },
   {
-   "id": "329c28b2-1254-4328-867a-5583c81f15cc",
-   "name": "Ask for the Shop List",
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.2,
-   "position": [
-    1320,
-    240
-   ],
    "parameters": {
     "method": "POST",
     "url": "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/licence",
@@ -632,7 +683,6 @@
      ]
     },
     "sendBody": true,
-    "contentType": "json",
     "specifyBody": "json",
     "jsonBody": "={{ JSON.stringify({ state: 'list', ts: Math.floor(Date.now() / 1000) }) }}",
     "options": {
@@ -645,6 +695,14 @@
      "timeout": 60000
     }
    },
+   "id": "329c28b2-1254-4328-867a-5583c81f15cc",
+   "name": "Ask for the Shop List",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1328,
+    240
+   ],
    "onError": "continueRegularOutput",
    "credentials": {
     "httpHeaderAuth": {
@@ -654,29 +712,19 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Pick the Shop\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Input: the install catcher's list of every shop the switch reaches (\"Ask for the Shop List\": full response, statusCode + body):\n// client app copies AND stores in DTJ's own organization running DTJ's original apps (Harsh, 12 Oct 2026: \"on every store we work\n// on the switch must work\"). Finds the shop the admin named and decides the next step. Output: one item with action\n//   licence -> ask the catcher about (or switch) every app of `shops`: status for /shops and /status, active|inactive after a tap\n//   confirm -> send the \"Yes, switch ...\" / \"Cancel\" buttons\n//   reply   -> just answer\n// dtj_stores (\"Load Shops\") only adds friendlier names and the shop's other addresses, and shows shops set up for pages whose apps\n// are not on the switch yet.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: ask.chat_id, text } }];\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst code = Number(res.statusCode || (res.error ? 0 : 200));\nconst body = parse(res.body !== undefined ? res.body : res);\nif (code === 401) {\n  return reply('The install service refused the bot\\'s key (ask Harsh to check the n8n credential \"DTJ Catcher Bot Key\"). Nothing was changed.');\n}\nif (code !== 200 || !Array.isArray(body.shops)) {\n  const why = body.error || (typeof res.error === 'string' ? res.error : (res.error && res.error.message)) || ('HTTP ' + code);\n  return reply('I could not reach the install service (' + esc(why) + '). Nothing was changed. Please try again in a minute.');\n}\n\nconst low = (x) => String(x == null ? '' : x).toLowerCase().trim();\nconst rows = $('Load Shops').all().map((i) => i.json).filter((r) => r && r.myshopify_domain && r.active !== false);\nconst stem = (r) => (String(r.client_registry || '').match(/clients\\/([a-z0-9-]+)\\.json$/) || [])[1] || '';\nconst shops = body.shops.map((s) => {\n  const row = rows.find((r) => low(r.myshopify_domain) === low(s.shop) || stem(r) === s.client);\n  const name = (row && row.store_name) || s.name || s.client;\n  const names = [name, s.name, s.client, s.shop, ...(row ? [row.myshopify_domain, ...String(row.other_domains || '').split(',')] : [])]\n    .map(low).filter(Boolean);\n  return { client: s.client, shop: s.shop, name, kind: s.kind, apps: (s.apps || []).map((a) => ({ app: a.app, label: a.label })), names };\n});\nconst missing = rows.filter((r) => !shops.some((s) => low(s.shop) === low(r.myshopify_domain) || s.client === stem(r)))\n  .map((r) => ({ name: r.store_name || r.myshopify_domain, names: [r.store_name, r.myshopify_domain, stem(r), ...String(r.other_domains || '').split(',')].map(low).filter(Boolean) }));\nconst plain = (s) => ({ client: s.client, shop: s.shop, name: s.name, kind: s.kind, apps: s.apps });\nconst licence = (state, list, extra) => [{ json: { action: 'licence', chat_id: ask.chat_id, state, shops: list.map(plain), listing: false,\n  missing: [], approved_by: '', reason: '', actor: ask.actor, admins: [], ...extra } }];\n\nif (ask.command === 'tap') {\n  const shop = shops.find((s) => s.client === ask.client);\n  if (!shop) return reply('That shop is not on the switch any more. Nothing was switched.');\n  const word = ask.state === 'active' ? 'on' : 'off';\n  return licence(ask.state, [shop], { approved_by: ask.actor + ' via Telegram', reason: 'Telegram /' + word, admins: ask.admins || [] });\n}\nif (ask.command === 'shops') {\n  if (!shops.length) {\n    return reply('No shop is on the switch yet.' + (missing.length ? ' Set up for pages only: ' + missing.map((m) => esc(m.name)).join(', ') + '.' : ''));\n  }\n  return licence('status', shops, { listing: true, missing: missing.map((m) => m.name) });\n}\n\nconst q = low(ask.arg).replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '');\nlet found = shops.filter((s) => s.names.includes(q));\nif (!found.length) found = shops.filter((s) => s.names.some((n) => n.includes(q)));\nif (!found.length) {\n  const pagesOnly = missing.find((m) => m.names.includes(q) || m.names.some((n) => n.includes(q)));\n  if (pagesOnly) return reply(esc(pagesOnly.name) + ' is set up for pages, but its DTJ apps are not on the switch yet. Ask Harsh to add it.');\n  return reply('No shop matches \"' + esc(ask.arg) + '\". Send /shops for the list.');\n}\nif (found.length > 1) {\n  return reply('More than one shop matches \"' + esc(ask.arg) + '\": ' + found.map((s) => esc(s.name)).join(', ') + '. Please be more specific.');\n}\nconst shop = found[0];\nif (ask.command === 'status') return licence('status', [shop], {});\nconst off = ask.command === 'off';\nconst word = off ? 'OFF' : 'ON';\nconst yes = 'lic:' + ask.command + ':' + shop.client + ':' + Math.floor(Date.now() / 1000);\nif (yes.length > 64) return reply('That shop\\'s name is too long for a Telegram button. Ask Harsh to switch it with licence_call.py.');\nreturn [{ json: { action: 'confirm', chat_id: ask.chat_id,\n  text: 'Switch ' + word + ' all DTJ apps on ' + esc(shop.name) + ' (' + esc(shop.shop) + ')?\\n'\n    + (off ? 'Every DTJ block disappears from that shop for its shoppers at once.' : 'Every DTJ block comes back on that shop at once.')\n    + '\\nTap the button within 2 minutes.',\n  yes_text: 'Yes, switch ' + word, yes_data: yes } }];\n"
+   },
    "id": "bd412698-42ae-4397-86e3-57f6fc5426a6",
    "name": "Pick the Shop",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1560,
+    1568,
     240
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Pick the Shop\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Input: the install catcher's list of every shop the switch reaches (\"Ask for the Shop List\": full response, statusCode + body):\n// client app copies AND stores in DTJ's own organization running DTJ's original apps (Harsh, 12 Oct 2026: \"on every store we work\n// on the switch must work\"). Finds the shop the admin named and decides the next step. Output: one item with action\n//   licence -> ask the catcher about (or switch) every app of `shops`: status for /shops and /status, active|inactive after a tap\n//   confirm -> send the \"Yes, switch ...\" / \"Cancel\" buttons\n//   reply   -> just answer\n// dtj_stores (\"Load Shops\") only adds friendlier names and the shop's other addresses, and shows shops set up for pages whose apps\n// are not on the switch yet.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: ask.chat_id, text } }];\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst code = Number(res.statusCode || (res.error ? 0 : 200));\nconst body = parse(res.body !== undefined ? res.body : res);\nif (code === 401) {\n  return reply('The install service refused the bot\\'s key (ask Harsh to check the n8n credential \"DTJ Catcher Bot Key\"). Nothing was changed.');\n}\nif (code !== 200 || !Array.isArray(body.shops)) {\n  const why = body.error || (typeof res.error === 'string' ? res.error : (res.error && res.error.message)) || ('HTTP ' + code);\n  return reply('I could not reach the install service (' + esc(why) + '). Nothing was changed. Please try again in a minute.');\n}\n\nconst low = (x) => String(x == null ? '' : x).toLowerCase().trim();\nconst rows = $('Load Shops').all().map((i) => i.json).filter((r) => r && r.myshopify_domain && r.active !== false);\nconst stem = (r) => (String(r.client_registry || '').match(/clients\\/([a-z0-9-]+)\\.json$/) || [])[1] || '';\nconst shops = body.shops.map((s) => {\n  const row = rows.find((r) => low(r.myshopify_domain) === low(s.shop) || stem(r) === s.client);\n  const name = (row && row.store_name) || s.name || s.client;\n  const names = [name, s.name, s.client, s.shop, ...(row ? [row.myshopify_domain, ...String(row.other_domains || '').split(',')] : [])]\n    .map(low).filter(Boolean);\n  return { client: s.client, shop: s.shop, name, kind: s.kind, apps: (s.apps || []).map((a) => ({ app: a.app, label: a.label })), names };\n});\nconst missing = rows.filter((r) => !shops.some((s) => low(s.shop) === low(r.myshopify_domain) || s.client === stem(r)))\n  .map((r) => ({ name: r.store_name || r.myshopify_domain, names: [r.store_name, r.myshopify_domain, stem(r), ...String(r.other_domains || '').split(',')].map(low).filter(Boolean) }));\nconst plain = (s) => ({ client: s.client, shop: s.shop, name: s.name, kind: s.kind, apps: s.apps });\nconst licence = (state, list, extra) => [{ json: { action: 'licence', chat_id: ask.chat_id, state, shops: list.map(plain), listing: false,\n  missing: [], approved_by: '', reason: '', actor: ask.actor, admins: [], ...extra } }];\n\nif (ask.command === 'tap') {\n  const shop = shops.find((s) => s.client === ask.client);\n  if (!shop) return reply('That shop is not on the switch any more. Nothing was switched.');\n  const word = ask.state === 'active' ? 'on' : 'off';\n  return licence(ask.state, [shop], { approved_by: ask.actor + ' via Telegram', reason: 'Telegram /' + word, admins: ask.admins || [] });\n}\nif (ask.command === 'shops') {\n  if (!shops.length) {\n    return reply('No shop is on the switch yet.' + (missing.length ? ' Set up for pages only: ' + missing.map((m) => esc(m.name)).join(', ') + '.' : ''));\n  }\n  return licence('status', shops, { listing: true, missing: missing.map((m) => m.name) });\n}\n\nconst q = low(ask.arg).replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '');\nlet found = shops.filter((s) => s.names.includes(q));\nif (!found.length) found = shops.filter((s) => s.names.some((n) => n.includes(q)));\nif (!found.length) {\n  const pagesOnly = missing.find((m) => m.names.includes(q) || m.names.some((n) => n.includes(q)));\n  if (pagesOnly) return reply(esc(pagesOnly.name) + ' is set up for pages, but its DTJ apps are not on the switch yet. Ask Harsh to add it.');\n  return reply('No shop matches \"' + esc(ask.arg) + '\". Send /shops for the list.');\n}\nif (found.length > 1) {\n  return reply('More than one shop matches \"' + esc(ask.arg) + '\": ' + found.map((s) => esc(s.name)).join(', ') + '. Please be more specific.');\n}\nconst shop = found[0];\nif (ask.command === 'status') return licence('status', [shop], {});\nconst off = ask.command === 'off';\nconst word = off ? 'OFF' : 'ON';\nconst yes = 'lic:' + ask.command + ':' + shop.client + ':' + Math.floor(Date.now() / 1000);\nif (yes.length > 64) return reply('That shop\\'s name is too long for a Telegram button. Ask Harsh to switch it with licence_call.py.');\nreturn [{ json: { action: 'confirm', chat_id: ask.chat_id,\n  text: 'Switch ' + word + ' all DTJ apps on ' + esc(shop.name) + ' (' + esc(shop.shop) + ')?\\n'\n    + (off ? 'Every DTJ block disappears from that shop for its shoppers at once.' : 'Every DTJ block comes back on that shop at once.')\n    + '\\nTap the button within 2 minutes.',\n  yes_text: 'Yes, switch ' + word, yes_data: yes } }];\n"
-   }
+   ]
   },
   {
-   "id": "baf073d5-57be-4d18-a685-d031fba59cc7",
-   "name": "What Next",
-   "type": "n8n-nodes-base.switch",
-   "typeVersion": 3.2,
-   "position": [
-    1800,
-    240
-   ],
    "parameters": {
     "rules": {
      "values": [
@@ -685,7 +733,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -707,7 +756,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -730,17 +780,17 @@
      "fallbackOutput": "extra",
      "renameFallbackOutput": "reply"
     }
-   }
+   },
+   "id": "baf073d5-57be-4d18-a685-d031fba59cc7",
+   "name": "What Next",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1808,
+    240
+   ]
   },
   {
-   "id": "04753223-72c4-4ca3-ba21-d707362188e7",
-   "name": "Start Brand Intake",
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.2,
-   "position": [
-    1320,
-    560
-   ],
    "parameters": {
     "method": "POST",
     "url": "https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/workflows/brand-intake.yml/dispatches",
@@ -764,7 +814,6 @@
      ]
     },
     "sendBody": true,
-    "contentType": "json",
     "specifyBody": "json",
     "jsonBody": "={{ JSON.stringify($json.body) }}",
     "options": {
@@ -777,6 +826,14 @@
      "timeout": 30000
     }
    },
+   "id": "04753223-72c4-4ca3-ba21-d707362188e7",
+   "name": "Start Brand Intake",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1328,
+    560
+   ],
    "onError": "continueRegularOutput",
    "credentials": {
     "httpBearerAuth": {
@@ -786,31 +843,20 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Intake Started\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Start Brand Intake\" asked GitHub to run the \"Brand intake\" workflow: GitHub answers 204 when the run is queued. The run itself\n// sends the Drive link to this chat when it is done (.github/workflows/brand-intake.yml), so here we only say it started, or why not.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst status = Number(res.statusCode || 0);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (status === 204) {\n  return [{ json: { chat_id: ask.chat_id, text: 'Started the brand intake for ' + esc(ask.store) + '. I will send the Google Drive '\n    + 'folder here when it is ready (a few minutes; shops with many videos take longer).' } }];\n}\nconst why = status === 401 || status === 403 ? 'the GitHub key in n8n is missing or not allowed to start runs'\n  : status === 404 ? 'GitHub cannot find the \"Brand intake\" workflow on the main branch yet'\n  : status === 422 ? 'GitHub did not accept the request'\n  : 'GitHub did not answer';\nreturn [{ json: { chat_id: ask.chat_id, text: 'Could not start the brand intake for ' + esc(ask.store) + ': ' + why\n  + ' (' + (status || 'no answer') + '). Please tell Harsh.' } }];\n"
+   },
    "id": "4cfd553e-5437-4aaa-8fd5-96529330c0f3",
    "name": "Intake Started",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1560,
+    1568,
     560
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Intake Started\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Start Brand Intake\" asked GitHub to run the \"Brand intake\" workflow: GitHub answers 204 when the run is queued. The run itself\n// sends the Drive link to this chat when it is done (.github/workflows/brand-intake.yml), so here we only say it started, or why not.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst status = Number(res.statusCode || 0);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (status === 204) {\n  return [{ json: { chat_id: ask.chat_id, text: 'Started the brand intake for ' + esc(ask.store) + '. I will send the Google Drive '\n    + 'folder here when it is ready (a few minutes; shops with many videos take longer).' } }];\n}\nconst why = status === 401 || status === 403 ? 'the GitHub key in n8n is missing or not allowed to start runs'\n  : status === 404 ? 'GitHub cannot find the \"Brand intake\" workflow on the main branch yet'\n  : status === 422 ? 'GitHub did not accept the request'\n  : 'GitHub did not answer';\nreturn [{ json: { chat_id: ask.chat_id, text: 'Could not start the brand intake for ' + esc(ask.store) + ': ' + why\n  + ' (' + (status || 'no answer') + '). Please tell Harsh.' } }];\n"
-   }
+   ]
   },
   {
-   "id": "8b06a05c-5fb3-4d7a-befa-b0585c2872b5",
-   "name": "List Intakes",
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.2,
-   "position": [
-    1320,
-    800
-   ],
    "parameters": {
-    "method": "GET",
     "url": "https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/workflows/brand-intake.yml/runs?per_page=30",
     "authentication": "genericCredentialType",
     "genericAuthType": "httpBearerAuth",
@@ -841,6 +887,14 @@
      "timeout": 30000
     }
    },
+   "id": "8b06a05c-5fb3-4d7a-befa-b0585c2872b5",
+   "name": "List Intakes",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1328,
+    800
+   ],
    "onError": "continueRegularOutput",
    "credentials": {
     "httpBearerAuth": {
@@ -850,29 +904,19 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Stop Plan\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Stopping a brand intake (19 Oct 2026, Harsh: \"add a stop feature so it can stop any ongoing specific task\"; brand intakes only).\n// After \"List Intakes\" asked GitHub for the latest runs of the \"Brand intake\" workflow (full response). Only a run of THAT workflow\n// that is still going can be stopped, so a Stop button can never cancel anything else (the SEO runs, for example).\n// Output: one or more items with action\n//   cancel -> \"Cancel the Intake\" (run_id)\n//   choose -> \"Ask to Stop\": one message per running intake, each with its own Stop button (/stop)\n//   reply  -> just answer\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: ask.chat_id, text } }];\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst status = Number(res.statusCode || 0);\nconst body = parse(res.body !== undefined ? res.body : res);\nif (status === 401 || status === 403) {\n  return reply('GitHub refused the bot\\'s key (the n8n credential \"DTJ GitHub Actions\"). Nothing was stopped. Please tell Harsh.');\n}\nif (status !== 200 || !Array.isArray(body.workflow_runs)) {\n  return reply('I could not reach GitHub (' + (status || 'no answer') + '). Nothing was stopped. Please try again in a minute.');\n}\nconst GOING = ['queued', 'in_progress', 'waiting', 'requested', 'pending'];\nconst store = (r) => String(r.display_title || '').replace(/^Brand intake:?\\s*/, '').trim() || 'a store';\nconst ago = (r) => {\n  const m = Math.max(0, Math.round((Date.now() - Date.parse(r.run_started_at || r.created_at || '')) / 60000));\n  return Number.isFinite(m) ? (m < 1 ? 'less than a minute ago' : m + ' min ago') : 'a moment ago';\n};\nconst runs = body.workflow_runs;\n\nif (ask.mode === 'cancel') {\n  const run = runs.find((r) => String(r.id) === String(ask.run_id));\n  if (!run) return reply('That brand intake is not on GitHub\\'s list of recent intakes. Nothing was stopped.');\n  if (!GOING.includes(run.status)) {\n    return reply('The brand intake for ' + esc(store(run)) + ' has already finished, so there is nothing to stop.');\n  }\n  return [{ json: { action: 'cancel', chat_id: ask.chat_id, run_id: String(run.id), store: store(run), by: ask.by } }];\n}\nconst running = runs.filter((r) => GOING.includes(r.status));\nif (!running.length) return reply('No brand intake is running right now. To stop a page or store job, tap \"Stop this job\" under its '\n  + '\"Started\" message.');\nreturn running.map((r) => ({ json: { action: 'choose', chat_id: ask.chat_id,\n  text: 'Running: brand intake for ' + esc(store(r)) + ', started ' + ago(r) + '.', stop_data: 'stop:intake:' + r.id } }));\n"
+   },
    "id": "3d3adfe2-4f81-4664-b64e-e3020eb75889",
    "name": "Stop Plan",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1560,
+    1568,
     800
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Stop Plan\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Stopping a brand intake (19 Oct 2026, Harsh: \"add a stop feature so it can stop any ongoing specific task\"; brand intakes only).\n// After \"List Intakes\" asked GitHub for the latest runs of the \"Brand intake\" workflow (full response). Only a run of THAT workflow\n// that is still going can be stopped, so a Stop button can never cancel anything else (the SEO runs, for example).\n// Output: one or more items with action\n//   cancel -> \"Cancel the Intake\" (run_id)\n//   choose -> \"Ask to Stop\": one message per running intake, each with its own Stop button (/stop)\n//   reply  -> just answer\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: ask.chat_id, text } }];\nconst parse = (b) => { if (b && typeof b === 'object') return b; try { return JSON.parse(String(b || '{}')); } catch (e) { return {}; } };\nconst status = Number(res.statusCode || 0);\nconst body = parse(res.body !== undefined ? res.body : res);\nif (status === 401 || status === 403) {\n  return reply('GitHub refused the bot\\'s key (the n8n credential \"DTJ GitHub Actions\"). Nothing was stopped. Please tell Harsh.');\n}\nif (status !== 200 || !Array.isArray(body.workflow_runs)) {\n  return reply('I could not reach GitHub (' + (status || 'no answer') + '). Nothing was stopped. Please try again in a minute.');\n}\nconst GOING = ['queued', 'in_progress', 'waiting', 'requested', 'pending'];\nconst store = (r) => String(r.display_title || '').replace(/^Brand intake:?\\s*/, '').trim() || 'a store';\nconst ago = (r) => {\n  const m = Math.max(0, Math.round((Date.now() - Date.parse(r.run_started_at || r.created_at || '')) / 60000));\n  return Number.isFinite(m) ? (m < 1 ? 'less than a minute ago' : m + ' min ago') : 'a moment ago';\n};\nconst runs = body.workflow_runs;\n\nif (ask.mode === 'cancel') {\n  const run = runs.find((r) => String(r.id) === String(ask.run_id));\n  if (!run) return reply('That brand intake is not on GitHub\\'s list of recent intakes. Nothing was stopped.');\n  if (!GOING.includes(run.status)) {\n    return reply('The brand intake for ' + esc(store(run)) + ' has already finished, so there is nothing to stop.');\n  }\n  return [{ json: { action: 'cancel', chat_id: ask.chat_id, run_id: String(run.id), store: store(run), by: ask.by } }];\n}\nconst running = runs.filter((r) => GOING.includes(r.status));\nif (!running.length) return reply('No brand intake is running right now.');\nreturn running.map((r) => ({ json: { action: 'choose', chat_id: ask.chat_id,\n  text: 'Running: brand intake for ' + esc(store(r)) + ', started ' + ago(r) + '.', stop_data: 'stop:intake:' + r.id } }));\n"
-   }
+   ]
   },
   {
-   "id": "70bf6f7d-f948-4ae5-b181-51de51f609d9",
-   "name": "Stop Next",
-   "type": "n8n-nodes-base.switch",
-   "typeVersion": 3.2,
-   "position": [
-    1800,
-    800
-   ],
    "parameters": {
     "rules": {
      "values": [
@@ -881,7 +925,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -903,7 +948,8 @@
         "options": {
          "caseSensitive": true,
          "leftValue": "",
-         "typeValidation": "strict"
+         "typeValidation": "strict",
+         "version": 1
         },
         "conditions": [
          {
@@ -926,17 +972,17 @@
      "fallbackOutput": "extra",
      "renameFallbackOutput": "reply"
     }
-   }
+   },
+   "id": "70bf6f7d-f948-4ae5-b181-51de51f609d9",
+   "name": "Stop Next",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1808,
+    800
+   ]
   },
   {
-   "id": "a14d3922-bdda-4e31-a1aa-353eee7adb0d",
-   "name": "Cancel the Intake",
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.2,
-   "position": [
-    2040,
-    720
-   ],
    "parameters": {
     "method": "POST",
     "url": "=https://api.github.com/repos/harsh-shopify-dev/dtj-agency-automation/actions/runs/{{ $json.run_id }}/cancel",
@@ -969,6 +1015,14 @@
      "timeout": 30000
     }
    },
+   "id": "a14d3922-bdda-4e31-a1aa-353eee7adb0d",
+   "name": "Cancel the Intake",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2048,
+    720
+   ],
    "onError": "continueRegularOutput",
    "credentials": {
     "httpBearerAuth": {
@@ -978,32 +1032,20 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Stop Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Cancel the Intake\" asked GitHub to cancel one brand intake run (full response): GitHub answers 202 when it starts cancelling.\n// The run itself then closes its progress message and says in the chat that it was stopped (.github/workflows/brand-intake.yml).\nconst ask = $('Stop Plan').first().json;\nconst res = $input.first().json || {};\nconst status = Number(res.statusCode || 0);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet text;\nif (status === 202) {\n  text = 'Stopping the brand intake for ' + esc(ask.store) + ' (asked by ' + esc(ask.by) + '). Its progress message will say when it has '\n    + 'stopped. Files it already put in Google Drive stay there.';\n} else if (status === 409) {\n  text = 'The brand intake for ' + esc(ask.store) + ' had already finished, so there was nothing to stop.';\n} else {\n  const why = status === 401 || status === 403 ? 'the GitHub key in n8n is missing or not allowed to stop runs' : 'GitHub did not accept it';\n  text = 'Could not stop the brand intake for ' + esc(ask.store) + ': ' + why + ' (' + (status || 'no answer') + '). Please tell Harsh.';\n}\nreturn [{ json: { chat_id: ask.chat_id, text } }];\n"
+   },
    "id": "a3f2d7ef-4644-4393-8628-25cc022122c3",
    "name": "Stop Report",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    2280,
+    2288,
     720
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Stop Report\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Cancel the Intake\" asked GitHub to cancel one brand intake run (full response): GitHub answers 202 when it starts cancelling.\n// The run itself then closes its progress message and says in the chat that it was stopped (.github/workflows/brand-intake.yml).\nconst ask = $('Stop Plan').first().json;\nconst res = $input.first().json || {};\nconst status = Number(res.statusCode || 0);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet text;\nif (status === 202) {\n  text = 'Stopping the brand intake for ' + esc(ask.store) + ' (asked by ' + esc(ask.by) + '). Its progress message will say when it has '\n    + 'stopped. Files it already put in Google Drive stay there.';\n} else if (status === 409) {\n  text = 'The brand intake for ' + esc(ask.store) + ' had already finished, so there was nothing to stop.';\n} else {\n  const why = status === 401 || status === 403 ? 'the GitHub key in n8n is missing or not allowed to stop runs' : 'GitHub did not accept it';\n  text = 'Could not stop the brand intake for ' + esc(ask.store) + ': ' + why + ' (' + (status || 'no answer') + '). Please tell Harsh.';\n}\nreturn [{ json: { chat_id: ask.chat_id, text } }];\n"
-   }
+   ]
   },
   {
-   "id": "c494c05c-5646-4061-86b5-fe56a890df5c",
-   "name": "Ask to Stop",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    2040,
-    900
-   ],
    "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
     "chatId": "={{ $json.chat_id }}",
     "text": "={{ $json.text }}",
     "replyMarkup": "inlineKeyboard",
@@ -1025,12 +1067,20 @@
     },
     "additionalFields": {
      "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
+     "disable_web_page_preview": true,
+     "parse_mode": "HTML"
     }
    },
-   "onError": "continueRegularOutput",
+   "id": "c494c05c-5646-4061-86b5-fe56a890df5c",
+   "name": "Ask to Stop",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2048,
+    912
+   ],
    "webhookId": "877b9426-4618-45ec-81d7-a3e6e4a8d6da",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -1039,32 +1089,20 @@
    }
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Intake Question\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Store Factory: New Page\" started a page: ask the person who sent the link whether the designer should collect the brand's\n// data first (19 Oct 2026, Harsh: \"if i am starting the design of a product page or homepage it should ask me if it should run the\n// scraper or not and using the data available it should start designing\"). The tap is saved on the brief (column brand_intake) by\n// \"Note the Choice\"; the designer's Claude Code reads it before designing (request_page_design.js, step 2).\n// Output: one item for \"Ask About Intake\" (the question with a Yes and a No button), or nothing when no page was started.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nif (!res.ok || !res.row_id) return [];\nreturn [{ json: {\n  chat_id: ask.chat_id,\n  text: 'One question before the designer starts brief ' + res.row_id + ': collect the brand\\'s data first? That reads its website '\n    + '(product pictures and videos, logo, colours, fonts, policies; a few minutes) and the page is designed from it.',\n  yes_data: 'brief:intake:' + res.row_id,\n  no_data: 'brief:skip:' + res.row_id,\n} }];\n"
+   },
    "id": "8080e520-d236-4109-bce8-1603f04beff2",
    "name": "Intake Question",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    2280,
-    200
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Intake Question\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Store Factory: New Page\" started a page: ask the person who sent the link whether the designer should collect the brand's\n// data first (19 Oct 2026, Harsh: \"if i am starting the design of a product page or homepage it should ask me if it should run the\n// scraper or not and using the data available it should start designing\"). The tap is saved on the brief (column brand_intake) by\n// \"Note the Choice\"; the designer's Claude Code reads it before designing (request_page_design.js, step 2).\n// Output: one item for \"Ask About Intake\" (the question with a Yes and a No button), or nothing when no page was started.\nconst ask = $('Who Is It').first().json;\nconst res = $input.first().json || {};\nif (!res.ok || !res.row_id) return [];\nreturn [{ json: {\n  chat_id: ask.chat_id,\n  text: 'One question before the designer starts brief ' + res.row_id + ': collect the brand\\'s data first? That reads its website '\n    + '(product pictures and videos, logo, colours, fonts, policies; a few minutes) and the page is designed from it.',\n  yes_data: 'brief:intake:' + res.row_id,\n  no_data: 'brief:skip:' + res.row_id,\n} }];\n"
-   }
+    2288,
+    208
+   ]
   },
   {
-   "id": "985d3396-ebd7-452b-a000-e5272e487672",
-   "name": "Ask About Intake",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    2520,
-    200
-   ],
    "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
     "chatId": "={{ $json.chat_id }}",
     "text": "={{ $json.text }}",
     "replyMarkup": "inlineKeyboard",
@@ -1092,12 +1130,20 @@
     },
     "additionalFields": {
      "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
+     "disable_web_page_preview": true,
+     "parse_mode": "HTML"
     }
    },
-   "onError": "continueRegularOutput",
+   "id": "985d3396-ebd7-452b-a000-e5272e487672",
+   "name": "Ask About Intake",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2528,
+    208
+   ],
    "webhookId": "52a6c712-f000-46d2-adf9-e4be2a075d75",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -1106,14 +1152,6 @@
    }
   },
   {
-   "id": "a8713857-f89d-441e-930b-8064e4d86d65",
-   "name": "Note the Choice",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    1320,
-    1040
-   ],
    "parameters": {
     "operation": "update",
     "dataTableId": {
@@ -1149,39 +1187,38 @@
     },
     "options": {}
    },
-   "onError": "continueRegularOutput",
-   "alwaysOutputData": true
+   "id": "a8713857-f89d-441e-930b-8064e4d86d65",
+   "name": "Note the Choice",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1328,
+    1040
+   ],
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Choice Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Choice\" saved the answer to \"collect the brand's data first?\" on the brief (dtj_client_intake.brand_intake):\n// tell the person what the designer will do. \"Note the Choice\" gives back the updated row, or nothing when the brief is gone.\n// After a Yes the bot also asks for the brand's OWN website (19 Oct 2026, Harsh: \"it didnt asked for the brand website link?\"): the\n// shop a product link comes from is not always the brand's site (DTJ's demo shop carries other brands' products). The question is\n// sent with Telegram's \"reply\" box (\"Ask for the Website\"); the reply comes back as kind \"site\" (bot_read.js reads \"for brief N?\").\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nconst brand = row.brand_name ? ' for ' + esc(row.brand_name) : '';\nconst done = row.page_status\n  ? '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.' : '';\nif (ask.brand_intake !== 'yes') {\n  return [{ json: { chat_id: ask.chat_id, text: 'Noted: the designer will design the page' + brand\n    + ' with the data we already have, without collecting it again.' + done } }];\n}\nconst known = row.brand_website || ((String(row.product_url || '').match(/^https?:\\/\\/[^/]+/i) || [])[0])\n  || (row.store_domain ? 'https://' + row.store_domain : '');\nconst host = String(known).replace(/^https?:\\/\\//i, '').replace(/^www\\./i, '').replace(/[/?#].*$/, '');\nreturn [{ json: { chat_id: ask.chat_id, site_question: true,\n  text: 'Noted: the designer will collect the brand\\'s data first' + brand + ', then design the page from it.' + done + '\\n\\n'\n    + 'Which website is the brand\\'s own for brief ' + esc(row.id) + '? Reply to this message with its address, for example senso.in.'\n    + (host ? ' If it is ' + esc(host) + ', reply: same' : '') } }];\n"
+   },
    "id": "fab91381-d2fb-4392-ab04-3b8aba27e4f5",
    "name": "Choice Noted",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1560,
+    1568,
     1040
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Choice Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Choice\" saved the answer to \"collect the brand's data first?\" on the brief (dtj_client_intake.brand_intake):\n// tell the person what the designer will do. \"Note the Choice\" gives back the updated row, or nothing when the brief is gone.\n// After a Yes the bot also asks for the brand's OWN website (19 Oct 2026, Harsh: \"it didnt asked for the brand website link?\"): the\n// shop a product link comes from is not always the brand's site (DTJ's demo shop carries other brands' products). The question is\n// sent with Telegram's \"reply\" box (\"Ask for the Website\"); the reply comes back as kind \"site\" (bot_read.js reads \"for brief N?\").\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nconst brand = row.brand_name ? ' for ' + esc(row.brand_name) : '';\nconst done = row.page_status\n  ? '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.' : '';\nif (ask.brand_intake !== 'yes') {\n  return [{ json: { chat_id: ask.chat_id, text: 'Noted: the designer will design the page' + brand\n    + ' with the data we already have, without collecting it again.' + done } }];\n}\nconst known = row.brand_website || ((String(row.product_url || '').match(/^https?:\\/\\/[^/]+/i) || [])[0])\n  || (row.store_domain ? 'https://' + row.store_domain : '');\nconst host = String(known).replace(/^https?:\\/\\//i, '').replace(/^www\\./i, '').replace(/[/?#].*$/, '');\nreturn [{ json: { chat_id: ask.chat_id, site_question: true,\n  text: 'Noted: the designer will collect the brand\\'s data first' + brand + ', then design the page from it.' + done + '\\n\\n'\n    + 'Which website is the brand\\'s own for brief ' + esc(row.id) + '? Reply to this message with its address, for example senso.in.'\n    + (host ? ' If it is ' + esc(host) + ', reply: same' : '') } }];\n"
-   }
+   ]
   },
   {
-   "id": "fa186cce-eb6e-4964-85e4-56370906d578",
-   "name": "Need the Website?",
-   "type": "n8n-nodes-base.if",
-   "typeVersion": 2.2,
-   "position": [
-    1800,
-    1040
-   ],
    "parameters": {
     "conditions": {
      "options": {
       "caseSensitive": true,
       "leftValue": "",
-      "typeValidation": "loose"
+      "typeValidation": "loose",
+      "version": 1
      },
      "conditions": [
       {
@@ -1197,20 +1234,18 @@
      "combinator": "and"
     },
     "options": {}
-   }
+   },
+   "id": "fa186cce-eb6e-4964-85e4-56370906d578",
+   "name": "Need the Website?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1808,
+    1040
+   ]
   },
   {
-   "id": "8e580c88-9280-47ba-8d16-aa90054be312",
-   "name": "Ask for the Website",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    2040,
-    1000
-   ],
    "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
     "chatId": "={{ $json.chat_id }}",
     "text": "={{ $json.text }}",
     "replyMarkup": "forceReply",
@@ -1219,12 +1254,20 @@
     },
     "additionalFields": {
      "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
+     "disable_web_page_preview": true,
+     "parse_mode": "HTML"
     }
    },
-   "onError": "continueRegularOutput",
+   "id": "8e580c88-9280-47ba-8d16-aa90054be312",
+   "name": "Ask for the Website",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2048,
+    1008
+   ],
    "webhookId": "3723f2a9-1dd3-4c05-b8d5-7383b5d2b147",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -1233,14 +1276,6 @@
    }
   },
   {
-   "id": "b66f96ad-ecc7-44d7-b3f8-7d52a856fd2c",
-   "name": "Note the Website",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    1320,
-    1240
-   ],
    "parameters": {
     "operation": "update",
     "dataTableId": {
@@ -1276,39 +1311,38 @@
     },
     "options": {}
    },
-   "onError": "continueRegularOutput",
-   "alwaysOutputData": true
+   "id": "b66f96ad-ecc7-44d7-b3f8-7d52a856fd2c",
+   "name": "Note the Website",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1328,
+    1248
+   ],
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Website Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Website\" saved the brand's own website on the brief (dtj_client_intake.brand_website, 19 Oct 2026): confirm it.\n// The designer's Claude Code reads it when it starts and collects the brand's data from that site (request_page_design.js, step 2).\n// Then the third question (Harsh, 19 Oct 2026: \"it should ask either upload the assets from google drive to the store\"): a new shop\n// needs the brand's pictures uploaded, an old shop already has them. \"Need the Pictures?\" sends it with Yes / No buttons.\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nconst host = String(ask.website).replace(/^https?:\\/\\//i, '');\nlet text = 'Got it: for brief ' + esc(row.id) + ' the designer will collect the brand\\'s data from ' + esc(host) + '.';\nif (row.page_status) {\n  text += '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.';\n  return [{ json: { chat_id: ask.chat_id, text } }];\n}\ntext += '\\n\\nLast question: upload the brand\\'s pictures from ' + esc(host) + ' to the shop, so the page can use them? '\n  + 'Yes for a new shop; No when the shop already has them.';\nreturn [{ json: { chat_id: ask.chat_id, text, pictures_question: true,\n  yes_data: 'brief:upload:' + row.id, no_data: 'brief:keep:' + row.id } }];\n"
+   },
    "id": "f11198e3-9694-4ffd-ab2e-95d87cfb97f7",
    "name": "Website Noted",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1560,
-    1240
-   ],
-   "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Website Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Website\" saved the brand's own website on the brief (dtj_client_intake.brand_website, 19 Oct 2026): confirm it.\n// The designer's Claude Code reads it when it starts and collects the brand's data from that site (request_page_design.js, step 2).\n// Then the third question (Harsh, 19 Oct 2026: \"it should ask either upload the assets from google drive to the store\"): a new shop\n// needs the brand's pictures uploaded, an old shop already has them. \"Need the Pictures?\" sends it with Yes / No buttons.\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nconst host = String(ask.website).replace(/^https?:\\/\\//i, '');\nlet text = 'Got it: for brief ' + esc(row.id) + ' the designer will collect the brand\\'s data from ' + esc(host) + '.';\nif (row.page_status) {\n  text += '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.';\n  return [{ json: { chat_id: ask.chat_id, text } }];\n}\ntext += '\\n\\nLast question: upload the brand\\'s pictures from ' + esc(host) + ' to the shop, so the page can use them? '\n  + 'Yes for a new shop; No when the shop already has them.';\nreturn [{ json: { chat_id: ask.chat_id, text, pictures_question: true,\n  yes_data: 'brief:upload:' + row.id, no_data: 'brief:keep:' + row.id } }];\n"
-   }
+    1568,
+    1248
+   ]
   },
   {
-   "id": "eb9ecb89-a032-4578-9aba-66612bee496f",
-   "name": "Need the Pictures?",
-   "type": "n8n-nodes-base.if",
-   "typeVersion": 2.2,
-   "position": [
-    1800,
-    1240
-   ],
    "parameters": {
     "conditions": {
      "options": {
       "caseSensitive": true,
       "leftValue": "",
-      "typeValidation": "loose"
+      "typeValidation": "loose",
+      "version": 1
      },
      "conditions": [
       {
@@ -1324,20 +1358,18 @@
      "combinator": "and"
     },
     "options": {}
-   }
+   },
+   "id": "eb9ecb89-a032-4578-9aba-66612bee496f",
+   "name": "Need the Pictures?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1808,
+    1248
+   ]
   },
   {
-   "id": "73a5c67d-2c06-4d24-9e42-63502ce7997e",
-   "name": "Ask About Pictures",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    2040,
-    1200
-   ],
    "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
     "chatId": "={{ $json.chat_id }}",
     "text": "={{ $json.text }}",
     "replyMarkup": "inlineKeyboard",
@@ -1365,12 +1397,20 @@
     },
     "additionalFields": {
      "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
+     "disable_web_page_preview": true,
+     "parse_mode": "HTML"
     }
    },
-   "onError": "continueRegularOutput",
+   "id": "73a5c67d-2c06-4d24-9e42-63502ce7997e",
+   "name": "Ask About Pictures",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2048,
+    1200
+   ],
    "webhookId": "1b9b456c-b710-4202-a3ff-5bfdb5bfe65f",
+   "onError": "continueRegularOutput",
    "credentials": {
     "telegramApi": {
      "id": "gM49WI7trRUFpcNv",
@@ -1379,14 +1419,6 @@
    }
   },
   {
-   "id": "9c6507cf-a0e9-423c-b1ff-cf5772995b7d",
-   "name": "Note the Pictures",
-   "type": "n8n-nodes-base.dataTable",
-   "typeVersion": 1.1,
-   "position": [
-    1320,
-    1440
-   ],
    "parameters": {
     "operation": "update",
     "dataTableId": {
@@ -1432,23 +1464,442 @@
     },
     "options": {}
    },
-   "onError": "continueRegularOutput",
-   "alwaysOutputData": true
+   "id": "9c6507cf-a0e9-423c-b1ff-cf5772995b7d",
+   "name": "Note the Pictures",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1328,
+    1440
+   ],
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
   },
   {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Pictures Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Pictures\" saved the answer to \"upload the brand's pictures to the shop?\" on the brief (dtj_client_intake.upload_assets\n// and upload_assets_by, 19 Oct 2026). A Yes is that person's approval for this one upload: the designer's Claude Code uploads the\n// intake's pictures with page_builder.store_files --approved-by \"<name> (Telegram, brief N)\" (request_page_design.js, step 2).\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nlet text = ask.upload_assets === 'yes'\n  ? 'Noted: the designer will upload the brand\\'s pictures to the shop\\'s Files (approved by ' + esc(ask.by) + ') and design the page with them.'\n  : 'Noted: nothing is uploaded; the designer will use the pictures the shop already has.';\nif (row.page_status) text += '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.';\nreturn [{ json: { chat_id: ask.chat_id, text } }];\n"
+   },
    "id": "42c9db2b-e470-4027-b5bf-24312cc99baa",
    "name": "Pictures Noted",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    1560,
+    1568,
     1440
-   ],
+   ]
+  },
+  {
    "parameters": {
-    "mode": "runOnceForAllItems",
-    "language": "javaScript",
-    "jsCode": "// n8n Code node \"Pictures Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Note the Pictures\" saved the answer to \"upload the brand's pictures to the shop?\" on the brief (dtj_client_intake.upload_assets\n// and upload_assets_by, 19 Oct 2026). A Yes is that person's approval for this one upload: the designer's Claude Code uploads the\n// intake's pictures with page_builder.store_files --approved-by \"<name> (Telegram, brief N)\" (request_page_design.js, step 2).\nconst ask = $('Who Is It').first().json;\nconst row = ($input.all().map((i) => i.json).find((r) => r && r.id) || null);\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (!row) return [{ json: { chat_id: ask.chat_id, text: 'That page request (brief ' + esc(ask.row_id) + ') is not on the list any more. Nothing was changed.' } }];\nlet text = ask.upload_assets === 'yes'\n  ? 'Noted: the designer will upload the brand\\'s pictures to the shop\\'s Files (approved by ' + esc(ask.by) + ') and design the page with them.'\n  : 'Noted: nothing is uploaded; the designer will use the pictures the shop already has.';\nif (row.page_status) text += '\\nThis page is already marked \"' + esc(row.page_status) + '\", so tell the designer if it should be done again.';\nreturn [{ json: { chat_id: ask.chat_id, text } }];\n"
-   }
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "W7Aiz9aup2OfAkmR",
+     "cachedResultName": "Store Factory: Add Shop"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "shop": "={{ $json.shop }}",
+      "label": "={{ $json.label }}",
+      "requested_by": "={{ $json.requested_by }}",
+      "chat_id": "={{ $json.chat_id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "shop",
+       "displayName": "shop",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "label",
+       "displayName": "label",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "options": {
+     "waitForSubWorkflow": false
+    }
+   },
+   "id": "734f31b7-5e9c-4296-9e76-9f19fe7b6cc4",
+   "name": "Start Add Shop",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    1328,
+    1680
+   ],
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Add Shop Started\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Start Add Shop\" handed /addshop to \"Store Factory: Add Shop\" (it does not wait): the answer for the admin who asked.\n// \"Start Add Shop\" continues on an error, so a start that failed is said plainly instead of \"Got it\".\nconst ask = $('Who Is It').first().json;\nconst started = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (started.error) {\n  const why = typeof started.error === 'string' ? started.error : (started.error.message || JSON.stringify(started.error));\n  return [{ json: { chat_id: ask.chat_id, text: 'Could not start adding ' + esc(ask.label) + ' (' + esc(ask.shop) + '): '\n    + esc(String(why).slice(0, 300)) + '\\nNothing was made. Harsh will take a look.' } }];\n}\nreturn [{ json: { chat_id: ask.chat_id, text:\n  'Got it: adding ' + esc(ask.label) + ' (' + esc(ask.shop) + ').\\n\\n'\n  + 'A DTJ laptop\\'s Claude Code now makes, links and releases the seven DTJ app copies (a progress bar shows up here), then I send you '\n  + 'seven Install buttons for the store OWNER (logged in to that shop\\'s admin; forward them if that is not you).\\n\\n'\n  + 'If no laptop is listening: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n',\n} }];\n"
+   },
+   "id": "9cbba71c-be41-4680-bc5c-35c20228df56",
+   "name": "Add Shop Started",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1568,
+    1680
+   ]
+  },
+  {
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "nvaph1ZhD1mreJHD",
+     "cachedResultName": "Store Factory: New Store"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "link": "={{ $json.link }}",
+      "note": "={{ $json.note }}",
+      "requested_by": "={{ $json.requested_by }}",
+      "chat_id": "={{ $json.chat_id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "link",
+       "displayName": "link",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "note",
+       "displayName": "note",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "options": {
+     "waitForSubWorkflow": false
+    }
+   },
+   "id": "dc972eda-6304-4e4e-b079-232a601d3b48",
+   "name": "Start New Store",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    1328,
+    1920
+   ],
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Store Started\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Start New Store\" handed an admin's store link to \"Store Factory: New Store\" (it does not wait): the answer for that admin.\n// \"Start New Store\" continues on an error, so a start that failed is said plainly.\nconst ask = $('Who Is It').first().json;\nconst started = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (started.error) {\n  const why = typeof started.error === 'string' ? started.error : (started.error.message || JSON.stringify(started.error));\n  return [{ json: { chat_id: ask.chat_id, text: 'Could not start the store ' + esc(ask.link) + ': ' + esc(String(why).slice(0, 300))\n    + '\\nNothing was made. Harsh will take a look.' } }];\n}\nreturn [{ json: { chat_id: ask.chat_id, text:\n  'Got it: the whole store ' + esc(ask.link) + '.\\n\\n'\n  + 'A DTJ laptop\\'s Claude Code reads the store and asks you a few questions here (the brand\\'s own link, whose store, what to '\n  + 'design, which products, any offer). Before it makes or writes anything that needs a yes (the draft copy, copying the brand\\'s '\n  + 'products into this store, the app copies, the header and footer, the '\n  + 'collection page) it sends an Approve button. Nothing is published.\\n\\n'\n  + 'If no laptop is listening: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n',\n} }];\n"
+   },
+   "id": "0144880c-be2b-434f-a74a-271f0d5694d3",
+   "name": "Store Started",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1568,
+    1920
+   ]
+  },
+  {
+   "parameters": {
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "job": "={{ $json.job }}",
+      "key": "={{ $json.key }}",
+      "value": "={{ $json.value }}",
+      "choice": "={{ $json.choice }}",
+      "by": "={{ $json.by }}",
+      "chat_id": "={{ $json.chat_id }}",
+      "at": "={{ $json.at }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "job",
+       "displayName": "job",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "key",
+       "displayName": "key",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "value",
+       "displayName": "value",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "choice",
+       "displayName": "choice",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "by",
+       "displayName": "by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "at",
+       "displayName": "at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "id": "5e8ef16c-3603-4b9a-88dd-f36e9588080d",
+   "name": "Save the Answer",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1328,
+    2160
+   ],
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "jsCode": "// n8n Code node \"Answer Noted\" in \"Store Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After \"Save the Answer\" wrote a store job's answer into dtj_bot_answers: a short confirmation for the person who answered.\n// \"Save the Answer\" continues on an error, so an answer that was not saved is said (the laptop would otherwise wait for it).\nconst a = $('Who Is It').first().json;\nconst saved = $input.first().json || {};\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (saved.error) {\n  return [{ json: { chat_id: a.chat_id, text: 'I could not save that answer (' + esc(String(saved.error.message || saved.error).slice(0, 200))\n    + '). Tap the button again in a minute.' } }];\n}\nlet text;\nif (a.value === 'Approve') text = 'Approved by ' + esc(a.by) + '. The laptop goes on with exactly that.';\nelse if (a.value === 'Skip') text = 'Skipped: that stays undone.';\nelse if (a.key === 'chat' && /^page-\\d{1,9}$/.test(String(a.job))) {  // a message about a finished page (page_chat.py)\n  text = 'Noted for brief ' + esc(String(a.job).slice(5)) + '. Claude picks it up within a minute and answers here.';\n}\nelse text = 'Noted: ' + esc(String(a.value).slice(0, 200));\nreturn [{ json: { chat_id: a.chat_id, text } }];\n"
+   },
+   "id": "2f5a2f23-c384-41ca-8819-7bba923ba3b8",
+   "name": "Answer Noted",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1568,
+    2160
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 1
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $('Who Is It').first().json.key === 'ok_copy' && $('Who Is It').first().json.value === 'Approve' }}",
+       "rightValue": true,
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "id": "f06387f3-e838-40e1-841c-b50afbf9d1e5",
+   "name": "Copy Approved?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1568,
+    2400
+   ]
+  },
+  {
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "ioaho57x1Ji0fEnb",
+     "cachedResultName": "Store Factory: Brand Copy"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "job": "={{ $('Who Is It').first().json.job }}",
+      "approved_by": "={{ $('Who Is It').first().json.by + ' (Telegram Approve)' }}",
+      "chat_id": "={{ $('Who Is It').first().json.chat_id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "job",
+       "displayName": "job",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "approved_by",
+       "displayName": "approved_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "options": {
+     "waitForSubWorkflow": false
+    }
+   },
+   "id": "9e7e2948-3c0e-47bd-bbc9-f2fdd689dc0d",
+   "name": "Start Brand Copy",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    1808,
+    2400
+   ],
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "chat_id",
+       "keyValue": "={{ $('Read the Message').first().json.chat_id }}"
+      },
+      {
+       "keyName": "value",
+       "condition": "isEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "id": "1382d765-1c33-4d65-961f-8ace72385f9a",
+   "name": "Load Open Questions",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    720,
+    304
+   ],
+   "alwaysOutputData": true,
+   "executeOnce": true,
+   "onError": "continueRegularOutput"
   }
  ],
  "connections": {
@@ -1517,26 +1968,9 @@
     ]
    ]
   },
-  "Load Shops": {
-   "main": [
-    [
-     {
-      "node": "Who Is It",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
   "Who Is It": {
    "main": [
-    [
-     {
-      "node": "What to Do",
-      "type": "main",
-      "index": 0
-     }
-    ]
+    []
    ]
   },
   "What to Do": {
@@ -1586,6 +2020,27 @@
     [
      {
       "node": "Note the Pictures",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Start Add Shop",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Start New Store",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Save the Answer",
       "type": "main",
       "index": 0
      }
@@ -1893,10 +2348,115 @@
      }
     ]
    ]
+  },
+  "Start Add Shop": {
+   "main": [
+    [
+     {
+      "node": "Add Shop Started",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Add Shop Started": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Start New Store": {
+   "main": [
+    [
+     {
+      "node": "Store Started",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Store Started": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save the Answer": {
+   "main": [
+    [
+     {
+      "node": "Answer Noted",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Copy Approved?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Answer Noted": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Copy Approved?": {
+   "main": [
+    [
+     {
+      "node": "Start Brand Copy",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Shops": {
+   "main": [
+    [
+     {
+      "node": "Load Open Questions",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Open Questions": {
+   "main": [
+    [
+     {
+      "node": "Who Is It",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
   }
  },
  "settings": {
   "executionOrder": "v1",
-  "availableInMCP": true
+  "availableInMCP": true,
+  "binaryMode": "separate"
  }
 }

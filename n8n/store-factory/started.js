@@ -8,6 +8,6 @@ return [{ json: {
   handle: match.handle,
   store_name: match.store_name,
   message: 'Got it: designing ' + match.handle + ' on ' + match.store_name + ' (brief ' + saved.id + '). '
-    + 'Next: open Claude Code in the dtj-agency-automation folder and type: handle the Claude Code trigger in n8n. '
+    + 'Next: DTJ\'s server asks here in a moment "Start: I\'m watching": tap it and the page is designed. '
     + 'The preview link comes back when the page is in the draft theme (about 15 to 20 minutes).',
 } }];

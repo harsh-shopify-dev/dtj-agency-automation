@@ -71,6 +71,23 @@ const lines = [
   '     (the intake ran on GitHub, so its folder is only in Drive? first: python -m page_builder.drive_upload --download "DTJ Clients/<brand>/Brand intake <date>" <the intake folder>/intake)',
   '     Then use the names in its store-files.json as facts.media[].file (roles such as lifestyle, pack, serve), point story, story_2, final_push and ugc image_role at them, and keep a picture of another pack version out of the buy box.',
   '   - "no" or empty: upload nothing; the store already has its pictures.',
+  // the same follow-ups as a whole store (Harsh, 23 Oct 2026: "here it should also show ChatGPT generates and that competitor flow
+  // message follow ups")
+  ...(chat ? [
+    '2b. The page\'s own questions in Telegram: ChatGPT pictures, a competitor study and what it should focus on (from the repo root):',
+    '   python n8n/store-factory/page_questions.py --brief ' + row.id + ' --chat ' + chat,
+    '   Exit 3 = waiting for the person: run it again (it never asks twice). It prints {"pictures", "pictures_by", "competitors": {"how", "links", "focus", "note"}}.',
+    '   - competitors.how is not "no": the study, before step 4 (skill dtj-new-store, step 1a): the person\'s links, or 5 D2C brands of this niche that grow on Meta ads (never the giants); from services/store-builder: python -m provision.niche_assets <links> --out ' + C + '/niche --niche "<one line>"; read their home and product pages too. Progress bar before you start it: ' + (chat ? PROG + 'step --stage study' + PSTATE : '(none)') + '. Write ' + C + '/study.md: one "#" heading per focus (Pictures, Copywriting, Colour palette and fonts, Layout and sections, Offers and pricing, Trust) and "# Your request" when there is a note. Then from the repo root: python n8n/store-factory/page_questions.py --brief ' + row.id + ' --study ' + '.work/clients/' + folder + '/study.md (it sends the short form to Telegram). Use the study in steps 4-6; never copy their text, claims, offers or pictures.',
+    // the gallery method (Harsh, 23-24 Oct 2026: square product pictures that explain the product like a pro D2C brand; the busy
+    // first set was "AI SLOP"), made WHILE the facts and the copy are written ("i want such tasks to go parallely")
+    '   - pictures is "make": follow references/product-gallery.md in the skill dtj-pdp-factory (6 square gallery pictures: what it is, why this one, the numbers, what\'s inside, how to use, lifestyle; one photo per picture section; ONE subject per photo on a flat brand-colour backdrop, nothing floating, the empty space named; the words are set later by code).',
+    '     WORK IN PARALLEL: right after step 3, write ' + C + '/gallery/plan.json (refs: step 3\'s pack photo in media/; "ref": true when our product is in the photo; "transparent": true for a cut-out on a see-through background) and start every photo in the background, from services/store-builder:',
+    '     python -m provision.gallery_photos --plan ' + C + '/gallery/plan.json --out ' + C + '/gallery/photos --detach' + (chat ? ' --progress ' + C + '/progress.json' : ''),
+    '     It returns at once (Codex on the VPS, 3 at a time, about 2 minutes each)' + (chat ? ' and moves the Telegram bar itself' : '') + '. Do steps 4 and 5 (facts, brand, copy) meanwhile; do not wait for the photos.',
+    '     Before step 6: python -m provision.gallery_photos --plan ' + C + '/gallery/plan.json --out ' + C + '/gallery/photos --wait. Look at every photo against the quality gate in product-gallery.md (one subject, no clutter, the product exactly as the pack, appetising, no words); remake the ones that fail with --only <names> --detach, then --wait again (at most 3 tries each).',
+    '     Then the words: write ' + C + '/gallery/compose.json (layouts pack, top, numbers, tiles, stack, bottom; every line from facts.json) and run python -m provision.gallery_compose --spec ' + C + '/gallery/compose.json --facts ' + C + '/facts.json --out ' + C + '/gallery/final. Look at the 6 finished pictures next to the study\'s reference brand: busier or cheaper looking = redo it.',
+    '     Upload the finished gallery and the section photos: python -m page_builder.store_files --store ' + store + ' --folder <the folder> --approved-by "<pictures_by> (Telegram, brief ' + row.id + ' pictures)". Put the section photos in facts.media (roles lifestyle, story_2, final_push; keys role, file and alt only). Putting the 6 first in the product\'s own gallery changes the product: say in the reply that they are in the store\'s Files, ready for a person\'s yes.',
+  ] : []),
   '3. Read the product as the store shows it and fetch its pictures (read-only):',
   ...prog('step --stage product'),
   '   cd services/store-builder',

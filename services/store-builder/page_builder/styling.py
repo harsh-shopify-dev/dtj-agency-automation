@@ -66,6 +66,36 @@ def apply_home_type(sec: Section, cat: Catalog) -> None:
         put("heading_size", step[1])
 
 
+def buy_button_colours(r: dict) -> dict:
+    """The theme's own buy buttons in the page's palette (Harsh, 24 Oct 2026: "update the button colors too for add to cart keep the
+    yellow and buy it now red (the same color palette applied to the page)"): Add to cart in the page's button colour (the CTAs'),
+    Buy it now in the brand colour when its words read on it and it differs from the first button, else in ink."""
+    cart_bg, cart_text = r["button_bg"], r["button_text"]
+    brand_ok = style.contrast(r["on_band"], r["band"]) >= 4.5 and style.contrast(r["band"], cart_bg) >= 1.5
+    now_bg = r["band"] if brand_ok else r["dark"]
+    return {"cart_bg": cart_bg, "cart_text": cart_text, "now_bg": now_bg, "now_text": best_text_on(now_bg)}
+
+
+def strip_tick(tick: str, r: dict, dark: bool, band: bool, accent_band: bool, band_bg: str) -> str:
+    """The moving strip's tick colour: kept unless it matches the strip's words on a coloured strip; then the first of the brand's
+    colours that shows on the strip (3:1) and differs from the words (1.5:1, the design check's "same colour" line)."""
+    if not (dark or band or accent_band):
+        return tick
+    bg = r["dark"] if dark else r["accent_fill"] if accent_band else band_bg
+    words = r["on_dark"] if dark else r["on_accent"] if accent_band else r["on_band"]
+    if style.contrast(tick, words) >= 1.5:
+        return tick
+    # the accent fill too: on a playful page the "accent" can be the brand colour itself and the second colour lives in the fill
+    # (NoCheat: accent maroon = the strip, accent fill yellow)
+    for colour in (r["accent"], r["accent_fill"], r.get("accent_on_band"), r.get("accent_on_dark"), r["band"], r["dark"],
+                   r["tint_card"], "#FFFFFF"):
+        if not colour:
+            continue
+        if style.contrast(colour, bg) >= 3 and style.contrast(colour, words) >= 1.5:
+            return colour
+    return tick
+
+
 def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = False) -> None:
     r, s = d.roles, sec.settings
 
@@ -114,8 +144,11 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
 
     b = sec.block
     if b == "marquee":
-        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning
-        put("accent_color", r["tint_card"] if band and bold else acc)
+        # on a brand-colour band the ticks are white (Harsh, 10 Oct 2026); they are decoration, the words carry the meaning. On any
+        # coloured strip whose ticks would match its words (24 Oct 2026, NoCheat: white on white over maroon, ink on ink over yellow;
+        # design check H03) the first brand colour that shows on the strip (3:1) and differs from the words (1.5:1) is used.
+        tick = r["tint_card"] if band and bold else acc
+        put("accent_color", strip_tick(tick, r, dark, band, accent_band, band_bg))
         put("text_size", MARQUEE["text"])
         put("icon_size", MARQUEE["icon"])
         put("gap", MARQUEE["gap"])
@@ -241,8 +274,12 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
     elif b == "social-proof":
         put("star_color", r["rating_star"])  # rating gold, darkened only as far as 3:1 on the page needs (direction.py)
         put("badge_bg", r["band"])
-        put("badge_color", r["text"])
-        put("badge_icon_color", acc)
+        # the ink only when it reads on the band (24 Oct 2026, NoCheat: ink #24090B on the maroon band was 2.35:1, the review's R03)
+        words = r["text"] if style.contrast(r["text"], r["band"]) >= 4.5 else best_text_on(r["band"])
+        put("badge_color", words)
+        # the icon must show on the badge (24 Oct 2026, NoCheat: the maroon accent on the maroon badge, so "no icon"): the first brand
+        # colour at 3:1 on it, else the badge's words
+        put("badge_icon_color", next((c for c in (acc, r["accent_fill"], r["button_bg"]) if style.contrast(c, r["band"]) >= 3), words))
         put("text_size", 13)
         put("item_gap", 8)
         put("avatar_size", 24)  # five photos (rule L14) + badge + stars must fit one phone line without cutting the badge (9 Oct 2026)
@@ -250,6 +287,9 @@ def apply(sec: Section, role: str, d: Direction, cat: Catalog, first: bool = Fal
         put("accent_color", acc)
         if b == "hero-points":
             put("eyebrow_color", head)
+            if s.get("icon_style") == "ring":  # the brand colour's ring, the icon in the words' colour (NoCheat's look)
+                put("ring_color", acc if style.contrast(acc, r["bg"]) >= 3 else r["text"])
+                put("ring_glyph_color", r["text"])
         if b == "testimonials":
             put("star_color", r["rating_star"])
             put("avatar_text_color", best_text_on(acc))  # the initial on the accent circle: black or white by contrast, not Canvas

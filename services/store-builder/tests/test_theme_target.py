@@ -347,3 +347,29 @@ class PushRefusalTests(unittest.TestCase):
         with self.assertRaises(tt.ThemeError) as caught:
             access.push_product_template("1", tt.Path("."), "templates/product.x.json")
         self.assertIn("overlay_opacity", str(caught.exception))
+
+    def test_a_pull_folder_looks_like_a_theme_so_the_cli_runs_without_a_person(self):
+        import subprocess
+        import tempfile
+        seen = []
+        access = tt.ThemeAccess("x.myshopify.com", None, runner=lambda cmd, env: seen.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""),
+                                login=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            access.pull("1", ["templates/product.json"], tt.Path(tmp) / "pull")
+            self.assertEqual(sorted(p.name for p in (tt.Path(tmp) / "pull").iterdir()), ["config", "layout", "sections", "templates"])
+        self.assertNotIn("--force", seen[0])
+
+    def test_a_failed_pull_says_the_cli_error_not_its_boxes(self):
+        import subprocess
+        import tempfile
+        box, gap = "─" * 78, " " * 78
+        err = ('<claude-code-hint v="1" type="plugin" value="shopify-ai-toolkit@claude-plugins-official" />\n'
+               f"╭─ warning {box}╮\n│{gap}│\n│  It doesn't seem like you're running this command in a theme directory.      │\n│{gap}│\n╰{box}╯\n"
+               f"╭─ error {box}╮\n│{gap}│\n│  Request timed out: the theme files could not be listed.                     │\n╰{box}╯")
+        access = tt.ThemeAccess("x.myshopify.com", "shptka_test", runner=lambda cmd, env: subprocess.CompletedProcess(cmd, 1, "", err))
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(tt.ThemeError) as caught:
+            access.pull("1", ["templates/product.json"], tt.Path(tmp))
+        text = str(caught.exception)
+        self.assertIn("failed (1): error Request timed out: the theme files could not be listed.", text)
+        self.assertNotIn("claude-code-hint", text)
+        self.assertNotIn("theme directory", text)

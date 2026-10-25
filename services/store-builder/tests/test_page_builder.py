@@ -748,6 +748,69 @@ class StandardPageTests(unittest.TestCase):
         icons = by_kind["why_features"]
         self.assertEqual((icons["icon_bg"], icons["icon_color"]), (d.roles["tint_card"], d.roles["on_card"]))  # white badges on the band
 
+    def test_the_shield_only_on_a_promise_badge(self):
+        # Harsh, 24 Oct 2026: "the shield is totally unrelated with the badge saying high protein"
+        from page_builder.sections import SHIELD_WORDS
+        self.assertFalse(SHIELD_WORDS.search("High protein"))
+        self.assertTrue(SHIELD_WORDS.search("Lab tested") and SHIELD_WORDS.search("7-day returns"))
+
+    def test_the_badge_icon_shows_on_its_badge(self):
+        # 24 Oct 2026, NoCheat: the icon was the maroon of the maroon badge ("NO ICON IN THE HIGH PROTEIN")
+        for vibe in ("electric", "playful", None):
+            r = self.build(vibe=vibe) if vibe else self.build()
+            blocks = r.template["sections"]["main"]["blocks"]["product-details"]["blocks"]
+            proof = next((b["settings"] for k, b in blocks.items() if "social_proof" in k), {})
+            if "badge_icon_color" in proof:
+                self.assertGreaterEqual(style_contrast(proof["badge_icon_color"], proof["badge_bg"]), 3, vibe)
+
+    def test_buy_box_points_get_a_matching_line_icon_in_a_ring(self):
+        # Harsh, 25 Oct 2026, NoCheat's buy box: "we need icons like this"
+        from page_builder.sections import point_icon
+        self.assertEqual([point_icon(x) for x in ("High protein in every spoon", "Bold peri peri kick", "No added sugar or preservatives",
+                                                  "No artificial colours", "Source of dietary fibre", "Free delivery")],
+                         ["protein", "chilli", "no-sugar", "no-colour", "fibre", ""])
+        r = self.build(vibe="electric")
+        blocks = r.template["sections"]["main"]["blocks"]["product-details"]["blocks"]
+        pts = next(b["settings"] for k, b in blocks.items() if "hero_points" in k)
+        if pts.get("icon_style") == "ring":
+            lines = pts["benefits"].splitlines()
+            self.assertTrue(any(" | " in ln for ln in lines))
+            self.assertTrue(pts.get("ring_color") and pts.get("ring_glyph_color"))
+
+    def test_a_shop_without_the_point_icons_release_keeps_plain_ticks(self):
+        from page_builder import catalog
+        reg = catalog.registry()
+        tpl = {"sections": {"main": {"blocks": {"p": {"type": f"shopify://apps/dtj-blocks/blocks/dtj-hero-points/{reg['dtj-blocks']['uuid']}",
+               "settings": {"benefits": "protein | High protein\nPlain point", "icon_style": "ring", "ring_color": "#9E1B22", "check_size": 34}}}}}}
+        old = {"dtj-blocks": {"handle": "dtj-blocks-x", "uuid": "0" * 36}}
+        s = catalog.to_client(tpl, old)["sections"]["main"]["blocks"]["p"]["settings"]
+        self.assertEqual((s["benefits"], s["check_size"]), ("High protein\nPlain point", 20))
+        self.assertNotIn("icon_style", s)
+        new = {"dtj-blocks": {**old["dtj-blocks"], "features": ["point_icons"]}}
+        s = catalog.to_client(tpl, new)["sections"]["main"]["blocks"]["p"]["settings"]
+        self.assertEqual((s["icon_style"], s["benefits"].splitlines()[0]), ("ring", "protein | High protein"))
+
+    def test_the_faq_question_keeps_its_colour_on_hover(self):
+        # Harsh, 25 Oct 2026: "on hover the text gets hidden": Horizon's summary:hover beat the block's question colour
+        r = self.build(vibe="electric")
+        faq = [s for s in r.template["sections"].values()
+               if any("dtj-faq" in str(b.get("type", "")) for b in (s.get("blocks") or {}).values())]
+        self.assertTrue(faq)
+        self.assertIn(".dtj-faq__q:hover{color:var(--fq-q-color,inherit)}", faq[0]["custom_css"])
+
+    def test_the_theme_buy_buttons_take_the_page_palette(self):
+        # Harsh, 24 Oct 2026: "add to cart keep the yellow and buy it now red (the same color palette applied to the page)"
+        r = self.build(vibe="electric")
+        d, t = r.model.direction.roles, r.template
+        cart = t["sections"]["main"]["blocks"]["product-details"]["blocks"]["buy_buttons_eYQEYi"]["blocks"]["add-to-cart"]["settings"]
+        self.assertEqual((cart["style_class"], cart["custom_button_background"], cart["custom_button_text"]),
+                         ("button-custom", d["button_bg"], d["button_text"]))
+        css = " ".join(t["sections"]["main"]["custom_css"])
+        self.assertIn("button.shopify-payment-button__button.shopify-payment-button__button--unbranded", css)
+        now = css.split("background-color:")[1].split(" ")[0]
+        self.assertGreaterEqual(style_contrast(now, css.split("color:")[2].split(" ")[0]), 4.5)  # Buy it now's words read on it
+        self.assertGreaterEqual(style_contrast(now, d["button_bg"]), 1.5)  # and it is not the Add to cart colour
+
     def test_white_words_on_an_electric_page_sit_on_ink_never_on_the_brand_colour(self):
         # Harsh, 10 Oct 2026: white story points, white FAQ answers, white strip ticks; white on the brand cyan was 2.2:1
         r = self.build(vibe="electric")
@@ -760,7 +823,11 @@ class StandardPageTests(unittest.TestCase):
         faq = by_kind["faq"]
         self.assertEqual((faq["item_bg"], faq["q_color"], faq["a_color"], faq["toggle_color"]),
                          (d.roles["dark"], d.roles["on_dark"], d.roles["on_dark"], d.roles["accent_on_dark"]))
-        self.assertEqual(by_kind["trust_marquee"]["accent_color"], d.roles["tint_card"])  # white ticks on the brand band
+        # the strip's ticks stand apart from its words and show on the band (white ticks, unless the words are white too:
+        # design check H03, 24 Oct 2026)
+        tick = by_kind["trust_marquee"]["accent_color"]
+        self.assertGreaterEqual(style_contrast(tick, by_kind["trust_marquee"].get("text_color") or d.roles["on_band"]), 1.5)
+        self.assertGreaterEqual(style_contrast(tick, d.roles["band"]), 3)
         self.assertEqual(by_kind["benefit_strip_2"]["accent_color"], d.roles["on_accent"])  # the accent band keeps its own checked colour
         calm = {s.kind: s.settings for s in self.build().model.sections}
         self.assertNotIn("item_bg", calm["faq"])  # calm pages keep their soft look

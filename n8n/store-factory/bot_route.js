@@ -2,6 +2,9 @@
 // Only people in the data table dtj_bot_users (active) may use the bot. Roles: requester (sends links), designer (also gets told
 // when a page waits for Claude Code), admin (both, plus the app switch: /shops, /status, /on, /off).
 // Output: one item with action
+//   addshop -> an admin adds a client shop (Store Factory: Add Shop: the laptop's Claude Code does it)
+//   store  -> an admin's store link (no /products/): the whole store (Store Factory: New Store: questions, apps, every page)
+//   answer -> a tap or typed reply to a store job's question: saved in dtj_bot_answers ("Save the Answer")
 //   design -> start a page (Store Factory: New Page)
 //   switch -> an admin's switch command or button tap: the shop is found after the install catcher's list ("Pick the Shop")
 //   intake -> start a brand intake on GitHub ("Start Brand Intake")
@@ -29,6 +32,31 @@ if (!me) {
 }
 const isAdmin = roleOf(me) === 'admin';
 const myName = me.name || msg.name;
+// an answer to a store job's question or Approve button (21 Oct 2026): saved in dtj_bot_answers ("Save the Answer"), where the
+// laptop's store_job.py reads it. Anyone on the bot (an Approve tap is that person's yes, with their name: CLAUDE.md rule 2).
+// a plain message while one of the store job's typed questions is open in this chat is its answer (22 Oct 2026: Harsh sent the
+// brand's link as a new message, not a reply, and the bot took it for a second store). "Load Open Questions" holds the laptop's
+// open / closed marks for this chat; the newest one decides.
+let openQ = null;
+try {
+  const marks = $('Load Open Questions').all().map((i) => i.json)
+    .filter((r) => r && String(r.chat_id) === msg.chat_id && !String(r.value || '').trim() && ['open', 'closed'].includes(r.choice));
+  marks.sort((a, b) => (String(a.at).slice(0, 19) < String(b.at).slice(0, 19) ? -1 : 1));
+  const last = marks[marks.length - 1];
+  if (last && last.choice === 'open') openQ = last;
+} catch (e) { openQ = null; }  // the step is not there (an older bot): only a reply counts
+// a page chat (page_chat.py marks it open): a plain message goes to the page's Claude session; a product link still starts a page
+const pageChat = Boolean(openQ) && /^page-[0-9]{1,9}$/.test(String(openQ.job));
+if (openQ && (msg.kind === 'nolink' || (msg.kind === 'link' && !pageChat)) && String(msg.text || '').trim()) {
+  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: openQ.job, key: openQ.key, choice: '',
+    value: String(msg.text).trim().slice(0, pageChat ? 1500 : 500), by: myName, at: new Date().toISOString() } }];
+}
+if (msg.kind === 'answer') {
+  const value = String(msg.arg || '').trim();
+  if (!value) return reply('I could not read that answer. Tap the button again, or reply to the question with your answer.');
+  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: msg.job, key: msg.key, choice: String(msg.choice || ''), value,
+    by: myName, at: new Date().toISOString() } }];
+}
 // /commands: every command, one line each; the admin ones only for admins (Harsh, 19 Oct 2026: "create a command so it can show
 // all the commands in the bot available"). Keep this list in step with bot_read.js when a command is added.
 if (msg.kind === 'commands') {
@@ -51,7 +79,9 @@ if (msg.kind === 'commands') {
     lines.push('', '<b>Admin: the DTJ apps on each shop</b>',
       '/shops: every shop on the switch and whether its DTJ apps are on',
       '/status shop: one shop\'s DTJ apps',
-      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)');
+      '/off shop and /on shop: switch all DTJ apps of a shop off or on (you confirm with a button)',
+      '/addshop name.myshopify.com Client Name: add a client shop (the seven DTJ app copies, then seven Install buttons for you)',
+      'a store\'s own link (https://brand.com, no /products/): design the whole store; I ask a few questions here first');
   }
   return reply(lines.join('\n'));
 }
@@ -116,6 +146,21 @@ if (msg.kind === 'button' && String(msg.data || '').startsWith('stop:')) {
   if (!s) return reply('That button is not valid any more.');
   return [{ json: { action: 'stop', mode: 'cancel', chat_id: msg.chat_id, run_id: s[1], by: myName } }];
 }
+// adding a client shop (21 Oct 2026, Harsh: "one step process from telegram"): admins only. The laptop's Claude Code makes, links and
+// releases the seven app copies and the install links (Store Factory: Add Shop); the person then taps seven Install buttons here.
+if (msg.kind === 'addshop') {
+  if (!isAdmin) return reply('Only an admin can add a shop.');
+  const a = String(msg.arg || '').match(/^(?:https?:\/\/)?(?:admin\.shopify\.com\/store\/([a-z0-9][a-z0-9-]*)|([a-z0-9][a-z0-9-]*)\.myshopify\.com)\/?(?:\s+([\s\S]+))?$/i);
+  if (!a) {
+    return reply('Send the shop\'s ORIGINAL Shopify address and the client\'s name, for example:\n/addshop royal-dosa.myshopify.com Royal Dosa\n\n'
+      + 'The address is in the shop\'s admin: admin.shopify.com/store/&lt;name&gt; means &lt;name&gt;.myshopify.com. I make, link and release the '
+      + 'seven DTJ app copies, then send you seven Install buttons for the store owner to tap.');
+  }
+  const shop = ((a[1] || a[2]) + '.myshopify.com').toLowerCase();
+  const label = String(a[3] || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!label) return reply('And the client\'s name, for the app names. For example:\n/addshop ' + esc(shop) + ' Royal Dosa');
+  return [{ json: { action: 'addshop', chat_id: msg.chat_id, shop, label, requested_by: myName } }];
+}
 if (msg.kind === 'nolink') {
   return reply('Please send a product link from the shop\'s website (it has /products/ in it). You can add a note after the link.');
 }
@@ -137,6 +182,19 @@ if (msg.kind === 'command' || msg.kind === 'button') {
   }
   if (msg.command !== 'shops' && !msg.arg) return reply('Which shop? For example: /' + msg.command + ' test store. Send /shops for the list.');
   return [{ json: ask }];
+}
+
+// ---- a store's own link (no /products/ in it): the whole store (21 Oct 2026, Harsh: "i just share the brand store link and it starts
+// designing the store and it asks the specific questions it needs along with the app installation"). Admins only: it makes app copies.
+if (!/\/products\//i.test(msg.product_link)) {
+  if (!isAdmin) {
+    return reply('That is a store\'s own link. For one product page, send a product link (it has /products/ in it). '
+      + 'A whole store is started by an admin.');
+  }
+  const link = msg.product_link.match(/^(?:https?:\/\/)?(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?:[/?#][^\s]*)?$/) ? msg.product_link : '';
+  if (!link) return reply('That does not look like a store\'s address. Send it like this: https://brand.com');
+  return [{ json: { action: 'store', chat_id: msg.chat_id, link: /^https?:\/\//i.test(link) ? link : 'https://' + link,
+    note: msg.note || '', requested_by: myName } }];
 }
 
 // ---- a product link: start a page

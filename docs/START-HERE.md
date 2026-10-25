@@ -10,6 +10,11 @@ What you need depends on your job: **most people only need Telegram.**
 3. You now have **full access**:
    - **A product page:** send a product link from the shop's website, with a note if you like. The bot sends the preview link back
      when the page is ready.
+   - **Change a finished page by chatting:** after the bot's "page ready" message, just type what to change in plain words (for
+     example "make the hero headline about protein"). Claude on DTJ's server changes the page's draft and answers in the same chat
+     with the new preview link. Changes beyond the page's draft (the product, the store's settings, the live theme) need your yes
+     in the chat first.
+   - **A whole store:** send the store's own link (no /products/ in it); the bot asks redesign or new store and the rest.
    - **The app switch:** `/shops` lists every shop and its DTJ apps; `/status <shop>` shows one; `/off <shop>` and `/on <shop>`
      switch them, after you tap a confirm button.
 

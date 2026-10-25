@@ -18,9 +18,10 @@ works on DTJ's n8n today and on a brand-new n8n server (a fresh Claude Code sess
                                                           (with Harsh's yes) add the first bot admin to dtj_bot_users. The person gets
                                                           their number by messaging @DtjPageDesignerBot. The number is never printed.
 
-What it checks: the data tables dtj_client_intake, dtj_stores and dtj_bot_users have the columns in tables.json; dtj_stores has
+What it checks: the data tables dtj_client_intake, dtj_stores, dtj_bot_users and dtj_bot_answers have the columns in tables.json; dtj_stores has
 shops; dtj_bot_users has an active admin (COUNTS only: never a number or a name); the workflows "Store Factory: Page Design",
-"Store Factory: New Page" and "Store Factory: Telegram Bot" exist, are published, live = draft, every code node equals the repo
+"Store Factory: New Page", "Store Factory: Add Shop", "Store Factory: New Store", "Store Factory: Brand Copy" and "Store Factory:
+Telegram Bot" exist, are published, live = draft, every code node equals the repo
 export, nodes / connections / links to the tables and workflows match the export, every node that needs a credential has one; the
 credentials the exports use (Telegram API "DTJ Page Bot", Header Auth "DTJ Catcher Bot Key") exist, and whether --apply can create
 a missing one; the n8n API key works (only when this laptop has one).
@@ -51,13 +52,19 @@ from n8n_mcp import N8N_HOST  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 TABLES_FILE = HERE / "tables.json"
-TABLE_NAMES = ("dtj_client_intake", "dtj_stores", "dtj_bot_users")
+TABLE_NAMES = ("dtj_client_intake", "dtj_stores", "dtj_bot_users", "dtj_bot_answers")  # answers: a store job's questions (bot_ask.py)
 # in creation order: each workflow only points at the tables and at the workflows above it
 WORKFLOWS = {"Store Factory: Page Design": "page_design.workflow.json",
              "Store Factory: New Page": "new_page.workflow.json",
+             "Store Factory: Add Shop": "add_shop.workflow.json",
+             "Store Factory: New Store": "new_store.workflow.json",
+             "Store Factory: Brand Copy": "brand_copy.workflow.json",
              "Store Factory: Telegram Bot": "telegram_bot.workflow.json"}
 DEPLOY = {"Store Factory: Page Design": "deploy_page_design.py (then deploy_telegram_bot.py for Tell the Requester / Send Result)",
           "Store Factory: New Page": "deploy_new_page.py",
+          "Store Factory: Add Shop": "deploy_add_shop.py (then deploy_telegram_bot.py for the bot's /addshop)",
+          "Store Factory: New Store": "deploy_new_store.py (then deploy_telegram_bot.py for the bot's store link and answers)",
+          "Store Factory: Brand Copy": "deploy_brand_copy.py (then deploy_telegram_bot.py for the copy's Approve tap)",
           "Store Factory: Telegram Bot": "deploy_telegram_bot.py"}
 CREDENTIAL_LABELS = {"telegramApi": "Telegram API", "httpHeaderAuth": "Header Auth", "httpBearerAuth": "Bearer Auth"}
 NODE_SETTINGS = ("onError", "executeOnce", "alwaysOutputData", "retryOnFail", "maxTries", "waitBetweenTries")

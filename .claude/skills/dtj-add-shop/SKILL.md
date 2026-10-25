@@ -1,6 +1,6 @@
 ---
 name: dtj-add-shop
-description: Add a new shop to DTJ's store factory end to end, so product pages can be built for it within hours. Covers a client's store (their own copies of DTJ's three apps, installed through the install service) and a store inside DTJ's own Shopify organization (DTJ's original apps). Claude runs every scripted step and stops only where a person must click in Shopify. Use it whenever someone says "add a new shop", "new client store", "onboard a store", "build the store", "set up <store> for pages", "connect our apps to <store>", "put <store> on the switch", or "the shop is not set up for page design", even when they don't name the skill.
+description: Add a new shop to DTJ's store factory end to end, so product pages can be built for it within hours. Covers a client's store (their own copies of DTJ's seven apps, made, released and installed with one command, add_shop.py, also started from Telegram with /addshop) and a store inside DTJ's own Shopify organization (DTJ's original apps). Claude runs every scripted step and stops only where a person must click in Shopify. Use it whenever someone says "add a new shop", "new client store", "onboard a store", "build the store", "set up <store> for pages", "connect our apps to <store>", "put <store> on the switch", "/addshop", "handle the add shop request", or "the shop is not set up for page design", even when they don't name the skill.
 ---
 
 # Add a new shop (a few hours, mostly waiting for the client)
@@ -13,7 +13,7 @@ Pages are then made the normal way: a product link to the bot, then "listen for 
 
 Claude runs every scripted step. People do only the clicks that Shopify reserves for them. Read `CLAUDE.md` first. In
 particular, a "yes" comes from Harsh or, when he isn't reachable, any teammate, by name. The deploy and the app release each need
-one; collect them in one message. Background: `docs/TEAM-GUIDE.md` Part E and `services/install-catcher/README.md`.
+one; collect them in one message (an admin's `/addshop` in Telegram is that yes for add_shop.py's steps). Background: `docs/TEAM-GUIDE.md` Part E and `services/install-catcher/README.md`.
 
 ## Rules
 - Secrets only through hidden prompts or the vault: `tools\team-setup\save-dtj-app-secrets.ps1`, opened with `run_in_terminal`
@@ -39,7 +39,33 @@ one; collect them in one message. Background: `docs/TEAM-GUIDE.md` Part E and `s
 Then check it isn't already set up: not in the catcher list (`/shops`) and not in dtj_stores (`setup_n8n.py`). If it is, say so
 and stop.
 
-## Path A: a client's store (outside DTJ's organization), 1 to 3 hours
+## One command: add_shop.py (path A, for all seven apps; what /addshop starts)
+Since 21 Oct 2026 (Harsh: "one step process from telegram") one script does path A's steps 2 to 5 and 7 for all seven DTJ apps
+(Blocks, Sections, Sections 2, Heroes, Commerce, Shop, Collection). An admin sends the bot `/addshop name.myshopify.com Client Name`;
+n8n's "Store Factory: Add Shop" then waits for a laptop's Claude Code (listening, or "handle the Claude Code trigger in n8n"), and its
+"Request for Claude Code: Add Shop" lists the exact commands. By hand it is the same:
+1. **Make, link and release.** In the person's terminal (`run_in_terminal`, see Rules; read it with `read_terminal`):
+   `python services/install-catcher/tools/add_shop.py --shop <original>.myshopify.com --label "<Name>" [--chat <telegram id>] --approved-by "<who said yes>"`
+   - It creates the seven apps in DTJ's organization (141167028), writes and links their files, moves each client secret straight
+     into a Windows user variable (`DTJ_SECRET_<SHORT>_<PART>`, never shown), releases them and deploys the install service. With
+     `--chat` a progress bar runs in that Telegram chat.
+   - Exit 1: stopped, with the reason. Fix it and run the same command: it continues where it stopped (state in
+     `.work/add-shop/<short>.json`; copies already in the repo are reused, never made twice).
+   - Exit 3: waiting for the install links (step 2).
+2. **The install links.** Shopify makes them only in the Dev Dashboard (no API, no CLI): for each of the seven apps, Distribution,
+   Custom distribution, the store's original address, Generate link. Claude may do this in the built-in browser when it is signed
+   in; never type a password. Record them in one run (each link must carry that app's client id, or it is refused):
+   `add_shop.py --shop <original> --link blocks=<url> --link sections=<url> ... --link collection=<url>`
+3. **The installs.** That run sends seven Install buttons to the chat for the store OWNER (a collaborator login is refused) and
+   waits up to 30 minutes, reporting each one. Exit 3 = some still missing: run `add_shop.py --shop <original>` again later. With all
+   seven in, it fills the page builder's client list (`client_registry.py`) and adds the shop to dtj_stores (active only when
+   `--theme <draft theme id>` was given).
+4. `add_shop.py --shop <original> --status` shows where it is. Every run writes `.work/add-shop/<short>.answer.json`, the body for
+   `n8n/store-factory/reply.py` when the request came from n8n: answer the run every time, also when it stopped.
+
+Then "Both paths" below: draft theme, Theme Access, the dtj_stores row's `draft_theme_id` and `active`, save in git.
+
+## Path A: a client's store (outside DTJ's organization), 1 to 3 hours (by hand; the older three-app way)
 1. **Person (DTJ, Dev Dashboard): collaborator access.** In the Dev Dashboard, Stores, request collaborator access to the client's
    store; the client approves. A collaborator can duplicate themes. Installing the apps, however, must be done by the store
    **owner**: a collaborator login gets "The installation link for this app is invalid".

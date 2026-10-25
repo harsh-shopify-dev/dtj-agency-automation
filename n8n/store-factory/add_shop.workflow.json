@@ -1,0 +1,210 @@
+{
+ "id": "W7Aiz9aup2OfAkmR",
+ "name": "Store Factory: Add Shop",
+ "description": "Store factory: an admin's /addshop (a client's .myshopify.com address and name) goes to Claude Code on a DTJ laptop, which makes, links and releases the seven DTJ app copies and sends seven Install buttons in Telegram.",
+ "nodes": [
+  {
+   "id": "7b0494d0-8429-48fc-b81c-8ddf2a374c2c",
+   "name": "From the Telegram Bot",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "shop",
+       "type": "string"
+      },
+      {
+       "name": "label",
+       "type": "string"
+      },
+      {
+       "name": "requested_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "492dc7b9-d4ae-480d-9081-ae9828bca9d8",
+   "name": "Request for Claude Code: Add Shop",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Request for Claude Code: Add Shop\" in \"Store Factory: Add Shop\" (mode: Run Once for All Items).\n// The run pauses at the Wait node after this one. A Claude Code session on a DTJ laptop (listen.py watches this workflow too) reads\n// `instructions` and does them: add_shop.py makes, links and releases the seven DTJ app copies, the install links come from each copy's\n// Distribution page, and the person taps seven Install buttons in Telegram (Harsh, 21 Oct 2026: \"one step process from telegram\").\nconst req = $input.first().json || {};\nconst shop = String(req.shop || '').toLowerCase().trim();\nif (!/^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$/.test(shop)) throw new Error('No store address (<name>.myshopify.com) reached this step');\nconst label = String(req.label || '').replace(/\\s+/g, ' ').trim().slice(0, 60);\nif (!label) throw new Error('No client name reached this step');\nconst by = String(req.requested_by || 'an admin').trim().slice(0, 60);\nconst chat = /^-?[0-9]{3,20}$/.test(String(req.chat_id || '').trim()) ? String(req.chat_id).trim() : '';\nconst resumeUrl = $execution.resumeUrl;\nconst client = shop.split('.')[0];\nconst q = (s) => '\"' + String(s).replace(/\"/g, \"'\") + '\"';\nconst base = 'python services/install-catcher/tools/add_shop.py --shop ' + shop;\nconst parts = ['blocks', 'sections', 'sections2', 'heroes', 'commerce', 'shop', 'collection'];\nconst lines = [\n  'DTJ STORE FACTORY - add a client shop: the seven DTJ app copies on ' + shop + ' for ' + label + '.',\n  'You are the AI step: a Claude Code session on a DTJ laptop where the Shopify CLI is signed in to DTJ\\'s Dev Dashboard account.',\n  '',\n  'REQUEST',\n  '- Shop: ' + shop + ' (the ORIGINAL .myshopify.com address) | Client name: ' + label,\n  '- Asked by: ' + by + ' (an admin on the DTJ bot) | Telegram chat: ' + (chat || '(none)'),\n  '- This /addshop is ' + by + '\\'s yes for exactly this: creating, linking and releasing the seven app copies, deploying the install service, '\n    + 'and generating the seven install links on the copies\\' Distribution pages. Nothing else: no theme write, no live theme, no other shop.',\n  '',\n  'DO THIS, IN ORDER (from the repo root, D:\\\\CODE CONTAINERR\\\\WEB DEV\\\\dtj-agency-automation)',\n  '1. Read CLAUDE.md and the skill dtj-add-shop (its \"One command: add_shop.py\" part). Stay on the current git branch.',\n  '2. Run in the person\\'s terminal (terminal tool run_in_terminal: the Shopify CLI there is signed in to DTJ\\'s Dev Dashboard; Claude\\'s own '\n    + 'shell may hold another login), then read it with read_terminal:',\n  '   ' + base + ' --label ' + q(label) + (chat ? ' --chat ' + chat : '') + ' --approved-by ' + q(by + ' (Telegram /addshop)'),\n  '   It creates, links and releases the copies, saves their keys (never shown) and deploys the install service, with a progress bar in '\n    + 'the chat. Exit 3 = waiting for the install links; exit 1 = stopped (read why, fix, run the same command again: it continues).',\n  '3. The install links: Shopify makes them ONLY in the Dev Dashboard (no API, no CLI). For each copy (DTJ Blocks / Sections / Sections 2 / '\n    + 'Heroes / Commerce / Shop / Collection - ' + label + '): open the app in the built-in browser (dev.shopify.com, organization 141167028), '\n    + 'Distribution, Custom distribution, the store ' + shop + ', Generate link, copy it. If the browser is not signed in, ask the person at '\n    + 'the laptop; never type a password.',\n  '   Record them: ' + base + ' ' + parts.map((p) => '--link ' + p + '=<url>').join(' '),\n  '   That run sends ' + by + ' seven Install buttons in Telegram and waits up to 30 minutes for the installs (exit 3 = some still missing: '\n    + 'run ' + base + ' again later to keep waiting).',\n  '4. Answer this n8n run, also when it stopped (add_shop.py writes the answer file at the end of every run):',\n  '   python n8n/store-factory/reply.py --resume-url \"' + resumeUrl + '\" --body .work/add-shop/' + client + '.answer.json',\n  '5. Add a dated entry to docs/HANDOFF.md: the shop, what is done, what is open (its draft theme id and Theme Access password for page writes).',\n  '',\n  'RULES',\n  '- Never print, paste or store a client secret, token or password: add_shop.py moves each key from the CLI into a Windows user variable.',\n  '- No theme and no store change here: an install is the store owner\\'s own tap on Shopify\\'s page (a collaborator login was refused before).',\n  '- If something blocks you (the CLI is not signed in, Shopify refuses an app name or a release): stop, answer n8n (step 4: the answer file '\n    + 'says \"could not add\" and why) and tell the person exactly what to do.',\n];\nreturn [{ json: {\n  claude_code_stage: 'add_shop',\n  resume_url: resumeUrl,\n  instructions: lines.join('\\n'),\n  request: { shop, label, requested_by: by, telegram_chat_id: chat, client },\n} }];\n"
+   }
+  },
+  {
+   "id": "da0c612e-b90d-411d-8726-e834cfb99bb4",
+   "name": "Wait for Claude Code: Add Shop",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    0
+   ],
+   "parameters": {
+    "resume": "webhook",
+    "httpMethod": "POST",
+    "limitWaitTime": true,
+    "resumeAmount": 3,
+    "resumeUnit": "days",
+    "options": {}
+   },
+   "webhookId": "b76e6f3e-f6b7-4aed-816b-e4602fa5ae1a"
+  },
+  {
+   "id": "ede7bb0e-0f98-4927-842f-615f128f3c2d",
+   "name": "Claude Code Reply: Add Shop",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Claude Code Reply: Add Shop\" in \"Store Factory: Add Shop\" (mode: Run Once for All Items).\n// Reads what Claude Code posted to the Wait node (a timeout resumes with no body) and keeps only well-formed values: the same rules as\n// n8n/store-factory/reply.py, which refuses a malformed answer before sending it.\nconst posted = $input.first().json.body;\nconst b = posted && typeof posted === 'object' && !Array.isArray(posted) ? posted : {};\nconst allowed = ['done', 'waiting for installs', 'could not add'];\nlet status = allowed.includes(b.shop_status) ? b.shop_status : (Object.keys(b).length ? 'reply not understood' : 'timed out (no reply in 3 days)');\nconst installed = Number.isInteger(b.installed) && b.installed >= 0 && b.installed <= 7 ? b.installed : null;\nif (status === 'done' && installed !== 7) status = 'reply not understood (done needs all 7 installed)';\nconst req = $('Request for Claude Code: Add Shop').first().json.request;\nreturn [{ json: {\n  shop: req.shop,\n  label: req.label,\n  chat_id: req.telegram_chat_id,\n  shop_status: status,\n  installed,\n  note: String(b.note || '').slice(0, 800),\n} }];\n"
+   }
+  },
+  {
+   "id": "7a9a7f69-5b54-4fb8-bf80-9d2db614a345",
+   "name": "Tell the Requester",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Tell the Requester\" in \"Store Factory: Add Shop\" (mode: Run Once for All Items).\n// The result of /addshop for the admin who asked (in the chat it came from). Output: [] (no chat) or one { chat_id, text } for \"Send Result\".\nconst r = $input.first().json || {};\nconst chat = String(r.chat_id || '').trim();\nif (!chat) return [];\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst who = esc(r.label) + ' (' + esc(r.shop) + ')';\nlet text;\nif (r.shop_status === 'done') {\n  text = who + ' is added: all 7 DTJ apps are installed and their licences are on.\\n\\n'\n    + 'Before page requests for it work: its draft theme id goes into the shop list, and the shop installs Shopify\\'s Theme Access app '\n    + '(Harsh saves the password it emails). Then send any product link from that shop.';\n} else if (r.shop_status === 'waiting for installs') {\n  text = who + ': ' + (r.installed == null ? 'some' : r.installed) + ' of 7 apps installed so far. Tap the remaining Install buttons '\n    + '(the store owner, logged in to that shop), then send /addshop ' + esc(r.shop) + ' ' + esc(r.label) + ' again: it continues where it stopped.'\n    + (r.note ? '\\n' + esc(r.note) : '');\n} else {\n  text = who + ' was not added (' + esc(r.shop_status || 'no answer') + ')' + (r.note ? ': ' + esc(r.note) : '.') + '\\nHarsh will take a look.';\n}\nreturn [{ json: { chat_id: chat, text } }];\n"
+   }
+  },
+  {
+   "id": "862d6834-3ee7-4d83-a0fe-d81fc74a36bb",
+   "name": "Send Result",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "de900e8c-10ea-47a4-a10d-470979843141",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "9286035f-bfb1-462f-a637-e94d0e758318",
+   "name": "Sticky Note 248e1875",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -360
+   ],
+   "parameters": {
+    "content": "## Add a client shop (/addshop)\nStarted by the Telegram bot when an admin sends **/addshop name.myshopify.com Client Name**.\n\nThe run pauses at **Wait for Claude Code: Add Shop**. A Claude Code session in the dtj-agency-automation folder (listening, or told \"handle the Claude Code trigger in n8n\") reads **Request for Claude Code: Add Shop**, runs add_shop.py (the seven app copies, the install service, the Install buttons in Telegram) and answers here. No theme or store change happens in this workflow: each install is a tap by someone logged in to that shop.\n\nSource in git: `n8n/store-factory/` and `services/install-catcher/tools/add_shop.py`.",
+    "color": 5,
+    "width": 760,
+    "height": 320
+   }
+  }
+ ],
+ "connections": {
+  "From the Telegram Bot": {
+   "main": [
+    [
+     {
+      "node": "Request for Claude Code: Add Shop",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Request for Claude Code: Add Shop": {
+   "main": [
+    [
+     {
+      "node": "Wait for Claude Code: Add Shop",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait for Claude Code: Add Shop": {
+   "main": [
+    [
+     {
+      "node": "Claude Code Reply: Add Shop",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Claude Code Reply: Add Shop": {
+   "main": [
+    [
+     {
+      "node": "Tell the Requester",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tell the Requester": {
+   "main": [
+    [
+     {
+      "node": "Send Result",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

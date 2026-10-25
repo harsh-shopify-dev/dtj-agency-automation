@@ -1,0 +1,17 @@
+# DTJ Store Builder (services/install-catcher/tools/store_builder.py): the brand copy's app, nothing else.
+# Only the permissions the brand copy needs (src/copy.js); it has no blocks and no admin pages.
+client_id = "5704872b2f8cb791487ab19c51530cca"
+name = "DTJ Store Builder"
+application_url = "https://dtj-install-catcher.ultimateecomwithharsh.workers.dev/builder"
+embedded = false
+
+[webhooks]
+api_version = "2026-10"
+
+[access_scopes]
+scopes = "read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies,read_online_store_pages,write_online_store_pages,read_online_store_navigation,write_online_store_navigation"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ ]

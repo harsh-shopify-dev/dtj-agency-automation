@@ -15,7 +15,9 @@ import urllib.error
 import urllib.request
 from typing import Callable
 
-ALLOWED_MUTATIONS = frozenset({"productCreate", "productVariantsBulkUpdate", "stagedUploadsCreate", "fileCreate"})
+ALLOWED_MUTATIONS = frozenset({"productCreate", "productVariantsBulkUpdate", "stagedUploadsCreate", "fileCreate",
+                               # the brand copy (brand_copy.py, 21 Oct 2026): create only; never update what a store has
+                               "productSet", "collectionCreate", "publishablePublish", "shopPolicyUpdate"})
 MAX_RETRIES = 3
 MAX_WAIT_SECONDS = 60.0
 

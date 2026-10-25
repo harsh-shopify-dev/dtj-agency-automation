@@ -4,6 +4,7 @@ Nothing here writes marketing copy: text comes from facts (verbatim, with its so
 from __future__ import annotations
 
 import html
+import re
 from dataclasses import dataclass, field
 
 from .catalog import IMAGE_PREFIX, VIDEO_PREFIX, Catalog
@@ -129,6 +130,18 @@ class Ctx:
 TICKS = 4  # every tick-mark list on a page has exactly this many points (rule L13)
 AVATARS = 5  # the rating line shows exactly this many round photos, or none (rule L14; Harsh, 9 Oct 2026)
 
+
+# the buy box's point icons (DTJ Blocks' line icons): the first rule a point's words match; none = the plain tick
+POINT_ICONS = [(r"protein", "protein"), (r"sugar|sweet", "no-sugar"), (r"preservativ", "no-preservative"), (r"colou?rs?\b", "no-colour"),
+               (r"chill?i|spic|kick|peri|heat|fier", "chilli"), (r"fibre|fiber", "fibre"), (r"peanut|almond|cashew", "peanut"),
+               (r"herb|leaf|plant", "leaf"), (r"fridge|jar\b", "jar")]
+
+
+def point_icon(text: str) -> str:
+    return next((icon for pattern, icon in POINT_ICONS if re.search(pattern, text or "", re.I)), "")
+
+
+SHIELD_WORDS = re.compile(r"\b(tested|guarantee[ds]?|warranty|returns?|refunds?|safe|secure|trusted|licensed|certified|verified|genuine|authentic)\b", re.I)
 
 def _slots(n_max, items):
     return list(enumerate(items[:n_max], 1))
@@ -498,6 +511,9 @@ def buybox_blocks(ctx: Ctx) -> dict:
             ctx.put(s, "rating_value", f["rating"]["value"], "fact", f["rating"]["source"])
         if sp.get("badge"):
             ctx.put(s, "badge_text", sp["badge"]["text"], "fact", sp["badge"]["source"])
+            # the block's only icon is a shield: it fits a promise ("Lab tested", "7-day returns"), not a label like "High protein"
+            # (Harsh, 24 Oct 2026: "the shield is totally unrelated with the badge saying high protein")
+            s.settings["badge_icon"] = bool(SHIELD_WORDS.search(sp["badge"]["text"]))
         for i, line in _slots(2, sp.get("lines", [])):
             ctx.put(s, f"proof_text_{i}", line["text"], "fact", line["source"])
         n = 0
@@ -520,8 +536,12 @@ def buybox_blocks(ctx: Ctx) -> dict:
         if bb.get("tagline") and ctx.eyebrow_allowed():
             ctx.put(s, "eyebrow", bb["tagline"], "fact", src)
         ctx.put(s, "subheading", bb.get("intro"), "fact", src)
-        ctx.put(s, "benefits", "\n".join(bullets[:4]), "fact", src)
+        icons = [point_icon(b) for b in bullets[:4]]
+        lines = [f"{icon} | {b}" if icon else b for icon, b in zip(icons, bullets[:4])]
+        ctx.put(s, "benefits", "\n".join(lines), "fact", src)
         s.settings.update({"columns": "2", "show_star": False})
+        if any(icons):  # a line icon per point in a ring, like a pro D2C buy box (Harsh, 25 Oct 2026: "we need icons like this")
+            s.settings.update({"icon_style": "ring", "check_size": 34})
         out["after_title"].append(s)
     bundles = f.get("bundles") or {}
     if len(bundles.get("variant_handles", [])) >= 2:

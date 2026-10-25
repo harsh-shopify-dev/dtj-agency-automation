@@ -93,6 +93,8 @@ class Bot(unittest.TestCase):
         self.assertIn("ready in the draft theme", out[0]["json"]["text"])
         self.assertIn("preview_theme_id=1&amp;view=dtj-v", out[0]["json"]["text"])
         self.assertIn("Samples to replace before it goes live: 34", out[0]["json"]["text"])
+        chat = run_node("notify_result.js", done, {"Load Brief": {**brief, "id": 12}})["out"][0]["json"]["text"]
+        self.assertTrue(chat.endswith("Reply to this message to change something on the page.\n(job page-12, answer chat)"))
         failed = run_node("notify_result.js", {"page_status": "could not build", "page_note": "no Theme Access password"}, {"Load Brief": brief})["out"]
         self.assertIn("was not finished (could not build): no Theme Access password", failed[0]["json"]["text"])
         self.assertEqual(run_node("notify_result.js", done, {"Load Brief": {"telegram_chat_id": ""}})["out"], [])  # not from Telegram
@@ -342,7 +344,9 @@ class Stop(unittest.TestCase):
         self.assertEqual([o["stop_data"] for o in out], ["stop:intake:1", "stop:intake:3"])
         self.assertIn("Running: brand intake for freesoul.com, started", out[0]["text"])
         self.assertIn("&lt;b&gt;x&lt;/b&gt;.com", out[1]["text"])  # a store name is never read as HTML
-        self.assertEqual(self.plan(ask, 200, [run(2, "completed")])[0]["text"], "No brand intake is running right now.")
+        none = self.plan(ask, 200, [run(2, "completed")])[0]["text"]
+        self.assertTrue(none.startswith("No brand intake is running right now."))
+        self.assertIn('tap "Stop this job" under its "Started" message', none)  # page and store jobs stop from their own button
 
     def test_only_a_brand_intake_that_is_still_going_is_cancelled(self):
         ask = {"chat_id": "111", "mode": "cancel", "run_id": "7", "by": "Riya"}
@@ -585,6 +589,357 @@ class PicturesDeploy(unittest.TestCase):
         note = next(o["node"] for o in ops if o["type"] == "addNode" and o["node"]["name"] == "Note the Pictures")
         self.assertEqual(note["parameters"]["columns"]["value"],
                          {"upload_assets": "={{ $json.upload_assets }}", "upload_assets_by": "={{ $json.by }}"})
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class AddShop(unittest.TestCase):
+    """/addshop <shop>.myshopify.com <client name> (21 Oct 2026, Harsh: "one step process from telegram"): admins only."""
+
+    def ask(self, text, user=333):
+        msg = run_node("bot_read.js", update(text, user=user))["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD]})
+        self.assertTrue(res["ok"], res)
+        return msg, res["out"][0]["json"]
+
+    def test_an_admin_names_the_shop_and_the_client(self):
+        for text in ("/addshop royal-dosa.myshopify.com Royal Dosa", "/addshop https://admin.shopify.com/store/royal-dosa  Royal   Dosa",
+                     "/addshop@DtjPageDesignerBot Royal-Dosa.myshopify.com/ Royal Dosa"):
+            msg, out = self.ask(text)
+            self.assertEqual(msg["kind"], "addshop", text)
+            self.assertEqual(out, {"action": "addshop", "chat_id": "333", "shop": "royal-dosa.myshopify.com", "label": "Royal Dosa",
+                                   "requested_by": "Harsh"}, text)
+
+    def test_others_and_bad_addresses_start_nothing(self):
+        self.assertEqual(self.ask("/addshop royal-dosa.myshopify.com Royal Dosa", user=111)[1]["text"], "Only an admin can add a shop.")
+        self.assertIn("only for the DTJ team", self.ask("/addshop royal-dosa.myshopify.com Royal Dosa", user=999)[1]["text"])
+        for text in ("/addshop", "/addshop royaldosa.com Royal Dosa", "/addshop royal-dosa.myshopify.com; rm -rf / x"):
+            out = self.ask(text)[1]
+            self.assertEqual(out["action"], "reply", text)
+            self.assertIn("/addshop royal-dosa.myshopify.com Royal Dosa", out["text"], text)
+        out = self.ask("/addshop royal-dosa.myshopify.com")[1]
+        self.assertEqual(out["action"], "reply")
+        self.assertIn("client's name", out["text"])
+
+    def test_the_answer_says_started_or_why_not(self):
+        who = {"chat_id": "333", "shop": "royal-dosa.myshopify.com", "label": "Royal <Dosa>"}
+        ok = run_node("add_shop_started.js", {"shop": "royal-dosa.myshopify.com"}, {"Who Is It": who})["out"][0]["json"]
+        self.assertEqual(ok["chat_id"], "333")
+        self.assertIn("Got it: adding Royal &lt;Dosa&gt; (royal-dosa.myshopify.com)", ok["text"])
+        self.assertIn("handle the Claude Code trigger in n8n", ok["text"])
+        self.assertIn("for the store OWNER", ok["text"])  # Shopify refused an install opened by a collaborator
+        bad = run_node("add_shop_started.js", {"error": "Workflow does not exist"}, {"Who Is It": who})["out"][0]["json"]
+        self.assertIn("Could not start adding", bad["text"])
+        self.assertIn("Workflow does not exist", bad["text"])
+
+
+class AddShopDeploy(unittest.TestCase):
+    def test_addshop_takes_the_eighth_output_and_starts_the_add_shop_workflow_without_waiting(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.addshop_ops("WF-AS")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules], ["design", "switch", "intake", "stop", "brief", "site", "pictures", "addshop"])
+        links = sorted((o["source"], o.get("sourceIndex", -1), o["target"]) for o in ops if o["type"] == "addConnection")
+        self.assertEqual(links, [("Add Shop Started", -1, "Send"), ("Start Add Shop", -1, "Add Shop Started"),
+                                 ("What to Do", 7, "Start Add Shop"), ("What to Do", 8, "Send")])
+        self.assertIn({"type": "removeConnection", "source": "What to Do", "sourceIndex": 7, "target": "Send"}, ops)
+        start = next(o["node"] for o in ops if o["type"] == "addNode" and o["node"]["name"] == "Start Add Shop")["parameters"]
+        self.assertEqual((start["workflowId"]["value"], start["options"]["waitForSubWorkflow"]), ("WF-AS", False))
+        self.assertEqual(start["workflowInputs"]["value"], {k: f"={{{{ $json.{k} }}}}" for k in ("shop", "label", "requested_by", "chat_id")})
+        self.assertEqual(d.CODE_NODES["Add Shop Started"], "add_shop_started.js")
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class AddShopWorkflow(unittest.TestCase):
+    """"Store Factory: Add Shop": the request for a laptop's Claude Code, its reply and the message to the admin who asked."""
+    RESUME = "https://n8n.srv2048145.hstgr.cloud/webhook-waiting/801?signature=ab12"
+    ASK = {"shop": "Royal-Dosa.myshopify.com ", "label": " Royal  Dosa ", "requested_by": "Harsh", "chat_id": "333"}
+
+    def request(self, given):
+        res = run_node("add_shop_request.js", given, {"__resume": self.RESUME})
+        self.assertTrue(res["ok"], res)
+        return res["out"][0]["json"]
+
+    def test_the_request_is_a_complete_task_list_for_a_laptop(self):
+        out = self.request(self.ASK)
+        self.assertEqual(out["claude_code_stage"], "add_shop")
+        self.assertEqual(out["request"], {"shop": "royal-dosa.myshopify.com", "label": "Royal Dosa", "requested_by": "Harsh",
+                                          "telegram_chat_id": "333", "client": "royal-dosa"})
+        text = out["instructions"]
+        for must in ('python services/install-catcher/tools/add_shop.py --shop royal-dosa.myshopify.com --label "Royal Dosa" --chat 333 '
+                     '--approved-by "Harsh (Telegram /addshop)"', "--link blocks=<url>", "--link collection=<url>", "organization 141167028", "run_in_terminal", "store owner",
+                     f'reply.py --resume-url "{self.RESUME}" --body .work/add-shop/royal-dosa.answer.json', "never type a password",
+                     "Never print, paste or store a client secret", "No theme and no store change here", "docs/HANDOFF.md"):
+            self.assertIn(must, text)
+
+    def test_a_bad_request_stops_before_the_wait(self):
+        for given in ({**self.ASK, "shop": "royaldosa.com"}, {**self.ASK, "label": "  "}):
+            self.assertFalse(run_node("add_shop_request.js", given, {"__resume": self.RESUME})["ok"], given)
+        quoted = self.request({**self.ASK, "label": 'Royal "D" Dosa', "chat_id": "not a chat"})
+        self.assertIn('--label "Royal \'D\' Dosa"', quoted["instructions"])
+        self.assertNotIn("--chat", quoted["instructions"])
+
+    def reply(self, body):
+        req = {"request": {"shop": "royal-dosa.myshopify.com", "label": "Royal Dosa", "telegram_chat_id": "333"}}
+        res = run_node("add_shop_reply.js", {"body": body}, {"Request for Claude Code: Add Shop": req})
+        self.assertTrue(res["ok"], res)
+        return res["out"][0]["json"]
+
+    def test_the_reply_keeps_only_well_formed_answers(self):
+        self.assertEqual(self.reply({"shop_status": "done", "installed": 7, "note": "ok"})["shop_status"], "done")
+        self.assertEqual(self.reply({"shop_status": "done", "installed": 5})["shop_status"], "reply not understood (done needs all 7 installed)")
+        self.assertEqual(self.reply({"shop_status": "added"})["shop_status"], "reply not understood")
+        self.assertEqual(self.reply(None)["shop_status"], "timed out (no reply in 3 days)")
+        out = self.reply({"shop_status": "waiting for installs", "installed": 9, "note": "x" * 900})
+        self.assertEqual((out["installed"], len(out["note"]), out["chat_id"]), (None, 800, "333"))
+
+    def test_the_message_for_the_admin(self):
+        base = {"shop": "royal-dosa.myshopify.com", "label": "Royal Dosa", "chat_id": "333", "note": ""}
+        done = run_node("add_shop_notify.js", {**base, "shop_status": "done", "installed": 7})["out"][0]["json"]
+        self.assertIn("all 7 DTJ apps are installed", done["text"])
+        wait = run_node("add_shop_notify.js", {**base, "shop_status": "waiting for installs", "installed": 3})["out"][0]["json"]
+        self.assertIn("3 of 7 apps installed so far", wait["text"])
+        self.assertIn("send /addshop royal-dosa.myshopify.com Royal Dosa again", wait["text"])
+        fail = run_node("add_shop_notify.js", {**base, "shop_status": "could not add", "note": "<CLI> not signed in"})["out"][0]["json"]
+        self.assertIn("was not added (could not add): &lt;CLI&gt; not signed in", fail["text"])
+        self.assertEqual(run_node("add_shop_notify.js", {**base, "chat_id": "", "shop_status": "done"})["out"], [])
+
+
+QUESTION = {"message_id": 70, "chat": {"id": 333, "type": "private"}, "text": "Whose store is it?",
+            "reply_markup": {"inline_keyboard": [[{"text": "A client's store", "callback_data": "a:royal-dosa:whose:0"}],
+                                                 [{"text": "DTJ's own store", "callback_data": "a:royal-dosa:whose:1"}]]}}
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class WholeStore(unittest.TestCase):
+    """A store's own link starts the whole store (admins); the store job's questions are answered by a tap or a typed reply, and the
+    answer is saved for the laptop (21 Oct 2026)."""
+
+    def route(self, upd):
+        msg = run_node("bot_read.js", upd)["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD]})
+        self.assertTrue(res["ok"], res)
+        return msg, res["out"][0]["json"]
+
+    def test_an_admins_store_link_starts_the_whole_store(self):
+        msg, out = self.route(update("https://royaldosa.com make it premium", user=333))
+        self.assertEqual(out, {"action": "store", "chat_id": "333", "link": "https://royaldosa.com", "note": "make it premium",
+                               "requested_by": "Harsh"})
+        self.assertEqual(self.route(update("royaldosa.com/collections/all", user=333))[1]["link"], "https://royaldosa.com/collections/all")
+        self.assertEqual(self.route(update("https://royaldosa.com/products/podi", user=333))[1]["action"], "design")  # still one page
+        other = self.route(update("https://royaldosa.com", user=111))[1]
+        self.assertEqual(other["action"], "reply")
+        self.assertIn("A whole store is started by an admin", other["text"])
+
+    def test_a_tap_is_an_answer_with_the_tapped_label(self):
+        tap = {"update_id": 9, "callback_query": {"id": "cb9", "data": "a:royal-dosa:whose:1", "message": QUESTION,
+                                                  "from": {"id": 111, "first_name": "Riya", "is_bot": False}}}
+        msg, out = self.route(tap)
+        self.assertEqual((msg["kind"], msg["arg"]), ("answer", "DTJ's own store"))
+        self.assertEqual({k: out[k] for k in ("action", "job", "key", "choice", "value", "by", "chat_id")},
+                         {"action": "answer", "job": "royal-dosa", "key": "whose", "choice": "1", "value": "DTJ's own store", "by": "Riya",
+                          "chat_id": "333"})
+        self.assertRegex(out["at"], r"^\d{4}-\d\d-\d\dT")
+        stranger = {**tap, "callback_query": {**tap["callback_query"], "from": {"id": 999, "first_name": "X", "is_bot": False}}}
+        self.assertEqual(self.route(stranger)[1]["action"], "reply")  # not on the bot: nothing saved
+        odd = {**tap, "callback_query": {**tap["callback_query"], "data": "a:Royal Dosa:whose:1"}}
+        self.assertEqual(self.route(odd)[0]["kind"], "button")  # not a store job's button: the old path says it is not valid
+
+    def test_a_typed_reply_to_a_question_is_an_answer(self):
+        asked = {"message_id": 71, "from": {"id": 1, "is_bot": True}, "chat": {"id": 333, "type": "private"},
+                 "text": "Send the offer's exact words.\n\n(job royal-dosa, answer offer_text)"}
+        upd = update("Flat 10% off on prepaid orders", user=333)
+        upd["message"]["reply_to_message"] = asked
+        msg, out = self.route(upd)
+        self.assertEqual((out["action"], out["key"], out["value"], out["choice"]), ("answer", "offer_text", "Flat 10% off on prepaid orders", ""))
+        secret = update("shpat_0123456789abcdef0123", user=333)
+        secret["message"]["reply_to_message"] = asked
+        self.assertEqual(self.route(secret)[0]["kind"], "secret")  # a key is never saved as an answer
+
+    def test_the_answers_after_start_and_save(self):
+        ask = {"chat_id": "333", "link": "https://royaldosa.com"}
+        ok = run_node("store_started.js", {"link": "x"}, {"Who Is It": ask})["out"][0]["json"]
+        self.assertIn("Got it: the whole store https://royaldosa.com", ok["text"])
+        self.assertIn("Approve button", ok["text"])
+        bad = run_node("store_started.js", {"error": "Workflow does not exist"}, {"Who Is It": ask})["out"][0]["json"]
+        self.assertIn("Could not start the store", bad["text"])
+        for value, must in (("Approve", "Approved by Harsh"), ("Skip", "Skipped"), ("Royal <Dosa>", "Noted: Royal &lt;Dosa&gt;")):
+            a = {"chat_id": "333", "value": value, "by": "Harsh"}
+            self.assertIn(must, run_node("answer_noted.js", {"id": 4}, {"Who Is It": a})["out"][0]["json"]["text"])
+        lost = run_node("answer_noted.js", {"error": "table not found"}, {"Who Is It": {"chat_id": "333", "value": "Approve", "by": "Harsh"}})
+        self.assertIn("could not save that answer", lost["out"][0]["json"]["text"])
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class PlainAnswers(unittest.TestCase):
+    """A plain message answers the store job's open typed question (22 Oct 2026: the brand link sent as a new message)."""
+
+    def route(self, upd, marks):
+        msg = run_node("bot_read.js", upd)["out"][0]["json"]
+        res = run_node("bot_route.js", list(SHOPS), {"Read the Message": msg, "Load Bot Users": [RIYA, DEV, HARSH, OLD],
+                                                      "Load Open Questions": marks or [{}]})
+        self.assertTrue(res["ok"], res)
+        return res["out"][0]["json"]
+
+    OPEN = {"job": "dtj-testing", "key": "brand_link", "value": "", "choice": "open", "chat_id": "333", "at": "2026-10-22T06:25:59Z"}
+
+    def test_while_a_question_is_open_a_plain_link_or_text_is_its_answer(self):
+        out = self.route(update("https://sensofoods.com/", user=333), [self.OPEN])
+        self.assertEqual({k: out[k] for k in ("action", "job", "key", "value", "by")},
+                         {"action": "answer", "job": "dtj-testing", "key": "brand_link", "value": "https://sensofoods.com/", "by": "Harsh"})
+        offer = self.route(update("Flat 10% off on prepaid orders", user=333), [{**self.OPEN, "key": "offer_text"}])
+        self.assertEqual((offer["action"], offer["key"]), ("answer", "offer_text"))
+
+    def test_after_it_is_closed_or_in_another_chat_messages_go_their_usual_way(self):
+        closed = {**self.OPEN, "choice": "closed", "at": "2026-10-22T06:26:30Z"}
+        self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [self.OPEN, closed])["action"], "store")
+        self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [{**self.OPEN, "chat_id": "111"}])["action"], "store")
+        self.assertEqual(self.route(update("/commands", user=333), [self.OPEN])["action"], "reply")  # a command stays a command
+        self.assertEqual(self.route(update("https://sensofoods.com/", user=333), [])["action"], "store")
+
+    def test_an_open_page_chat_takes_plain_text_but_a_link_still_starts_its_own_work(self):
+        # 24 Oct 2026: Harsh wrote a new message, not a reply, after the page message, and the bot asked him for a product link
+        page = {**self.OPEN, "job": "page-12", "key": "chat"}
+        out = self.route(update("We have to create a full website for senso in the dtj testing theme", user=333), [page])
+        self.assertEqual({k: out[k] for k in ("action", "job", "key")}, {"action": "answer", "job": "page-12", "key": "chat"})
+        self.assertNotEqual(self.route(update("https://sensofoods.com/", user=333), [page])["action"], "answer")
+
+
+class WholeStoreDeploy(unittest.TestCase):
+    def test_the_open_question_check_sits_before_who_is_it(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.open_question_ops("T-ANS")
+        node = next(o["node"] for o in ops if o["type"] == "addNode")
+        self.assertEqual((node["name"], node["parameters"]["dataTableId"]["value"]), ("Load Open Questions", "T-ANS"))
+        self.assertEqual([c["keyName"] for c in node["parameters"]["filters"]["conditions"]], ["chat_id", "value"])
+        links = [(o["type"], o["source"], o["target"]) for o in ops if "Connection" in o["type"]]
+        self.assertEqual(links, [("removeConnection", "Load Shops", "Who Is It"), ("addConnection", "Load Shops", "Load Open Questions"),
+                                 ("addConnection", "Load Open Questions", "Who Is It")])
+
+    def test_the_store_link_and_the_answers_take_the_ninth_and_tenth_outputs(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.store_ops("WF-NS", "T-ANS")
+        rules = next(o for o in ops if o.get("path") == "/rules/values")["value"]
+        self.assertEqual([r["outputKey"] for r in rules][-3:], ["addshop", "store", "answer"])
+        links = sorted((o["source"], o.get("sourceIndex", -1), o["target"]) for o in ops if o["type"] == "addConnection")
+        self.assertIn(("What to Do", 8, "Start New Store"), links)
+        self.assertIn(("What to Do", 9, "Save the Answer"), links)
+        self.assertIn(("What to Do", 10, "Send"), links)
+        self.assertIn({"type": "removeConnection", "source": "What to Do", "sourceIndex": 8, "target": "Send"}, ops)
+        nodes = {o["node"]["name"]: o["node"]["parameters"] for o in ops if o["type"] == "addNode"}
+        self.assertEqual((nodes["Start New Store"]["workflowId"]["value"], nodes["Start New Store"]["options"]["waitForSubWorkflow"]),
+                         ("WF-NS", False))
+        save = nodes["Save the Answer"]
+        self.assertEqual((save["operation"], save["dataTableId"]["value"]), ("insert", "T-ANS"))
+        self.assertEqual(sorted(save["columns"]["value"]), sorted(d.ANSWER_COLS))
+        import json  # noqa: PLC0415
+        from node_harness import HERE  # noqa: PLC0415
+        spec = json.loads((HERE / "tables.json").read_text(encoding="utf-8"))["dtj_bot_answers"]["columns"]
+        self.assertEqual(tuple(c["name"] for c in spec), d.ANSWER_COLS)  # what the bot saves = what the table holds
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class NewStoreWorkflow(unittest.TestCase):
+    RESUME = "https://n8n.srv2048145.hstgr.cloud/webhook-waiting/901?signature=ab12"
+
+    def test_the_request_is_a_complete_task_list(self):
+        res = run_node("new_store_request.js", {"link": "https://royaldosa.com", "note": "premium", "requested_by": "Harsh", "chat_id": "333"},
+                       {"__resume": self.RESUME, "__run": "1201"})
+        self.assertTrue(res["ok"], res)
+        out = res["out"][0]["json"]
+        self.assertEqual(out["claude_code_stage"], "new_store")
+        text = out["instructions"]
+        for must in ('store_job.py start --link "https://royaldosa.com" --chat 333 --by "Harsh" --run 1201', "skill dtj-new-store",
+                     f'reply.py --resume-url "{self.RESUME}" --body .work/stores/<job>/answer.json', "Approve tap", "Nothing is published",
+                     "Never invent an offer", "docs/HANDOFF.md", "Note from Harsh: premium", "store_job.py copy",
+                     "This link is the store to build IN", "one for the products", "store_job.py assets",
+                     "Every product goes in ACTIVE"):
+            self.assertIn(must, text)
+        self.assertFalse(run_node("new_store_request.js", {"link": "javascript:alert(1)"}, {"__resume": self.RESUME})["ok"])
+
+    def reply(self, body):
+        req = {"request": {"link": "https://royaldosa.com", "telegram_chat_id": "333"}}
+        res = run_node("new_store_reply.js", {"body": body}, {"Request for Claude Code: New Store": req})
+        self.assertTrue(res["ok"], res)
+        return res["out"][0]["json"]
+
+    def test_the_reply_and_the_message(self):
+        body = {"store_status": "done", "shop": "royal-dosa.myshopify.com", "name": "Royal Dosa", "draft_theme_id": "188893495469",
+                "pages": [{"part": "home", "preview": "https://royal-dosa.myshopify.com/?preview_theme_id=188893495469"},
+                          {"part": "bad", "preview": "javascript:alert(1)"}], "note": ""}
+        r = self.reply(body)
+        self.assertEqual((r["store_status"], r["draft_theme_id"], len(r["pages"])), ("done", "188893495469", 1))
+        self.assertEqual(self.reply(None)["store_status"], "timed out (no reply in 7 days)")
+        self.assertEqual(self.reply({"store_status": "finished"})["store_status"], "reply not understood")
+        text = run_node("new_store_notify.js", r)["out"][0]["json"]["text"]
+        self.assertIn("Royal Dosa (royal-dosa.myshopify.com) is designed in the draft copy (theme 188893495469, unpublished)", text)
+        self.assertIn('<a href="https://royal-dosa.myshopify.com/?preview_theme_id=188893495469">home</a>', text)
+        part = run_node("new_store_notify.js", {**r, "store_status": "partly done", "note": "2 installs missing"})["out"][0]["json"]["text"]
+        self.assertIn("partly done", part)
+        self.assertIn("Open: 2 installs missing", part)
+        self.assertEqual(run_node("new_store_notify.js", {**r, "chat_id": ""})["out"], [])
+
+
+@unittest.skipUnless(HAS_NODE, "Node.js is needed to run n8n code nodes")
+class BrandCopyWorkflow(unittest.TestCase):
+    """The brand copy's Approve tap runs the copy in n8n, step by step through the install service (21 Oct 2026)."""
+    START = {"job": "royal-demo", "approved_by": "Riya (Telegram Approve)", "chat_id": "333"}
+
+    def test_each_step_carries_the_job_the_approver_and_a_fresh_time(self):
+        out = run_node("brand_copy_step.js", self.START, {"From the Telegram Bot": self.START})["out"][0]["json"]
+        self.assertEqual(out["round"], 0)
+        self.assertEqual({k: out["body"][k] for k in ("op", "job", "approved_by")}, {"op": "step", "job": "royal-demo",
+                                                                                    "approved_by": "Riya (Telegram Approve)"})
+        self.assertIsInstance(out["body"]["ts"], int)
+        again = run_node("brand_copy_step.js", {"round": 4, "finished": False}, {"From the Telegram Bot": self.START})["out"][0]["json"]
+        self.assertEqual(again["round"], 4)
+        for bad in ({**self.START, "approved_by": " "}, {**self.START, "job": "Bad Job"}):
+            self.assertFalse(run_node("brand_copy_step.js", bad, {"From the Telegram Bot": bad})["ok"], bad)
+
+    def progress(self, res, round_=0):
+        refs = {"From the Telegram Bot": self.START, "Copy Step Body": {"round": round_}}
+        return run_node("brand_copy_progress.js", res, refs)["out"][0]["json"]
+
+    def test_not_finished_goes_round_again_and_finished_tells_the_person(self):
+        mid = self.progress({"statusCode": 200, "body": {"finished": False, "done": {"products": 3}, "total": {"products": 17}}})
+        self.assertEqual((mid["finished"], mid["round"], mid["text"]), (False, 1, ""))
+        end = self.progress({"statusCode": 200, "body": {"finished": True, "status": "ACTIVE", "stopped": None,
+                                                         "done": {"products": 16, "collections": 29, "policies": 2, "skipped": 1, "failed": 1},
+                                                         "total": {"products": 17, "collections": 29, "policies": 2}}}, 5)
+        self.assertTrue(end["finished"])
+        for must in ("Brand copy done (products are live behind the store password)", "- products: 16 of 17", "- collections: 29 of 29",
+                     "- left alone (the store has them already): 1", "- failed: 1"):
+            self.assertIn(must, end["text"])
+        self.assertEqual(end["chat_id"], "333")
+
+    def test_a_refusal_or_too_many_rounds_ends_the_run(self):
+        no = self.progress({"statusCode": 404, "body": {"error": "no copy plan for this job"}})
+        self.assertTrue(no["finished"])
+        self.assertIn("The brand copy stopped: no copy plan for this job", no["text"])
+        long = self.progress({"statusCode": 200, "body": {"finished": False, "done": {}, "total": {}}}, 399)
+        self.assertTrue(long["finished"])
+        self.assertIn("too many steps", long["text"])
+
+
+class BrandCopyDeploy(unittest.TestCase):
+    def test_only_an_approve_under_the_copy_starts_it_without_waiting(self):
+        import deploy_telegram_bot as d  # noqa: PLC0415
+        ops = d.copy_ops("WF-BC")
+        nodes = {o["node"]["name"]: o["node"]["parameters"] for o in ops if o["type"] == "addNode"}
+        cond = nodes["Copy Approved?"]["conditions"]["conditions"][0]["leftValue"]
+        self.assertIn(".key === 'ok_copy'", cond)
+        self.assertIn(".value === 'Approve'", cond)
+        start = nodes["Start Brand Copy"]
+        self.assertEqual((start["workflowId"]["value"], start["options"]["waitForSubWorkflow"]), ("WF-BC", False))
+        self.assertIn("(Telegram Approve)", start["workflowInputs"]["value"]["approved_by"])
+        links = [(o["source"], o.get("sourceIndex", -1), o["target"]) for o in ops if o["type"] == "addConnection"]
+        self.assertEqual(links, [("Save the Answer", -1, "Copy Approved?"), ("Copy Approved?", 0, "Start Brand Copy")])
+
+    def test_the_workflow_loops_until_finished(self):
+        import deploy_brand_copy as b  # noqa: PLC0415
+        code = b.sdk_code()
+        self.assertIn(".to(finished.onTrue(send).onFalse(pause.to(stepBody)))", code)
+        self.assertIn(b.COPY_URL, code)
+        self.assertTrue(b.COPY_URL.endswith("/copy"))
 
 
 if __name__ == "__main__":

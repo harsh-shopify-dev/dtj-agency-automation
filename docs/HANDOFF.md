@@ -55,6 +55,437 @@ senso-01_v6_phone_look.mp4 (after) and senso-01_v6_before_phone_look.mp4. NOT do
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 25 Oct 2026: PROPERI polish + DTJ Blocks dtj-blocks-28 RELEASED (PRs #79-#82, account A)
+- **App release (Harsh's yes in chat: "yes, release DTJ Blocks"):** DTJ Blocks **dtj-blocks-28** (DTJ's own app, `services/block-library`,
+  `shopify app deploy --allow-updates`): DTJ Hero Points can show a line icon per point ("icon | text": protein, peanut, no-sugar,
+  chilli, flame, fibre, leaf, no-colour, no-preservative, jar) in a ring (`icon_style: ring`). Existing pages unchanged (ticks).
+  The builder picks icons by words (`sections.point_icon`) ONLY for shops whose registry says `"features": ["point_icons"]`
+  (elevate set; client copies such as dtj-testing keep ticks until their own copy is released and the flag is added).
+- **PROPERI page (brief 12), all on the DRAFT:** desktop gallery = one big square picture with thumbnails, half width (builder
+  default, #79); NoCheat's 9 photos detached from the product (still in Files); "88% peanut butter" card = a plain clear jar
+  filled with peanuts; copy audit: the fiery flavour now has its own story section, strip lines and FAQ (NoCheat's own words:
+  "Bold flavour and purposeful nutrition", "a little kick"; no invented heat level); buy box points with icons; FAQ questions no
+  longer vanish on hover (Horizon's `summary:hover`; builder adds section CSS, #80).
+- **OPEN for NoCheat / Harsh:** "No palm oil" and a heat level ("extreme fiery") only if NoCheat confirms them; the store menu items
+  "footer-client-services" / "footer-company" and the store name "DTJ" (Shopify admin).
+
+## 24 Oct 2026 (later): PAGE CHAT IN TELEGRAM; PROPERI RE-WRITTEN AROUND PROTEIN (PRs #73-#77, account A)
+- **Page chat (new, live):** after a page's "page ready" message, a person just types a change in Telegram (a reply works too).
+  The bot saves it in dtj_bot_answers (job `page-<brief>`, key `chat`; `page_chat.py` marks the chat open so plain text counts),
+  the VPS worker resumes THAT page's own Claude session (`worker.py look_at_chats`, one turn at a time per page) and the session
+  answers with `python n8n/store-factory/page_chat.py --brief N --chat C --say "..."`. A product link still starts a new page.
+  Anything beyond the page's draft (product, settings, menus, live theme, publishing, app releases) needs the person's yes in the
+  chat. Older runs are linked with `worker.py --page <run> <brief>` (done for brief 12 = run 1421).
+  VERIFIED: 220 store-factory tests; bot published (code identical); the first "chat is open" messages reached Harsh.
+  NOT YET VERIFIED: a full live chat turn (Harsh's first message arrived before the plain-text routing was live; he resends it).
+- **PROPERI (brief 12), Harsh's review ("sounds like a chutney page"):** all copy now leads with protein and nutrition (26 g protein
+  per 100 g, about 8 g per tablespoon, 0 g added sugar, 88% peanuts; NoCheat's own line "Nutrition that fits your life"); peri peri
+  is the twist. Gallery pictures 2, 5, 6 re-worded and swapped on the product. Badge: icon colour fixed, then the shield removed
+  (it fits a promise, not "High protein"; a protein icon would need a DTJ Blocks app release = Harsh's yes).
+- **Builder rules added for every brand:** badge icon visible on its badge (#73); gallery headlines wrap and keep "8 g" together
+  (#74); the badge shield only on promise badges (#75).
+- **How to work (Harsh, 23-24 Oct 2026), for every session and teammate:** product pictures are always square; a product gets a
+  5-6 picture explaining gallery (what, why, numbers, what's inside, how to use, lifestyle) made the MojoVibe way
+  (`.claude/skills/dtj-pdp-factory/references/product-gallery.md`); run slow work (pictures, builds) in the background and write
+  the copy meanwhile; hand the client's page over first, fix the automation right after; a protein / nutrition product leads with
+  its nutrition, never with "snack" copy.
+- **OPEN:** Harsh's Senso whole-store request (dtj-testing): start it by sending the store link to the bot; the protein icon option
+  (app release); the X icon in the footer; the store menu items "footer-client-services" / "footer-company" (admin).
+
+## 24 Oct 2026: PROPERI PAGE READY FOR THE CLIENT (NoCheat on elevate-with-harsh, brief 12; PRs #62-#71, account A)
+- **The page (DRAFT theme 188893495469 "DTJ master 4.2.0 test 1"; the live theme untouched):**
+  https://elevate-with-harsh.myshopify.com/products/properi-spread?preview_theme_id=188893495469&view=dtj-properi-spread
+  (template `product.dtj-properi-spread`). Review pass, design checks 11/11, lint 0; checked on the real page at 375 and 1280 px:
+  every section shows, no broken picture, no sideways scroll; Add to cart yellow #FFC94A, Buy it now maroon #9E1B22, videos play.
+- **Product properi-spread changed (Harsh's yes, 23 Oct "full access, test store"):** 6 new square gallery pictures attached and moved
+  first (NoCheat's 9 photos kept after them); logged in `.work/stores/elevate-with-harsh/action-log.jsonl`. The first AI set (busy,
+  "AI SLOP") was never attached; it stays in elevate's Files (`g1-hero.png` ... `g6-bite.png`, `ai-*.png`): delete them in admin if wanted.
+- **On the page:** gallery = AI studio photos + words set by code (`provision/gallery_compose.py`); section photos (toast, paratha, pack);
+  "Why it beats plain peanut butter" = 6 transparent cut-outs (Harsh's Go Mints sample); "NoCheat in real life" = 6 videos from
+  nocheatnutrition.com (ProPeri reel, ProPeri how-to-use, and 4 reels of other NoCheat products as SAMPLE stand-ins, Harsh: "its fine if
+  they are not product related right now"). Header and footer written too (Harsh: "update the header and footer color too"): maroon bar
+  and footer, real social links, 2 SAMPLE bar lines from NoCheat's own site (free shipping; 48 h damaged-jar replacement), backups in
+  `.work/clients/n8n-12-properi-spread/chrome-run/*/backup-*`.
+- **What NoCheat must send or sign off:** `.work/clients/n8n-12-properi-spread/content-needed.md` on the VPS (real reviews and rating,
+  stories, ProPeri videos, sign-off of the AI pictures and the DTJ COPY lines, the shipping and replacement promises for this store).
+- **Built for every brand (all merged and on the VPS):** photo paths made absolute for Codex (#62); Playwright Chromium for the VPS review
+  and readable CLI errors (#63); the gallery method + `references/product-gallery.md` + theme folders for unattended pulls (#64); badge,
+  strip-tick and buy-button colours from the palette (#65-#68, #70); pictures made in parallel with the copy (`provision/gallery_photos.py
+  --detach/--wait/--progress`), transparent cut-outs (`ai_images --transparent`) and the n8n Page Design text for both (#69, published);
+  videos into Files (`store_files`, #70); bold brands' header and footer in the brand colour (#71). Briefs 7-9's VPS notes (password page,
+  missing permissions, CLI sign-in) are all resolved by these and the 23 Oct PRs.
+- **NOT DONE / OPEN:** (1) a Telegram Approve tap + tool that puts a brief's gallery first in the product's gallery from the VPS (the VPS CLI
+  store auth has files scopes only; today it ran from the laptop); (2) the X/Twitter icon did not show (Horizon's setting name); (3) the
+  store's menus still hold "footer-client-services" / "footer-company" (admin, a person's fix); (4) brief 12's n8n run 1421 was answered
+  "could not build" on 23 Oct, so its brief row does not show today's finished page.
+
+## 23 Oct 2026 (evening): THE VPS WORKER IS LIVE (PRs #43-#56, account A)
+- **The VPS (srv2048145, user `ai`):**
+  - the repo at ~/dtj-agency-automation, updated from the laptop with git bundles over ssh (no GitHub login there);
+  - the service `dtj-worker` is active (attended mode, 2 Claude sessions at once);
+  - the keys are in ~/.config/dtj/worker.env (0600; the n8n token is Harsh's own for now);
+  - the Shopify CLI is signed in as ultimateecomwithharsh@gmail.com (`shopify auth login`), plus `shopify store auth` for
+    elevate-with-harsh (write_files);
+  - pictures come from Codex (`tools/vps/codex_image.sh`, as ~/work/run-ref.sh did);
+  - ~/.local/bin/xdg-open only saves a sign-in link to /tmp/last-open-url. A store auth redirects to 127.0.0.1:<port> on the
+    VPS: open an ssh tunnel (`ssh -N -L <port>:127.0.0.1:<port> ai@srv2048145.hstgr.cloud`) before the person opens the link.
+- **Laptop access:** ssh as `ai` (Harsh added the key; local permission `Bash(ssh -o BatchMode=yes ai@srv2048145.hstgr.cloud:*)`).
+  Root stays blocked by the auto-mode check.
+- **Built today:**
+  - the competitor study with a focus question and the person's own words (store and page);
+  - ChatGPT-pictures questions for pages (`page_questions.py`);
+  - a step-by-step guide for a shop that is not connected (`match_store.js`), and the store job adds a connected shop to dtj_stores;
+  - a "Next:" line after every store-job step, and Started + a Stop this job button from the worker;
+  - parallel sessions and queued Start taps;
+  - the progress bar and the read-only n8n tools allowed on the VPS (`tools/vps/mcp.json`);
+  - `fetch_product` reads a password-protected store's product through DTJ Store Builder (install service op `product`).
+  - dtj-testing is on dtj_stores; its 7 DTJ apps are installed and on; old run 988 is answered.
+- **First live VPS runs:**
+  - briefs 7 and 8 stopped: dtj-testing's password page; no n8n connection on the VPS (both fixed);
+  - brief 9 stopped: elevate's `properi-spread` is an empty product (Rs 0, sold out, no pictures) and the CLI was not signed in
+    (fixed). No Cheat's intake is kept in .work/clients/intake-nocheatnutrition.com on the VPS;
+  - brief 10 (run 1399) waits for its Start tap.
+- **OPEN for Harsh:**
+  1. fill elevate's properi-spread (price, stock, pictures) or use a product that has them;
+  2. "yes, deploy" for the install service (ops uploads, activate, pages, menu, product), which is needed for password-protected
+     stores;
+  3. "yes, release" for Store Builder (pages and navigation scopes);
+  4. a test Drive folder.
+- **NOT VERIFIED LIVE:** a page written to a draft from the VPS; Codex pictures through the script; the competitor study and
+  page questions; a whole store end to end through the worker.
+
+## 23 Oct 2026: THE WORKER IS ATTENDED BY DEFAULT: A START TAP, NO API KEY (branch `feature/worker-attended`, account A)
+Harsh, 23 Oct 2026: "there will be a person watching it, its just because i dont have to tell you here to listen for the call in
+n8n so everything gets handled there ... when we get a client only then we build the site via automation so we need a person".
+- **`worker.py` mode `attended` is the default (`DTJ_WORKER_MODE`):**
+  - each new request gets one Telegram question in the chat the link came from (else `DTJ_ADMIN_CHAT`): "Start: I'm watching";
+  - nothing starts before that tap, and the tapper's name is kept and told to Claude;
+  - Claude then runs on the VPS's own Claude login (no `--bare`, no API key passed on, no spend cap needed).
+- **Mode `api`** (the earlier unattended mode: `--bare`, `ANTHROPIC_API_KEY`, `DTJ_CLAUDE_MAX_USD`) stays, off unless Harsh
+  switches it on.
+- `setup_worker.sh` and the README now ask only for the bot, the n8n token, the admin chat and the catcher key, and check that
+  Claude Code is logged in as `ai`. CLAUDE.md is updated.
+- **VERIFIED:** tests (store-factory 194, worker 10).
+- **NOT VERIFIED:** on the VPS (no access from this laptop).
+- **OPEN for Harsh:** the VPS setup (tools/vps/README.md); no API key needed.
+
+## 22 Oct 2026 (night): ABOUT / CONTACT / FAQ PAGES AND THE MENUS (branch `feature/pages-and-menus`, account A)
+Harsh, 22 Oct 2026: "we have to handover a product ready shopify store so if anything is missed by me you will cover it".
+- **New part `pages`** in the "what to design" question, included in "Everything":
+  - `store_job.py pages --job J --file pages.json`: About us, Contact (theme contact form) and FAQ. New pages only, with their own
+    Approve tap. Sample text is marked, listed in the handover and checked for claim words.
+  - `store_job.py menus --job J`: the main menu (Home, Shop all, up to 5 collections, About, Contact) and the footer (About,
+    Contact, FAQ, Search, the 4 policies), with one Approve tap.
+- **Install service `/copy`:**
+  - op `pages` (pageCreate; a handle the store has is skipped; HTML without scripts, frames, forms or event handlers);
+  - op `menu` (menuUpdate of `main-menu` or `footer` only; links resolved from the store; the old links kept in the audit row).
+- **Store Builder scopes** gain `read/write_online_store_pages` and `read/write_online_store_navigation`
+  (`services/store-builder-app/shopify.app.toml`, `tools/store_builder.py`). **NOT RELEASED:** a new app version is Harsh's yes;
+  until then both steps are refused by Shopify and say so in Telegram.
+- CLAUDE.md's Telegram-Approve list now names the pages and the menus. n8n New Store instructions republished.
+- **VERIFIED:** tests (store-factory 191, install service 26 JS + 35 Python, store-builder all OK).
+- **NOT VERIFIED:** a live call (the app version is not released, the install service is not deployed).
+
+## 22 Oct 2026 (evening): EVERYTHING ON THE VPS: n8n STARTS IT, CLAUDE RUNS ON THE API KEY (branch `feature/vps-worker`, account A)
+Harsh, 22 Oct 2026: "everything will be automated ... i would suggest that the n8n triggers it and same for the claude".
+- **`n8n/store-factory/worker.py`** is a service on the VPS (`tools/vps/dtj-worker.service`, setup `tools/vps/setup_worker.sh`,
+  steps `tools/vps/README.md`).
+  - It takes every Page Design / Add Shop / New Store request within about 30 s.
+  - It runs `claude -p --permission-mode dontAsk --settings .claude/vps-settings.json --max-budget-usd $DTJ_CLAUDE_MAX_USD` on
+    `ANTHROPIC_API_KEY`. It refuses to start without the key or the cap (rule 9).
+  - Telegram waits: Claude ends with `DTJ_WAIT: <store_job command>`. The worker reruns that command every 5 min (only
+    store_job start/draft/copy/apps/installs/approve, never a shell) and resumes the same session when it exits not-3.
+  - A run left unanswered is marked failed and the admin chat is told; 3 in a row stop new starts.
+  - Reel requests are not taken yet.
+- **`.claude/vps-settings.json`** lists what unattended Claude may run (DTJ's tools only). It denies the Shopify CLI itself,
+  theme publish, git push/commit, rm, curl, ssh, the vault and `deploy.py`.
+- **Linux support:** `n8n_mcp.token()` reads the environment on Linux; `vault.py pull --env-file` writes the worker's owner-only
+  env file; `tools/vps/set_key.py` saves a key at a hidden prompt.
+- **VERIFIED:** tests (worker 7, store-factory 189 in all, vault 6); `bash -n` on the setup script.
+- **NOT VERIFIED:** anything on the VPS (no access from this laptop), and a real headless Claude run.
+- **OPEN for Harsh:**
+  1. an Anthropic API key and the per-request cap (spend decisions);
+  2. run the README steps as `ai` on the VPS;
+  3. stop laptop listeners once the worker runs.
+
+## 22 Oct 2026 (later): STORE ASSETS: NICHE RESEARCH, CHATGPT PICTURES, SAMPLE PRICES, HANDOVER (branch `feature/store-assets`, account A)
+Harsh, 22 Oct 2026: sample prices and details are allowed ("we will change it later"); pictures only after studying the top 5
+D2C, Meta-ad-led competitors of the niche (never the giants: for Senso, never Wagh Bakri / Red Label / Taj), made with ChatGPT
+(a ChatGPT command hosted on the Hostinger VPS) from our own product photos; Telegram asks first whether to make pictures; hand
+over a store that is ready to sell.
+- **Telegram:** after the source question, "Should ChatGPT make new pictures?" The options are per source:
+  - samples: all, or product pictures only;
+  - Drive: banners and extra product pictures, only banners, or none;
+  - website or this store: only banners, or none.
+- **`store_job.py assets`** (assets.json written by the session, skill step 1b):
+  - Pictures are refused without `research` (3+ brands read, `provision/niche_assets.py`) and a written `style` study.
+  - Our photos go in as `refs`; ChatGPT's pictures come after the brand's own.
+  - Sample prices (`dtj-sample-price`) come from `niche_assets.sample_price` within the niche's real range. Sample descriptions
+    are tagged `dtj-sample-text`.
+- **Prices question:** "Use the sample prices" / type / leave at 0.00.
+- **`finish`:** writes `.work/stores/<job>/handover.md` and sends the short part to Telegram. It covers what is in the store,
+  every sample to replace, and the owner's settings: payments, shipping, GST, domain, store details, policies, menus, launch, ads.
+- **`provision/ai_images.py` order:**
+  1. the VPS: `DTJ_IMAGE_VPS` (ssh/scp to `reel_factory.chatgpt_cli`, the logged-in Chrome);
+  2. the OpenAI API, with `/images/edits` for refs;
+  3. a local ChatGPT.
+- CLAUDE.md rule 5 has the store-build sample exception (offers, claims, reviews and policies stay never).
+- **VERIFIED:**
+  - tests: store-factory 182, store-builder all OK (1 skipped), install service 24, reel-factory OK;
+  - niche_assets live on Blue Tea India (read only): 4 banners, 3 best sellers, 9 pictures, prices 599 / 719 / 1349.
+- **NOT VERIFIED:** the VPS route and the OpenAI edits call (no VPS access from this laptop, no key); a full run.
+- **BLOCKED:** reading the VPS from this laptop. `ssh ai@srv2048145.hstgr.cloud` is refused (the laptop key is not in
+  /home/ai/.ssh/authorized_keys). A root read was refused by Claude Code's auto-mode check ("Production Reads"); it was not
+  worked around.
+- **OPEN for Harsh:** set up the VPS route once (services/reel-factory/README.md, "VPS picture route"):
+  - the repo at ~/dtj-agency-automation as user ai, Playwright, and the logged-in Chrome on port 9222;
+  - the laptop's public key for user ai;
+  - `DTJ_IMAGE_VPS=ai@srv2048145.hstgr.cloud` on the laptop.
+  The earlier items stand: "yes, deploy" for the install service, then Senso's activate, and a test Drive folder.
+
+## 22 Oct 2026: AI STORE CREATION: REDESIGN OR NEW STORE (PR #37 merged, branch `feature/ai-store-creation`, account A)
+Harsh, 22 Oct 2026: "it starts and asks if it is a redesign or new store development" and "all the products will stay active none of
+them will be kept as draft".
+- **The flow in Telegram (one store link):**
+  - The first question is "Redesign an existing brand" or "New store from scratch".
+  - Redesign: products already in this store (nothing added), or the brand's current website scraped (WordPress, Wix or Shopify).
+  - New store: a Google Drive folder (layout `.claude/skills/dtj-new-store/references/drive-folder.md`, shared "Anyone with the
+    link"), or N sample products (3/6/9/12) whose pictures, and the home page banners, are made with ChatGPT's image model.
+  - Then the same questions as before; a prices question before the copy; one Approve tap per action.
+- **Every product goes in ACTIVE.** No price = 0.00 + `dtj-price-needed`, never guessed. An open store (no password page) is said
+  in the Approve tap.
+- **New tools:**
+  - `store_job.py assets`: samples + banners from a file the session writes; it refuses prices and claim words.
+  - `store_job.py activate`: old drafts -> ACTIVE, with a named yes.
+  - `provision/drive_assets.py` (keyless Drive), `provision/ai_images.py` (OpenAI API, else ChatGPT over CDP),
+    `provision/staged_upload.py`.
+  - Install service `/copy` ops `uploads` (stagedUploadsCreate) and `activate` (DRAFT -> ACTIVE + Online Store only, 12 per call).
+- n8n "Store Factory: New Store" instructions republished (code identical to the files).
+- **VERIFIED:**
+  - tests: store-factory 180, store-builder 497 (1 skipped), install service 24;
+  - Drive listing, Google Doc text and file download, live on gdown's public test folder.
+- **NOT VERIFIED:**
+  - picture bytes from a real client folder;
+  - the staged upload: the install service is NOT deployed with the new ops yet, and the Store Builder scopes are unproven for
+    stagedUploadsCreate;
+  - the image API (no `OPENAI_API_KEY` on this laptop);
+  - a whole new-store run end to end.
+- **OPEN for Harsh:**
+  1. "yes, deploy" for the install service (`services/install-catcher/tools/deploy.py`);
+  2. then Senso's 114 drafts in dtj-testing -> ACTIVE: `store_job.py activate --job dtj-testing --approved-by "Harsh (chat, 22 Oct 2026)"`;
+  3. an OpenAI key with credit saved as `OPENAI_API_KEY` (Windows variable + vault);
+  4. a test Drive folder in the layout.
+  - Also open: "Other pages" (About, Contact, FAQ) need `write_online_store_pages` on Store Builder (an app release = Harsh's yes);
+    a products Google Sheet is not read.
+- Earlier today, the policy copy re-plan for dtj-testing (Senso's terms page) waits for its Approve tap in Telegram.
+
+## 22 Oct 2026: BRANDS THAT ARE NOT ON SHOPIFY (branch `feature/site-brands`, account A)
+Harsh's test brand was Senso (sensofoods.com): a WordPress trade site with 114 product pages and **no prices**. He asked whether the
+scraper takes everything; asked how to handle missing prices he chose **"Create them as drafts, prices later"**.
+- **`provision/brand_copy.read_site`:** when there is no /products.json, it reads the product pages from the site's sitemap
+  (`/product/`, `/products/`, `/my-product/`...):
+  - the name comes from schema.org Product or the `<h1>`;
+  - the description is the page summary plus the "Features" list;
+  - the pictures are the product's own: no logos or icons, nothing after "Related Products", nothing shared by 4+ products;
+  - a price is used only when the page states one;
+  - it also reads the WordPress policy pages.
+  Products without a price go in at 0.00 with the tag `dtj-price-needed`, and the whole copy is DRAFT.
+- **Live read of Senso (read only):** 114 products, all readable, each with its own photo; privacy and terms found. The odd
+  characters in the console are real dashes and quotes.
+- **`store_job`:** a website brand is announced as "hidden drafts, set the prices". A link that cannot be read is asked for
+  again; a refused answer is never reused, even within the clock allowance; 3 in a row stop the job.
+- **Live run 988 (dtj-testing):** Harsh sent the Senso link as a new message, not a reply, so the bot started a second store
+  (run 993, closed with a note). His message was recorded as the brand answer (`dtj_bot_answers`, its own time). Still to do: let
+  a plain message answer a waiting typed question.
+- **Tests:** n8n/store-factory 165 OK, page builder 449 OK, install service JS 20 OK. No Worker change, so no deploy.
+
+## 22 Oct 2026: PASSWORD STORES AND ADMIN LINKS (branch `fix/password-stores`, account A)
+Harsh asked which link to send for his new dev store `dtj-testing` (admin.shopify.com/store/dtj-testing or dtj-testing.myshopify.com).
+Neither worked: every dev store sits behind its password page, so the public page shows no store data and the job stopped.
+- **Fix:** `store_scan.scan(link, private=...)` hands an admin link or a password page to `store_job._private_scan`, which reads it
+  read-only: the live theme with this laptop's Shopify login (`theme list` plus that theme's `config/settings_schema.json`), and the
+  name, currency, products and collections through DTJ Store Builder. Tests: store-builder `test_store_access` 10 OK, store job 28 OK.
+- **VERIFIED live, read only, on dtj-testing:** both links read the store. **Store Builder is installed there and its key works**:
+  name, USD, 17 products and 3 collections came through `/copy` target. The live theme is Shopify's generated test-data theme
+  ("Generated Data Theme"), not Horizon, so the job will ask Harsh to add Horizon (unpublished) first.
+- The listener stopped overnight after 3 DNS failures in a row (`getaddrinfo failed`); it was restarted on 22 Oct.
+
+## THE BRAND COPY RUNS FROM TELEGRAM ONLY: DTJ STORE BUILDER (21 Oct 2026, branch `feature/copy-from-telegram`, account A)
+Harsh: "all this steps must be done in the telegram bot nothing will be kept here", then he chose "A new DTJ Store Builder app".
+So the copy no longer uses the laptop's CLI sign-in (a short-lived token that needs a browser approval) or a PowerShell command.
+- **DTJ Store Builder** (`services/install-catcher/tools/store_builder.py create`) is a separate app in DTJ's organization.
+  - Permissions: read/write products, publications and legal policies only. The 7 block apps keep none.
+  - It has no blocks. After install, Shopify shows the install service's `/builder` page.
+  - Its secret goes into the Windows variable `DTJ_STORE_BUILDER_CLIENT_SECRET` and its client id into `wrangler.toml`
+    (`BUILDER_CLIENT_ID`). `deploy.py` puts the secret up as `ORG_SECRET_DTJ_STORE_BUILDER`.
+  - On an organization store the install service gets a fresh key per call (client credentials) and keeps none.
+- **Install service `POST /copy`** (`src/copy.js`, signed like `/licence`: the laptop's CONTROL_KEY or the bot's BOT_KEY) has four
+  operations:
+  - `target`: read only;
+  - `plan`: keep the laptop's plan per job in KV; fixed once the copy starts;
+  - `step`: up to 8 items, collections first, needs `approved_by`;
+  - `status`.
+
+  Only its own four mutations, with every input rebuilt from allowed fields: no product id, a price required, https pictures only.
+  An existing handle or a non-empty policy is skipped, it stops after 3 failures in a row, and every step is an audit row with the
+  approver.
+- **n8n "Store Factory: Brand Copy"** (id `ioaho57x1Ji0fEnb`) loops step, then progress, then a 2 s pause, until finished, then
+  Telegram. The bot starts it after "Save the Answer" when the tap is Approve under `ok_copy` ("Copy Approved?" -> "Start Brand
+  Copy").
+- **`store_job.py copy`:** plans through the install service, asks the Approve tap, then only watches the status. If Store Builder
+  is not installed yet, it tells the person once in Telegram and retries every minute.
+- **VERIFIED:**
+  - tests: install service JS 20 OK (5 new for `/copy`);
+  - install service Python 35 OK (deploy secret, store_builder 2);
+  - n8n/store-factory 162 OK; page builder 444 OK;
+  - n8n: Brand Copy created (unpublished, both credentials attached, the loop wiring read back); the bot's draft got the trigger
+    (5 operations).
+- **ROLLBACK:** the bot's live version before this: `2ca24237-c6c7-463e-ab96-924109237e8a`.
+- **DONE with Harsh's two yeses** (chat, 21 Oct 2026: "yes, create Store Builder — yes, deploy"):
+  1. **DTJ Store Builder** was created and released in DTJ's organization (client id `5704872b2f8cb791487ab19c51530cca`, config
+     `services/store-builder-app/shopify.app.toml`, secret in the Windows variable only).
+  2. **The install service was deployed** (`/health` 200, 9 apps).
+
+  Live read-only checks:
+  - `/copy` status of an unknown job gives 404 "no copy plan";
+  - `/copy` target on elevate gives "not installed", which is Shopify's own answer to Store Builder's key request, so that path is
+    wired.
+
+  Next: Harsh installs Store Builder once on his new dev store (Dev Dashboard > Apps > DTJ Store Builder > Install app), then sends
+  the dev store's link to the bot.
+- **NOT VERIFIED:** any real copy; Store Builder's install on a dev store; whether
+  the client credentials grant gives a key with the app's permissions.
+
+## THE LINK IS THE STORE TO BUILD IN: THE BRAND IS COPIED INTO IT (21 Oct 2026, branch `feature/brand-copy`, account A)
+The first live test of "a whole store from one link" (elevate, run 891) showed the plan was the wrong way round. Harsh: "it didnt
+asked me the brand link it has to create the shopify store of it just fetching the current store products".
+- **His choices:**
+  - the store to build in is whatever store he sends;
+  - copy products with pictures and prices, collections, logo/colours/fonts and the policy pages;
+  - products ACTIVE when the store is behind a password;
+  - **one Approve tap per import** (now in CLAUDE.md rule 2).
+- **Questions now start with "which brand?":** the brand's own Shopify link, or "This store is the brand". Products are offered
+  from the brand's best sellers.
+- **`store_job.py copy`:** a read-only plan (`.work/stores/<job>/copy/plan.json`), then one Approve tap that names the counts and
+  notes, then the apply command.
+- **`services/store-builder/provision/brand_copy.py`** (API 2026-10; the CLI refuses older versions):
+  - it reads the brand's /products.json, collections and policy pages, and the target's handles, currency, empty policies and the
+    Online Store channel;
+  - it creates with `productSet` (all options and variants, pictures keeping the brand's file names, untracked stock), then
+    `collectionCreate` and `publishablePublish`, and `shopPolicyUpdate` only for empty policies;
+  - it never touches an existing handle, and nothing deletes (allowlist in `provision/gql.py` extended with these four);
+  - prices are the brand's numbers (a currency mismatch is noted, never converted);
+  - it resumes from `applied.json`, logs every write with the approver, and stops after 3 failures in a row.
+- **Fixed after the live test:**
+  - `match_products`: an exact name wins, and same-name products take the best seller (PR #24);
+  - every stop is told in Telegram;
+  - an answer counts only when given after its question (the table kept the first run's taps for the same job).
+- **VERIFIED:**
+  - tests: n8n/store-factory 155 OK, page builder 444 OK (brand copy 10, store job 24);
+  - read-only on real stores: Shopify's 2026-10 schema read through the CLI (every input field used exists);
+  - a real plan Pro Effex -> elevate: 17 products (197 pictures, 58 variants), 29 collections, as DRAFT because elevate is open to
+    the public;
+  - policies were left out, because elevate's CLI sign-in lacks `read_legal_policies`.
+- **NOT VERIFIED:**
+  - a real import: `apply` has never run, and auto mode may block `--allow-mutations` (then it is Harsh's PowerShell);
+  - picture file names after the copy matching the brand's;
+  - the product pages read from the brand's store.
+- **Before the first real import, the store's CLI sign-in needs the scopes once:**
+  `shopify store auth -s <store> --scopes read_products,write_products,read_publications,write_publications,read_legal_policies,write_legal_policies`
+- **Open:** the old elevate job state was moved to `.work/stores/elevate-with-harsh.before-brand-copy`; run 891 is continued with
+  the new questions.
+
+## A WHOLE STORE FROM ONE LINK (21 Oct 2026, branch `feature/store-from-link`, account A)
+Harsh: "i just share the brand store link and it starts designing the store and it asks the specific questions it needs along with
+the app installation". His choices: every part by default; the product-page count asked per store; **Approve taps in Telegram** as
+the yes (now in CLAUDE.md rule 2); **his collaborator login** instead of a Theme Access password.
+- **Flow:** an admin sends the bot a store's own link (no /products/) -> "Start New Store" -> n8n **Store Factory: New Store**
+  (id `nvaph1ZhD1mreJHD`, waits up to 7 days for Claude Code) -> a laptop follows skill `dtj-new-store`:
+  `n8n/store-factory/store_job.py start` reads the store (`page_builder/store_scan.py`: original .myshopify.com address, live theme,
+  products in best-selling order, collections) and asks in Telegram: whose store, the client's name, the theme question when it is
+  not Horizon, what to design, which products (options sized to the store), the offer (typed words only). `draft` = Approve tap, then
+  `shopify theme duplicate` of the live theme as "DTJ Draft <date>" (unpublished, read back). `apps` = Approve tap, then the exact
+  `add_shop.py` command. Then brand intake, header/footer (tap each), home (no tap), collection (tap), product pages (no tap),
+  `finish` -> `reply.py`. A button tap or typed reply goes bot -> "Save the Answer" -> n8n table **dtj_bot_answers**
+  (id `k4r02PeayiGh60gW`) -> the laptop reads it (`bot_ask.py`). Every tap is logged with the person's name.
+- **Store access:** `theme_target.open_access(store)` = the Theme Access password when saved, else the CLI's own login with
+  `SHOPIFY_FLAG_NO_INPUT=1` (a missing login fails at once with what to do). All five page writers use it.
+- **Found while building:** the builder designs on Horizon only (Dawn: product pages only). Gymreapers runs Impact, so for such a
+  store the job asks the person to add Horizon (unpublished) first, or stops.
+- **VERIFIED:** tests: n8n/store-factory 147 OK (store job 16, bot 10 new), page builder 434 OK (9 new), install catcher 32 OK.
+  Read-only on real stores: the CLI login listed elevate's themes with no password; `store_scan` read elevate (13 products,
+  Horizon), Gymreapers (246, Impact) and Pro Effex (18, Horizon; original address 1sq0y0-3c). n8n: New Store created
+  (unpublished), table created, the bot's two new routes added (17 operations), code identical to the repo.
+- **ROLLBACK:** the bot's live version before this: `f66b6537-7710-4d2a-a327-8078df33f140`. New Store is new (unpublish to stop it).
+- **NOT VERIFIED:** a real run end to end; `theme duplicate` on a real store; the CLI login on a store where DTJ is a collaborator
+  (elevate is owned); the answers going through the live bot. The first run should be watched with Harsh at the laptop.
+- **PUBLISHED later on 21 Oct** (after n8n's 429s passed): New Store and the bot, live = draft. Superseded the same day by the entry
+  above (the link is the store to build IN).
+- **Open:** Harsh ticked "something else" for the scope without saying what.
+
+## /addshop: A CLIENT SHOP FROM TELEGRAM IN ONE STEP (21 Oct 2026, branch `feature/addshop`, account A)
+Harsh: "cant we make the installation process a one step process from telegram ... i will provide the shopify domain of the store".
+- **How it works now:** an admin sends the bot `/addshop name.myshopify.com Client Name` (also `admin.shopify.com/store/<name>`).
+  The bot starts n8n **Store Factory: Add Shop** (id `W7Aiz9aup2OfAkmR`) without waiting and answers "Got it". That workflow pauses
+  at "Wait for Claude Code: Add Shop" (3 days). A DTJ laptop's Claude Code picks it up (`listen.py` now watches Page Design AND Add
+  Shop by default, oldest first; the reel VPS keeps `--workflow "Reel Factory: New Reel"`) and runs, in the person's terminal:
+  `python services/install-catcher/tools/add_shop.py --shop <x>.myshopify.com --label "<Name>" --chat <id> --approved-by "<who> (Telegram /addshop)"`.
+  It creates the 7 app copies in DTJ's organization 141167028 (Blocks, Sections, Sections 2, Heroes, Commerce, Shop, Collection),
+  writes + links their files (`add_client.py`, now 7 parts), moves each client secret into the Windows user variable
+  `DTJ_SECRET_<CLIENT>_<PART>` (never printed), releases them, deploys the install service, and runs a progress bar in the chat.
+  Then the ONE manual step: each copy's install link is made only in the Dev Dashboard (Distribution, Custom distribution, Generate
+  link; no API, no CLI), recorded with `--link <part>=<url>` (refused unless the link carries that copy's client id). The next run
+  sends 7 Install buttons for the STORE OWNER (the skill's 9 Oct finding: a collaborator login gets "installation link is invalid"),
+  waits up to 30 min reporting each install, fills `page_builder/clients/<client>.json` (`client_registry.py`) and adds a dtj_stores
+  row (active only with `--theme`). Every run writes `.work/add-shop/<client>.answer.json`; `reply.py` (new stage `add_shop`, "done"
+  needs installed = 7) answers n8n, which tells the admin. A rerun continues where it stopped; app files already in the repo are
+  reused, so a second laptop never makes duplicate apps.
+- **Code:** `services/install-catcher/tools/add_shop.py` (+ `test/test_add_shop.py`, 10 tests), `add_client.py`, `client_registry.py`,
+  `src/worker.js` (7 parts); n8n `add_shop_request.js`, `add_shop_reply.js`, `add_shop_notify.js`, `add_shop_started.js`,
+  `deploy_add_shop.py`, `add_shop.workflow.json`; `bot_read.js` / `bot_route.js` (`/addshop`, admins only, on `/commands`);
+  `deploy_telegram_bot.py` (`addshop_ops`: 8th "What to Do" rule -> "Start Add Shop" -> "Add Shop Started" -> Send);
+  `setup_n8n.py` (Add Shop in the workflow list, before the bot); skills `dtj-add-shop` ("One command: add_shop.py") and
+  `dtj-factory-setup` (listen handles Add Shop requests); `CLAUDE.md` n8n hand-offs line.
+- **VERIFIED:** tests: install catcher Python 32 OK + worker JS 15 OK; n8n/store-factory 123 OK. n8n: the Add Shop workflow validated
+  and created (unpublished), the bot's /addshop branch added (11 operations); `setup_n8n.py` check: every code node equals the repo,
+  credentials attached; only "Add Shop not published" and "bot draft ahead of live" left (published after the merge, see below).
+- **ROLLBACK:** the bot's live version before /addshop: `3909c9d4-36ec-4e98-a2f7-d8b587aa1c23` (n8n workflow history > restore).
+  Add Shop is new (unpublish it to switch it off).
+- **NOT VERIFIED:** a real `/addshop` on a client store end to end (the CLI steps `app init --organization-id --no-input`, `env show`,
+  `config link`, `deploy` were each checked by hand on 21 Oct, never chained on a client); making the install links in the Dev
+  Dashboard from the built-in browser; the store owner's taps. The first real run should be watched, with Harsh at the laptop.
+- **Open:** after the 7 installs, the shop still needs its draft theme id in dtj_stores and the Theme Access password (dtj-add-shop
+  "Both paths"); the 7 new `shopify.app.<client>.toml` files and `wrangler.toml` must be committed on a branch.
+
+## MAIN FOLDER SYNCED + HEADER AND FOOTER (21 Oct 2026, branch `feature/header-footer`, account A)
+- **Folder sync:** the main folder was on `feature/proeffex-product-list-block`, 17 commits behind. Every uncommitted file was saved in the
+  LOCAL branch `backup/main-folder-2026-10-21` (1000 files, never pushed; no key found by a pattern scan first), the folder moved to a fresh
+  `feature/header-footer` from `origin/chore/initial-import` (with the reel factory, PR #17), and the other sessions' unfinished work was
+  put back as uncommitted changes (806 new files: SEO, SMM, UGC/video skills...; 12 changed: landing-variants, `.claude/launch.json`,
+  `.claude/settings.json`, `.env.example`, `docs/ACCESS-AND-KEYS.md` (token expiry filled), `docs/DTJ-CONTEXT.md`). Files the latest branch
+  had newer (progress bar, reel factory, `CLAUDE.md`, `listen.py`, `reply.py`) kept the latest. Tests after: store-builder 410, n8n 113,
+  Collection 28 OK. The worktree `D:\CODE CONTAINERR\WEB DEV\dtj-pr-collection` (used for PRs #14/#15) can be removed with `git worktree remove`.
+- **Header and footer (Harsh: "the header and footer will be designed according to the color palette"):** skill `dtj-header-footer`;
+  `page_builder/assemble_chrome.py` + `run_chrome.py` build `sections/header-group.json` and `sections/footer-group.json` FROM the draft's
+  own files (every section / block / id kept): announcement bar on the palette's deep colour with lines from `chrome.json` or the home facts
+  (no line = bar off, never "Welcome to our store"), header on the page colour with a thin border and the cart count in the button colours,
+  footer + bottom strip on the deep colour, sign-up in the button colours, the theme's "exclusive deals" promise replaced, placeholder social
+  links emptied (real ones only, with a source), "Powered by Shopify" off; every setting checked against Horizon 4.2.0 (`base/horizon-chrome-parts.json`),
+  every text pair 4.5:1+. `theme_target.PAGE_FILES` now also allows exactly these two group files (Tier 2: a person's code per file).
+  Study (`references/study.md`, 23 sites, colours read from screenshot pixels): top bar on 17 (13 dark / brand colour, ~41 px), header
+  white on 21, sticky 17, footer dark / brand colour on 15, social links on 21, payment icons on 4.
+- **WRITTEN to elevate draft 188893495469 with Harsh's yes (21 Oct 2026):** header code 4e8f36e361fd (3 marked SAMPLE lines, `--allow-samples`),
+  footer code fd6f01d834b5. Live check (`check_chrome_live.py`, K1-K5) PASS on / and /collections/product-list-block-test, phone + desktop.
+  Harsh also chose to remove the home page's own announcement strip (same lines twice): `ship_home --remove announcement` switched
+  `home_announce` OFF (kept in the file). Harsh will tidy the store's menus himself ("footer-client-services", "footer-company").
+- **Frozen CLI fix:** the footer write's read-back froze (CLI idle 10+ min, as on 20 Oct); the write HAD landed (verified separately,
+  action-log row). `theme_target._run` now stops the whole process tree after a limit (pull 180 s, list 90 s, push 300 s), retries a read
+  once, never repeats a write; `push_page` reads the theme back after a stopped write before reporting. The new global CLI in
+  `%APPDATA%\npm` prints a `<claude-code-hint ...>` line under Claude (seen in its output). Tests: store-builder 425 OK (16 new).
+- **Next (Harsh said yes):** `/addshop <domain>` from Telegram: create the 7 app copies (`shopify app init --name --organization-id
+  --no-input`), deploy, read each secret (`shopify app env show`, checked) and extension uuid (`.shopify/deploy-bundle/manifest.json`
+  "uuid", checked) automatically; the custom-distribution install link (dashboard only) and the 7 Install taps stay with a person.
+
 ## PAGE DESIGN PROGRESS BAR IN TELEGRAM (20 Oct 2026, branch `feature/bot-progress-bar`)
 Harsh: "in the telegram bot also add the progress bar for page designing". A page request from the bot now gets ONE Telegram message
 that the designer's Claude Code session edits at every step (like the brand intake's bar): reading the brief 0-5 %, collecting the

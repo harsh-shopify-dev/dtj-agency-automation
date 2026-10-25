@@ -1,4 +1,5 @@
-"""Connect one client store: write the per-client app files for its three app copies and register them with the catcher.
+"""Connect one client store: write the per-client app files for its app copies (all seven since 21 Oct 2026; --parts to choose) and register
+them with the catcher.
 
     python services/install-catcher/tools/add_client.py --shop royal-dosa.myshopify.com --label "Royal Dosa" \
         --worker https://dtj-install-catcher.<subdomain>.workers.dev \
@@ -35,11 +36,17 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
 SERVICES = HERE.parent
-APPS = {  # app part -> (code folder, display name)
+APPS = {  # app part -> (code folder, display name). The first three since 9 Oct 2026; the other four since 21 Oct 2026 (home and collection
+    # pages need them; /addshop sets all seven up). A client set up before keeps its three: every tool works on the parts a client has.
     "blocks": ("block-library", "DTJ Blocks"),
     "sections": ("block-library-sections", "DTJ Sections"),
     "sections2": ("block-library-sections-2", "DTJ Sections 2"),
+    "heroes": ("block-library-heroes", "DTJ Heroes"),
+    "commerce": ("block-library-commerce", "DTJ Commerce"),
+    "shop": ("block-library-shop", "DTJ Shop"),
+    "collection": ("block-library-collection", "DTJ Collection"),
 }
+FIRST_THREE = ("blocks", "sections", "sections2")
 SHOP_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\.myshopify\.com$")
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 API_VERSION = "2026-10"  # the stable version Shopify gives a new app (seen on the Rupa Divine copies, 9 Oct 2026)
@@ -48,6 +55,10 @@ ORG_APPS = {
     "blocks": ("dtj-blocks", "DTJ_BLOCKS_CLIENT_SECRET"),
     "sections": ("dtj-sections", "DTJ_SECTIONS_CLIENT_SECRET"),
     "sections2": ("dtj-sections2", "DTJ_SECTIONS2_CLIENT_SECRET"),
+    "heroes": ("dtj-heroes", "DTJ_HEROES_CLIENT_SECRET"),
+    "commerce": ("dtj-commerce", "DTJ_COMMERCE_CLIENT_SECRET"),
+    "shop": ("dtj-shop", "DTJ_SHOP_CLIENT_SECRET"),
+    "collection": ("dtj-collection", "DTJ_COLLECTION_CLIENT_SECRET"),
 }
 
 
@@ -123,6 +134,8 @@ def main(argv=None, services: Path = SERVICES, wrangler: Path = HERE / "wrangler
     ap.add_argument("--org", action="store_true", help="a store in DTJ's own Shopify organization: DTJ's original apps, no copies")
     ap.add_argument("--worker", help="the catcher's https address (app copies only)")
     ap.add_argument("--name", help="short name for files, app addresses and secret variables (default: the store's handle)")
+    ap.add_argument("--parts", default=",".join(APPS), help=f"the apps to register (default all seven: {','.join(APPS)}); "
+                                                           f"a client set up before 21 Oct 2026 has {','.join(FIRST_THREE)}")
     for part in APPS:
         ap.add_argument(f"--{part}-id", help=f"client id of the {APPS[part][1]} copy (app copies only)")
     args = ap.parse_args(argv)
@@ -130,24 +143,30 @@ def main(argv=None, services: Path = SERVICES, wrangler: Path = HERE / "wrangler
     client_key(args.shop)  # the store address is checked even when a name is given
     if not NAME_RE.fullmatch(client):
         raise SystemExit(f"--name {client!r}: use lowercase letters, digits and single dashes")
+    parts = [p.strip() for p in args.parts.split(",") if p.strip()]
+    unknown = [p for p in parts if p not in APPS]
+    if unknown or not parts:
+        raise SystemExit(f"--parts: unknown {unknown}; pick from {', '.join(APPS)}")
     apps = current_apps(wrangler.read_text(encoding="utf-8"))
     if args.org:
-        for part, (org_app, _var) in ORG_APPS.items():
+        for part in parts:
+            org_app = ORG_APPS[part][0]
             apps[f"{client}-{part}"] = {"client_id": original_client_id(services, part), "shop": args.shop,
                                         "label": f"{APPS[part][1]} - {args.label}", "grant": "org", "org_app": org_app}
         wrangler.write_text(set_apps(wrangler.read_text(encoding="utf-8"), apps), encoding="utf-8")
-        print(f"registered {client}-blocks, {client}-sections, {client}-sections2 in {wrangler.name} (DTJ's original apps, organization store)")
+        print(f"registered {', '.join(f'{client}-{p}' for p in parts)} in {wrangler.name} (DTJ's original apps, organization store)")
         print("the original apps' client secrets are read at deploy time from these Windows variables (never typed here):")
-        for _org_app, var in ORG_APPS.values():
-            print(f"  {var}")
+        for part in parts:
+            print(f"  {ORG_APPS[part][1]}")
         return 0
-    missing = [f"--{name}" for name in ("worker", *(f"{part}-id" for part in APPS)) if not getattr(args, name.replace("-", "_"))]
+    missing = [f"--{name}" for name in ("worker", *(f"{part}-id" for part in parts)) if not getattr(args, name.replace("-", "_"))]
     if missing:
         raise SystemExit(f"app copies need {', '.join(missing)} (or --org for a store in DTJ's own organization)")
     worker = args.worker.rstrip("/")
     if not re.fullmatch(r"https://[a-z0-9.-]+", worker):
         raise SystemExit("--worker must be an https address without a path")
-    for part, (folder, display) in APPS.items():
+    for part in parts:
+        folder, display = APPS[part]
         cid = getattr(args, f"{part}_id")
         if not re.fullmatch(r"[0-9a-f]{32}", cid):
             raise SystemExit(f"--{part}-id {cid!r} does not look like a Shopify client id (32 hex characters)")
@@ -156,9 +175,9 @@ def main(argv=None, services: Path = SERVICES, wrangler: Path = HERE / "wrangler
         apps[f"{client}-{part}"] = {"client_id": cid, "shop": args.shop, "label": f"{display} - {args.label}"}
         print(f"wrote {path.relative_to(services.parent)}")
     wrangler.write_text(set_apps(wrangler.read_text(encoding="utf-8"), apps), encoding="utf-8")
-    print(f"registered {client}-blocks, {client}-sections, {client}-sections2 in {wrangler.name}")
+    print(f"registered {', '.join(f'{client}-{p}' for p in parts)} in {wrangler.name}")
     print("client secrets are read at deploy time from these Windows variables (never typed here):")
-    for part in APPS:
+    for part in parts:
         print(f"  {secret_env(client, part)}")
     return 0
 
