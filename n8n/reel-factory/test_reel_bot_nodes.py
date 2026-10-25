@@ -29,7 +29,7 @@ class ReelBot(unittest.TestCase):
     def route(self, update, users=USERS, today=(), settings=(), photos=(), marks=()):
         refs = {"Read the Message": self.read(update), "Load Bot Users": list(users), "Load Open Questions": list(marks),
                 "Load Today's Reels": list(today), "Load Settings": list(settings), "Load Recent Photos": list(photos)}
-        out = run_node(HERE / "reel_bot_route.js", {}, refs)["out"]
+        out = run_node(getattr(self, "route_file", HERE / "reel_bot_route.js"), {}, refs)["out"]
         return out[0]["json"] if out else None
 
     def test_kinds(self):
@@ -68,7 +68,15 @@ class ReelBot(unittest.TestCase):
         self.assertEqual((ans["action"], ans["job"], ans["key"], ans["value"]), ("answer", "r42", "pictures1n", "3: the box is too small"))
         self.assertIn("ONE reference reel", self.route(msg("/remake https://shop.example/p"))["text"])
 
+    def test_refs_wait_for_find_references(self):
+        self.assertIn("Apify key", self.route(msg("/refs Blue Tea India"))["text"])
+
     def test_refs_and_audience(self):
+        import tempfile
+        on = Path(tempfile.mkdtemp()) / "reel_bot_route.js"       # the router as deploy_reel_bot.py sends it once Find References is live
+        on.write_text((HERE / "reel_bot_route.js").read_text(encoding="utf-8").replace("const REFS_READY = false;", "const REFS_READY = true;"),
+                      encoding="utf-8")
+        self.route_file = on
         r = self.route(msg("/refs Blue Tea India meta"))
         self.assertEqual((r["action"], r["inputs"]["query"], r["inputs"]["sources"], r["inputs"]["mode"]), ("refs", "Blue Tea India", "meta", "refs"))
         a = self.route(msg("/audience Gen Z urban India #genz #mumbaifood @foodie.creator"))

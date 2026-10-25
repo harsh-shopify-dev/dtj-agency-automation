@@ -10,6 +10,9 @@
 //   reply  -> just answer (help, status, refusals)
 const msg = $('Read the Message').first().json;
 if (msg.kind === 'ignore') return [];
+// /refs and /audience need "Reel Factory: Find References" published (it needs the DTJ Apify credential and its live test first);
+// deploy_reel_bot.py sets this to true and switches "Start Find References" on when that workflow is published
+const REFS_READY = false;
 const all = (n) => { try { return $(n).all().map((i) => i.json).filter(Boolean); } catch (e) { return []; } };
 const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];
@@ -57,6 +60,8 @@ if (msg.kind === 'status') {
   return reply('<b>Today: ' + today.length + ' of ' + limit + ' reels</b>\n' + (lines.join('\n') || 'none yet'));
 }
 if (msg.kind === 'refs' || msg.kind === 'audience') {
+  if (!REFS_READY) return reply('Finding reference reels (/refs, /audience) starts once Harsh adds the Apify key in n8n and its first test passes. '
+    + 'Until then, send a reel link straight to /remake.');
   if (!msg.arg) return reply(msg.kind === 'refs' ? 'Send /refs and a brand or @handle, e.g. /refs Blue Tea India meta'
     : 'Send /audience, a name and its hashtags and creators, e.g. /audience Gen Z urban India #genz #mumbai @creator');
   const tags = (msg.arg.match(/#[\w.]+/g) || []).join(' ');

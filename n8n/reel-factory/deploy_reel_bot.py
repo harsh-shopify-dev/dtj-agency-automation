@@ -82,8 +82,18 @@ def _rl(table_id, name):
     return {"__rl": True, "mode": "list", "value": table_id, "cachedResultName": name}
 
 
-def sdk_code(t: dict, wf: dict) -> str:
-    js = {name: (HERE / f).read_text(encoding="utf-8") for name, f in CODE_NODES.items()}
+REFS_FLAG = "const REFS_READY = false;"
+
+
+def code_of(name: str, refs_ready: bool = False) -> str:
+    """A code node's file; the router's REFS_READY says whether Find References is published (n8n refuses to publish a workflow
+    that starts an unpublished one, 25 Oct 2026)."""
+    text = (HERE / CODE_NODES[name]).read_text(encoding="utf-8")
+    return text.replace(REFS_FLAG, "const REFS_READY = true;") if refs_ready and name == "Who Is It" else text
+
+
+def sdk_code(t: dict, wf: dict, refs_ready: bool = False) -> str:
+    js = {name: code_of(name, refs_ready) for name in CODE_NODES}
     J = json.dumps
 
     def cfg(name, pos, params, extra=""):
@@ -195,6 +205,7 @@ def workflows() -> dict:
     for name in (NEW_REEL, FIND_REFS, NAME):
         found = [w for w in call("search_workflows", {"query": name}).get("data", []) if w.get("name") == name]
         out[name] = found[0]["id"] if found else None
+        out[name + " active"] = bool(found and found[0].get("active"))
     for name in (NEW_REEL, FIND_REFS):
         if not out[name]:
             raise RuntimeError(f"workflow {name} is missing")
@@ -213,11 +224,14 @@ def main(argv=None) -> int:
         return 0
     try:
         t, wf = tables(), workflows()
-        code = sdk_code(t, wf)
+        refs_ready = wf[FIND_REFS + " active"]
+        code = sdk_code(t, wf, refs_ready)
         wf_id = wf[NAME]
         if wf_id:
-            ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": (HERE / f).read_text(encoding="utf-8")}}
-                   for n, f in CODE_NODES.items()]
+            ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": code_of(n, refs_ready)}} for n in CODE_NODES]
+            # n8n will not publish a workflow that starts an unpublished one: Find References is linked only once it is published
+            ops.append({"type": "setNodeDisabled", "nodeName": "Start Find References", "disabled": not refs_ready})
+            print("Find References published:", refs_ready, "-> /refs and /audience", "on" if refs_ready else "answer 'not ready yet'")
             print("exists: refreshing its code nodes", call("update_workflow", {"workflowId": wf_id, "operations": ops,
                   "versionName": "Reel bot: code nodes refreshed from git"}).get("appliedOperations"))
         else:
@@ -255,7 +269,7 @@ def main(argv=None) -> int:
         print(f"not deployed: {exc}", file=sys.stderr)
         return 1
     live = {n["name"]: n for n in after["nodes"]}
-    mismatched = [n for n, f in CODE_NODES.items() if live.get(n, {}).get("parameters", {}).get("jsCode") != (HERE / f).read_text(encoding="utf-8")]
+    mismatched = [n for n in CODE_NODES if live.get(n, {}).get("parameters", {}).get("jsCode") != code_of(n, refs_ready)]
     no_notes = [n for n in NOTES if not live.get(n, {}).get("notes")]
     export = {k: after.get(k) for k in ("id", "name", "description", "nodes", "connections", "settings") if k in after}
     (HERE / "reel_bot.workflow.json").write_text(json.dumps(export, indent=1, ensure_ascii=False), encoding="utf-8")
