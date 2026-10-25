@@ -1,0 +1,20 @@
+# The remote view of screen :99, for a person's one-time sign-in and to watch a run: x11vnc shares the screen on a private
+# socket (no TCP port at all) and websockify serves noVNC on 127.0.0.1:6080 ONLY. Reach it from a laptop through an SSH
+# tunnel (tools/vps/README.md, "Reel machine"); never bind it to a public address. If either half stops, both restart.
+# A systemd USER service of the user ai; tools/vps/setup_reel.sh copies it to ~/.config/systemd/user/ and starts it.
+[Unit]
+Description=DTJ reel remote view (noVNC on 127.0.0.1:6080)
+Requires=dtj-xvfb.service
+After=dtj-xvfb.service
+
+[Service]
+Type=simple
+Slice=dtj-reel.slice
+Nice=10
+OOMScoreAdjust=500
+ExecStart=/bin/bash -c 'rm -f %t/dtj-vnc.sock; /usr/bin/x11vnc -display :99 -rfbport 0 -unixsock %t/dtj-vnc.sock -forever -shared -nopw -quiet & /usr/bin/websockify --web /usr/share/novnc 127.0.0.1:6080 --unix-target=%t/dtj-vnc.sock & wait -n; exit 1'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
