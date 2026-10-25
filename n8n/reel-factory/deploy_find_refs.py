@@ -6,13 +6,17 @@ Pinterest videos, Meta Ad Library video ads), saved in dtj_reel_library without 
     python n8n/reel-factory/deploy_find_refs.py --publish     the same, then publish it (turns on both schedules; only after a
                                                               manual test passed)
 
-From the Telegram Bot (query, sources, limit, requested_by, chat_id: the bot's /refs) ─┐
-Every Monday 9:00 (the active rows of dtj_reel_watchlist) ─────────────────────────────┴> Load Watchlist -> Load Bot Users
-    -> Plan the Searches -> Anything to Search?
-        yes -> Ask Apify (HTTP, credential "DTJ Apify") -> Read the Results -> Only New Links (not yet in dtj_reel_library)
+From the Telegram Bot (query, sources, limit, requested_by, chat_id: the reel bot's /refs; for an audience scan
+    mode "audience", audience, hashtags, creators, limit) ─┐
+Every Monday 9:00 (the active rows of dtj_reel_watchlist and dtj_reel_audiences) ─┴> Load Watchlist -> Load Bot Users
+    -> Load Audiences -> Plan the Searches -> Anything to Search?
+        yes -> Ask Apify (HTTP, credential "DTJ Apify") -> Read the Results -> Only New Links (link_key not yet in dtj_reel_library)
                -> Pick the New Ones -> Anything New? -> yes: Save New References -> Write the Digest / no: Write the Digest
                -> Is It the Summary? -> Send the Summary / Send a Reference (Keep / Skip, "a:refs-<row id>:keep:<n>")
         no  -> Is It the Summary? -> Send the Summary (what could not be searched)
+An audience scan (Harsh, 25 Oct 2026) saves the top reels of the audience's hashtags and creators (source "audience": views,
+likes, comments, the creator's followers, views per follower, comments per view, audio name) and India's trending Reels audio
+(source "trending_audio") with the audience on every row, and sends one short summary without buttons.
 Every 15 Minutes -> Load the Taps (dtj_bot_answers, job refs-*) -> Match the Taps -> Record the Choice (keep yes / no, kept_by)
 The reel factory has its own Telegram bot (Harsh, 25 Oct 2026): the digest goes out through the n8n credential "DTJ Reel Bot",
 and that bot's workflow "Reel Factory: Telegram Bot" saves the taps in dtj_bot_answers (n8n/store-factory/bot_ask.py format, job
@@ -35,14 +39,14 @@ sys.path.insert(0, str(HERE.parent / "store-factory"))
 from n8n_mcp import PROJECT, call  # noqa: E402
 
 NAME = "Reel Factory: Find References"
-WATCHLIST, LIBRARY = "dtj_reel_watchlist", "dtj_reel_library"
+WATCHLIST, LIBRARY, AUDIENCES = "dtj_reel_watchlist", "dtj_reel_library", "dtj_reel_audiences"
 USERS, ANSWERS = "dtj_bot_users", "dtj_bot_answers"   # made by the store factory (setup_n8n.py)
 CREDENTIAL = "DTJ Reel Bot"   # the reel factory's own Telegram bot (token pasted by Harsh in n8n), not the store bot
 APIFY = "DTJ Apify"           # Header Auth: Authorization = Bearer <Apify token>; made by Harsh in the n8n UI, never in a file
 TABLES = json.loads((HERE / "find_refs_tables.json").read_text(encoding="utf-8"))
 CODE_NODES = {"Plan the Searches": "refs_plan.js", "Read the Results": "refs_read.js", "Pick the New Ones": "refs_pick_new.js",
               "Write the Digest": "refs_digest.js", "Match the Taps": "refs_taps.js"}
-INPUTS = ("query", "sources", "limit", "requested_by", "chat_id")
+INPUTS = ("query", "sources", "limit", "requested_by", "chat_id", "mode", "audience", "hashtags", "creators")
 SEND_FIELDS = {"appendAttribution": False, "parse_mode": "HTML", "disable_web_page_preview": True}
 DESCRIPTION = ("Reel factory: reference videos via Apify (Instagram reels, Pinterest videos, Meta Ad Library video ads) for /refs and "
                "a weekly watchlist scan -> dtj_reel_library (no duplicates) -> Telegram Keep / Skip; taps set keep.")
@@ -129,6 +133,9 @@ def sdk_code(ids: dict[str, str]) -> str:
         "const loadUsers = node({ type: 'n8n-nodes-base.dataTable', version: 1.1, config: { name: 'Load Bot Users', position: [480, 100], "
         "executeOnce: true, alwaysOutputData: true, "
         f"parameters: {{ resource: 'row', operation: 'get', dataTableId: {rl(USERS)}, returnAll: true }} }} }});\n"
+        + "const loadAud = node({ type: 'n8n-nodes-base.dataTable', version: 1.1, config: { name: 'Load Audiences', position: [600, 260], "
+          "executeOnce: true, alwaysOutputData: true, "
+          f"parameters: {{ resource: 'row', operation: 'get', dataTableId: {rl(AUDIENCES)}, returnAll: true }} }} }});\n"
         + code_node("plan", "Plan the Searches", "[720, 100]")
         + if_node("toSearch", "Anything to Search?", "[960, 100]", "{{ $json.actor }}", not_empty)
         + "const apify = node({ type: 'n8n-nodes-base.httpRequest', version: 4.2, config: { name: 'Ask Apify', position: [1200, 0], "
@@ -142,7 +149,7 @@ def sdk_code(ids: dict[str, str]) -> str:
         + "const onlyNew = node({ type: 'n8n-nodes-base.dataTable', version: 1.1, config: { name: 'Only New Links', position: [1680, 0], "
           "alwaysOutputData: true, "
           f"parameters: {{ resource: 'row', operation: 'rowNotExists', dataTableId: {rl(LIBRARY)}, matchType: 'allConditions', "
-          "filters: { conditions: [{ keyName: 'url', condition: 'eq', keyValue: '={{ $json.url }}' }] } } } });\n"
+          f"filters: {{ conditions: {json.dumps(ONLY_NEW)} }} }} }} }});\n"
         + code_node("pick", "Pick the New Ones", "[1920, 0]")
         + if_node("anyNew", "Anything New?", "[2160, 0]", "{{ $json.url }}", not_empty)
         + "const save = node({ type: 'n8n-nodes-base.dataTable', version: 1.1, config: { name: 'Save New References', position: [2400, -100], "
@@ -167,7 +174,7 @@ def sdk_code(ids: dict[str, str]) -> str:
         "export default workflow('reel-factory-find-references', " + json.dumps(NAME) + ")\n"
         "  .add(fromBot).to(loadWatch)\n"
         "  .add(weekly).to(loadWatch)\n"
-        "  .add(loadWatch).to(loadUsers).to(plan).to(toSearch.onTrue(apify.to(read.to(onlyNew.to(pick.to(anyNew.onTrue(save.to(digest)).onFalse(digest)))))).onFalse(isSummary))\n"
+        "  .add(loadWatch).to(loadUsers).to(loadAud).to(plan).to(toSearch.onTrue(apify.to(read.to(onlyNew.to(pick.to(anyNew.onTrue(save.to(digest)).onFalse(digest)))))).onFalse(isSummary))\n"
         "  .add(digest).to(isSummary.onTrue(sendSummary).onFalse(sendRef))\n"
         "  .add(every15).to(loadTaps).to(taps).to(record)\n"
         "  .add(about);\n"
@@ -190,8 +197,9 @@ def main(argv=None) -> int:
         found = [w for w in call("search_workflows", {"query": NAME}).get("data", []) if w.get("name") == NAME]
         if found:
             wf_id = found[0]["id"]
-            ops = [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": (HERE / f).read_text(encoding="utf-8")}}
-                   for n, f in CODE_NODES.items()]
+            ops = structure_ops(call("get_workflow_details", {"workflowId": wf_id})["workflow"], ids)
+            ops += [{"type": "updateNodeParameters", "nodeName": n, "parameters": {"jsCode": (HERE / f).read_text(encoding="utf-8")}}
+                    for n, f in CODE_NODES.items()]
             # n8n_mcp.call publishes after every update_workflow; an unpublished workflow stays unpublished unless --publish
             live_now = args.publish or found[0].get("active")
             res = call("update_workflow", {"workflowId": wf_id, "operations": ops}) if live_now else _update_unpublished(wf_id, ops)
@@ -236,6 +244,41 @@ def main(argv=None) -> int:
 
 
 SENDS = ("Send the Summary", "Send a Reference")
+ONLY_NEW = [{"keyName": "link_key", "condition": "eq", "keyValue": "={{ $json.link_key }}"}]   # "<link>|<audience>" (refs_read.js)
+
+
+def column_schema(cols: list[dict]) -> list[dict]:
+    return [{"id": c["name"], "displayName": c["name"], "required": False, "defaultMatch": False, "display": True, "type": c["type"],
+             "canBeUsedToMatch": True} for c in cols]
+
+
+def structure_ops(wf: dict, ids: dict[str, str]) -> list[dict]:
+    """Bring a workflow made by an earlier version of this script up to date without making a new one (its id stays, the reel bot
+    calls it by id): the bot's inputs, "Load Audiences" before "Plan the Searches", the library's columns on "Save New References"
+    and the link_key check on "Only New Links". Each step only when it is missing, so a second run changes nothing."""
+    nodes = {n["name"]: n for n in wf.get("nodes", [])}
+    ops = []
+    want_inputs = [{"name": n, "type": "string"} for n in INPUTS]
+    have_inputs = nodes.get("From the Telegram Bot", {}).get("parameters", {}).get("workflowInputs", {}).get("values", [])
+    if [i.get("name") for i in have_inputs] != list(INPUTS):
+        ops.append({"type": "setNodeParameter", "nodeName": "From the Telegram Bot", "path": "/workflowInputs/values", "value": want_inputs})
+    if "Load Audiences" not in nodes:
+        ops += [{"type": "addNode", "node": {"name": "Load Audiences", "type": "n8n-nodes-base.dataTable", "typeVersion": 1.1, "position": [600, 260],
+                 "parameters": {"resource": "row", "operation": "get", "returnAll": True,
+                                "dataTableId": {"__rl": True, "mode": "list", "value": ids[AUDIENCES], "cachedResultName": AUDIENCES}}}},
+                {"type": "setNodeSettings", "nodeName": "Load Audiences", "settings": {"executeOnce": True, "alwaysOutputData": True}},
+                {"type": "removeConnection", "source": "Load Bot Users", "target": "Plan the Searches"},
+                {"type": "addConnection", "source": "Load Bot Users", "target": "Load Audiences"},
+                {"type": "addConnection", "source": "Load Audiences", "target": "Plan the Searches"}]
+    lib_cols = TABLES[LIBRARY]["columns"]
+    have_cols = [c.get("id") for c in nodes.get("Save New References", {}).get("parameters", {}).get("columns", {}).get("schema", [])]
+    if have_cols != [c["name"] for c in lib_cols]:
+        ops.append({"type": "setNodeParameter", "nodeName": "Save New References", "path": "/columns", "value": {
+            "mappingMode": "defineBelow", "value": {c["name"]: f"={{{{ $json.{c['name']} }}}}" for c in lib_cols}, "matchingColumns": [],
+            "schema": column_schema(lib_cols)}})
+    if nodes.get("Only New Links", {}).get("parameters", {}).get("filters", {}).get("conditions") != ONLY_NEW:
+        ops.append({"type": "setNodeParameter", "nodeName": "Only New Links", "path": "/filters", "value": {"conditions": ONLY_NEW}})
+    return ops
 
 
 def bot_ops(wf: dict, cred_id: str | None) -> list[dict]:

@@ -35,11 +35,11 @@ class Nodes(unittest.TestCase):
         return [i["json"] for i in got["out"]]
 
     # ---- Plan the Searches
-    def plan(self, bot=None, watch=WATCH):
-        refs = {"Load Watchlist": watch}
+    def plan(self, bot=None, watch=WATCH, audiences=None):
+        refs = {"Load Bot Users": ADMINS, "Load Watchlist": watch, "Load Audiences": audiences or [{}]}
         if bot is not None:
             refs["From the Telegram Bot"] = bot
-        return self.run_node("refs_plan.js", ADMINS, refs)
+        return self.run_node("refs_plan.js", [{}], refs)
 
     def test_a_handle_from_the_bot_searches_all_three_sources_with_its_limit(self):
         out = self.plan({"query": "@boat.nirvana", "sources": "", "limit": "3", "requested_by": "Harsh", "chat_id": "111"})
@@ -178,6 +178,93 @@ class Nodes(unittest.TestCase):
         self.assertEqual([(r["row_id"], r["keep"], r["kept_by"]) for r in out],
                          [(41, "no", "Asha"), (43, "yes", "someone on the DTJ bot")])
         self.assertEqual(self.run_node("refs_taps.js", [{}]), [])
+
+    # ---- audience scans (25 Oct 2026)
+    def test_an_audience_scan_from_the_bot_plans_reels_followers_and_trending_audio(self):
+        out = self.plan({"mode": "audience", "audience": "Gen Z urban India", "hashtags": "#genz, aesthetic", "creators": '["@Rj.Abhinav", "https://www.instagram.com/komal.pandey/"]',
+                         "limit": "3", "requested_by": "Harsh", "chat_id": "111"})
+        kinds = [(p["kind"], p["query"], p["actor"]) for p in out]
+        self.assertEqual(kinds, [("audience", "#genz", "apify/instagram-hashtag-scraper"), ("audience", "#aesthetic", "apify/instagram-hashtag-scraper"),
+                                 ("audience", "@rj.abhinav", "apify/instagram-reel-scraper"), ("audience", "@komal.pandey", "apify/instagram-reel-scraper"),
+                                 ("profiles", "@rj.abhinav @komal.pandey", "apify/instagram-profile-scraper"),
+                                 ("trending", "trending Reels audio, India", "s_actors/instagram-trending-audio")])
+        for p in out:
+            self.assertEqual((p["audience"], p["slug"], p["chat_ids"], p["mode"]), ("Gen Z urban India", "gen-z-urban-india", ["111"], "bot"))
+            self.assertLessEqual(p["max_usd"], 0.5)
+        self.assertEqual(out[0]["input"], {"hashtags": ["genz"], "resultsType": "reels", "resultsLimit": 3})
+        self.assertEqual(out[4]["input"], {"usernames": ["rj.abhinav", "komal.pandey"]})
+        self.assertEqual(out[5]["input"]["countries"], ["IN"])
+        self.assertEqual(out[5]["max_items"], 3)
+        big = self.plan({"mode": "audience", "audience": "Moms", "hashtags": "momlife", "limit": "", "chat_id": "111"})
+        self.assertEqual(big[0]["keep_n"], 30)          # default 30 reels per hashtag or creator, never more
+        self.assertEqual([p["kind"] for p in big], ["audience", "trending"])   # no creators: no follower call
+
+    def test_a_saved_audience_by_name_and_the_weekly_scan_use_dtj_reel_audiences(self):
+        saved = [{"audience": "Gujarati home cooks 30-50", "slug": "gujarati-home-cooks", "hashtags": "gujaratifood,gujjurecipes", "creators": "",
+                  "per_source": 4, "active": True},
+                 {"audience": "Paused", "hashtags": "x1", "active": False}]
+        out = self.plan({"mode": "audience", "audience": "gujarati home cooks 30-50", "chat_id": "222"}, audiences=saved)
+        self.assertEqual([p["query"] for p in out], ["#gujaratifood", "#gujjurecipes", "trending Reels audio, India"])
+        self.assertEqual((out[0]["slug"], out[0]["keep_n"]), ("gujarati-home-cooks", 4))
+        weekly = self.plan(watch=[{}], audiences=saved)
+        self.assertEqual([p["query"] for p in weekly], ["#gujaratifood", "#gujjurecipes", "trending Reels audio, India"])
+        self.assertTrue(all(p["chat_ids"] == ["111"] and p["mode"] == "weekly" for p in weekly))
+        bad = self.plan({"mode": "audience", "audience": "", "hashtags": "", "chat_id": "222"})
+        self.assertEqual(len(bad), 1)
+        self.assertIn("audience scan needs", bad[0]["text"])
+
+    def test_audience_reels_get_followers_comments_audio_and_are_ranked(self):
+        common = {"source": "audience", "audience": "Gen Z", "keep_n": 3, "found_for": "Harsh"}
+        plans = [{**common, "kind": "audience", "query": "#genz", "actor": "apify/instagram-hashtag-scraper"},
+                 {**common, "kind": "audience", "query": "@big", "actor": "apify/instagram-reel-scraper"},
+                 {**common, "kind": "profiles", "query": "@big", "actor": "apify/instagram-profile-scraper"},
+                 {**common, "kind": "trending", "source": "trending_audio", "query": "trending Reels audio, India", "keep_n": 3}]
+        reel = lambda code, owner, views, comments, song="Original audio": {  # noqa: E731
+            "url": f"https://www.instagram.com/reel/{code}/", "videoUrl": f"https://cdn/{code}.mp4", "ownerUsername": owner, "videoPlayCount": views,
+            "likesCount": 10, "commentsCount": comments, "caption": "c", "productType": "clips",
+            "musicInfo": {"song_name": song, "artist_name": owner}}
+        answers = [{"statusCode": 201, "body": [reel("H1", "small", 50000, 500), reel("H2", "mid", 900000, 90)]},
+                   {"statusCode": 201, "body": [reel("B1", "big", 2000000, 200, "Kesariya")]},
+                   {"statusCode": 201, "body": [{"username": "big", "followersCount": 4000000}]},
+                   {"statusCode": 201, "body": [{"title": "Sahiba", "artist": "Aditya Rikhari", "audioUrl": "https://www.instagram.com/reels/audio/1/",
+                                                 "reelsCountText": "23.2K reels", "isTrending": True, "isOriginalAudio": False}]}]
+        out = self.run_node("refs_read.js", answers, {"Plan the Searches": plans})
+        rows, marker = out[:-1], out[-1]
+        sound = rows[0]
+        self.assertEqual((sound["source"], sound["url"], sound["video_url"], sound["audio_name"], sound["audience"]),
+                         ("trending_audio", "https://www.instagram.com/reels/audio/1/", "", "Sahiba · Aditya Rikhari", "Gen Z"))
+        self.assertIn("23.2K reels", sound["caption"])
+        reels = rows[1:]
+        self.assertEqual([r["url"][-3:-1] for r in reels], ["B1", "H2", "H1"])   # with followers first, then by views
+        b1 = reels[0]
+        self.assertEqual((b1["followers"], b1["views_per_follower"], b1["comments"], b1["comments_per_view"], b1["audio_name"], b1["brand"]),
+                         (4000000, 0.5, 200, 0.0001, "Kesariya · big", "@big"))
+        self.assertIsNone(reels[2]["followers"])
+        self.assertEqual(reels[2]["comments_per_view"], 0.01)
+        self.assertEqual((marker["by_audience"], marker["found_refs"]), ({"Gen Z": 3}, 0))
+
+    def test_the_audience_summary_is_one_message_without_buttons(self):
+        plans = [{"kind": "audience", "source": "audience", "audience": "Gen Z", "slug": "gen-z", "query": "#genz", "chat_ids": ["111"], "mode": "bot"},
+                 {"kind": "trending", "source": "trending_audio", "audience": "Gen Z", "slug": "gen-z", "query": "trending Reels audio, India",
+                  "chat_ids": ["111"], "mode": "bot"}]
+        saved = [{"id": 7, "source": "audience", "audience": "Gen Z", "url": "https://www.instagram.com/reel/A/", "brand": "@a", "views": 1500000,
+                  "views_per_follower": 3.25, "comments_per_view": 0.0042, "audio_name": "Original audio · a"},
+                 {"id": 8, "source": "audience", "audience": "Gen Z", "url": "https://www.instagram.com/reel/B/", "brand": "@b", "views": 9000},
+                 {"id": 9, "source": "trending_audio", "audience": "Gen Z", "url": "https://www.instagram.com/reels/audio/1/", "audio_name": "Sahiba · Aditya Rikhari"}]
+        out = self.digest(saved, plans, {"marker": True, "found": 4, "found_refs": 0, "by_audience": {"Gen Z": 3}, "problems": []})
+        self.assertEqual(len(out), 1)
+        text = out[0]["text"]
+        for must in ("Audience scan Gen Z</b>: 2 reels saved (1 more were already in the library), from #genz", "Top 2 by views per follower",
+                     "1. <a href=\"https://www.instagram.com/reel/A/\">@a</a> · 1.5M views · 3.3× followers · 0.42% comments · audio Original audio · a",
+                     "2. <a", "Trending audio in India: Sahiba · Aditya Rikhari", "audiences/gen-z.md"):
+            self.assertIn(must, text)
+        self.assertEqual((out[0]["keep_data"], out[0]["summary"]), ("", True))
+
+    def test_the_same_reel_is_saved_once_per_audience(self):
+        rows = [{"source": "audience", "audience": "A", "url": "https://x/1"}, {"source": "audience", "audience": "B", "url": "https://x/1"},
+                {"source": "audience", "audience": "A", "url": "https://x/1"}]
+        out = self.run_node("refs_pick_new.js", rows)
+        self.assertEqual([(r["audience"], r["comments"]) for r in out], [("A", None), ("B", None)])
 
 
 if __name__ == "__main__":

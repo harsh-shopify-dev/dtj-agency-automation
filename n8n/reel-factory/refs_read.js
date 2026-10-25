@@ -1,8 +1,11 @@
 // n8n Code node "Read the Results" in "Reel Factory: Find References" (mode: Run Once for All Items).
 // Input: one "Ask Apify" answer per planned call, in the same order as "Plan the Searches" ({ statusCode, body } with the run's
 // dataset items as body, or { error } when the call failed). Output: one item per reference video found, in the columns of
-// dtj_reel_library (videos only: an item without a direct video link is left out), then always one marker item
-// { marker: true, url: '', found, problems } that carries the counts and what failed to "Write the Digest".
+// dtj_reel_library (videos only: an item without a direct video link is left out; a trending sound is the one row without one),
+// then always one marker item { marker: true, url: '', found, by_audience, problems } with the counts and what failed for
+// "Write the Digest". An audience scan's reels (source "audience") carry the audience, comments, the audio's name, the creator's
+// followers when "profiles" gave them, views per follower and comments per view; they are ranked by views per follower (reels
+// with a follower count first), then views.
 // Field names: the picked actors and their fallbacks (refs_plan.js), as in the sample outputs on their Apify Store pages.
 const plans = $('Plan the Searches').all().map((i) => i.json || {});
 const answers = $input.all().map((i) => i.json || {});
@@ -25,8 +28,12 @@ const iso = (v) => {
 
 function instagram(x) {
   if (x.productType && !['clips', 'igtv', 'feed'].includes(x.productType) && !x.videoUrl) return null;
+  const music = x.musicInfo || {};
+  const song = str(first(music.song_name, music.title)), artist = str(first(music.artist_name, music.display_artist));
   return { url: https(x.url) || (x.shortCode ? 'https://www.instagram.com/reel/' + x.shortCode + '/' : ''), video_url: https(x.videoUrl),
     caption: str(x.caption), views: count(x.videoPlayCount, x.igPlayCount, x.videoViewCount), likes: count(x.likesCount),
+    comments: count(x.commentsCount), username: str(x.ownerUsername).toLowerCase(),
+    audio_name: song ? song + (artist ? ' · ' + artist : '') : '',
     owner: str(first(x.ownerFullName, x.ownerUsername)), posted_at: iso(x.timestamp), days_running: null };
 }
 function pinterest(x) {
@@ -45,33 +52,74 @@ function meta(x) {
     caption: str(first(x.bodyText, (snap.body || {}).text, x.title, snap.title)), views: null, likes: null,
     owner: str(first(x.pageName, snap.page_name, x.page_name)), posted_at: iso(start), days_running: days(start) };
 }
-const READ = { instagram, pinterest, meta };
+function trending(x) {   // one trending sound (s_actors/instagram-trending-audio): its page is the link, there is no video
+  const title = str(x.title), artist = str(first(x.artist, x.artistUsername));
+  const facts = [str(first(x.reelsCountText, x.reelsCount != null ? x.reelsCount + ' reels' : '')), x.isTrending ? 'trending in India' : '',
+    x.isOriginalAudio ? 'original audio' : 'song', x.topReelUrl ? 'top reel ' + str(x.topReelUrl) : ''].filter(Boolean).join('; ');
+  return { url: https(first(x.audioUrl, x.url)), video_url: '', caption: title + (artist ? ' · ' + artist : '') + (facts ? ' (' + facts + ')' : ''),
+    audio_name: title + (artist ? ' · ' + artist : ''), views: null, likes: null, owner: artist, posted_at: iso(x.newestReelAt), days_running: null };
+}
+const READ = { instagram, pinterest, meta, audience: instagram, trending_audio: trending };
 
-const out = [];
-const problems = [];
-const seen = new Set();
-plans.forEach((plan, i) => {
+const answerOf = (i) => {
   const a = answers[i] || {};
-  const what = plan.source + ' ' + (plan.query || plan.label || '');
   let body = a.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { /* kept as text */ } }
-  const status = Number(a.statusCode || 0);
-  if (a.error || !Array.isArray(body)) {
-    const why = (body && body.error && (body.error.message || body.error.type)) || (a.error && (a.error.message || a.error)) || (status ? 'HTTP ' + status : 'no answer');
-    problems.push(what + ': ' + String(why).replace(/Bearer\s+\S+/gi, 'Bearer ***').slice(0, 160));
-    return;
+  return { a, body, status: Number(a.statusCode || 0) };
+};
+const problems = [];
+const failed = (plan, a, body, status) => {
+  const why = (body && body.error && (body.error.message || body.error.type)) || (a.error && (a.error.message || a.error)) || (status ? 'HTTP ' + status : 'no answer');
+  problems.push(plan.source + ' ' + (plan.query || plan.label || '') + ': ' + String(why).replace(/Bearer\s+\S+/gi, 'Bearer ***').slice(0, 160));
+};
+
+// the creators' followers first (kind "profiles"), so every reel of theirs gets views per follower
+const followers = {};
+plans.forEach((plan, i) => {
+  if (plan.kind !== 'profiles') return;
+  const { a, body, status } = answerOf(i);
+  if (a.error || !Array.isArray(body)) { failed(plan, a, body, status); return; }
+  for (const x of body) {
+    const n = count(x && x.followersCount, x && x.followers);
+    if (x && x.username && n) followers[str(x.username).toLowerCase()] = n;
   }
-  const read = READ[plan.source];
-  let rows = body.map((x) => (x && typeof x === 'object' && read ? read(x) : null)).filter((r) => r && r.url && r.video_url);
-  if (plan.source === 'meta') rows.sort((p, q) => (q.days_running || 0) - (p.days_running || 0));
-  rows = rows.slice(0, plan.keep_n || rows.length);
-  for (const r of rows) {
-    if (seen.has(r.url)) continue;
-    seen.add(r.url);
-    out.push({ source: plan.source, url: r.url, video_url: r.video_url, brand: plan.brand || r.owner, niche: plan.niche || '',
-      caption: r.caption.slice(0, 2000), views: r.views, likes: r.likes, days_running: r.days_running, posted_at: r.posted_at,
-      query: str(plan.query).slice(0, 300), actor: plan.actor, found_at: now.toISOString(), found_for: plan.found_for || '', keep: '', kept_by: '', kept_at: '' });
-  }
-  if (!rows.length && !body.length) problems.push(what + ': nothing found');
 });
-return [...out, { marker: true, url: '', found: out.length, problems }].map((json) => ({ json }));
+
+const out = [];
+const seen = new Set();
+const byAudience = {};
+plans.forEach((plan, i) => {
+  if (plan.kind === 'profiles') return;
+  const { a, body, status } = answerOf(i);
+  if (a.error || !Array.isArray(body)) { failed(plan, a, body, status); return; }
+  const read = READ[plan.source];
+  let rows = body.map((x) => (x && typeof x === 'object' && read ? read(x) : null))
+    .filter((r) => r && r.url && (r.video_url || plan.source === 'trending_audio'));
+  if (plan.source === 'meta') rows.sort((p, q) => (q.days_running || 0) - (p.days_running || 0));
+  if (plan.source === 'audience') rows.sort((p, q) => (q.views || 0) - (p.views || 0));
+  rows = rows.slice(0, plan.keep_n || rows.length);
+  const aud = plan.source === 'audience' || plan.source === 'trending_audio';
+  for (const r of rows) {
+    const key = r.url + '|' + (plan.audience || '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const f = r.username ? followers[r.username] || null : null;
+    out.push({ source: plan.source, url: r.url, video_url: r.video_url, brand: plan.brand || (aud && r.username ? '@' + r.username : r.owner),
+      niche: plan.niche || '', caption: r.caption.slice(0, 2000), views: r.views, likes: r.likes, days_running: r.days_running,
+      posted_at: r.posted_at, query: str(plan.query).slice(0, 300), actor: plan.actor, found_at: now.toISOString(), found_for: plan.found_for || '',
+      keep: '', kept_by: '', kept_at: '', audience: plan.audience || '', audio_name: (r.audio_name || '').slice(0, 300),
+      comments: aud && r.comments != null ? r.comments : null, followers: f,
+      views_per_follower: f && r.views != null ? Math.round((r.views / f) * 1000) / 1000 : null,
+      comments_per_view: aud && r.views && r.comments != null ? Math.round((r.comments / r.views) * 1e6) / 1e6 : null,
+      link_key: key });
+    if (plan.source === 'audience') byAudience[plan.audience] = (byAudience[plan.audience] || 0) + 1;
+  }
+  if (!rows.length && !body.length) problems.push(plan.source + ' ' + (plan.query || plan.label || '') + ': nothing found');
+});
+// an audience's reels by views per follower (those with a follower count first), then views
+const score = (r) => [r.views_per_follower == null ? 1 : 0, -(r.views_per_follower || 0), -(r.views || 0)];
+const order = (p, q) => { const a = score(p), b = score(q); for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] - b[k]; return 0; };
+const refs = out.filter((r) => r.source !== 'audience');
+const reels = out.filter((r) => r.source === 'audience').sort((p, q) => (p.audience < q.audience ? -1 : p.audience > q.audience ? 1 : order(p, q)));
+const foundRefs = refs.filter((r) => r.source !== 'trending_audio').length;
+return [...refs, ...reels, { marker: true, url: '', found: out.length, found_refs: foundRefs, by_audience: byAudience, problems }].map((json) => ({ json }));

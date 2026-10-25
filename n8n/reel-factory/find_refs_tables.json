@@ -26,6 +26,22 @@
   {"name": "found_for", "type": "string"},
   {"name": "keep", "type": "string"},
   {"name": "kept_by", "type": "string"},
-  {"name": "kept_at", "type": "string"}
+  {"name": "kept_at", "type": "string"},
+  {"name": "audience", "type": "string"},
+  {"name": "audio_name", "type": "string"},
+  {"name": "comments", "type": "number"},
+  {"name": "followers", "type": "number"},
+  {"name": "views_per_follower", "type": "number"},
+  {"name": "comments_per_view", "type": "number"},
+  {"name": "link_key", "type": "string"}
+ ]},
+ "dtj_reel_audiences": {"columns": [
+  {"name": "audience", "type": "string"},
+  {"name": "slug", "type": "string"},
+  {"name": "hashtags", "type": "string"},
+  {"name": "creators", "type": "string"},
+  {"name": "per_source", "type": "number"},
+  {"name": "active", "type": "boolean"},
+  {"name": "notes", "type": "string"}
  ]}
 }
