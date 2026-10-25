@@ -2,8 +2,10 @@
 // Input: the references just saved in dtj_reel_library (each with its row id), or one empty item when nothing new was found.
 // Output, per chat that gets the digest (the person who asked with /refs, or the active admins for the weekly scan): one summary
 // message, then one message per new reference (at most MAX_SHOWN) with Keep / Skip buttons. A button carries the bot's answer format
-// "a:ref-<row id>:keep:<n>" (n8n/store-factory/bot_ask.py), so the bot's "Save the Answer" records the tap and "Match the Taps" here
-// writes keep = yes / no on the row. A Pinterest pin's "likes" are its saves. Every item is { chat_id, text, summary, keep_data, skip_data } (HTML, text escaped).
+// "a:refs-<row id>:keep:<n>" (n8n/store-factory/bot_ask.py), so the reel bot's "Reel Factory: Telegram Bot" saves the tap in
+// dtj_bot_answers and "Match the Taps" here writes keep = yes / no on the row. The messages go out through the reel bot
+// ("DTJ Reel Bot"). A Pinterest pin's "likes" are its saves. Every item is { chat_id, text, summary, keep_data, skip_data }
+// (HTML, text escaped).
 const MAX_SHOWN = 15;
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const NAMES = { instagram: 'Instagram', pinterest: 'Pinterest', meta: 'Meta Ad Library' };
@@ -50,7 +52,7 @@ for (const chat of chats) {
       + (caption ? '"' + esc(caption.slice(0, 220)) + (caption.length > 220 ? '…' : '') + '"\n' : '')
       + (facts ? facts + '\n' : '')
       + '<a href="' + esc(r.url) + '">Open it</a>' + (r.video_url ? ' · <a href="' + esc(r.video_url) + '">video file</a>' : '');
-    out.push({ json: { chat_id: chat, text, summary: false, keep_data: 'a:ref-' + r.id + ':keep:0', skip_data: 'a:ref-' + r.id + ':keep:1' } });
+    out.push({ json: { chat_id: chat, text, summary: false, keep_data: 'a:refs-' + r.id + ':keep:0', skip_data: 'a:refs-' + r.id + ':keep:1' } });
   });
 }
 return out;

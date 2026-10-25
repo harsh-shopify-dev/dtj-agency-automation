@@ -153,8 +153,8 @@ class Nodes(unittest.TestCase):
         self.assertTrue(head["summary"])
         for must in ("2 new reference videos", "Meta Ad Library 1", "Instagram 1", "1 found were already", "Notes: pinterest: Apify said 402", "Keep"):
             self.assertIn(must, head["text"])
-        self.assertEqual([o["keep_data"] for o in out[1:]], ["a:ref-42:keep:0", "a:ref-41:keep:0"])  # long-running ads first
-        self.assertEqual(out[2]["skip_data"], "a:ref-41:keep:1")
+        self.assertEqual([o["keep_data"] for o in out[1:]], ["a:refs-42:keep:0", "a:refs-41:keep:0"])  # long-running ads first
+        self.assertEqual(out[2]["skip_data"], "a:refs-41:keep:1")
         self.assertIn("1.3M views", out[2]["text"])
         self.assertIn("Bass &lt;3", out[2]["text"])
         self.assertIn("running 63 days", out[1]["text"])
@@ -169,11 +169,11 @@ class Nodes(unittest.TestCase):
 
     # ---- Match the Taps
     def test_the_last_recent_tap_per_reference_decides(self):
-        rows = [{"id": 1, "job": "ref-41", "key": "keep", "value": "Keep", "choice": "0", "by": "Harsh", "at": ago(minutes=30)},
-                {"id": 2, "job": "ref-41", "key": "keep", "value": "Skip", "choice": "1", "by": "Asha", "at": ago(minutes=5)},
-                {"id": 3, "job": "ref-42", "key": "keep", "value": "Keep", "choice": "0", "by": "Harsh", "at": ago(days=5)},
+        rows = [{"id": 1, "job": "refs-41", "key": "keep", "value": "Keep", "choice": "0", "by": "Harsh", "at": ago(minutes=30)},
+                {"id": 2, "job": "refs-41", "key": "keep", "value": "Skip", "choice": "1", "by": "Asha", "at": ago(minutes=5)},
+                {"id": 3, "job": "refs-42", "key": "keep", "value": "Keep", "choice": "0", "by": "Harsh", "at": ago(days=5)},
                 {"id": 4, "job": "store-x", "key": "keep", "value": "Keep", "choice": "0", "by": "Harsh", "at": ago(minutes=1)},
-                {"id": 5, "job": "ref-43", "key": "keep", "value": "Keep", "choice": "", "by": "", "at": ago(minutes=2)}]
+                {"id": 5, "job": "refs-43", "key": "keep", "value": "Keep", "choice": "", "by": "", "at": ago(minutes=2)}]
         out = sorted(self.run_node("refs_taps.js", rows), key=lambda r: r["row_id"])
         self.assertEqual([(r["row_id"], r["keep"], r["kept_by"]) for r in out],
                          [(41, "no", "Asha"), (43, "yes", "someone on the DTJ bot")])

@@ -496,7 +496,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Write the Digest\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// Input: the references just saved in dtj_reel_library (each with its row id), or one empty item when nothing new was found.\n// Output, per chat that gets the digest (the person who asked with /refs, or the active admins for the weekly scan): one summary\n// message, then one message per new reference (at most MAX_SHOWN) with Keep / Skip buttons. A button carries the bot's answer format\n// \"a:ref-<row id>:keep:<n>\" (n8n/store-factory/bot_ask.py), so the bot's \"Save the Answer\" records the tap and \"Match the Taps\" here\n// writes keep = yes / no on the row. A Pinterest pin's \"likes\" are its saves. Every item is { chat_id, text, summary, keep_data, skip_data } (HTML, text escaped).\nconst MAX_SHOWN = 15;\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst NAMES = { instagram: 'Instagram', pinterest: 'Pinterest', meta: 'Meta Ad Library' };\nconst big = (n) => {\n  const v = Number(n);\n  if (!Number.isFinite(v) || v <= 0) return '';\n  return v >= 1e6 ? (v / 1e6).toFixed(1).replace(/\\.0$/, '') + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1).replace(/\\.0$/, '') + 'k' : String(Math.round(v));\n};\n\nconst saved = $input.all().map((i) => i.json || {}).filter((r) => r.id && r.url);\nconst results = $('Read the Results').all().map((i) => i.json || {});\nconst marker = results.find((r) => r.marker) || {};\nconst plans = $('Plan the Searches').all().map((i) => i.json || {});\nconst first = plans[0] || {};\nconst chats = [...new Set(plans.flatMap((p) => p.chat_ids || []).map(String).filter(Boolean))];\nif (!chats.length) return [];\n\nconst what = first.mode === 'weekly' ? 'the weekly scan of the watchlist' : esc(first.label || first.query || 'your search');\nconst perSource = {};\nfor (const r of saved) perSource[r.source] = (perSource[r.source] || 0) + 1;\nconst found = Number(marker.found || 0);\nlet head = saved.length\n  ? '<b>' + saved.length + ' new reference video' + (saved.length === 1 ? '' : 's') + '</b> from ' + what + ' ('\n    + Object.keys(perSource).map((s) => (NAMES[s] || s) + ' ' + perSource[s]).join(', ') + ').'\n  : 'No new reference videos from ' + what + '.';\nif (found > saved.length) head += ' ' + (found - saved.length) + ' found were already in the library.';\nif (saved.length > MAX_SHOWN) head += ' The first ' + MAX_SHOWN + ' are below; all ' + saved.length + ' are saved in dtj_reel_library.';\nif (saved.length) head += '\\nTap <b>Keep</b> to add one to the reel library (/reel and /remake can use it), <b>Skip</b> to leave it out.';\nconst skipped = [...new Set(plans.flatMap((p) => p.skipped || []))].map((s) => (NAMES[s] || s) + ': nothing to search for there');\nconst problems = [...(marker.problems || []), ...skipped].slice(0, 6);\nif (problems.length) head += '\\n\\nNotes: ' + problems.map((p) => esc(p)).join('; ') + '.';\n\nconst order = { meta: 0, instagram: 1, pinterest: 2 };\nconst shown = saved.slice().sort((a, b) => (order[a.source] ?? 3) - (order[b.source] ?? 3)\n  || Number(b.days_running || 0) - Number(a.days_running || 0) || Number(b.views || 0) - Number(a.views || 0)).slice(0, MAX_SHOWN);\nconst out = [];\nfor (const chat of chats) {\n  out.push({ json: { chat_id: chat, text: head, summary: true, keep_data: '', skip_data: '' } });\n  shown.forEach((r, i) => {\n    const facts = [r.days_running ? 'running ' + r.days_running + ' days' : '', big(r.views) ? big(r.views) + ' views' : '',\n      big(r.likes) ? big(r.likes) + (r.source === 'pinterest' ? ' saves' : ' likes') : ''].filter(Boolean).join(' · ');\n    const caption = String(r.caption || '').replace(/\\s+/g, ' ').trim();\n    const text = '<b>' + (i + 1) + '/' + shown.length + ' · ' + esc(NAMES[r.source] || r.source) + (r.brand ? ' · ' + esc(r.brand) : '') + '</b>\\n'\n      + (caption ? '\"' + esc(caption.slice(0, 220)) + (caption.length > 220 ? '…' : '') + '\"\\n' : '')\n      + (facts ? facts + '\\n' : '')\n      + '<a href=\"' + esc(r.url) + '\">Open it</a>' + (r.video_url ? ' · <a href=\"' + esc(r.video_url) + '\">video file</a>' : '');\n    out.push({ json: { chat_id: chat, text, summary: false, keep_data: 'a:ref-' + r.id + ':keep:0', skip_data: 'a:ref-' + r.id + ':keep:1' } });\n  });\n}\nreturn out;\n"
+    "jsCode": "// n8n Code node \"Write the Digest\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// Input: the references just saved in dtj_reel_library (each with its row id), or one empty item when nothing new was found.\n// Output, per chat that gets the digest (the person who asked with /refs, or the active admins for the weekly scan): one summary\n// message, then one message per new reference (at most MAX_SHOWN) with Keep / Skip buttons. A button carries the bot's answer format\n// \"a:refs-<row id>:keep:<n>\" (n8n/store-factory/bot_ask.py), so the reel bot's \"Reel Factory: Telegram Bot\" saves the tap in\n// dtj_bot_answers and \"Match the Taps\" here writes keep = yes / no on the row. The messages go out through the reel bot\n// (\"DTJ Reel Bot\"). A Pinterest pin's \"likes\" are its saves. Every item is { chat_id, text, summary, keep_data, skip_data }\n// (HTML, text escaped).\nconst MAX_SHOWN = 15;\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst NAMES = { instagram: 'Instagram', pinterest: 'Pinterest', meta: 'Meta Ad Library' };\nconst big = (n) => {\n  const v = Number(n);\n  if (!Number.isFinite(v) || v <= 0) return '';\n  return v >= 1e6 ? (v / 1e6).toFixed(1).replace(/\\.0$/, '') + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1).replace(/\\.0$/, '') + 'k' : String(Math.round(v));\n};\n\nconst saved = $input.all().map((i) => i.json || {}).filter((r) => r.id && r.url);\nconst results = $('Read the Results').all().map((i) => i.json || {});\nconst marker = results.find((r) => r.marker) || {};\nconst plans = $('Plan the Searches').all().map((i) => i.json || {});\nconst first = plans[0] || {};\nconst chats = [...new Set(plans.flatMap((p) => p.chat_ids || []).map(String).filter(Boolean))];\nif (!chats.length) return [];\n\nconst what = first.mode === 'weekly' ? 'the weekly scan of the watchlist' : esc(first.label || first.query || 'your search');\nconst perSource = {};\nfor (const r of saved) perSource[r.source] = (perSource[r.source] || 0) + 1;\nconst found = Number(marker.found || 0);\nlet head = saved.length\n  ? '<b>' + saved.length + ' new reference video' + (saved.length === 1 ? '' : 's') + '</b> from ' + what + ' ('\n    + Object.keys(perSource).map((s) => (NAMES[s] || s) + ' ' + perSource[s]).join(', ') + ').'\n  : 'No new reference videos from ' + what + '.';\nif (found > saved.length) head += ' ' + (found - saved.length) + ' found were already in the library.';\nif (saved.length > MAX_SHOWN) head += ' The first ' + MAX_SHOWN + ' are below; all ' + saved.length + ' are saved in dtj_reel_library.';\nif (saved.length) head += '\\nTap <b>Keep</b> to add one to the reel library (/reel and /remake can use it), <b>Skip</b> to leave it out.';\nconst skipped = [...new Set(plans.flatMap((p) => p.skipped || []))].map((s) => (NAMES[s] || s) + ': nothing to search for there');\nconst problems = [...(marker.problems || []), ...skipped].slice(0, 6);\nif (problems.length) head += '\\n\\nNotes: ' + problems.map((p) => esc(p)).join('; ') + '.';\n\nconst order = { meta: 0, instagram: 1, pinterest: 2 };\nconst shown = saved.slice().sort((a, b) => (order[a.source] ?? 3) - (order[b.source] ?? 3)\n  || Number(b.days_running || 0) - Number(a.days_running || 0) || Number(b.views || 0) - Number(a.views || 0)).slice(0, MAX_SHOWN);\nconst out = [];\nfor (const chat of chats) {\n  out.push({ json: { chat_id: chat, text: head, summary: true, keep_data: '', skip_data: '' } });\n  shown.forEach((r, i) => {\n    const facts = [r.days_running ? 'running ' + r.days_running + ' days' : '', big(r.views) ? big(r.views) + ' views' : '',\n      big(r.likes) ? big(r.likes) + (r.source === 'pinterest' ? ' saves' : ' likes') : ''].filter(Boolean).join(' · ');\n    const caption = String(r.caption || '').replace(/\\s+/g, ' ').trim();\n    const text = '<b>' + (i + 1) + '/' + shown.length + ' · ' + esc(NAMES[r.source] || r.source) + (r.brand ? ' · ' + esc(r.brand) : '') + '</b>\\n'\n      + (caption ? '\"' + esc(caption.slice(0, 220)) + (caption.length > 220 ? '…' : '') + '\"\\n' : '')\n      + (facts ? facts + '\\n' : '')\n      + '<a href=\"' + esc(r.url) + '\">Open it</a>' + (r.video_url ? ' · <a href=\"' + esc(r.video_url) + '\">video file</a>' : '');\n    out.push({ json: { chat_id: chat, text, summary: false, keep_data: 'a:refs-' + r.id + ':keep:0', skip_data: 'a:refs-' + r.id + ':keep:1' } });\n  });\n}\nreturn out;\n"
    }
   },
   {
@@ -527,87 +527,6 @@
       }
      ],
      "combinator": "and"
-    }
-   }
-  },
-  {
-   "id": "be5ef653-2102-48e4-aee0-03adcbe0ed02",
-   "name": "Send the Summary",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    3120,
-    0
-   ],
-   "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
-    "chatId": "={{ $json.chat_id }}",
-    "text": "={{ $json.text }}",
-    "additionalFields": {
-     "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": true
-    }
-   },
-   "onError": "continueRegularOutput",
-   "webhookId": "228a5499-8c49-466e-b406-2d88d6c39a98",
-   "credentials": {
-    "telegramApi": {
-     "id": "gM49WI7trRUFpcNv",
-     "name": "DTJ Page Bot"
-    }
-   }
-  },
-  {
-   "id": "d1dd4b54-56c6-418d-8186-c4c1ce5c1797",
-   "name": "Send a Reference",
-   "type": "n8n-nodes-base.telegram",
-   "typeVersion": 1.2,
-   "position": [
-    3120,
-    200
-   ],
-   "parameters": {
-    "resource": "message",
-    "operation": "sendMessage",
-    "chatId": "={{ $json.chat_id }}",
-    "text": "={{ $json.text }}",
-    "replyMarkup": "inlineKeyboard",
-    "inlineKeyboard": {
-     "rows": [
-      {
-       "row": {
-        "buttons": [
-         {
-          "text": "Keep",
-          "additionalFields": {
-           "callback_data": "={{ $json.keep_data }}"
-          }
-         },
-         {
-          "text": "Skip",
-          "additionalFields": {
-           "callback_data": "={{ $json.skip_data }}"
-          }
-         }
-        ]
-       }
-      }
-     ]
-    },
-    "additionalFields": {
-     "appendAttribution": false,
-     "parse_mode": "HTML",
-     "disable_web_page_preview": false
-    }
-   },
-   "onError": "continueRegularOutput",
-   "webhookId": "a534a9cc-532f-44ca-833e-86be470e99a3",
-   "credentials": {
-    "telegramApi": {
-     "id": "gM49WI7trRUFpcNv",
-     "name": "DTJ Page Bot"
     }
    }
   },
@@ -655,7 +574,7 @@
       {
        "keyName": "job",
        "condition": "like",
-       "keyValue": "ref-%"
+       "keyValue": "refs-%"
       },
       {
        "keyName": "key",
@@ -679,7 +598,7 @@
    "parameters": {
     "mode": "runOnceForAllItems",
     "language": "javaScript",
-    "jsCode": "// n8n Code node \"Match the Taps\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// The Keep / Skip buttons under each reference carry \"a:ref-<library row id>:keep:<0 Keep | 1 Skip>\"; the Telegram bot's\n// \"Save the Answer\" writes every tap into dtj_bot_answers (job ref-<id>, key keep, choice, by, at). Here: the last tap per reference\n// from the last two days (older taps were recorded by earlier runs) -> one item per reference for \"Record the Choice\".\nconst WINDOW_MS = 2 * 24 * 3600 * 1000;\nconst since = new Date(Date.now() - WINDOW_MS).toISOString().slice(0, 19);\nconst last = {};\nfor (const it of $input.all()) {\n  const r = it.json || {};\n  const m = String(r.job || '').match(/^ref-(\\d{1,12})$/);\n  if (!m || String(r.key || '') !== 'keep') continue;\n  const at = String(r.at || '').slice(0, 19);\n  if (!at || at < since) continue;\n  const choice = String(r.choice || '');\n  const label = String(r.value || '').trim().toLowerCase();\n  const keep = choice === '0' || (choice === '' && label === 'keep') ? 'yes' : choice === '1' || (choice === '' && label === 'skip') ? 'no' : '';\n  if (!keep) continue;\n  const prev = last[m[1]];\n  if (prev && (prev.at > at || (prev.at === at && prev.id > Number(r.id || 0)))) continue;\n  last[m[1]] = { at, id: Number(r.id || 0), keep, by: String(r.by || '').trim() || 'someone on the DTJ bot' };\n}\nreturn Object.keys(last).map((id) => ({ json: { row_id: Number(id), keep: last[id].keep, kept_by: last[id].by, kept_at: last[id].at + 'Z' } }));\n"
+    "jsCode": "// n8n Code node \"Match the Taps\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// The Keep / Skip buttons under each reference carry \"a:refs-<library row id>:keep:<0 Keep | 1 Skip>\"; the reel bot's workflow\n// writes every tap into dtj_bot_answers (job refs-<id>, key keep, choice, by, at). Here: the last tap per reference\n// from the last two days (older taps were recorded by earlier runs) -> one item per reference for \"Record the Choice\".\nconst WINDOW_MS = 2 * 24 * 3600 * 1000;\nconst since = new Date(Date.now() - WINDOW_MS).toISOString().slice(0, 19);\nconst last = {};\nfor (const it of $input.all()) {\n  const r = it.json || {};\n  const m = String(r.job || '').match(/^refs-(\\d{1,12})$/);\n  if (!m || String(r.key || '') !== 'keep') continue;\n  const at = String(r.at || '').slice(0, 19);\n  if (!at || at < since) continue;\n  const choice = String(r.choice || '');\n  const label = String(r.value || '').trim().toLowerCase();\n  const keep = choice === '0' || (choice === '' && label === 'keep') ? 'yes' : choice === '1' || (choice === '' && label === 'skip') ? 'no' : '';\n  if (!keep) continue;\n  const prev = last[m[1]];\n  if (prev && (prev.at > at || (prev.at === at && prev.id > Number(r.id || 0)))) continue;\n  last[m[1]] = { at, id: Number(r.id || 0), keep, by: String(r.by || '').trim() || 'someone on the DTJ bot' };\n}\nreturn Object.keys(last).map((id) => ({ json: { row_id: Number(id), keep: last[id].keep, kept_by: last[id].by, kept_at: last[id].at + 'Z' } }));\n"
    }
   },
   {
@@ -764,6 +683,89 @@
     "color": 5,
     "width": 760,
     "height": 380
+   }
+  },
+  {
+   "id": "8ac36ea5-22df-41a6-b89f-3ca086cef96e",
+   "name": "Send the Summary",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    3120,
+    0
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "d1afc420-201a-4777-9810-7acd5fb80f8b",
+   "disabled": true,
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "c338f4a6-f56c-48aa-a987-34e7447c8727",
+   "name": "Send a Reference",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    3120,
+    200
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "replyMarkup": "inlineKeyboard",
+    "inlineKeyboard": {
+     "rows": [
+      {
+       "row": {
+        "buttons": [
+         {
+          "text": "Keep",
+          "additionalFields": {
+           "callback_data": "={{ $json.keep_data }}"
+          }
+         },
+         {
+          "text": "Skip",
+          "additionalFields": {
+           "callback_data": "={{ $json.skip_data }}"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": false
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "e176157a-08fd-4d2e-a37c-ac93d81722fa",
+   "disabled": true,
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
    }
   }
  ],

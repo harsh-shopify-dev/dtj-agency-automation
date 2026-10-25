@@ -11,10 +11,12 @@ Every Monday 9:00 (the active rows of dtj_reel_watchlist) ───────�
     -> Plan the Searches -> Anything to Search?
         yes -> Ask Apify (HTTP, credential "DTJ Apify") -> Read the Results -> Only New Links (not yet in dtj_reel_library)
                -> Pick the New Ones -> Anything New? -> yes: Save New References -> Write the Digest / no: Write the Digest
-               -> Is It the Summary? -> Send the Summary / Send a Reference (Keep / Skip, "a:ref-<row id>:keep:<n>")
+               -> Is It the Summary? -> Send the Summary / Send a Reference (Keep / Skip, "a:refs-<row id>:keep:<n>")
         no  -> Is It the Summary? -> Send the Summary (what could not be searched)
-Every 15 Minutes -> Load the Taps (dtj_bot_answers, job ref-*) -> Match the Taps -> Record the Choice (keep yes / no, kept_by)
-The bot's "Save the Answer" writes the taps (n8n/store-factory/bot_ask.py format); this workflow never touches the bot.
+Every 15 Minutes -> Load the Taps (dtj_bot_answers, job refs-*) -> Match the Taps -> Record the Choice (keep yes / no, kept_by)
+The reel factory has its own Telegram bot (Harsh, 25 Oct 2026): the digest goes out through the n8n credential "DTJ Reel Bot",
+and that bot's workflow "Reel Factory: Telegram Bot" saves the taps in dtj_bot_answers (n8n/store-factory/bot_ask.py format, job
+refs-<row id>, key keep); this workflow never touches a bot workflow.
 The Apify token lives only in the n8n credential "DTJ Apify" (Header Auth, Authorization: Bearer <token>) that Harsh makes in the
 n8n UI; this script attaches it when it exists. The code nodes are the refs_*.js files next to this script (run in Node by
 test_find_refs_nodes.py), sent byte for byte; the live workflow is read back, compared and exported to find_refs.workflow.json.
@@ -35,7 +37,7 @@ from n8n_mcp import PROJECT, call  # noqa: E402
 NAME = "Reel Factory: Find References"
 WATCHLIST, LIBRARY = "dtj_reel_watchlist", "dtj_reel_library"
 USERS, ANSWERS = "dtj_bot_users", "dtj_bot_answers"   # made by the store factory (setup_n8n.py)
-CREDENTIAL = "DTJ Page Bot"   # the Telegram API credential the store factory already uses
+CREDENTIAL = "DTJ Reel Bot"   # the reel factory's own Telegram bot (token pasted by Harsh in n8n), not the store bot
 APIFY = "DTJ Apify"           # Header Auth: Authorization = Bearer <Apify token>; made by Harsh in the n8n UI, never in a file
 TABLES = json.loads((HERE / "find_refs_tables.json").read_text(encoding="utf-8"))
 CODE_NODES = {"Plan the Searches": "refs_plan.js", "Read the Results": "refs_read.js", "Pick the New Ones": "refs_pick_new.js",
@@ -154,7 +156,7 @@ def sdk_code(ids: dict[str, str]) -> str:
           "position: [0, 500], parameters: { rule: { interval: [{ field: 'minutes', minutesInterval: 15 }] } } } });\n"
         + "const loadTaps = node({ type: 'n8n-nodes-base.dataTable', version: 1.1, config: { name: 'Load the Taps', position: [240, 500], "
           f"parameters: {{ resource: 'row', operation: 'get', dataTableId: {rl(ANSWERS)}, matchType: 'allConditions', "
-          "filters: { conditions: [{ keyName: 'job', condition: 'like', keyValue: 'ref-%' }, { keyName: 'key', condition: 'eq', keyValue: 'keep' }] }, "
+          "filters: { conditions: [{ keyName: 'job', condition: 'like', keyValue: 'refs-%' }, { keyName: 'key', condition: 'eq', keyValue: 'keep' }] }, "
           "returnAll: true } } });\n"
         + code_node("taps", "Match the Taps", "[480, 500]")
         + "const record = node({ type: 'n8n-nodes-base.dataTable', version: 1.1, config: { name: 'Record the Choice', position: [720, 500], "
@@ -204,10 +206,10 @@ def main(argv=None) -> int:
             print("created:", json.dumps(made)[:600])
             wf_id = made.get("workflowId") or made.get("id")
         creds = {(c.get("name"), c.get("type")): c["id"] for c in call("list_credentials", {}).get("data", [])}
-        ops = []
-        if (CREDENTIAL, "telegramApi") in creds:
-            ops += [{"type": "setNodeCredential", "nodeName": n, "credentialKey": "telegramApi", "credentialId": creds[(CREDENTIAL, "telegramApi")],
-                     "credentialName": CREDENTIAL} for n in ("Send the Summary", "Send a Reference")]
+        ops = bot_ops(call("get_workflow_details", {"workflowId": wf_id})["workflow"], creds.get((CREDENTIAL, "telegramApi")))
+        if (CREDENTIAL, "telegramApi") not in creds:
+            print(f"no Telegram credential named '{CREDENTIAL}' yet: make it in n8n (Credentials > Create > Telegram API; name "
+                  f"'{CREDENTIAL}', the reel bot's token from BotFather), then run this script again")
         if (APIFY, "httpHeaderAuth") in creds:
             ops.append({"type": "setNodeCredential", "nodeName": "Ask Apify", "credentialKey": "httpHeaderAuth",
                         "credentialId": creds[(APIFY, "httpHeaderAuth")], "credentialName": APIFY})
@@ -231,6 +233,29 @@ def main(argv=None) -> int:
     print(f"workflow {wf_id}: {len(live)} nodes; code identical to the files: {not mismatched} {mismatched or ''}; "
           f"active: {after.get('active')}; export saved: find_refs.workflow.json")
     return 0 if not mismatched else 1
+
+
+SENDS = ("Send the Summary", "Send a Reference")
+
+
+def bot_ops(wf: dict, cred_id: str | None) -> list[dict]:
+    """The two Telegram nodes on the reel bot, and "Load the Taps" on its refs-* jobs. With the credential in n8n: attach it and switch
+    the nodes on. Without it (Harsh has not made it yet) they are switched OFF: n8n fills an empty Telegram credential with any one it
+    has (it gave them the store bot's, 25 Oct 2026), and a reference digest must never go out through the store bot."""
+    nodes = {n["name"]: n for n in wf.get("nodes", [])}
+    ops = []
+    taps = nodes.get("Load the Taps", {}).get("parameters", {}).get("filters", {}).get("conditions", [])
+    if taps and taps[0].get("keyValue") != "refs-%":
+        ops.append({"type": "setNodeParameter", "nodeName": "Load the Taps", "path": "/filters/conditions/0/keyValue", "value": "refs-%"})
+    for name in SENDS:
+        if name not in nodes:
+            continue
+        if cred_id:
+            ops += [{"type": "setNodeCredential", "nodeName": name, "credentialKey": "telegramApi", "credentialId": cred_id,
+                     "credentialName": CREDENTIAL}, {"type": "setNodeDisabled", "nodeName": name, "disabled": False}]
+        else:
+            ops.append({"type": "setNodeDisabled", "nodeName": name, "disabled": True})
+    return ops
 
 
 def _update_unpublished(wf_id: str, ops: list[dict]) -> dict:
