@@ -116,6 +116,12 @@ class Guard(unittest.TestCase):
         self.assertIn("empty calm area on one side", banner)
         self.assertIn("the picture never does", banner)
         self.assertIn("No words", ai.guard("Family at breakfast", "lifestyle"))
+        # the phone banner (26 Oct 2026): tall, subject high, the lower half empty for the words the slideshow lays on it
+        phone = ai.guard("A glass of masala chai on a saffron backdrop", "banner_mobile")
+        self.assertIn("upper half", phone)
+        self.assertIn("lower half is an empty calm area", phone)
+        self.assertEqual(ai.KINDS["banner_mobile"], "1024x1536")
+        self.assertIn("portrait picture (1024x1536)", ai._chat_prompt("x", ai.KINDS["banner_mobile"], []))
 
     def test_sizes_in_a_description_are_allowed(self):
         self.assertIn("250 ml", ai.guard("A 250 ml amber bottle of oil", "product"))

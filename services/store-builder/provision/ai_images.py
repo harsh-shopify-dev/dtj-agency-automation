@@ -71,8 +71,8 @@ API_URL = "https://api.openai.com/v1/images/generations"
 # generations call above already uses)
 EDITS_URL = "https://api.openai.com/v1/images/edits"
 MODELS = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")  # fast, most precise
-KINDS = {"banner": "1536x864", "product": "1024x1024", "lifestyle": "1536x1024", "gallery": "1024x1024", "section": "1024x1024",
-         "studio": "1024x1024"}
+KINDS = {"banner": "1536x864", "banner_mobile": "1024x1536", "product": "1024x1024", "lifestyle": "1536x1024", "gallery": "1024x1024",
+         "section": "1024x1024", "studio": "1024x1024"}
 MAX_WORDS, MAX_WORD_CHARS = 7, 60  # a gallery picture: a headline and a few short lines, readable on a phone
 KEY_NAMES = ("OPENAI_API_KEY", "DTJ_OPENAI_API_KEY")
 CDP_DEFAULT = "http://127.0.0.1:9222"
@@ -95,6 +95,11 @@ SUFFIX = {
                " soft natural shadow, true-to-life colours, sharp focus.",
     "banner": " A wide home-page banner photo, realistic light, with an empty calm area on one side (plain background) where the"
               " page places its headline: the page adds the words, the picture never does.",
+    # the hero's own phone picture (Harsh, 26 Oct 2026: "generate banner images separately for mobile version"): on phones the
+    # slideshow lays the words on the LOWER part of a tall picture (mobile_layout overlay), so the subject sits high
+    "banner_mobile": " A tall portrait home-page banner photo for phones, realistic light: the subject sits in the upper half of the"
+                     " frame and the whole lower half is an empty calm area (plain backdrop or a plain surface) where the page places"
+                     " its headline and button: the page adds the words, the picture never does.",
     "lifestyle": " A realistic everyday lifestyle photo, natural light, Indian setting where people appear, phone-camera feel,"
                  " no glossy AI look.",
     "gallery": " One square picture for the product's own gallery on its product page, the way a pro D2C brand explains its"
