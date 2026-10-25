@@ -1,0 +1,984 @@
+{
+ "id": "rZ4yg4Yyi6jBaVD3",
+ "name": "Reel Factory: Find References",
+ "description": "Reel factory: reference videos from Apify (Instagram reels, Pinterest videos, Meta Ad Library video ads; India, active, longest running first) for the bot's /refs and a weekly scan of dtj_reel_watchlist -> dtj_reel_library without duplicates -> a Telegram",
+ "nodes": [
+  {
+   "id": "ec17f04a-107d-4e11-8136-07d8cbeedeb0",
+   "name": "From the Telegram Bot",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "query",
+       "type": "string"
+      },
+      {
+       "name": "sources",
+       "type": "string"
+      },
+      {
+       "name": "limit",
+       "type": "string"
+      },
+      {
+       "name": "requested_by",
+       "type": "string"
+      },
+      {
+       "name": "chat_id",
+       "type": "string"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "2a251b80-becf-4aff-9cdd-fc9f0e443377",
+   "name": "Load Watchlist",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    240,
+    100
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "houwhYw9PVfkQP65",
+     "cachedResultName": "dtj_reel_watchlist"
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "bab53bbf-25ad-4253-b4da-346fdb1e042d",
+   "name": "Every Monday 9:00",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    200
+   ],
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "weeks",
+       "weeksInterval": 1,
+       "triggerAtDay": [
+        1
+       ],
+       "triggerAtHour": 9,
+       "triggerAtMinute": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "b873ab5f-a9f4-4657-80f8-be47a1b00d54",
+   "name": "Load Bot Users",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    100
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "xJ9O19tBBmCJc1Hc",
+     "cachedResultName": "dtj_bot_users"
+    },
+    "returnAll": true
+   },
+   "executeOnce": true,
+   "alwaysOutputData": true
+  },
+  {
+   "id": "06bfcd1c-e786-4f78-8833-3773ce32997a",
+   "name": "Plan the Searches",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    100
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Plan the Searches\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// Input: dtj_bot_users (\"Load Bot Users\"); also \"Load Watchlist\" (dtj_reel_watchlist) and, when the bot's /refs started the run,\n// \"From the Telegram Bot\" (query, sources, limit, requested_by, chat_id). Output: one item per Apify call\n// { mode, label, query, source, actor, input, max_items, keep_n, max_usd, timeout_s, brand, niche, chat_ids, found_for }, or for a\n// /refs that cannot be searched one { chat_id, text, summary: true } item for \"Send the Summary\" (no actor: nothing is called).\n// The actors were picked on 25 Oct 2026 from their Apify Store pages (price per result, a direct video link in the output);\n// each gets a 3-result live test once the \"DTJ Apify\" credential exists:\n//   instagram  apify/instagram-reel-scraper (a profile) / apify/instagram-hashtag-scraper (a hashtag, resultsType reels)\n//   pinterest  apt_marble/pinterest-video-scraper (video pins only, mp4Url)\n//   meta       automation-lab/facebook-ads-library (country IN, active, video; startDate -> days running)\n// Fallbacks whose output \"Read the Results\" also reads: apify/instagram-scraper, silentflow/pinterest-scraper-ppr,\n// apify/facebook-ads-scraper.\nconst MAX_PER_SOURCE = 10, DEFAULT_PER_SOURCE = 5, MAX_CALLS = 60;\nconst MAX_USD = 0.10;        // Apify's charge cap per call (maxTotalChargeUsd); 10 results cost about $0.03-0.04\nconst META_POOL = 3;         // ads are fetched 3x the limit and the longest running ones kept (Meta cannot sort by run time)\nconst SOURCES = ['instagram', 'pinterest', 'meta'];\nconst ALIASES = { instagram: 'instagram', insta: 'instagram', ig: 'instagram', reels: 'instagram', pinterest: 'pinterest', pin: 'pinterest',\n  pins: 'pinterest', meta: 'meta', fb: 'meta', facebook: 'meta', ads: 'meta', ad: 'meta', adlibrary: 'meta', all: 'all' };\nconst clean = (s) => String(s == null ? '' : s).trim();\n// @mamaearth.in -> \"mamaearth\": a handle's .in / _official / .india / _store ending is not part of the brand's name\nconst words = (s) => clean(s).replace(/^[@#]/, '').replace(/[._](in|india|official|store|shop|co)$/i, '').replace(/[._]+/g, ' ').replace(/\\s+/g, ' ').trim();\nconst num = (v, d) => { const n = parseInt(String(v == null ? '' : v), 10); return Number.isFinite(n) && n > 0 ? Math.min(n, MAX_PER_SOURCE) : d; };\n\n// what to search for one brand or query: { instagram: {handle} | {hashtag}, pinterest: 'words', meta: {query} | {page} | {library} }\nfunction targets(row) {\n  const t = {};\n  const ig = clean(row.instagram);\n  const igUrl = ig.match(/instagram\\.com\\/(?:explore\\/tags\\/([A-Za-z0-9_]+)|([A-Za-z0-9._]{1,30}))/i);\n  if (igUrl) t.instagram = igUrl[1] ? { hashtag: igUrl[1] } : { handle: igUrl[2] };\n  else if (/^#[\\p{L}\\p{N}_]{2,}$/u.test(ig)) t.instagram = { hashtag: ig.slice(1) };\n  else if (/^@?[A-Za-z0-9._]{1,30}$/.test(ig)) t.instagram = { handle: ig.replace(/^@/, '') };\n  if (clean(row.pinterest_query)) t.pinterest = clean(row.pinterest_query).slice(0, 100);\n  const meta = clean(row.meta_advertiser);\n  if (/^https:\\/\\/(www\\.)?facebook\\.com\\/ads\\/library\\//i.test(meta)) t.meta = { library: meta };\n  else if (/^https:\\/\\/(www\\.)?facebook\\.com\\/[^\\s]+$/i.test(meta)) t.meta = { page: meta };\n  else if (meta) t.meta = { query: meta.slice(0, 100) };\n  return t;\n}\n\n// the search in words, for the library's query column and the digest\nconst said = (source, t) => source === 'pinterest' ? t : t.handle ? '@' + t.handle : t.hashtag ? '#' + t.hashtag : t.library || t.page || t.query;\n\nfunction call(source, target, n) {\n  if (source === 'instagram') {\n    return target.hashtag\n      ? { actor: 'apify/instagram-hashtag-scraper', input: { hashtags: [target.hashtag], resultsType: 'reels', resultsLimit: n }, max_items: n }\n      : { actor: 'apify/instagram-reel-scraper', input: { username: [target.handle], resultsLimit: n, skipPinnedPosts: true }, max_items: n };\n  }\n  if (source === 'pinterest') {\n    return { actor: 'apt_marble/pinterest-video-scraper', input: { queries: [target], maxVideos: n, excludePromoted: false }, max_items: n };\n  }\n  const pool = Math.min(n * META_POOL, MAX_PER_SOURCE * META_POOL);\n  const input = { country: 'IN', activeStatus: 'active', mediaType: 'video', maxAds: pool };\n  if (target.library) input.adsLibraryUrls = [target.library];\n  else if (target.page) input.pageUrls = [target.page];\n  else input.searchQueries = [target.query];\n  return { actor: 'automation-lab/facebook-ads-library', input, max_items: pool };\n}\n\nconst users = $input.all().map((i) => i.json || {});\nlet bot = null;\ntry { bot = $('From the Telegram Bot').first().json; } catch (e) { bot = null; }  // the weekly scan\nconst watch = $('Load Watchlist').all().map((i) => i.json || {}).filter((r) => r.brand || r.instagram || r.pinterest_query || r.meta_advertiser);\n\nconst plans = [];\nif (bot) {\n  const chat = clean(bot.chat_id);\n  const query = clean(bot.query).slice(0, 200);\n  const asked = clean(bot.sources).toLowerCase().split(/[\\s,;/+]+/).filter(Boolean);\n  const unknown = asked.filter((s) => !ALIASES[s]);\n  let sources = asked.length ? [...new Set(asked.map((s) => ALIASES[s]).filter(Boolean))] : ['all'];\n  if (sources.includes('all')) sources = SOURCES.slice();\n  const help = (why) => [{ json: { chat_id: chat, summary: true, text: why + '\\n\\nUse: /refs @handle, /refs #hashtag, /refs a brand on the '\n    + 'watchlist, or /refs some words; add instagram, pinterest or meta to search only those, and a number (at most '\n    + MAX_PER_SOURCE + ') for how many per source. Example: /refs @mamaearth.in meta 5' } }];\n  if (!chat) return [];\n  if (!query) return help('What should I search for?');\n  if (unknown.length || !sources.length) return help('I do not know the source ' + unknown.join(', ') + '.');\n  const lower = query.toLowerCase().replace(/^@/, '');\n  const row = watch.find((r) => clean(r.brand).toLowerCase() === lower || clean(r.instagram).toLowerCase().replace(/^@/, '') === lower);\n  let t;\n  if (row) t = targets(row);\n  else {\n    const isUrl = /^https:\\/\\//i.test(query);\n    t = targets({ instagram: isUrl ? (/instagram\\.com/i.test(query) ? query : '') : query.startsWith('#') ? query : query.startsWith('@') ? query\n      : '#' + query.toLowerCase().replace(/[^\\p{L}\\p{N}_]+/gu, ''),\n      pinterest_query: isUrl ? '' : words(query), meta_advertiser: isUrl ? (/facebook\\.com/i.test(query) ? query : '') : words(query) });\n  }\n  const n = num(bot.limit, row ? num(row.per_source, DEFAULT_PER_SOURCE) : DEFAULT_PER_SOURCE);\n  const missing = sources.filter((s) => !t[s]);\n  for (const s of sources.filter((x) => t[x])) {\n    plans.push({ mode: 'bot', label: query, query: said(s, t[s]), source: s, ...call(s, t[s], n), keep_n: n, brand: row ? clean(row.brand) : '',\n      niche: row ? clean(row.niche) : '', chat_ids: [chat], found_for: clean(bot.requested_by) || 'the bot', skipped: missing });\n  }\n  if (!plans.length) return help('I could not turn \"' + query.replace(/[<>&]/g, '') + '\" into a search for ' + sources.join(', ') + '.');\n} else {\n  const admins = [...new Set(users.filter((u) => u.telegram_user_id && u.active !== false && String(u.role || '').toLowerCase().trim() === 'admin')\n    .map((u) => String(u.telegram_user_id).trim()))];\n  for (const row of watch.filter((r) => r.active === true || String(r.active).toLowerCase() === 'true')) {\n    const t = targets(row);\n    const n = num(row.per_source, DEFAULT_PER_SOURCE);\n    for (const s of SOURCES.filter((x) => t[x])) {\n      plans.push({ mode: 'weekly', label: clean(row.brand), query: said(s, t[s]), source: s, ...call(s, t[s], n),\n        keep_n: n, brand: clean(row.brand), niche: clean(row.niche), chat_ids: admins, found_for: 'weekly scan' });\n    }\n  }\n}\nreturn plans.slice(0, MAX_CALLS).map((p) => ({ json: { ...p, max_usd: MAX_USD, timeout_s: 240 } }));\n"
+   }
+  },
+  {
+   "id": "cae439b8-d90b-48c1-bac0-68f6dc8ae337",
+   "name": "Anything to Search?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    960,
+    100
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.actor }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "117f575c-68f1-42d8-aefd-b60dc7dd800c",
+   "name": "Ask Apify",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1200,
+    0
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "={{ 'https://api.apify.com/v2/acts/' + $json.actor.replace('/', '~') + '/run-sync-get-dataset-items?timeout=' + $json.timeout_s + '&maxItems=' + $json.max_items + '&maxTotalChargeUsd=' + $json.max_usd }}",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "contentType": "json",
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.input) }}",
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     },
+     "timeout": 300000,
+     "batching": {
+      "batch": {
+       "batchSize": 1,
+       "batchInterval": 1000
+      }
+     }
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "0940a995-e5bb-406d-b1b7-0778b8c36890",
+   "name": "Read the Results",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1440,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Read the Results\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// Input: one \"Ask Apify\" answer per planned call, in the same order as \"Plan the Searches\" ({ statusCode, body } with the run's\n// dataset items as body, or { error } when the call failed). Output: one item per reference video found, in the columns of\n// dtj_reel_library (videos only: an item without a direct video link is left out), then always one marker item\n// { marker: true, url: '', found, problems } that carries the counts and what failed to \"Write the Digest\".\n// Field names: the picked actors and their fallbacks (refs_plan.js), as in the sample outputs on their Apify Store pages.\nconst plans = $('Plan the Searches').all().map((i) => i.json || {});\nconst answers = $input.all().map((i) => i.json || {});\nconst now = new Date();\nconst str = (v) => (v == null ? '' : String(v)).trim();\nconst first = (...vals) => { for (const v of vals) if (v != null && String(v).trim() !== '') return v; return null; };\nconst count = (...vals) => { const v = first(...vals); const n = Number(v); return v == null || !Number.isFinite(n) ? null : Math.round(n); };\nconst https = (u) => (/^https:\\/\\/[^\\s\"<>]+$/i.test(str(u)) ? str(u) : '');\nconst days = (start) => {\n  if (start == null || start === '') return null;\n  const t = typeof start === 'number' || /^\\d{9,13}$/.test(String(start)) ? new Date(Number(start) * (String(start).length > 11 ? 1 : 1000))\n    : new Date(String(start).length === 10 ? String(start) + 'T00:00:00Z' : String(start));\n  return Number.isNaN(t.getTime()) ? null : Math.max(0, Math.floor((now - t) / 86400000));\n};\nconst iso = (v) => {\n  if (v == null || v === '') return '';\n  const t = typeof v === 'number' || /^\\d{9,13}$/.test(String(v)) ? new Date(Number(v) * (String(v).length > 11 ? 1 : 1000)) : new Date(String(v));\n  return Number.isNaN(t.getTime()) ? str(v).slice(0, 30) : t.toISOString();\n};\n\nfunction instagram(x) {\n  if (x.productType && !['clips', 'igtv', 'feed'].includes(x.productType) && !x.videoUrl) return null;\n  return { url: https(x.url) || (x.shortCode ? 'https://www.instagram.com/reel/' + x.shortCode + '/' : ''), video_url: https(x.videoUrl),\n    caption: str(x.caption), views: count(x.videoPlayCount, x.igPlayCount, x.videoViewCount), likes: count(x.likesCount),\n    owner: str(first(x.ownerFullName, x.ownerUsername)), posted_at: iso(x.timestamp), days_running: null };\n}\nfunction pinterest(x) {\n  if (x.isVideo === false) return null;   // silentflow returns image pins too\n  return { url: https(x.url), video_url: https(first(x.mp4Url, x.videoUrl, x.hlsUrl)), caption: str(first(x.title, x.description, x.altText)),\n    views: count(x.viewCount), likes: count(x.saveCount, x.likeCount, x.saves),\n    owner: str(first(x.creatorUsername, x.pinnerUsername, (x.pinner || {}).username)), posted_at: iso(x.createdAt), days_running: null };\n}\nfunction meta(x) {\n  const snap = x.snapshot || {};\n  const vids = [].concat(x.videoUrls || [], (snap.videos || []).map((v) => first(v.videoHdUrl, v.video_hd_url, v.videoSdUrl, v.video_sd_url)),\n    (snap.cards || []).map((c) => first(c.videoHdUrl, c.video_hd_url, c.videoSdUrl, c.video_sd_url)));\n  const id = str(first(x.adArchiveId, x.adArchiveID, x.ad_archive_id));\n  const start = first(x.startDate, x.start_date, x.startDateFormatted);\n  return { url: https(x.adLibraryUrl) || (id ? 'https://www.facebook.com/ads/library/?id=' + id : ''), video_url: https(vids.find(Boolean)),\n    caption: str(first(x.bodyText, (snap.body || {}).text, x.title, snap.title)), views: null, likes: null,\n    owner: str(first(x.pageName, snap.page_name, x.page_name)), posted_at: iso(start), days_running: days(start) };\n}\nconst READ = { instagram, pinterest, meta };\n\nconst out = [];\nconst problems = [];\nconst seen = new Set();\nplans.forEach((plan, i) => {\n  const a = answers[i] || {};\n  const what = plan.source + ' ' + (plan.query || plan.label || '');\n  let body = a.body;\n  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { /* kept as text */ } }\n  const status = Number(a.statusCode || 0);\n  if (a.error || !Array.isArray(body)) {\n    const why = (body && body.error && (body.error.message || body.error.type)) || (a.error && (a.error.message || a.error)) || (status ? 'HTTP ' + status : 'no answer');\n    problems.push(what + ': ' + String(why).replace(/Bearer\\s+\\S+/gi, 'Bearer ***').slice(0, 160));\n    return;\n  }\n  const read = READ[plan.source];\n  let rows = body.map((x) => (x && typeof x === 'object' && read ? read(x) : null)).filter((r) => r && r.url && r.video_url);\n  if (plan.source === 'meta') rows.sort((p, q) => (q.days_running || 0) - (p.days_running || 0));\n  rows = rows.slice(0, plan.keep_n || rows.length);\n  for (const r of rows) {\n    if (seen.has(r.url)) continue;\n    seen.add(r.url);\n    out.push({ source: plan.source, url: r.url, video_url: r.video_url, brand: plan.brand || r.owner, niche: plan.niche || '',\n      caption: r.caption.slice(0, 2000), views: r.views, likes: r.likes, days_running: r.days_running, posted_at: r.posted_at,\n      query: str(plan.query).slice(0, 300), actor: plan.actor, found_at: now.toISOString(), found_for: plan.found_for || '', keep: '', kept_by: '', kept_at: '' });\n  }\n  if (!rows.length && !body.length) problems.push(what + ': nothing found');\n});\nreturn [...out, { marker: true, url: '', found: out.length, problems }].map((json) => ({ json }));\n"
+   }
+  },
+  {
+   "id": "76b923cf-ebff-4f58-9d52-00d1949911e5",
+   "name": "Only New Links",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1680,
+    0
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "rowNotExists",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "YyI0Ss2xyv5Bs8Hx",
+     "cachedResultName": "dtj_reel_library"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "url",
+       "condition": "eq",
+       "keyValue": "={{ $json.url }}"
+      }
+     ]
+    }
+   },
+   "alwaysOutputData": true
+  },
+  {
+   "id": "344d52e8-1d19-44e8-b4e2-d5793ed92b34",
+   "name": "Pick the New Ones",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1920,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Pick the New Ones\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// Input: the references whose link is not yet in dtj_reel_library (\"Only New Links\"; one empty item when there are none). Output:\n// those references (the columns of dtj_reel_library only), or one { url: '' } item so \"Anything New?\" sends just the summary.\nconst COLS = ['source', 'url', 'video_url', 'brand', 'niche', 'caption', 'views', 'likes', 'days_running', 'posted_at', 'query', 'actor',\n  'found_at', 'found_for', 'keep', 'kept_by', 'kept_at'];\nconst seen = new Set();\nconst out = [];\nfor (const it of $input.all()) {\n  const r = it.json || {};\n  if (r.marker || !r.url || seen.has(r.url)) continue;\n  seen.add(r.url);\n  const row = {};\n  for (const c of COLS) row[c] = r[c] == null ? (['views', 'likes', 'days_running'].includes(c) ? null : '') : r[c];\n  out.push({ json: row });\n}\nreturn out.length ? out : [{ json: { url: '' } }];\n"
+   }
+  },
+  {
+   "id": "000c7715-c6b1-488a-958d-c808235d3965",
+   "name": "Anything New?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2160,
+    0
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.url }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "54f312f9-d8f0-4485-96bd-7858790c0e47",
+   "name": "Save New References",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    2400,
+    -100
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "YyI0Ss2xyv5Bs8Hx",
+     "cachedResultName": "dtj_reel_library"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "source": "={{ $json.source }}",
+      "url": "={{ $json.url }}",
+      "video_url": "={{ $json.video_url }}",
+      "brand": "={{ $json.brand }}",
+      "niche": "={{ $json.niche }}",
+      "caption": "={{ $json.caption }}",
+      "views": "={{ $json.views }}",
+      "likes": "={{ $json.likes }}",
+      "days_running": "={{ $json.days_running }}",
+      "posted_at": "={{ $json.posted_at }}",
+      "query": "={{ $json.query }}",
+      "actor": "={{ $json.actor }}",
+      "found_at": "={{ $json.found_at }}",
+      "found_for": "={{ $json.found_for }}",
+      "keep": "={{ $json.keep }}",
+      "kept_by": "={{ $json.kept_by }}",
+      "kept_at": "={{ $json.kept_at }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "source",
+       "displayName": "source",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "url",
+       "displayName": "url",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "video_url",
+       "displayName": "video_url",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "brand",
+       "displayName": "brand",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "niche",
+       "displayName": "niche",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "caption",
+       "displayName": "caption",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "views",
+       "displayName": "views",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "likes",
+       "displayName": "likes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "days_running",
+       "displayName": "days_running",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "number",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "posted_at",
+       "displayName": "posted_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "query",
+       "displayName": "query",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "actor",
+       "displayName": "actor",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "found_at",
+       "displayName": "found_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "found_for",
+       "displayName": "found_for",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "keep",
+       "displayName": "keep",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "kept_by",
+       "displayName": "kept_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "kept_at",
+       "displayName": "kept_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "acdd0675-7eaf-43e4-9f64-8e5945cf8418",
+   "name": "Write the Digest",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2640,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Write the Digest\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// Input: the references just saved in dtj_reel_library (each with its row id), or one empty item when nothing new was found.\n// Output, per chat that gets the digest (the person who asked with /refs, or the active admins for the weekly scan): one summary\n// message, then one message per new reference (at most MAX_SHOWN) with Keep / Skip buttons. A button carries the bot's answer format\n// \"a:ref-<row id>:keep:<n>\" (n8n/store-factory/bot_ask.py), so the bot's \"Save the Answer\" records the tap and \"Match the Taps\" here\n// writes keep = yes / no on the row. A Pinterest pin's \"likes\" are its saves. Every item is { chat_id, text, summary, keep_data, skip_data } (HTML, text escaped).\nconst MAX_SHOWN = 15;\nconst esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst NAMES = { instagram: 'Instagram', pinterest: 'Pinterest', meta: 'Meta Ad Library' };\nconst big = (n) => {\n  const v = Number(n);\n  if (!Number.isFinite(v) || v <= 0) return '';\n  return v >= 1e6 ? (v / 1e6).toFixed(1).replace(/\\.0$/, '') + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1).replace(/\\.0$/, '') + 'k' : String(Math.round(v));\n};\n\nconst saved = $input.all().map((i) => i.json || {}).filter((r) => r.id && r.url);\nconst results = $('Read the Results').all().map((i) => i.json || {});\nconst marker = results.find((r) => r.marker) || {};\nconst plans = $('Plan the Searches').all().map((i) => i.json || {});\nconst first = plans[0] || {};\nconst chats = [...new Set(plans.flatMap((p) => p.chat_ids || []).map(String).filter(Boolean))];\nif (!chats.length) return [];\n\nconst what = first.mode === 'weekly' ? 'the weekly scan of the watchlist' : esc(first.label || first.query || 'your search');\nconst perSource = {};\nfor (const r of saved) perSource[r.source] = (perSource[r.source] || 0) + 1;\nconst found = Number(marker.found || 0);\nlet head = saved.length\n  ? '<b>' + saved.length + ' new reference video' + (saved.length === 1 ? '' : 's') + '</b> from ' + what + ' ('\n    + Object.keys(perSource).map((s) => (NAMES[s] || s) + ' ' + perSource[s]).join(', ') + ').'\n  : 'No new reference videos from ' + what + '.';\nif (found > saved.length) head += ' ' + (found - saved.length) + ' found were already in the library.';\nif (saved.length > MAX_SHOWN) head += ' The first ' + MAX_SHOWN + ' are below; all ' + saved.length + ' are saved in dtj_reel_library.';\nif (saved.length) head += '\\nTap <b>Keep</b> to add one to the reel library (/reel and /remake can use it), <b>Skip</b> to leave it out.';\nconst skipped = [...new Set(plans.flatMap((p) => p.skipped || []))].map((s) => (NAMES[s] || s) + ': nothing to search for there');\nconst problems = [...(marker.problems || []), ...skipped].slice(0, 6);\nif (problems.length) head += '\\n\\nNotes: ' + problems.map((p) => esc(p)).join('; ') + '.';\n\nconst order = { meta: 0, instagram: 1, pinterest: 2 };\nconst shown = saved.slice().sort((a, b) => (order[a.source] ?? 3) - (order[b.source] ?? 3)\n  || Number(b.days_running || 0) - Number(a.days_running || 0) || Number(b.views || 0) - Number(a.views || 0)).slice(0, MAX_SHOWN);\nconst out = [];\nfor (const chat of chats) {\n  out.push({ json: { chat_id: chat, text: head, summary: true, keep_data: '', skip_data: '' } });\n  shown.forEach((r, i) => {\n    const facts = [r.days_running ? 'running ' + r.days_running + ' days' : '', big(r.views) ? big(r.views) + ' views' : '',\n      big(r.likes) ? big(r.likes) + (r.source === 'pinterest' ? ' saves' : ' likes') : ''].filter(Boolean).join(' · ');\n    const caption = String(r.caption || '').replace(/\\s+/g, ' ').trim();\n    const text = '<b>' + (i + 1) + '/' + shown.length + ' · ' + esc(NAMES[r.source] || r.source) + (r.brand ? ' · ' + esc(r.brand) : '') + '</b>\\n'\n      + (caption ? '\"' + esc(caption.slice(0, 220)) + (caption.length > 220 ? '…' : '') + '\"\\n' : '')\n      + (facts ? facts + '\\n' : '')\n      + '<a href=\"' + esc(r.url) + '\">Open it</a>' + (r.video_url ? ' · <a href=\"' + esc(r.video_url) + '\">video file</a>' : '');\n    out.push({ json: { chat_id: chat, text, summary: false, keep_data: 'a:ref-' + r.id + ':keep:0', skip_data: 'a:ref-' + r.id + ':keep:1' } });\n  });\n}\nreturn out;\n"
+   }
+  },
+  {
+   "id": "42fcac4c-5ce0-403b-8d97-5e6e1bc428ed",
+   "name": "Is It the Summary?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2880,
+    100
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.summary }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   }
+  },
+  {
+   "id": "be5ef653-2102-48e4-aee0-03adcbe0ed02",
+   "name": "Send the Summary",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    3120,
+    0
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "228a5499-8c49-466e-b406-2d88d6c39a98",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "d1dd4b54-56c6-418d-8186-c4c1ce5c1797",
+   "name": "Send a Reference",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    3120,
+    200
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "replyMarkup": "inlineKeyboard",
+    "inlineKeyboard": {
+     "rows": [
+      {
+       "row": {
+        "buttons": [
+         {
+          "text": "Keep",
+          "additionalFields": {
+           "callback_data": "={{ $json.keep_data }}"
+          }
+         },
+         {
+          "text": "Skip",
+          "additionalFields": {
+           "callback_data": "={{ $json.skip_data }}"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": false
+    }
+   },
+   "onError": "continueRegularOutput",
+   "webhookId": "a534a9cc-532f-44ca-833e-86be470e99a3",
+   "credentials": {
+    "telegramApi": {
+     "id": "gM49WI7trRUFpcNv",
+     "name": "DTJ Page Bot"
+    }
+   }
+  },
+  {
+   "id": "ae1ce6f9-d065-4dbe-83c6-ebe11bb3d6f3",
+   "name": "Every 15 Minutes",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    500
+   ],
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "minutes",
+       "minutesInterval": 15
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "7e2cff4d-e540-46df-8451-aa251f2b9ded",
+   "name": "Load the Taps",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    240,
+    500
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "job",
+       "condition": "like",
+       "keyValue": "ref-%"
+      },
+      {
+       "keyName": "key",
+       "condition": "eq",
+       "keyValue": "keep"
+      }
+     ]
+    },
+    "returnAll": true
+   }
+  },
+  {
+   "id": "c51df766-039a-4f49-b55f-818443b514a2",
+   "name": "Match the Taps",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    480,
+    500
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Match the Taps\" in \"Reel Factory: Find References\" (mode: Run Once for All Items).\n// The Keep / Skip buttons under each reference carry \"a:ref-<library row id>:keep:<0 Keep | 1 Skip>\"; the Telegram bot's\n// \"Save the Answer\" writes every tap into dtj_bot_answers (job ref-<id>, key keep, choice, by, at). Here: the last tap per reference\n// from the last two days (older taps were recorded by earlier runs) -> one item per reference for \"Record the Choice\".\nconst WINDOW_MS = 2 * 24 * 3600 * 1000;\nconst since = new Date(Date.now() - WINDOW_MS).toISOString().slice(0, 19);\nconst last = {};\nfor (const it of $input.all()) {\n  const r = it.json || {};\n  const m = String(r.job || '').match(/^ref-(\\d{1,12})$/);\n  if (!m || String(r.key || '') !== 'keep') continue;\n  const at = String(r.at || '').slice(0, 19);\n  if (!at || at < since) continue;\n  const choice = String(r.choice || '');\n  const label = String(r.value || '').trim().toLowerCase();\n  const keep = choice === '0' || (choice === '' && label === 'keep') ? 'yes' : choice === '1' || (choice === '' && label === 'skip') ? 'no' : '';\n  if (!keep) continue;\n  const prev = last[m[1]];\n  if (prev && (prev.at > at || (prev.at === at && prev.id > Number(r.id || 0)))) continue;\n  last[m[1]] = { at, id: Number(r.id || 0), keep, by: String(r.by || '').trim() || 'someone on the DTJ bot' };\n}\nreturn Object.keys(last).map((id) => ({ json: { row_id: Number(id), keep: last[id].keep, kept_by: last[id].by, kept_at: last[id].at + 'Z' } }));\n"
+   }
+  },
+  {
+   "id": "613ef8e7-8dca-42e7-a48f-1e3784dbc0f7",
+   "name": "Record the Choice",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    720,
+    500
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "update",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "YyI0Ss2xyv5Bs8Hx",
+     "cachedResultName": "dtj_reel_library"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "id",
+       "condition": "eq",
+       "keyValue": "={{ $json.row_id }}"
+      }
+     ]
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "keep": "={{ $json.keep }}",
+      "kept_by": "={{ $json.kept_by }}",
+      "kept_at": "={{ $json.kept_at }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "keep",
+       "displayName": "keep",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "kept_by",
+       "displayName": "kept_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      },
+      {
+       "id": "kept_at",
+       "displayName": "kept_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "type": "string",
+       "canBeUsedToMatch": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "0d86e50f-68b9-4bac-9cd9-c5a98ef22fd5",
+   "name": "Sticky Note 067de7ff",
+   "type": "n8n-nodes-base.stickyNote",
+   "typeVersion": 1,
+   "position": [
+    -40,
+    -420
+   ],
+   "parameters": {
+    "content": "## Reel factory: find references\n**/refs** in the Telegram bot (or the weekly scan of **dtj_reel_watchlist**, Mondays 9:00) asks Apify for reference videos: Instagram reels of a handle or hashtag, Pinterest videos for a search, Meta Ad Library video ads (India, active, longest running first). New ones go to **dtj_reel_library** and to Telegram with Keep / Skip; a tap sets keep = yes / no (every 15 minutes).\n\nApify token: only in the credential **DTJ Apify** (Header Auth, name `Authorization`, value `Bearer <token>`). Costs: at most `limit` results per source (10 max) and a charge cap per call. Source in git: `n8n/reel-factory/`.",
+    "color": 5,
+    "width": 760,
+    "height": 380
+   }
+  }
+ ],
+ "connections": {
+  "From the Telegram Bot": {
+   "main": [
+    [
+     {
+      "node": "Load Watchlist",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Watchlist": {
+   "main": [
+    [
+     {
+      "node": "Load Bot Users",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Every Monday 9:00": {
+   "main": [
+    [
+     {
+      "node": "Load Watchlist",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Bot Users": {
+   "main": [
+    [
+     {
+      "node": "Plan the Searches",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Plan the Searches": {
+   "main": [
+    [
+     {
+      "node": "Anything to Search?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Anything to Search?": {
+   "main": [
+    [
+     {
+      "node": "Ask Apify",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Is It the Summary?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Ask Apify": {
+   "main": [
+    [
+     {
+      "node": "Read the Results",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Read the Results": {
+   "main": [
+    [
+     {
+      "node": "Only New Links",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Only New Links": {
+   "main": [
+    [
+     {
+      "node": "Pick the New Ones",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pick the New Ones": {
+   "main": [
+    [
+     {
+      "node": "Anything New?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Anything New?": {
+   "main": [
+    [
+     {
+      "node": "Save New References",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Write the Digest",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save New References": {
+   "main": [
+    [
+     {
+      "node": "Write the Digest",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Write the Digest": {
+   "main": [
+    [
+     {
+      "node": "Is It the Summary?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Is It the Summary?": {
+   "main": [
+    [
+     {
+      "node": "Send the Summary",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send a Reference",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Every 15 Minutes": {
+   "main": [
+    [
+     {
+      "node": "Load the Taps",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load the Taps": {
+   "main": [
+    [
+     {
+      "node": "Match the Taps",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Match the Taps": {
+   "main": [
+    [
+     {
+      "node": "Record the Choice",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}
