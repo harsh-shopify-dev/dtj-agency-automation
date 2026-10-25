@@ -22,6 +22,46 @@ Update this file at the end of every working session (Harsh's rule).
 - OPEN for Harsh: Remotion licence if DTJ is over 3 people (else the libass captions);
   licensed music (BOP is preview-only); delete test row 1 in dtj_reel_jobs if you want the table empty (Claude does not delete).
 
+## 26 Oct 2026: SENSO WHOLE STORE on dtj-testing (draft theme 189402775703, account A)
+Harsh, 26 Oct 2026: "design the website for senso ... final ready to use website with homepage, collection page and product page (list
+all products but design only 2 product pages) ... this is my first and last prompt". Then: "only generate the product images for 2
+products only and other homepage graphics". Every store change below is logged in `.work/stores/dtj-testing/action-log.jsonl` with
+approved_by "Harsh (chat, 26 Oct 2026)". The live theme (test-data) and the password page are untouched; nothing is published.
+- **Store access:** Harsh approved a CLI store sign-in for dtj-testing on this laptop (`shopify store auth`, products, files,
+  publications, pages, navigation, legal policies). The install service deploy (activate/uploads/pages/menu ops) was blocked by the
+  auto-mode classifier ("Production Deploy") and is NOT done; the CLI sign-in made it unnecessary for this store.
+- **Products:** Senso's 114 products (copied 22 Oct as drafts) are ACTIVE on the Online Store, each with a product type and a SAMPLE
+  price + compare-at (tag `dtj-sample-price`, `dtj-price-needed` removed). The store's currency is **USD** (an owner's setting), so the
+  samples are USD: tea premix 6.99/8.99, chai lattes 8.99/11.99, turmeric lattes 9.99/12.99, coffee and hot chocolate 8.99/11.99,
+  refreshers 6.99/8.99, chai karak 7.99/9.99, vending machines 249-899 (Indian 2-option machines ~Rs 15-35k). Script:
+  scratchpad `ready_products.py` (logic recorded here; result 114/114, 0 problems).
+- **Collections (automated by product type, on the Online Store, each with its category picture):** shop-all (vendor Senso Foods),
+  tea-premix, chai-latte-mixes, turmeric-lattes, chai-karak, coffee-premix, hot-chocolate, refreshers, vending-machines.
+- **Pictures:** 33 + 5 photos by Codex on the VPS (`.work/stores/dtj-testing/pics/plan*.json`): home hero (desktop + phone), a pour
+  hero, 7 category tiles, office and morning lifestyle, how-to, and per product: pack, pour, numbers, ingredients, 3 how-to shots,
+  lifestyle. The turmeric box's small labels came out misspelt ("Van GMO") and were remade with the labels named in the prompt. Two
+  6-picture square galleries with code-set words (`gallery_compose`, DM Serif Display + Poppins). 54 files in the store's Files
+  (`store_files` uploads at most 12 per run: batches with `--only`).
+- **Theme (draft only):** header + footer (run_chrome, deep green #0E3B22, Senso's real Instagram/Facebook/YouTube, announcements:
+  2 million cups a day; Rajkot, 30+ countries), home page (ship_home: hero slideshow, trust, categories, best sellers by tab, story,
+  reasons, FAQ; read-back differs only by the hero's desktop_max_height, as on elevate), collection page (run_collection: title band,
+  category links row, DTJ Product List, FAQ), product pages `product.dtj-masala-tea-premix` and `product.dtj-turmeric-latte-mix-with-saffron`
+  (ship_draft: review pass, lint 0, design checks pass, 0 samples, 0 test pictures; galleries first on the products, tiny 80x80 icons
+  detached from the turmeric product, files kept), theme settings (Playfair Display headings, Poppins body, Senso logo, round buttons;
+  backup ~/work/settings_data.backup-20261026.json on the VPS).
+- **Pages and menus:** About us and FAQ made (Contact kept as it was); main menu: Shop all, Masala chai, Chai lattes, Golden milk,
+  Coffee, Vending machines, About us, Contact; footer: About us, Contact, FAQ, Search, Your Privacy Choices.
+- **Facts rules kept:** no reviews, ratings or customer photos (none are real); no guarantee or shipping terms (Senso states none);
+  proof = Senso's own about page (2 million cups/day, 30+ countries, FSSC 22000 by SGS, Gulfood 2019/2020, airlines).
+- **Fixed on the way:** gallery_compose printed "14 g" as "1" + "4 g" and 4 ingredient tiles as 3 + 1 (PR #87, merged, on the VPS).
+- **Known limits:** DTJ Product List shows at most 50 products per collection page: Shop all (114) shows its first 50; every category
+  page is complete. Showing all 114 on one page needs pagination in DTJ Collection (an app release = Harsh's yes). The designed
+  product pages open with `?view=dtj-<handle>` until the owner assigns the templates (Products > the product > Theme template).
+- **OPEN for the owner / Harsh:** store currency to INR if the shop sells in India, then real prices for all 114 (replace the samples);
+  payments, shipping, taxes, domain, policies; assign the 2 product templates; publish the draft and remove the password page (Harsh's
+  yes); the logo file is small (196 x 98 px) — a larger logo from Senso; 16 Shopify test products (snowboards, gift card) are still
+  active from the store's test data (archive them before launch).
+
 ## 25 Oct 2026: PROPERI polish + DTJ Blocks dtj-blocks-28 RELEASED (PRs #79-#82, account A)
 - **App release (Harsh's yes in chat: "yes, release DTJ Blocks"):** DTJ Blocks **dtj-blocks-28** (DTJ's own app, `services/block-library`,
   `shopify app deploy --allow-updates`): DTJ Hero Points can show a line icon per point ("icon | text": protein, peanut, no-sugar,
