@@ -1,10 +1,13 @@
 {
- "_comment": "Harsh's own dev store runs DTJ's ORIGINAL apps (not per-client copies): handles and extension uuids as read from the blocks in its theme 188893495469 on 12 Oct 2026, identical to page_builder/registry.json. Original apps released 12 Oct 2026 with the 10 Oct blocks. DTJ Commerce and DTJ Shop added 13 Oct 2026 (uuids read from blocks placed by Harsh in the same theme; handles dtj-commerce / dtj-shop). DTJ Collection added 20 Oct 2026 (uuid read from the DTJ Product List Harsh placed in the same theme; handle dtj-collection).",
+ "_comment": "Harsh's own dev store runs DTJ's ORIGINAL apps (not per-client copies): handles and extension uuids as read from the blocks in its theme 188893495469 on 12 Oct 2026, identical to page_builder/registry.json. Original apps released 12 Oct 2026 with the 10 Oct blocks. DTJ Commerce and DTJ Shop added 13 Oct 2026 (uuids read from blocks placed by Harsh in the same theme; handles dtj-commerce / dtj-shop). DTJ Collection added 20 Oct 2026 (uuid read from the DTJ Product List Harsh placed in the same theme; handle dtj-collection). DTJ Blocks dtj-blocks-28 released 25 Oct 2026 with the buy box point icons (features: point_icons).",
  "store": "elevate-with-harsh.myshopify.com",
  "apps": {
   "dtj-blocks": {
    "handle": "dtj-blocks",
-   "uuid": "01a10b7e-02ff-7b68-95a3-bbcdcb562875"
+   "uuid": "01a10b7e-02ff-7b68-95a3-bbcdcb562875",
+   "features": [
+    "point_icons"
+   ]
   },
   "dtj-sections": {
    "handle": "dtj-sections",
