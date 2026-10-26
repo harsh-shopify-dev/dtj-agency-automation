@@ -36,7 +36,7 @@ Then run (their links and words exactly as they wrote them; add `for: <audience>
 /opt/data/profiles/ugc_generation_automation/dtj/dtj remake <ad link> <product link if any> <product name>
 ```
 Then relay `say`. In a minute a **Start** button comes in this chat ("tap Start if you are watching"); after the tap, the plan,
-the pictures and the final ad each come here with an **Approve** button. The buttons are handled for you (do not answer them).
+the pictures and the final ad each come here with an **Approve** button. The buttons are handled for you (do not answer them). If they TYPE "start" or "approve" instead of tapping, tell them to tap the button on that message; never run `dtj say` for it.
 
 ## Other requests
 | They want | Run |
@@ -46,7 +46,7 @@ the pictures and the final ad each come here with an **Approve** button. The but
 | what an audience watches | `dtj audience <audience name> #hashtags @creators` |
 | "status", "how is my ad going" | `dtj status` |
 | a photo of the product | `dtj photo <saved image path>` |
-| a plain answer to the question the reel just asked here (e.g. what to change) | `dtj say <their exact words>` |
+| a plain answer to a TYPED question the reel just asked here (it ends with "(job r..., answer ...)") | `dtj say <their exact words>` |
 
 (`dtj` = `/opt/data/profiles/ugc_generation_automation/dtj/dtj`.) It prints one JSON line: send them the `say` text word for word.
 Run it once per request; if it says `"ok": false`, just relay `say` (it explains what to do) and never retry on your own.

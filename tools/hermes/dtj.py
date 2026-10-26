@@ -44,6 +44,7 @@ SUBS = ("remake", "reel", "refs", "audience", "status", "help", "photo", "tg", "
 ENV_FILE = Path.home() / ".config" / "dtj" / "worker.env"
 LOG = Path.home() / "dtj" / "hermes" / "dtj.log"
 PHOTOS = Path.home() / "dtj" / "hermes" / "photos"
+REEL_JOB = re.compile(r"(r|wr)\d{1,12}|refs-[a-z0-9-]{1,18}")   # reel job ids (reel_job.py, worker, Find References)
 PHOTO_MINUTES = 30                       # the reel bot's own window for "photos sent just before"
 MAGIC = {bytes([0xFF, 0xD8, 0xFF]): ".jpg", bytes([0x89]) + b"PNG": ".png", b"RIFF": ".webp"}
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -143,8 +144,11 @@ def refs_for(call, chat: str, now: datetime) -> dict:
     today = now.astimezone(IST).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
     return {
         "Load Bot Users": rows(call, t["dtj_bot_users"], [{"columnName": "telegram_user_id", "condition": "isNotEmpty", "value": None}]),
-        "Load Open Questions": rows(call, t["dtj_bot_answers"], [{"columnName": "chat_id", "condition": "eq", "value": chat},
-                                                                 {"columnName": "value", "condition": "isEmpty", "value": None}]),
+        # reel questions only: the same chat also holds the store bot's page chats (job page-<n>), which a reel answer must never reach
+        # (26 Oct 2026: a typed "Start ... for diwali" went to the 24 Oct ProPeri page chat)
+        "Load Open Questions": [r for r in rows(call, t["dtj_bot_answers"], [{"columnName": "chat_id", "condition": "eq", "value": chat},
+                                                                            {"columnName": "value", "condition": "isEmpty", "value": None}])
+                                if REEL_JOB.fullmatch(str(r.get("job") or ""))],
         "Load Recent Photos": rows(call, t["dtj_bot_answers"], [{"columnName": "job", "condition": "eq", "value": "reelpics-" + chat}])
                               + recent_photos(chat, now, PHOTOS_ROOT[0]),
         "Load Today's Reels": rows(call, t["dtj_reel_jobs"], [{"columnName": "createdAt", "condition": "gte", "value": today}]),
