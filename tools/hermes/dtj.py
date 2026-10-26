@@ -10,6 +10,9 @@ pictures and the final reel there (phase 1; the buttons move into the Hermes bot
     dtj.py --ssh                                  ssh forced command: the request comes on stdin (tools/hermes/hermes_dtj.sh)
     dtj.py --user <telegram id> --name <name> <remake|reel|refs|audience|status|help> [text ...]   by hand, on the VPS
 
+`photo` (Hermes only): a photo the person sent to the Hermes bot, base64 on stdin line 5; saved in ~/dtj/hermes/photos/<user>/ and
+used as a product picture by that person's next remake / reel within 30 minutes, exactly like photos sent to the reel bot.
+
 stdin for --ssh: line 1 the sender's Telegram user id, line 2 their name, line 3 the platform (Hermes's own HERMES_SESSION_* values,
 not typed by the model), line 4 the sub-command, the rest the request text. Output: one JSON line {"ok", "say", ...} for Hermes to
 relay word for word. Every call is logged to ~/dtj/hermes/dtj.log (who, what, the result); never a token.
@@ -33,9 +36,12 @@ BOT = ROOT / "n8n" / "reel-factory"
 BOT_WORKFLOW = "DRHXIhjKpwYjPjJO"        # Reel Factory: Telegram Bot (its live code nodes are the rules)
 NEW_REEL = "dS36LVeRXLuIuajm"            # Reel Factory: New Reel
 PROJECT = "NuKdhPFWwCCbm1K3"
-SUBS = ("remake", "reel", "refs", "audience", "status", "help")
+SUBS = ("remake", "reel", "refs", "audience", "status", "help", "photo")
 ENV_FILE = Path.home() / ".config" / "dtj" / "worker.env"
 LOG = Path.home() / "dtj" / "hermes" / "dtj.log"
+PHOTOS = Path.home() / "dtj" / "hermes" / "photos"
+PHOTO_MINUTES = 30                       # the reel bot's own window for "photos sent just before"
+MAGIC = {bytes([0xFF, 0xD8, 0xFF]): ".jpg", bytes([0x89]) + b"PNG": ".png", b"RIFF": ".webp"}
 IST = timezone(timedelta(hours=5, minutes=30))
 REEL_BOT = "@dtj_reels_bot"
 
@@ -94,6 +100,40 @@ def rows(call, table_id: str, filters: list[dict]) -> list[dict]:
     return out
 
 
+def recent_photos(user: str, now: datetime, root: Path | None = None) -> list[dict]:
+    """Photos this person sent to the Hermes bot in the last 30 minutes, as rows the bot's "Load Recent Photos" gives: the value
+    carries an HP: mark so the picture is a VPS path, not a Telegram file id (handle() takes the tg: off again)."""
+    folder = (root or PHOTOS) / user
+    if not folder.is_dir():
+        return []
+    cutoff = now.timestamp() - PHOTO_MINUTES * 60
+    out = []
+    for f in sorted(folder.iterdir()):
+        if f.is_file() and f.stat().st_mtime >= cutoff:
+            at = datetime.fromtimestamp(f.stat().st_mtime, timezone.utc).isoformat()
+            out.append({"job": "reelpics-" + user, "value": "HP:" + str(f), "at": at})
+    return out
+
+
+def save_photo(user: str, b64: str, now: datetime, root: Path | None = None) -> dict:
+    import base64  # noqa: PLC0415
+    try:
+        raw = base64.b64decode(b64, validate=True)
+    except ValueError:
+        raw = b""
+    ext = next((e for m, e in MAGIC.items() if raw.startswith(m)), None)
+    if not ext or len(raw) > 10_000_000:
+        return {"ok": False, "say": "That does not look like a photo (JPG, PNG or WEBP under 10 MB). Please send it again."}
+    folder = (root or PHOTOS) / user
+    folder.mkdir(parents=True, exist_ok=True)
+    f = folder / (now.strftime("%Y%m%d-%H%M%S-%f") + ext)
+    f.write_bytes(raw)
+    n = len(recent_photos(user, now, root))
+    return {"ok": True, "action": "photo", "path": str(f),
+            "say": f"Photo saved ({n} in the last {PHOTO_MINUTES} minutes). Now send the ad you want to copy (a reel or Meta ad link), "
+                   "or send more product photos."}
+
+
 def refs_for(call, chat: str, now: datetime) -> dict:
     """What the bot's Load ... nodes give "Who Is It", with the same filters (deploy_reel_bot.py)."""
     t = tables(call)
@@ -102,10 +142,19 @@ def refs_for(call, chat: str, now: datetime) -> dict:
         "Load Bot Users": rows(call, t["dtj_bot_users"], [{"columnName": "telegram_user_id", "condition": "isNotEmpty", "value": None}]),
         "Load Open Questions": rows(call, t["dtj_bot_answers"], [{"columnName": "chat_id", "condition": "eq", "value": chat},
                                                                  {"columnName": "value", "condition": "isEmpty", "value": None}]),
-        "Load Recent Photos": rows(call, t["dtj_bot_answers"], [{"columnName": "job", "condition": "eq", "value": "reelpics-" + chat}]),
+        "Load Recent Photos": rows(call, t["dtj_bot_answers"], [{"columnName": "job", "condition": "eq", "value": "reelpics-" + chat}])
+                              + recent_photos(chat, now, PHOTOS_ROOT[0]),
         "Load Today's Reels": rows(call, t["dtj_reel_jobs"], [{"columnName": "createdAt", "condition": "gte", "value": today}]),
         "Load Settings": rows(call, t["dtj_reel_settings"], [{"columnName": "key", "condition": "isNotEmpty", "value": None}]),
     }
+
+
+PHOTOS_ROOT = [None]                     # tests point this at a temporary folder
+
+
+def is_member(call, user: str) -> bool:
+    team = rows(call, tables(call)["dtj_bot_users"], [{"columnName": "telegram_user_id", "condition": "eq", "value": user}])
+    return any(str(r.get("active")).lower() != "false" for r in team)
 
 
 def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: datetime | None = None, code_dir: Path | None = None) -> dict:
@@ -114,6 +163,10 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
         return {"ok": False, "say": "Reels start from Telegram (your Telegram account says who you are). Please send this from the Hermes bot."}
     if sub not in SUBS:
         return {"ok": False, "say": "Unknown request. Use: remake, reel, refs, audience, status or help."}
+    if sub == "photo":
+        if not is_member(call, user):
+            return {"ok": False, "say": "This bot is only for the DTJ team. To get access, send Harsh this number: " + user}
+        return save_photo(user, (text or "").strip(), now, PHOTOS_ROOT[0])
     name = re.sub(r"[\x00-\x1f]", " ", name or "").strip()[:60] or "there"
     message = {"message": {"chat": {"id": int(user), "type": "private"}, "from": {"id": int(user), "first_name": name, "is_bot": False},
                            "text": ("/" + sub + " " + (text or "")).strip()[:1600]}}
@@ -139,6 +192,7 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
         return {"ok": True, "action": "reply", "say": plain(out.get("text"))}
     if action == "reel":
         inputs = dict(out.get("inputs") or {})
+        inputs["product_images"] = str(inputs.get("product_images", "")).replace("tg:HP:", "")   # Hermes photos: VPS paths
         res = call("execute_workflow", {"workflowId": NEW_REEL, "triggerNodeName": "New UGC Reel", "executionMode": "production",
                                         "inputs": {"formData": inputs}})
         kind = "a remake" if inputs.get("reel_type") == "remake" else "a UGC reel"
@@ -170,7 +224,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     load_env()
     if a.ssh:
-        lines = sys.stdin.read(20000).split("\n")
+        lines = sys.stdin.read(14_000_000).split("\n")
         user, name, platform, sub = (lines + ["", "", "", ""])[:4]
         text = " ".join(x.strip() for x in lines[4:] if x.strip())
     else:
@@ -180,7 +234,8 @@ def main(argv=None) -> int:
         res = handle(user.strip(), name, sub, text)
     except Exception as e:  # noqa: BLE001  one plain line for the person; the reason is in the log
         res = {"ok": False, "say": "That did not go through. Please try again in a minute.", "error": str(e)[:300]}
-    log({"user": user.strip(), "name": name.strip()[:60], "platform": platform.strip()[:20], "sub": sub, "text": text[:300],
+    shown = f"<photo, {len(text) * 3 // 4} bytes>" if sub == "photo" else text[:300]
+    log({"user": user.strip(), "name": name.strip()[:60], "platform": platform.strip()[:20], "sub": sub, "text": shown,
          "action": res.get("action"), "ok": res.get("ok"), "run": res.get("run"), "error": res.get("error")})
     res.pop("error", None)
     print(json.dumps(res, ensure_ascii=False))

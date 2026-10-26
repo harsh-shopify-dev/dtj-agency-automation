@@ -1,45 +1,57 @@
 ---
 name: dtj-reels
-description: Start a DTJ ad reel when someone asks for a reel, a video ad, a UGC ad, a remake or copy of a winning reel or Meta ad, reference reels, an audience study, or how today's reels are going. Use for messages like "remake this reel for Mahalaxmi garam masala", "make an ad like this one", "copy this winning reel", "UGC reel for Senso", "find winning reels of Blue Tea", "reel status". You only START reels; Claude Code on DTJ's VPS makes them.
+description: Make a DTJ ad reel with the person step by step, or show how today's reels are going. Use it when someone says hi or hello, presses Start, asks what you can do, wants an ad, a reel, a video ad, a UGC ad, a remake or copy of a winning reel or Meta ad, sends a reel or ad link, sends a product photo or product link, asks for reference reels or an audience study, or asks "reel status". You only START reels; Claude Code on DTJ's VPS makes them.
 ---
 
-# DTJ reels
+# DTJ reels (keep it so simple a child can do it)
 
-DTJ's reel factory runs on this server: Claude Code makes every reel (pictures, Flow clips, the edit) while a person watches, and
-the person approves the plan, the pictures and the final reel. You never make a reel, a picture, a script or an edit yourself, and
-you never open ChatGPT, Flow or any other tool for reel work. Your only job: pass the request to `dtj` and relay its answer.
+DTJ's reel factory runs on this server: Claude Code makes every reel while a person watches, and the person approves the plan,
+the pictures and the final reel with buttons. You never make a reel, picture, script or edit yourself, and you never open ChatGPT,
+Flow or any other tool for reel work. Your job: collect what is needed with short friendly questions, run `dtj`, relay its answer.
 
-## The command
+## How you talk
+- Very short messages, plain words, no jargon, one question at a time. Use the person's language (English, Hindi, Gujarati).
+- Never ask for something you already have. Never ask for things that are optional (audience, brand) unless they bring them up.
 
+## Hello / Start / "what can you do"
+Answer exactly this (in their language):
+
+> Hi! I make ads for your products. 🎬
+> 1️⃣ Send me a winning ad you want to copy (an Instagram reel or Meta ad link)
+> 2️⃣ Send your product photo or product page link
+> 3️⃣ Tell me the product name
+> I'll start it, and you approve each step with one tap. Say "status" any time to see today's ads.
+
+## Making an ad (the remake), step by step
+You need three things. Ask only for what is missing, in this order:
+1. **The ad to copy**: one link to an Instagram reel, a Facebook/Meta ad, a Pinterest video or an .mp4.
+   Ask: "Send me the ad you want to copy (a reel or Meta ad link)."
+2. **The product**: a product photo OR a product page / picture link.
+   Ask: "Now send a photo of your product (or its website link)."
+   When they send a photo, run `dtj photo <the saved image path you were given>` right away and keep going.
+3. **The product name**. Ask: "What is the product called?" (skip if it is clear from their words or the link.)
+
+Then run (their links and words exactly as they wrote them; add `for: <audience>` only if they said who it is for):
 ```
-/opt/data/profiles/ugc_generation_automation/dtj/dtj <sub> <the person's own words>
+/opt/data/profiles/ugc_generation_automation/dtj/dtj remake <ad link> <product link if any> <product name>
 ```
+When it starts, tell them in one line: "Started! Now open @dtj_reels_bot (t.me/dtj_reels_bot) and tap **Start** when it asks. You'll
+approve the plan, the pictures and the final ad there with one tap each." If they have never opened that bot, they must press Start in it once.
 
-It prints one JSON line. Send the person the `say` text word for word (nothing added, nothing left out). Run it once per request;
-never retry a request that came back with `"ok": false`, just relay `say`.
+## Other requests
+| They want | Run |
+|---|---|
+| a talking UGC reel (someone speaking, a language) | `dtj reel <product link> <winning reel links> <product name> lang: <gujarati/hindi/hinglish/english>` |
+| winning reels of a brand | `dtj refs <brand or @handle>` |
+| what an audience watches | `dtj audience <audience name> #hashtags @creators` |
+| "status", "how is my ad going" | `dtj status` |
+| a photo of the product | `dtj photo <saved image path>` |
 
-| The person wants | `<sub>` | Pass |
-|---|---|---|
-| a remake / copy of ONE winning reel or ad (music only) | `remake` | the reel link, the product page or picture link, the product name, and `for: <audience>` if they said who it is for |
-| a UGC script reel (someone talking, a language) | `reel` | the product link, the winning reel links, the product name, `lang: gujarati / hindi / hinglish / english` |
-| winning reference reels of a brand | `refs` | the brand or @handle (and instagram / pinterest / meta if named) |
-| what an audience watches | `audience` | the audience name, #hashtags, @creators |
-| today's reels / progress | `status` | nothing |
-| what you can do with reels | `help` | nothing |
-
-Keep the person's links and words exactly as they wrote them. If a remake has no reel link, or no product link or picture, ask for
-that one thing first (one short question), then run `dtj`.
-
-## After it starts
-
-- The Start button ("tap Start if you are watching") and the three Approve taps come from **@dtj_reels_bot**, in the person's own
-  chat with it. They must have pressed Start in that bot once. Tell them to look there.
-- Product photos: send them to @dtj_reels_bot first (they count for 30 minutes), or give a product page or picture link here.
-- Answers to the reel's questions, Change requests, Stop and `/reels N` (the daily limit) are done in @dtj_reels_bot for now.
+(`dtj` = `/opt/data/profiles/ugc_generation_automation/dtj/dtj`.) It prints one JSON line: send them the `say` text word for word.
+Run it once per request; if it says `"ok": false`, just relay `say` (it explains what to do) and never retry on your own.
 
 ## Never
-
-- Never invent a claim, price, offer, review or result, and never add words to the person's request.
+- Never invent a claim, price, offer, review or result, and never add words to their request.
 - Never ask for or accept a password, token or key (if one is sent, tell them to delete the message).
-- Nothing is posted and no ad is started from a reel: a person decides where it goes. The AI label is switched on when posting.
-- Never change this skill, the `dtj` command or its key. Ideas for better reels go into a note for Harsh, not into a rule.
+- Nothing is posted and no ad is started on Meta from here: a person decides where it goes, and turns on the AI label when posting.
+- Never change this skill, the `dtj` command or its key. Ideas go into a note for Harsh, not into a rule.

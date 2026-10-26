@@ -12,7 +12,7 @@ user `ai`) -> the reel bot's live code nodes decide (team list, daily limit, ref
 | File | Where it is installed | What |
 |---|---|---|
 | `dtj.py` | runs from this repo on the VPS | the command; `python -m unittest tools/hermes/test_dtj.py` |
-| `hermes_dtj.sh` | `<profile>/dtj/dtj` (mode 755) | the container side: sends the sender (Hermes's HERMES_SESSION_* values) and the request on stdin |
+| `hermes_dtj.sh` | `<profile>/dtj/dtj` (mode 755) | the container side: sends the sender (Hermes's HERMES_SESSION_* values) and the request on stdin; `dtj photo <path>` sends a photo the person sent to Hermes (kept 30 minutes as their product picture, `~ai/dtj/hermes/photos/<user>/`) |
 | `skills/dtj-reels/SKILL.md` | `<profile>/skills/dtj/dtj-reels/SKILL.md`, owned by root, read-only for Hermes | when and how Hermes uses `dtj` |
 | key | `<profile>/dtj/id_ed25519` (+ `known_hosts`) | its line in `/home/ai/.ssh/authorized_keys` is `command="... tools/hermes/dtj.py --ssh",restrict` |
 
