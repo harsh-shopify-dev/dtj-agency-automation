@@ -45,6 +45,11 @@ real ingredient that carries it, never by one the product does not contain. A no
 Every page section that shows a picture gets one planned for it, from the same shoot: Story 1 and Story 2 = the use photos (step
 5's dishes) that match their headline; the final push = the clean pack photo (step 1's photo without words). Never a wide banner.
 
+**Card pictures are cut-outs** (Harsh, 26 Oct 2026, on Senso's "Why this golden milk" cards: "you should use images without
+background ... note it for the next time"): a small picture inside a card (the Why / differentiator cards, ingredient tiles,
+benefit pictures) is made with `--transparent` (`"transparent": true` in the gallery_photos plan), so the object sits on the
+section's own colour. A photo on its own cream square looks pasted in. Full-bleed pictures (story, final push, gallery) keep their backdrop.
+
 ## The quality gate (look at every picture before it is used; regenerate the ones that fail, at most 3 tries each)
 - One subject, flat ground, nothing floating, no crumbs or clutter; the product exactly like the reference (shape, cap, label).
 - The food looks edible and the product is clearly visible (a bite must show the product, not just bread).
