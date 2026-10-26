@@ -129,7 +129,7 @@ class WatcherTest(ReelJobTest):
         j.watch = self.verdict({"gate": "g2", "round": 1, "verdict": "pass", "score": 91, "ideas": [{"idea": "add a pack close-up"}]})
         self.assertEqual(j.pictures(d, [], 1, 0.1), reel_job.WAITING)
         texts = [dd.get("text", "") for m, dd in self.bot.sent]
-        self.assertTrue(any(t.startswith("Watcher (G2, round 1): PASS, 91/100") for t in texts))
+        self.assertTrue(any("Quality check: pictures" in t and "Good to go · 91/100" in t for t in texts))
 
 
 class MediaTest(unittest.TestCase):
@@ -149,6 +149,18 @@ class MediaTest(unittest.TestCase):
         tg_media.album("t", "1", files, post=post)
         self.assertEqual(calls, ["sendMediaGroup", "sendMediaGroup"])
         self.assertEqual(tg_media.upload("", "sendPhoto", {}, {}, post=post), {})   # no token: nothing sent
+
+
+class PlanSummaryTest(unittest.TestCase):
+    def test_short_summary_from_a_long_plan(self):
+        plan = "\n".join(["# r4 round 2: Senso Diwali", "", "- One reel, 29 s, all four flavours", "- Festive music, no voiceover", "",
+                          "| # | Time (s) | Shot | Still / Flow |", "|---|---|---|---|", "| 1 | 0.0-0.8 | diya | Flow (flame) |",
+                          "| 2 | 0.8-1.5 | packs | still |", "| 3 | 1.5-29.0 | chai | Flow (steam) |"])
+        text = reel_job.plan_summary(plan)
+        self.assertTrue(text.startswith("<b>📋 r4 round 2: Senso Diwali</b>"))
+        self.assertIn("3 shots, 29 s · 2 moving clips, 1 stills", text)
+        self.assertIn("• One reel, 29 s, all four flavours", text)
+        self.assertLess(len(text.splitlines()), 11)
 
 
 if __name__ == "__main__":
