@@ -1,0 +1,4 @@
+name: dtj-reels
+version: 1.0.0
+description: "DTJ reel factory on the Hermes reel bot: reel button taps (Start, Approve), replies to reel questions and /remake /reel are handed to DTJ's dtj command on the VPS. Only on the ugc_generation_automation bot."
+author: "DTJ (tools/hermes/plugin in dtj-agency-automation)"

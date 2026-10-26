@@ -2,6 +2,7 @@
 
     python -m unittest tools/hermes/test_dtj.py
 """
+import json
 import sys
 import tempfile
 import unittest
@@ -34,6 +35,9 @@ class FakeN8n:
             return {"data": self.data[args["dataTableId"]]}
         if tool == "execute_workflow":
             return {"executionId": "1900", "status": "started"}
+        if tool == "add_data_table_rows":
+            self.data[args["dataTableId"]] += args["rows"]
+            return {"inserted": len(args["rows"])}
         raise AssertionError(tool)
 
 
@@ -54,7 +58,7 @@ class Dtj(unittest.TestCase):
         self.assertEqual((form["reel_type"], form["chat_id"], form["requested_by"]), ("remake", "7051933055", "Harsh"))
         self.assertEqual(form["reference_reels"], "https://www.instagram.com/reel/DZhYs5wu_n3/")
         self.assertEqual(form["audience"], "Gujarati home cooks")
-        self.assertIn("@dtj_reels_bot", res["say"])
+        self.assertIn("tap Start", res["say"])
 
     def test_refusals_are_the_bots(self):
         self.assertIn("only for the DTJ team", self.run_dtj("status", "", FakeN8n(team=[]))["say"])
@@ -100,6 +104,30 @@ class Dtj(unittest.TestCase):
         jpg = base64.b64encode(bytes([0xFF, 0xD8, 0xFF]) + b"x" * 10).decode()
         self.assertIn("only for the DTJ team", dtj.handle("4242424", "X", "photo", jpg, call=FakeN8n(team=[]), now=NOW)["say"])
         self.assertFalse(dtj.handle("7051933055", "Harsh", "photo", base64.b64encode(b"<html>").decode(), call=FakeN8n(), now=NOW)["ok"])
+
+
+    def test_button_tap_is_saved_like_the_old_bot(self):
+        fake = FakeN8n()
+        tap = {"callback_query": {"id": "cb1", "from": {"id": 7051933055, "first_name": "Harsh", "is_bot": False}, "data": "a:r42:pictures1:0",
+                                  "message": {"chat": {"id": 7051933055, "type": "private"},
+                                              "reply_markup": {"inline_keyboard": [[{"text": "Approve", "callback_data": "a:r42:pictures1:0"}]]}}}}
+        res = dtj.handle("7051933055", "Harsh", "tg", json.dumps(tap), call=fake, now=NOW, code_dir=Path(tempfile.mkdtemp()))
+        self.assertEqual(res["action"], "answer", res)
+        row = fake.data["A"][-1]
+        self.assertEqual((row["job"], row["key"], row["value"], row["choice"], row["by"], row["chat_id"]),
+                         ("r42", "pictures1", "Approve", "0", "Harsh", "7051933055"))
+        self.assertIn("Approved by Harsh", res["say"])
+
+    def test_reply_to_a_question_and_forged_sender(self):
+        fake = FakeN8n()
+        reply = {"message": {"chat": {"id": 7051933055, "type": "private"}, "from": {"id": 7051933055, "first_name": "Harsh", "is_bot": False},
+                             "text": "make the box bigger", "reply_to_message": {"from": {"id": 1, "is_bot": True},
+                                                                                "text": "What should change?\n\n(job r42, answer pictures1n)"}}}
+        res = dtj.handle("7051933055", "Harsh", "tg", json.dumps(reply), call=fake, now=NOW, code_dir=Path(tempfile.mkdtemp()))
+        self.assertEqual((res["action"], fake.data["A"][-1]["value"], fake.data["A"][-1]["key"]), ("answer", "make the box bigger", "pictures1n"))
+        res = dtj.handle("4242424", "X", "tg", json.dumps(reply), call=FakeN8n(), now=NOW, code_dir=Path(tempfile.mkdtemp()))
+        self.assertFalse(res["ok"])
+        self.assertIn("sender did not match", res["say"])
 
 
 if __name__ == "__main__":

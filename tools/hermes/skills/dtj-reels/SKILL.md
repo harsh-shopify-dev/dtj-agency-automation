@@ -20,7 +20,7 @@ Answer exactly this (in their language):
 > 1️⃣ Send me a winning ad you want to copy (an Instagram reel or Meta ad link)
 > 2️⃣ Send your product photo or product page link
 > 3️⃣ Tell me the product name
-> I'll start it, and you approve each step with one tap. Say "status" any time to see today's ads.
+> I'll start it, and you approve each step right here with one tap. Say "status" any time to see today's ads.
 
 ## Making an ad (the remake), step by step
 You need three things. Ask only for what is missing, in this order:
@@ -35,8 +35,8 @@ Then run (their links and words exactly as they wrote them; add `for: <audience>
 ```
 /opt/data/profiles/ugc_generation_automation/dtj/dtj remake <ad link> <product link if any> <product name>
 ```
-When it starts, tell them in one line: "Started! Now open @dtj_reels_bot (t.me/dtj_reels_bot) and tap **Start** when it asks. You'll
-approve the plan, the pictures and the final ad there with one tap each." If they have never opened that bot, they must press Start in it once.
+Then relay `say`. In a minute a **Start** button comes in this chat ("tap Start if you are watching"); after the tap, the plan,
+the pictures and the final ad each come here with an **Approve** button. The buttons are handled for you (do not answer them).
 
 ## Other requests
 | They want | Run |
@@ -46,6 +46,7 @@ approve the plan, the pictures and the final ad there with one tap each." If the
 | what an audience watches | `dtj audience <audience name> #hashtags @creators` |
 | "status", "how is my ad going" | `dtj status` |
 | a photo of the product | `dtj photo <saved image path>` |
+| a plain answer to the question the reel just asked here (e.g. what to change) | `dtj say <their exact words>` |
 
 (`dtj` = `/opt/data/profiles/ugc_generation_automation/dtj/dtj`.) It prints one JSON line: send them the `say` text word for word.
 Run it once per request; if it says `"ok": false`, just relay `say` (it explains what to do) and never retry on your own.
