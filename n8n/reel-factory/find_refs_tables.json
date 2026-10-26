@@ -1,0 +1,47 @@
+{
+ "dtj_reel_watchlist": {"columns": [
+  {"name": "brand", "type": "string"},
+  {"name": "niche", "type": "string"},
+  {"name": "instagram", "type": "string"},
+  {"name": "pinterest_query", "type": "string"},
+  {"name": "meta_advertiser", "type": "string"},
+  {"name": "per_source", "type": "number"},
+  {"name": "active", "type": "boolean"},
+  {"name": "notes", "type": "string"}
+ ]},
+ "dtj_reel_library": {"columns": [
+  {"name": "source", "type": "string"},
+  {"name": "url", "type": "string"},
+  {"name": "video_url", "type": "string"},
+  {"name": "brand", "type": "string"},
+  {"name": "niche", "type": "string"},
+  {"name": "caption", "type": "string"},
+  {"name": "views", "type": "number"},
+  {"name": "likes", "type": "number"},
+  {"name": "days_running", "type": "number"},
+  {"name": "posted_at", "type": "string"},
+  {"name": "query", "type": "string"},
+  {"name": "actor", "type": "string"},
+  {"name": "found_at", "type": "string"},
+  {"name": "found_for", "type": "string"},
+  {"name": "keep", "type": "string"},
+  {"name": "kept_by", "type": "string"},
+  {"name": "kept_at", "type": "string"},
+  {"name": "audience", "type": "string"},
+  {"name": "audio_name", "type": "string"},
+  {"name": "comments", "type": "number"},
+  {"name": "followers", "type": "number"},
+  {"name": "views_per_follower", "type": "number"},
+  {"name": "comments_per_view", "type": "number"},
+  {"name": "link_key", "type": "string"}
+ ]},
+ "dtj_reel_audiences": {"columns": [
+  {"name": "audience", "type": "string"},
+  {"name": "slug", "type": "string"},
+  {"name": "hashtags", "type": "string"},
+  {"name": "creators", "type": "string"},
+  {"name": "per_source", "type": "number"},
+  {"name": "active", "type": "boolean"},
+  {"name": "notes", "type": "string"}
+ ]}
+}
