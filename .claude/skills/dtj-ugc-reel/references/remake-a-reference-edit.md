@@ -84,6 +84,10 @@ Job folder: `Downloads/dtj-ugc-<brand>-<nn>/` with inputs/, refs/, images/, clip
 Comparing and fixing: 10-20 min. A repeat run with this file: about 1.5 h.
 
 ## Lessons log (newest first; add one line per lesson, with the date and the reel)
+- 25 Oct, standalone kit (docs/ugc-reels/ad-remake-playbook.md, for other brands on another account): the browser pane cannot load
+  pictures from http://127.0.0.1 on chatgpt.com (blocked), so pictures need a public https folder; Ad Library card videos are
+  direct 360x640 fbcdn mp4s (curl, no login); ffmpeg scene detection + strongest hit per 0.3 s found all 17 mahalaxmi-02 cuts
+  (13 exact, rest 1-3 frames off: always check the 30 fps strips).
 - 25 Oct, mahalaxmi-02 v5: Harsh: remove the burned-in "Video created using AI"; the AI label is added in Instagram / Meta.
 - 25 Oct, mahalaxmi-02 v3/v4: measured the reference: stills never push in; every cut is a zoom-blur arrival (overshoot to
   1.4-1.5x, settle in 3-4 frames) and the red shots exit with a mirror shrink (to 0.72) or a zoom punch (to 1.2-1.85x).
