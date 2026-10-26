@@ -4,7 +4,7 @@ Plan (edit-plan.json):
   {"clips": [{"file": ".../clean/s1.mp4", "start": 0.1, "end": 3.9, "cap_margin": 548, "punch": [[t0, t1, 1.18]]}],
    "music": ".../bed.wav" | null, "music_db": -13, "language": "en", "script": "<the approved lines, in order>",
    "keywords": [...], "phrases": ["<product name>"], "spelling": {"heard": "Right"},
-   "out_dir": ".../final", "name": "reel"}
+   "out_dir": ".../final", "name": "reel", "phone_look": true}
 Writes <out_dir>/<name>_nocap.mp4 (clean picture + final audio), <name>_pages.json (caption pages for Remotion),
 <name>_ass.mp4 (libass captions, the fallback) and returns their paths.
 """
@@ -20,16 +20,34 @@ VOICE_TARGET_LUFS = -20.0   # every clip's voice levelled to this before the mix
 FINAL_LUFS, FINAL_TP = -14, -1.5
 
 
-def _part_filter(c: dict) -> str:
-    vf = "scale=1080:1920:flags=lanczos,fps=30,format=yuv420p"
+# Phone camera look (measured 21 Oct 2026 against real phone reels and Harsh's AI winners, see realism.py):
+# Flow takes are locked off (hand wobble 0.20-0.26 px vs 0.73-0.86) and over-detailed (sharpness 1,058-1,517 vs 47-614).
+# An edge-keeping soften (eyes, glasses, text stay crisp) and a slow hand wobble bring them to wobble ~0.73 and sharpness ~280.
+SOFTEN = "smartblur=lr=2.0:ls=0.8:lt=-3"
+WOBBLE_PX = 1.5
+
+
+def wobble(i: int, a: float = WOBBLE_PX) -> str:
+    """A slow, never-repeating hand wobble (three incommensurate sines), different for every clip i."""
+    ph = [(i * 1.7 + k * 0.9) % 6.28 for k in range(6)]
+    x = f"(iw-ow)/2+{a}*(sin(2*PI*t*0.47+{ph[0]:.2f})+0.7*sin(2*PI*t*1.13+{ph[1]:.2f})+0.2*sin(2*PI*t*3.1+{ph[2]:.2f}))"
+    y = f"(ih-oh)/2+{a}*(sin(2*PI*t*0.39+{ph[3]:.2f})+0.7*sin(2*PI*t*0.97+{ph[4]:.2f})+0.2*sin(2*PI*t*2.7+{ph[5]:.2f}))"
+    return f"scale=iw*1.03:-2,crop=1080:1920:'{x}':'{y}'"
+
+
+def _part_filter(c: dict, i: int = 0, phone: bool = True) -> str:
+    vf = "scale=1080:1920:flags=bicubic,fps=30"
+    if phone:
+        vf += f",{SOFTEN}"
     if c.get("punch"):
         z = "1"
         for t0, t1, zm in reversed(c["punch"]):
             z = f"if(between(in_time,{t0},{t1}),{zm},{z})"
         cy = c.get("punch_cy", 0.38)
-        vf = ("scale=1080:1920:flags=lanczos,fps=30,"
-              f"zoompan=z='{z}':x='iw/2-iw/zoom/2':y='ih*{cy}-ih/zoom*{cy}':d=1:s=1080x1920:fps=30,format=yuv420p")
-    return vf
+        vf += f",zoompan=z='{z}':x='iw/2-iw/zoom/2':y='ih*{cy}-ih/zoom*{cy}':d=1:s=1080x1920:fps=30"
+    if phone:
+        vf += "," + wobble(i)
+    return vf + ",format=yuv420p"
 
 
 def render(plan: dict) -> dict:
@@ -41,7 +59,7 @@ def render(plan: dict) -> dict:
         p = os.path.join(work, f"part{i}.mp4")
         start = c.get("start", 0.0)
         gain = VOICE_TARGET_LUFS - lufs(c["file"], start, c["end"])
-        run(["ffmpeg", "-v", "error", "-y", "-ss", str(start), "-to", str(c["end"]), "-i", c["file"], "-vf", _part_filter(c),
+        run(["ffmpeg", "-v", "error", "-y", "-ss", str(start), "-to", str(c["end"]), "-i", c["file"], "-vf", _part_filter(c, i, plan.get("phone_look", True)),
              "-af", f"aresample=48000,volume={gain:.2f}dB,acompressor=threshold=-24dB:ratio=2.5:attack=10:release=150,afade=t=in:d=0.03",
              "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-c:a", "aac", "-b:a", "192k", "-ac", "2", p])
         parts.append(p)
@@ -53,8 +71,13 @@ def render(plan: dict) -> dict:
     dur = duration(joined)
 
     heard = words(joined, plan.get("language", "en"), prompt=" ".join(plan.get("phrases", [])) or None)
-    w = cap.align_to_script(cap.apply_spelling(heard, plan.get("spelling", {})), plan.get("script", ""))
-    pages = cap.build_pages(w, cap.clip_spans(plan["clips"]), dur, plan.get("keywords", []), plan.get("phrases", []))
+    spans = cap.clip_spans(plan["clips"])
+    if plan.get("lines") and cap.needs_retime(heard, plan.get("script", "")):
+        starts = [s.start for s in spans] + [dur]
+        w = cap.retime_script(heard, plan["lines"], list(zip(starts, starts[1:])))
+    else:
+        w = cap.align_to_script(cap.apply_spelling(heard, plan.get("spelling", {})), plan.get("script", ""))
+    pages = cap.build_pages(w, spans, dur, plan.get("keywords", []), plan.get("phrases", []))
     pages_path = os.path.join(out_dir, f"{name}_pages.json")
     with open(pages_path, "w", encoding="utf-8") as f:
         json.dump(pages, f, indent=1, ensure_ascii=False)

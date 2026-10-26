@@ -1,0 +1,1284 @@
+{
+ "id": "DRHXIhjKpwYjPjJO",
+ "name": "Reel Factory: Telegram Bot",
+ "description": "The reel factory's own Telegram bot: /remake, /reel, /reels, /refs, /audience, /status, product photos, and every Approve / Start / Keep tap of a reel job (saved in dtj_bot_answers).",
+ "nodes": [
+  {
+   "id": "6591e994-4022-4924-ae6b-1609e1cfff94",
+   "name": "Telegram Message",
+   "type": "n8n-nodes-base.telegramTrigger",
+   "typeVersion": 1.5,
+   "position": [
+    0,
+    300
+   ],
+   "parameters": {
+    "updates": [
+     "message",
+     "callback_query"
+    ],
+    "additionalFields": {}
+   },
+   "notes": "Starts on every message, photo and button tap sent to the DTJ reel bot (one to one chats only).",
+   "notesInFlow": true,
+   "webhookId": "b15adf66-ec16-494a-9b4d-373a74a8e2b6",
+   "disabled": false,
+   "credentials": {
+    "telegramApi": {
+     "id": "mpRsTzq8PCAysP3P",
+     "name": "DTJ Reel Bot"
+    }
+   }
+  },
+  {
+   "id": "08688827-1197-4a92-8e83-a57fc6a9ba7c",
+   "name": "Read the Message",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    300
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Read the Message\" in \"Reel Factory: Telegram Bot\" (mode: Run Once for All Items).\n// The reel factory's own bot (Harsh, 25 Oct 2026: \"we will create a new telegram bot for this automation\"). Turns one Telegram\n// update into who wrote, in which chat and what they want (`kind`):\n//   answer  - a tap on a job's button (\"a:<job>:<key>:<n>\": worker Start/Stop wr<run>, reel approvals r<row>, Keep/Skip refs-<id>)\n//             or a reply to a job's typed question (its last line \"(job <job>, answer <key>)\")\n//   photo   - a product photo (the largest size is kept); a /remake or /reel in its caption is that command with the photo\n//   remake  - /remake <reference reel link> [product page / picture links] [product name] [for: audience] [lang: ...]\n//   reel    - /reel <product page / picture links> [reference links] [product name] [for: ...] [lang: ...]  (a UGC script reel)\n//   limit   - /reels <N>: today's reel limit;  refs - /refs <brand or @handle> [instagram|pinterest|meta];\n//   audience - /audience <name> #tag @creator ...;  status - /status;  help - /start, /help, anything without a command\n//   secret  - a message that looks like a password, token or key (never used);  ignore - groups, channels, other bots\nconst update = $input.first().json || {};\nconst s = (v) => String(v == null ? '' : v);\nconst nameOf = (f) => [f.first_name, f.last_name].filter(Boolean).join(' ') || f.username || 'there';\n\nconst cq = update.callback_query;\nif (cq) {\n  const chat = (cq.message || {}).chat || {};\n  const from = cq.from || {};\n  const base = { chat_id: s(chat.id), user_id: s(from.id), name: nameOf(from), text: '', callback_id: s(cq.id), photo_id: '' };\n  if (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n  const ans = s(cq.data).match(/^a:([a-z0-9][a-z0-9-]{1,23}):([a-z0-9_]{1,20}):(\\d{1,2})$/);\n  if (!ans) return [{ json: { ...base, kind: 'ignore' } }];\n  const keys = [].concat(...(((cq.message || {}).reply_markup || {}).inline_keyboard || []));\n  const tapped = keys.find((k) => k && k.callback_data === cq.data) || {};\n  return [{ json: { ...base, kind: 'answer', job: ans[1], key: ans[2], choice: ans[3], arg: s(tapped.text).slice(0, 100) } }];\n}\n\nconst msg = update.message || {};\nconst chat = msg.chat || {};\nconst from = msg.from || {};\nconst photos = Array.isArray(msg.photo) ? msg.photo : [];\nconst photo_id = photos.length ? s(photos[photos.length - 1].file_id) : '';\nconst text = s(msg.text || msg.caption).trim();\nconst base = { chat_id: s(chat.id), user_id: s(from.id), name: nameOf(from), text, callback_id: '', photo_id };\nif (!chat.id || chat.type !== 'private' || from.is_bot) return [{ json: { ...base, kind: 'ignore' } }];\n\nconst secret = /\\b[0-9]{8,10}:[A-Za-z0-9_-]{30,}\\b/.test(text) || /\\bapify_api_[A-Za-z0-9]{20,}/i.test(text)\n  || /\\b[0-9a-f]{32,}\\b/i.test(text) || /\\beyJ[A-Za-z0-9_-]{20,}\\./.test(text) || /\\bsk-(ant-)?[A-Za-z0-9_-]{16,}/.test(text);\nif (secret) return [{ json: { ...base, kind: 'secret' } }];\n\nconst asked = msg.reply_to_message || {};\nconst forJob = asked.from && asked.from.is_bot ? s(asked.text).match(/\\(job ([a-z0-9][a-z0-9-]{1,23}), answer ([a-z0-9_]{1,20})\\)\\s*$/) : null;\nif (forJob && text && !text.startsWith('/')) {\n  return [{ json: { ...base, kind: 'answer', job: forJob[1], key: forJob[2], choice: '', arg: text.slice(0, 1000) } }];\n}\n\nconst cmd = text.match(/^\\/([a-z]+)(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/i);\nconst word = cmd ? cmd[1].toLowerCase() : '';\nconst arg = cmd ? s(cmd[2]).trim().slice(0, 1500) : '';\nif (word === 'remake' || word === 'reel') return [{ json: { ...base, kind: word, arg } }];\nif (word === 'reels') return [{ json: { ...base, kind: 'limit', arg } }];\nif (word === 'refs') return [{ json: { ...base, kind: 'refs', arg } }];\nif (word === 'audience') return [{ json: { ...base, kind: 'audience', arg } }];\nif (word === 'status') return [{ json: { ...base, kind: 'status' } }];\nif (photo_id) return [{ json: { ...base, kind: 'photo' } }];\nif (word === 'start' || word === 'help' || word === 'commands' || !text) return [{ json: { ...base, kind: 'help' } }];\nreturn [{ json: { ...base, kind: 'plain' } }];\n"
+   },
+   "notes": "Works out what the person wants: a tap or typed answer for a reel job, a product photo, /remake, /reel, /reels N, /refs, /audience, /status or help. Never uses a message that looks like a password or key.",
+   "notesInFlow": true
+  },
+  {
+   "id": "3b873f16-d01a-4e5d-8027-ba316a98bc5b",
+   "name": "Is It a Button?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    480,
+    560
+   ],
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "leftValue": "={{ $json.callback_id }}",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    }
+   },
+   "notes": "A button tap? Then the tapped button's loading spinner is stopped (next node).",
+   "notesInFlow": true
+  },
+  {
+   "id": "8c0e2306-7f4d-42d5-a6d4-5827025a7057",
+   "name": "Answer the Button",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    720,
+    560
+   ],
+   "parameters": {
+    "resource": "callback",
+    "operation": "answerQuery",
+    "queryId": "={{ $json.callback_id }}",
+    "additionalFields": {}
+   },
+   "notes": "Tells Telegram the tap was received, so the button stops spinning.",
+   "notesInFlow": true,
+   "onError": "continueRegularOutput",
+   "webhookId": "c874a9c3-c2a7-419e-9c86-5ba387d6248f",
+   "disabled": false,
+   "credentials": {
+    "telegramApi": {
+     "id": "mpRsTzq8PCAysP3P",
+     "name": "DTJ Reel Bot"
+    }
+   }
+  },
+  {
+   "id": "feb2cf90-6784-41ad-a2ac-6233d8567dc0",
+   "name": "Load Bot Users",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    480,
+    300
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "xJ9O19tBBmCJc1Hc",
+     "cachedResultName": "dtj_bot_users"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "telegram_user_id",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "notes": "The DTJ team list (dtj_bot_users, active people only). Only they may use the bot; admins may change the limit.",
+   "notesInFlow": true,
+   "executeOnce": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "7d96ebc6-28a1-4970-bc15-8f69708aeefa",
+   "name": "Load Open Questions",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    720,
+    300
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "chat_id",
+       "condition": "eq",
+       "keyValue": "={{ $('Read the Message').first().json.chat_id }}"
+      },
+      {
+       "keyName": "value",
+       "condition": "isEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "notes": "Questions a reel job is waiting on in this chat (open marks in dtj_bot_answers): a plain message answers the open one.",
+   "notesInFlow": true,
+   "executeOnce": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "f759948c-8189-4e27-8644-6a38f935bd20",
+   "name": "Load Recent Photos",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    960,
+    300
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "job",
+       "condition": "eq",
+       "keyValue": "=reelpics-{{ $('Read the Message').first().json.chat_id }}"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "notes": "Product photos this person sent to the bot (dtj_bot_answers, job reelpics-<chat>); the last 30 minutes count.",
+   "notesInFlow": true,
+   "executeOnce": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "2a87e1b5-d89b-476d-a20a-13ab29f85fcc",
+   "name": "Load Today's Reels",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1200,
+    300
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "eDnHZuYHvGPggAgX",
+     "cachedResultName": "dtj_reel_jobs"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "createdAt",
+       "condition": "gte",
+       "keyValue": "={{ $now.setZone('Asia/Kolkata').startOf('day').toUTC().toISO() }}"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "notes": "Reels asked for today (dtj_reel_jobs, since midnight India time), for the daily limit and /status.",
+   "notesInFlow": true,
+   "executeOnce": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "8009cd60-d54a-4b19-918b-7b58c8f2912f",
+   "name": "Load Settings",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    1440,
+    300
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "get",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "dShtEXwGIfbDh4Wo",
+     "cachedResultName": "dtj_reel_settings"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "key",
+       "condition": "isNotEmpty"
+      }
+     ]
+    },
+    "returnAll": true
+   },
+   "notes": "The bot's settings (dtj_reel_settings): the daily reel limit set with /reels N (10 when never set).",
+   "notesInFlow": true,
+   "executeOnce": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "af27016d-73b4-4cbe-a79c-a07af75289d1",
+   "name": "Who Is It",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1680,
+    300
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Who Is It\" in \"Reel Factory: Telegram Bot\" (mode: Run Once for All Items).\n// Only active people in dtj_bot_users may use the bot (the same people as the store bot); /reels N is for admins.\n// Output: one item with `action`:\n//   answer -> \"Save the Answer\" (dtj_bot_answers: job, key, value, choice, by, chat_id, at), where reel_job.py, the worker and\n//             Find References read it; a plain message while a typed question is open in this chat is that question's answer\n//   photo  -> \"Save the Photo\" (dtj_bot_answers, job reelpics-<chat>): a /remake or /reel in the next 30 minutes takes it\n//   reel   -> \"Start New Reel\" (Reel Factory: New Reel, not waited for), unless today's limit is used\n//   limit  -> \"Save the Limit\" (dtj_reel_settings, key daily_limit)\n//   refs   -> \"Start Find References\" (Reel Factory: Find References: /refs and /audience)\n//   reply  -> just answer (help, status, refusals)\nconst msg = $('Read the Message').first().json;\nif (msg.kind === 'ignore') return [];\n// /refs and /audience need \"Reel Factory: Find References\" published (it needs the DTJ Apify credential and its live test first);\n// deploy_reel_bot.py sets this to true and switches \"Start Find References\" on when that workflow is published\nconst REFS_READY = false;\nconst all = (n) => { try { return $(n).all().map((i) => i.json).filter(Boolean); } catch (e) { return []; } };\nconst esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst reply = (text) => [{ json: { action: 'reply', chat_id: msg.chat_id, text } }];\nconst now = new Date().toISOString();\nconst users = all('Load Bot Users').filter((u) => u.telegram_user_id && u.active !== false);\nconst me = users.find((u) => String(u.telegram_user_id).trim() === msg.user_id);\n\nif (msg.kind === 'secret') {\n  return reply('That looks like a password or a key. Please delete your message now (press and hold it, then Delete). '\n    + 'Never send passwords or keys here: they go into n8n or the VPS at a hidden prompt.');\n}\nif (!me) return reply('Hi ' + esc(msg.name) + '. This bot is only for the DTJ team. To get access, send Harsh this number: ' + esc(msg.user_id));\nconst myName = me.name || msg.name;\nconst isAdmin = String(me.role || '').toLowerCase().trim() === 'admin';\n\n// an open typed question in this chat (reel_job.py marks it open / closed): a plain message is its answer\nconst marks = all('Load Open Questions').filter((r) => String(r.chat_id) === msg.chat_id && !String(r.value || '').trim()\n  && ['open', 'closed'].includes(r.choice)).sort((a, b) => (String(a.at) < String(b.at) ? -1 : 1));\nconst openQ = marks.length && marks[marks.length - 1].choice === 'open' ? marks[marks.length - 1] : null;\nif (openQ && msg.kind === 'plain' && msg.text) {\n  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: openQ.job, key: openQ.key, choice: '', value: msg.text.slice(0, 1000), by: myName, at: now } }];\n}\nif (msg.kind === 'answer') {\n  const value = String(msg.arg || '').trim();\n  if (!value) return reply('I could not read that answer. Tap the button again, or reply to the question.');\n  return [{ json: { action: 'answer', chat_id: msg.chat_id, job: msg.job, key: msg.key, choice: String(msg.choice || ''), value, by: myName, at: now } }];\n}\nif (msg.kind === 'photo') {\n  return [{ json: { action: 'photo', chat_id: msg.chat_id, job: 'reelpics-' + msg.chat_id, key: 'photo', choice: 'photo', value: msg.photo_id, by: myName, at: now } }];\n}\n\nconst settings = all('Load Settings');\nconst limitRow = settings.find((r) => r.key === 'daily_limit');\nconst limit = Math.max(0, parseInt((limitRow && limitRow.value) || '10', 10) || 10);\nconst today = all(\"Load Today's Reels\");\n\nif (msg.kind === 'limit') {\n  if (!isAdmin) return reply('Only an admin can change the daily limit.');\n  const n = parseInt(msg.arg, 10);\n  if (!(n >= 0 && n <= 100)) return reply('Send /reels and a number from 0 to 100, e.g. /reels 10. Now: ' + limit + ' a day.');\n  return [{ json: { action: 'limit', chat_id: msg.chat_id, key: 'daily_limit', value: String(n), set_by: myName, set_at: now } }];\n}\nif (msg.kind === 'status') {\n  const lines = today.map((r) => '- ' + esc(r.product_name) + ' (' + esc(r.reel_type || 'ugc') + '): ' + esc(r.reel_status || r.status));\n  return reply('<b>Today: ' + today.length + ' of ' + limit + ' reels</b>\\n' + (lines.join('\\n') || 'none yet'));\n}\nif (msg.kind === 'refs' || msg.kind === 'audience') {\n  if (!REFS_READY) return reply('Finding reference reels (/refs, /audience) starts once Harsh adds the Apify key in n8n and its first test passes. '\n    + 'Until then, send a reel link straight to /remake.');\n  if (!msg.arg) return reply(msg.kind === 'refs' ? 'Send /refs and a brand or @handle, e.g. /refs Blue Tea India meta'\n    : 'Send /audience, a name and its hashtags and creators, e.g. /audience Gen Z urban India #genz #mumbai @creator');\n  const tags = (msg.arg.match(/#[\\w.]+/g) || []).join(' ');\n  const creators = (msg.arg.match(/@[\\w.]+/g) || []).join(' ');\n  const sources = (msg.arg.match(/\\b(instagram|pinterest|meta)\\b/gi) || []).map((x) => x.toLowerCase()).join(',');\n  const words = msg.arg.replace(/[#@][\\w.]+/g, ' ').replace(/\\b(instagram|pinterest|meta)\\b/gi, ' ').replace(/\\s+/g, ' ').trim();\n  return [{ json: { action: 'refs', chat_id: msg.chat_id, inputs: { mode: msg.kind === 'audience' ? 'audience' : 'refs',\n    query: msg.kind === 'refs' ? (words || creators) : '', sources: sources || (msg.kind === 'refs' ? 'instagram,meta' : ''),\n    limit: '5', audience: msg.kind === 'audience' ? words : '', hashtags: tags, creators, requested_by: myName, chat_id: msg.chat_id } } }];\n}\nif (msg.kind === 'remake' || msg.kind === 'reel') {\n  if (today.length >= limit) return reply(\"Today's limit of \" + limit + ' reels is used. An admin can change it: /reels <number>.');\n  const links = (msg.arg.match(/https?:\\/\\/[^\\s<>\"]+/gi) || []).map((l) => l.replace(/[).,;!?]+$/, ''));\n  const isRef = (l) => /instagram\\.com\\/(reel|p|tv)\\/|facebook\\.com\\/(ads|reel|watch)|fb\\.watch|pinterest\\.|pin\\.it|\\.mp4(\\?|$)/i.test(l);\n  const refs = links.filter(isRef);\n  const product = links.filter((l) => !isRef(l));\n  const keyed = (k) => { const m = msg.arg.match(new RegExp('\\\\b' + k + ':\\\\s*([^\\\\n]+?)(?=\\\\s+\\\\w+:|$)', 'i')); return m ? m[1].trim() : ''; };\n  const rest = msg.arg.replace(/https?:\\/\\/[^\\s<>\"]+/gi, ' ').replace(/\\b(for|lang|brand|note):\\s*[^\\n]+?(?=\\s+\\w+:|$)/gi, ' ')\n    .replace(/\\s+/g, ' ').trim();\n  const cutoff = Date.now() - 30 * 60 * 1000;\n  const recent = all('Load Recent Photos').filter((r) => Date.parse(r.at || r.createdAt || 0) >= cutoff).map((r) => 'tg:' + r.value);\n  const pictures = [...product, ...recent, ...(msg.photo_id ? ['tg:' + msg.photo_id] : [])];\n  if (msg.kind === 'remake' && refs.length !== 1) {\n    return reply('A remake copies ONE reference reel. Send: /remake &lt;the reel link&gt; &lt;the product page or picture link&gt; &lt;product name&gt;'\n      + ' (photos sent just before also count). Optional: for: &lt;audience&gt;');\n  }\n  if (!refs.length) return reply('Add at least one winning reference reel link (Instagram, Meta Ad Library, Pinterest or an mp4).');\n  if (!pictures.length) return reply('Add the product: a product page or picture link, or send the product photos first and then the command.');\n  const name = rest || (product[0] ? product[0].replace(/^https?:\\/\\/(www\\.)?/, '').split(/[/?#]/).filter(Boolean).slice(-1)[0].replace(/[-_]+/g, ' ') : 'the product');\n  return [{ json: { action: 'reel', chat_id: msg.chat_id, inputs: {\n    reel_type: msg.kind === 'remake' ? 'remake' : 'ugc', product_name: name.slice(0, 200), audience: keyed('for'),\n    brand_name: keyed('brand'), product_images: pictures.join('\\n'), reference_reels: refs.join('\\n'), language: keyed('lang'),\n    music: '', facts: '', notes: keyed('note'), requested_by: myName, chat_id: msg.chat_id } } }];\n}\n// help (and any other message)\nreturn reply([\n  '<b>DTJ reel bot</b>: reels are made on DTJ\\'s server while a person watches; you approve the plan, the pictures and the reel here.',\n  '',\n  '/remake &lt;reel link&gt; &lt;product page or picture link&gt; &lt;product name&gt; - copy one winning edit shot for shot (music only)',\n  '/reel &lt;product link&gt; &lt;reference reel links&gt; &lt;product name&gt; - a UGC script reel (add lang: gujarati / hindi / hinglish / english)',\n  'Add for: &lt;audience&gt; (e.g. for: Gen Z urban India), brand: &lt;name&gt;, note: &lt;anything&gt;. Photos sent just before a command are its product pictures.',\n  '/refs &lt;brand or @handle&gt; [instagram pinterest meta] - find winning reference reels (Keep / Skip each)',\n  '/audience &lt;name&gt; #hashtags @creators - study what an audience watches (for the watcher)',\n  '/status - today\\'s reels;  /reels &lt;N&gt; - today\\'s limit (admins). Now ' + today.length + ' of ' + limit + ' used.',\n].join('\\n'));\n"
+   },
+   "notes": "Decides what happens: answer, photo, new reel (unless today's limit is used), limit, reference search, or a reply (help, status, a refusal with the reason). Unknown people get their Telegram number to send Harsh.",
+   "notesInFlow": true
+  },
+  {
+   "id": "ac43a18c-f6f8-425a-9d0b-51b37fa5a11d",
+   "name": "What to Do",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1920,
+    300
+   ],
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "answer",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "answer"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "photo",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "photo"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "reel",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "reel"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "limit",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "limit"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict"
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.action }}",
+          "rightValue": "refs",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "refs"
+      }
+     ]
+    },
+    "options": {
+     "fallbackOutput": "extra",
+     "renameFallbackOutput": "reply"
+    }
+   },
+   "notes": "Sends each request down its own path; everything else goes straight to Send.",
+   "notesInFlow": true
+  },
+  {
+   "id": "a1b8d2a1-b406-41d5-9540-378b08af5326",
+   "name": "Save the Answer",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    2160,
+    0
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "job": "={{ $json.job }}",
+      "key": "={{ $json.key }}",
+      "value": "={{ $json.value }}",
+      "choice": "={{ $json.choice }}",
+      "by": "={{ $json.by }}",
+      "chat_id": "={{ $json.chat_id }}",
+      "at": "={{ $json.at }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "job",
+       "displayName": "job",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "key",
+       "displayName": "key",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "value",
+       "displayName": "value",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "choice",
+       "displayName": "choice",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "by",
+       "displayName": "by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "at",
+       "displayName": "at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "notes": "Saves the tap or typed answer in dtj_bot_answers (job, key, value, who, when), where the VPS worker, reel_job.py and Find References read it. An Approve is that person's yes for that one step only.",
+   "notesInFlow": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "63da656c-1fcd-4fa3-956a-4cf80e614586",
+   "name": "Say What Happened",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2400,
+    320
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "language": "javaScript",
+    "jsCode": "// n8n Code node \"Say What Happened\" in \"Reel Factory: Telegram Bot\" (mode: Run Once for All Items).\n// After an answer, a photo, a new reel, a limit or a reference search was handed on: one short message for the person. The step\n// before it continues on an error, so a failure is said (nobody would otherwise know the tap or the request was lost).\nconst a = $('Who Is It').first().json;\nconst got = $input.first().json || {};\nconst esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nif (got.error) {\n  return [{ json: { chat_id: a.chat_id, text: 'That did not go through (' + esc(String(got.error.message || got.error).slice(0, 200))\n    + '). Please try again in a minute.' } }];\n}\nlet text = '';\nif (a.action === 'answer') {\n  if (a.value === 'Approve') text = 'Approved by ' + esc(a.by) + '. The reel goes on with exactly that.';\n  else if (a.value === 'Change something') text = 'OK. Reply to the next message with what should change.';\n  else if (a.value === 'Skip') text = 'Skipped.';\n  else if (a.value === 'Keep') text = 'Kept for the reference library.';\n  else if (/^Start/.test(a.value)) text = 'Thanks ' + esc(a.by) + ', you are watching this one. Claude starts on DTJ\\'s server now.';\n  else text = 'Noted: ' + esc(String(a.value).slice(0, 200));\n} else if (a.action === 'photo') {\n  text = 'Photo saved. Now send /remake or /reel with the links (photos from the last 30 minutes are used as the product pictures).';\n} else if (a.action === 'reel') {\n  const i = a.inputs || {};\n  text = 'Saved: ' + (i.reel_type === 'remake' ? 'a remake' : 'a UGC reel') + ' for ' + esc(i.product_name) + '. In a minute I ask here '\n    + '\"tap Start if you are watching\"; nothing starts before someone taps it. Then you approve the plan, the pictures and the reel here.';\n} else if (a.action === 'limit') {\n  text = 'Daily limit set to ' + esc(a.value) + ' reels by ' + esc(a.set_by) + '.';\n} else if (a.action === 'refs') {\n  text = (a.inputs && a.inputs.mode === 'audience' ? 'Studying the audience ' + esc(a.inputs.audience) : 'Looking for winning reels of '\n    + esc(a.inputs && a.inputs.query)) + '. The results come here in a few minutes.';\n}\nreturn text ? [{ json: { chat_id: a.chat_id, text } }] : [];\n"
+   },
+   "notes": "One short message saying what was done (or that it failed, so nothing is lost silently).",
+   "notesInFlow": true
+  },
+  {
+   "id": "47caefcf-426c-4379-9628-901169f13c83",
+   "name": "Save the Photo",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    2160,
+    160
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "insert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "k4r02PeayiGh60gW",
+     "cachedResultName": "dtj_bot_answers"
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "job": "={{ $json.job }}",
+      "key": "={{ $json.key }}",
+      "value": "={{ $json.value }}",
+      "choice": "={{ $json.choice }}",
+      "by": "={{ $json.by }}",
+      "chat_id": "={{ $json.chat_id }}",
+      "at": "={{ $json.at }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "job",
+       "displayName": "job",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "key",
+       "displayName": "key",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "value",
+       "displayName": "value",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "choice",
+       "displayName": "choice",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "by",
+       "displayName": "by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "at",
+       "displayName": "at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "notes": "Keeps the photo's Telegram file id, so the next /remake or /reel uses it as a product picture (downloaded on the VPS).",
+   "notesInFlow": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "2f3c5031-9232-46d7-a9b1-a41edf343a32",
+   "name": "Start New Reel",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    2160,
+    320
+   ],
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "dS36LVeRXLuIuajm",
+     "cachedResultName": "Reel Factory: New Reel"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "reel_type": "={{ $json.inputs.reel_type }}",
+      "product_name": "={{ $json.inputs.product_name }}",
+      "audience": "={{ $json.inputs.audience }}",
+      "brand_name": "={{ $json.inputs.brand_name }}",
+      "product_images": "={{ $json.inputs.product_images }}",
+      "reference_reels": "={{ $json.inputs.reference_reels }}",
+      "language": "={{ $json.inputs.language }}",
+      "music": "={{ $json.inputs.music }}",
+      "facts": "={{ $json.inputs.facts }}",
+      "notes": "={{ $json.inputs.notes }}",
+      "requested_by": "={{ $json.inputs.requested_by }}",
+      "chat_id": "={{ $json.inputs.chat_id }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "reel_type",
+       "displayName": "reel_type",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "product_name",
+       "displayName": "product_name",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "audience",
+       "displayName": "audience",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "brand_name",
+       "displayName": "brand_name",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "product_images",
+       "displayName": "product_images",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "reference_reels",
+       "displayName": "reference_reels",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "language",
+       "displayName": "language",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "music",
+       "displayName": "music",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "facts",
+       "displayName": "facts",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "notes",
+       "displayName": "notes",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "mode": "once",
+    "options": {
+     "waitForSubWorkflow": false
+    }
+   },
+   "notes": "Starts Reel Factory: New Reel with the request (remake or UGC) and does not wait: the VPS worker asks 'tap Start if you are watching' in this chat.",
+   "notesInFlow": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "108e92b6-d260-4b81-801c-6ea913b06e94",
+   "name": "Save the Limit",
+   "type": "n8n-nodes-base.dataTable",
+   "typeVersion": 1.1,
+   "position": [
+    2160,
+    480
+   ],
+   "parameters": {
+    "resource": "row",
+    "operation": "upsert",
+    "dataTableId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "dShtEXwGIfbDh4Wo",
+     "cachedResultName": "dtj_reel_settings"
+    },
+    "matchType": "allConditions",
+    "filters": {
+     "conditions": [
+      {
+       "keyName": "key",
+       "condition": "eq",
+       "keyValue": "daily_limit"
+      }
+     ]
+    },
+    "columns": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "key": "={{ $json.key }}",
+      "value": "={{ $json.value }}",
+      "set_by": "={{ $json.set_by }}",
+      "set_at": "={{ $json.set_at }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "key",
+       "displayName": "key",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "value",
+       "displayName": "value",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "set_by",
+       "displayName": "set_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "set_at",
+       "displayName": "set_at",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "notes": "Saves today's reel limit (key daily_limit in dtj_reel_settings) with who set it and when.",
+   "notesInFlow": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "fee20967-4e83-46e4-90b3-284c8498eafc",
+   "name": "Start Find References",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1.3,
+   "position": [
+    2160,
+    640
+   ],
+   "parameters": {
+    "workflowId": {
+     "__rl": true,
+     "mode": "list",
+     "value": "rZ4yg4Yyi6jBaVD3",
+     "cachedResultName": "Reel Factory: Find References"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "query": "={{ $json.inputs.query }}",
+      "sources": "={{ $json.inputs.sources }}",
+      "limit": "={{ $json.inputs.limit }}",
+      "requested_by": "={{ $json.inputs.requested_by }}",
+      "chat_id": "={{ $json.inputs.chat_id }}",
+      "mode": "={{ $json.inputs.mode }}",
+      "audience": "={{ $json.inputs.audience }}",
+      "hashtags": "={{ $json.inputs.hashtags }}",
+      "creators": "={{ $json.inputs.creators }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "query",
+       "displayName": "query",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "sources",
+       "displayName": "sources",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "limit",
+       "displayName": "limit",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "requested_by",
+       "displayName": "requested_by",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "chat_id",
+       "displayName": "chat_id",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "mode",
+       "displayName": "mode",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "audience",
+       "displayName": "audience",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "hashtags",
+       "displayName": "hashtags",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      },
+      {
+       "id": "creators",
+       "displayName": "creators",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string"
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": true
+    },
+    "mode": "once",
+    "options": {
+     "waitForSubWorkflow": false
+    }
+   },
+   "notes": "Starts Reel Factory: Find References (/refs: winning reels of a brand; /audience: what an audience watches) and does not wait; it sends its results to this chat.",
+   "notesInFlow": true,
+   "alwaysOutputData": true,
+   "onError": "continueRegularOutput",
+   "disabled": true
+  },
+  {
+   "id": "05fc16e0-f38e-4581-adb6-1f390102d80a",
+   "name": "Send",
+   "type": "n8n-nodes-base.telegram",
+   "typeVersion": 1.2,
+   "position": [
+    2640,
+    460
+   ],
+   "parameters": {
+    "resource": "message",
+    "operation": "sendMessage",
+    "chatId": "={{ $json.chat_id }}",
+    "text": "={{ $json.text }}",
+    "additionalFields": {
+     "appendAttribution": false,
+     "parse_mode": "HTML",
+     "disable_web_page_preview": true
+    }
+   },
+   "notes": "Sends the reply in this chat through the DTJ reel bot.",
+   "notesInFlow": true,
+   "onError": "continueRegularOutput",
+   "webhookId": "cf32e304-0c76-4249-96f6-425bc2697339",
+   "disabled": false,
+   "credentials": {
+    "telegramApi": {
+     "id": "mpRsTzq8PCAysP3P",
+     "name": "DTJ Reel Bot"
+    }
+   }
+  }
+ ],
+ "connections": {
+  "Telegram Message": {
+   "main": [
+    [
+     {
+      "node": "Read the Message",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Read the Message": {
+   "main": [
+    [
+     {
+      "node": "Is It a Button?",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Load Bot Users",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Is It a Button?": {
+   "main": [
+    [
+     {
+      "node": "Answer the Button",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Bot Users": {
+   "main": [
+    [
+     {
+      "node": "Load Open Questions",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Open Questions": {
+   "main": [
+    [
+     {
+      "node": "Load Recent Photos",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Recent Photos": {
+   "main": [
+    [
+     {
+      "node": "Load Today's Reels",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Today's Reels": {
+   "main": [
+    [
+     {
+      "node": "Load Settings",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Load Settings": {
+   "main": [
+    [
+     {
+      "node": "Who Is It",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Who Is It": {
+   "main": [
+    [
+     {
+      "node": "What to Do",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "What to Do": {
+   "main": [
+    [
+     {
+      "node": "Save the Answer",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Save the Photo",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Start New Reel",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Save the Limit",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Start Find References",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save the Answer": {
+   "main": [
+    [
+     {
+      "node": "Say What Happened",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Say What Happened": {
+   "main": [
+    [
+     {
+      "node": "Send",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save the Photo": {
+   "main": [
+    [
+     {
+      "node": "Say What Happened",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Start New Reel": {
+   "main": [
+    [
+     {
+      "node": "Say What Happened",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Save the Limit": {
+   "main": [
+    [
+     {
+      "node": "Say What Happened",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Start Find References": {
+   "main": [
+    [
+     {
+      "node": "Say What Happened",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "availableInMCP": true
+ }
+}

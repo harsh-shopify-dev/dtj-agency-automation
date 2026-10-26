@@ -6,6 +6,16 @@
       "headers": {
         "Authorization": "Bearer ${N8N_MCP_TOKEN}"
       }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.41",
+        "--cdp-endpoint",
+        "http://127.0.0.1:9222"
+      ]
     }
   }
 }

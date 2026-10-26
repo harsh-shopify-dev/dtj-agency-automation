@@ -13,7 +13,7 @@ FACTS = "SENSO Instant Detox Green Tea Kahwa. With natural ingredients. Just add
 
 
 def shot(i, **kw):
-    return {"id": f"s{i}", "line": "Just add hot water.", "seconds": 4, "image_prompt": "a", "video_prompt": "b", **kw}
+    return {"id": f"s{i}", "line": "Just add hot water.", "seconds": 4, "image_prompt": "a", "video_prompt": "handheld selfie", **kw}
 
 
 class Lint(unittest.TestCase):
@@ -21,7 +21,7 @@ class Lint(unittest.TestCase):
         return {"language": "en", "shots": shots, **kw}
 
     def test_a_clean_script_passes(self):
-        s = self.script([shot(1), shot(2), shot(3, product=True, video_prompt="she holds the same box steady, label to camera")])
+        s = self.script([shot(1), shot(2), shot(3, product=True, video_prompt="handheld selfie; she holds the same box steady, label to camera")])
         self.assertEqual(job.lint_script(s, FACTS), [])
 
     def test_an_invented_number_is_refused(self):
@@ -36,7 +36,7 @@ class Lint(unittest.TestCase):
         self.assertTrue(any("too fast" in b for b in bad) and any("seconds must be" in b for b in bad), bad)
 
     def test_a_product_shot_must_say_how_the_product_stays(self):
-        bad = job.lint_script(self.script([shot(1), shot(2), shot(3, product=True, video_prompt="she shows the box")]), FACTS)
+        bad = job.lint_script(self.script([shot(1), shot(2), shot(3, product=True, video_prompt="propped phone; she shows the box")]), FACTS)
         self.assertTrue(any("how the product stays" in b for b in bad), bad)
 
     def test_shot_count_and_language(self):
@@ -48,10 +48,17 @@ class Lint(unittest.TestCase):
         self.assertIsNone(job.credits([shot(1, seconds=6)]))
 
 
+    def test_ai_ad_words_and_a_missing_phone_setup_are_refused(self):
+        bad = job.lint_script(self.script([shot(1, image_prompt="cinematic studio portrait, flawless skin"), shot(2, video_prompt="she talks"),
+                                           shot(3)]), FACTS)
+        self.assertTrue(any("AI-ad words" in b and "cinematic" in b for b in bad), bad)
+        self.assertTrue(any("how the phone films it" in b for b in bad), bad)
+
+
 class Request(unittest.TestCase):
     def test_missing_fields(self):
         self.assertEqual(len(job.check_request({})), 4)
-        self.assertIn("language must be one of ('en', 'hi', 'hinglish')",
+        self.assertIn(f"language must be one of {job.LANGS}",
                       job.check_request({"product_name": "x", "product_images": ["a"], "reference_reels": ["b"], "language": "de"}))
 
 

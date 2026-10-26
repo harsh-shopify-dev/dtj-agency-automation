@@ -17,7 +17,19 @@ Decisions this runbook carries (Harsh, 20-21 Oct 2026):
 - **Flow: Omni 1.1 Flash only, 9:16, Ingredients mode** (start/end frames are not needed). 2 takes per shot.
 - **Flow's sparkle is removed with LaMa** on every raw clip (reel_factory/watermark.py), exactly as senso-01 v5. Not delogo.
 - **Captions at the bottom mark** (~69 % down); top (~14 %) only when the top band is empty AND the bottom would hide the product name.
-- **Languages**: English, Hindi, Hinglish. Music: only what the person supplies, and it must be licensed for paid ads.
+- **Languages**: English, Hindi, Hinglish, Gujarati (`gu`). Music: only what the person supplies, or a free-for-ads library track
+  (Pixabay Content License, no Content ID mention) with its licence note saved next to it.
+- **Clips are 8 s by default, 6 s minimum, never 4 s** (Harsh, 22 Oct 2026: 4 s cuts the line off).
+
+**Scripts (Harsh, 22 Oct 2026: "master the script writing"): read `references/script-playbook.md` before writing ANY script.**
+It holds the 12 rules, 12 timed beat templates, the do/don't wording table and the 22-point pre-flight from DTJ's research.
+AI characters are presenters/demonstrators/cartoons, never customers telling results. **No AI label is burned into the video**
+(Harsh, 25 Oct 2026: "we will add it in instagram reels and in meta we will apply the ai label"): the person posting turns on
+Instagram's / Meta's own AI label. Say so in every delivery message.
+
+**Realism (Harsh, 21 Oct 2026: Higgsfield-level, no AI slop): read `references/realism.md` before writing script.json.**
+Start pictures and prompts are written as real phone footage; the edit adds the measured phone look; `job edit` refuses
+"reel ready" when the reel measures outside phone footage's range.
 
 ## Where things are
 - Worker: `services/reel-factory/` (`python -m reel_factory.job <stage> --job <dir>`, stages in `reel_factory/job.py`'s header).
@@ -52,6 +64,18 @@ Decisions this runbook carries (Harsh, 20-21 Oct 2026):
 8. **Answer** (`result`, then reply.py). `reel ready` only when every shot passed and you watched it; otherwise `needs a look`
    with what a person must check; `could not make` with the reason (a sign-in, a refusal, credits).
 9. Dated entry in `docs/HANDOFF.md`; tell the person on duty in plain words where the file is and what to look at.
+
+## Copying a reference edit exactly (music only, no voiceover; mahalaxmi-02, 24-25 Oct 2026)
+**Follow `references/remake-a-reference-edit.md` step by step** (exact commands, ChatGPT and Flow prompts, checks,
+Do / Don't, timings, lessons log). Tools: `services/reel-factory/tools/remake/`. In short:
+1. Cut list from the reference; **measure its motion per frame** (`measure_motion.py`: zoom, shift, turn, blur, brightness).
+2. One reference frame per shot, the other brand's marks erased first; ChatGPT recreates each frame with only our pack
+   swapped (never from a written description: "AI slop"). Garbled small packs get the real pack pasted (`fixpack.py`).
+3. Flow clips only where something really moves; graphic/stylised shots stay stills.
+4. **Edit by replaying the measured motion** (`recut.py`, `"move": "ref"`): the reference's arrivals, mirror shrinks, zoom
+   punches and blur land on the same frames. Effects measurement cannot copy (light leaks, flashes, glitch, text) come from
+   the HyperFrames catalog (`npx hyperframes catalog --query ...`) before anything is hand-built.
+5. Compare reference and ours frame by frame at the cuts before delivering; add what you learned to the lessons log.
 
 ## script.json
 ```json

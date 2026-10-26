@@ -1,0 +1,76 @@
+{
+ "language": "hi",
+ "style": "animation",
+ "product_name": "Senso Turmeric Latte Mix",
+ "phrases": [
+  "Senso",
+  "Turmeric Latte",
+  "Golden Milk",
+  "haldi",
+  "kesar",
+  "kali mirch"
+ ],
+ "keywords": [
+  "haldi",
+  "kesar",
+  "kali mirch",
+  "Golden Milk",
+  "caffeine",
+  "Senso"
+ ],
+ "spelling": {
+  "sensor": "Senso",
+  "senso's": "Senso",
+  "haldee": "haldi",
+  "kesur": "kesar"
+ },
+ "music_db": -14,
+ "character": {
+  "chatgpt_prompt": "3D animated family-film style, three cute ingredient characters standing side by side on a wooden Indian kitchen counter at night, warm yellow light from a small kitchen lamp, steel kettle and a brass bowl in the soft background. Left: HALDI, a knobbly fresh turmeric root with deep orange-gold skin, big friendly brown eyes, a cheeky grin, thin root arms holding a big wooden spoon. Middle: KESAR, a slender saffron thread with deep red-orange colour, graceful, female, long lashes, a tiny crown of purple crocus petals. Right: KALI MIRCH, a small round wrinkly black peppercorn, tough little guy, thick eyebrows, wearing a tiny yellow hard hat, arms crossed, confident smirk. Each character about 15 cm tall. 9:16 vertical. No text, no logos.",
+  "product_prompt": "Put this exact Senso Turmeric Latte Mix box (2nd picture) standing upright on the counter behind the three characters, front label facing the camera, readable, same colours and proportions as the real box; keep the characters and the kitchen exactly."
+ },
+ "shots": [
+  {
+   "id": "s1",
+   "seconds": 8,
+   "product": false,
+   "line": "Main haldi hoon, raat ko aapko kuch garam peena hai par chai ya coffee nahi chahiye? Toh suno.",
+   "image_prompt": "3D animated family-film style. Close-up of HALDI, the knobbly orange-gold turmeric root character from the reference, standing on a wooden Indian kitchen counter at night next to a big clear glass cup of steaming golden milk (taller than him). He holds a big wooden spoon resting inside the cup, turned towards the camera with a cheeky grin. Warm yellow kitchen-lamp light, steel kettle softly out of focus behind. 9:16 vertical, no text.",
+   "video_prompt": "3D animated family-film style, the same scene and character. HALDI stirs the golden milk slowly twice with the big wooden spoon, then leans towards the camera, raises one eyebrow and speaks in a warm, cheeky male cartoon voice, in Hindi: \"Main haldi hoon, raat ko aapko kuch garam peena hai par chai ya coffee nahi chahiye? Toh suno.\" Steam rises gently from the cup. The camera holds still with a very slow push-in. He finishes the line and holds a grin. No text on screen, no music."
+  },
+  {
+   "id": "s2",
+   "seconds": 8,
+   "product": false,
+   "line": "Main kesar hoon, mere bina haldi doodh mein na woh rang aata hai, na woh khushboo.",
+   "image_prompt": "3D animated family-film style. KESAR, the slender deep red-orange saffron-thread character with a tiny crown of purple crocus petals from the reference, stands gracefully on the rim area of the counter beside the same steaming glass cup of golden milk, one hand raised over the cup with a few golden sparkles falling from her fingers. Same warm night kitchen, wooden counter, warm lamp light. 9:16 vertical, no text.",
+   "video_prompt": "3D animated family-film style, the same scene and character. KESAR sprinkles a few slow golden sparkles into the cup; the milk turns a richer gold where they land. She turns to the camera with a proud, elegant smile and speaks in a sweet, confident female cartoon voice, in Hindi: \"Main kesar hoon, mere bina haldi doodh mein na woh rang aata hai, na woh khushboo.\" The camera stays still. She finishes the line and holds the smile. No text on screen, no music."
+  },
+  {
+   "id": "s3",
+   "seconds": 8,
+   "product": false,
+   "line": "Main kali mirch hoon, chhota hoon par halke mein mat lena, mere saath hi haldi body mein achhe se absorb hoti hai.",
+   "image_prompt": "3D animated family-film style. KALI MIRCH, the small round wrinkly black peppercorn character with a tiny yellow hard hat from the reference, stands on the wooden counter in front of the same steaming glass cup of golden milk, arms crossed, chin up, confident smirk, tiny compared to the cup. A little pile of black peppercorns beside him. Same warm night kitchen, warm lamp light. 9:16 vertical, no text.",
+   "video_prompt": "3D animated family-film style, the same scene and character. KALI MIRCH taps his hard hat once, uncrosses his arms and points a thumb back at the golden milk, speaking in a gruff, funny, confident male cartoon voice, in Hindi: \"Main kali mirch hoon, chhota hoon par halke mein mat lena, mere saath hi haldi body mein achhe se absorb hoti hai.\" The camera stays still, low angle. He finishes the line, crosses his arms again and holds. No text on screen, no music."
+  },
+  {
+   "id": "s4",
+   "seconds": 8,
+   "product": true,
+   "line": "Hum teeno ek sachet mein, bas garam paani daalo aur hilao toh Golden Milk tayyar, caffeine bilkul nahi aur cheeni bhi kam.",
+   "image_prompt": "3D animated family-film style. HALDI, KESAR and KALI MIRCH from the reference stand together in a row on the wooden kitchen counter, waving at the camera. Behind them stands the real Senso Turmeric Latte Mix box from the product picture, upright, front label facing the camera, sharp and readable, exactly as the real box. Beside the box, the steaming glass cup of golden milk. Warm night kitchen lamp light. 9:16 vertical, no extra text.",
+   "video_prompt": "3D animated family-film style, the same scene. The three characters speak together in a cheerful Hindi chorus, taking turns: \"Hum teeno ek sachet mein, bas garam paani daalo aur hilao toh Golden Milk tayyar, caffeine bilkul nahi aur cheeni bhi kam.\" A soft golden glow swirls gently around the box. The Senso box stays upright and still in the same place for the whole clip, label to camera, never moves, never changes shape or text. Camera holds still. No text on screen, no music.",
+   "caption": "top"
+  },
+  {
+   "id": "s5",
+   "seconds": 8,
+   "product": true,
+   "line": "Senso Turmeric Latte, aaj hi try karo!",
+   "image_prompt": "3D animated family-film style product shot. The real Senso Turmeric Latte Mix box from the product picture stands upright in the centre of the wooden kitchen counter, front label facing the camera, sharp, readable and exactly as the real box, next to a steaming clear glass cup of golden milk. Tiny HALDI, KESAR and KALI MIRCH sit on the front edge of the counter, smiling. Warm night lamp light. 9:16 vertical, leave the bottom quarter of the frame calm and empty for a button. No extra text.",
+   "video_prompt": "3D animated family-film style, the same product shot. Steam rises slowly from the cup; the three small characters wave once. A cheerful male voice says in Hindi: \"Senso Turmeric Latte, aaj hi try karo!\" The box stays upright and still in the same place for the whole clip, label to camera, never moves, never changes shape or text. Camera holds still. No text on screen, no music.",
+   "caption": "top"
+  }
+ ]
+}

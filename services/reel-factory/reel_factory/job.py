@@ -25,11 +25,19 @@ import shutil
 import sys
 from pathlib import Path
 
-LANGS = ("en", "hi", "hinglish")
+LANGS = ("en", "hi", "hinglish", "gu")       # gu: Gujarati (Mahalaxmi, 22 Oct 2026)
 SECONDS = (4, 6, 8, 10)
 CREDITS = {4: 14, 8: 24}                   # per x2 generation; 6 s and 10 s were not read: "not available"
 MAX_WORDS_PER_S = 3.0                      # faster lines get cut off or rushed by Omni
 STATUSES = ("reel ready", "needs a look", "could not make")
+# Words that pull Flow / ChatGPT toward the polished "AI ad" look (studio light, glossy skin, perfect composition).
+SLOP_WORDS = ("cinematic", "studio", "flawless", "perfect skin", "porcelain", "airbrushed", "8k", "4k", "ultra-detailed", "ultra detailed",
+              "hyperrealistic", "hyper-realistic", "photorealistic", "masterpiece", "professional photo", "commercial", "bokeh",
+              "dramatic lighting", "softbox", "ring light", "glossy", "beautiful lighting", "perfect composition", "symmetrical")
+# Every clip must say what phone setup filmed it (the winners are all phone footage: selfie arm, propped phone, a friend holding it).
+CAMERA_WORDS = re.compile(r"handheld|selfie|propped|phone|front camera|arm.s length|held by a friend", re.I)
+# A finished reel inside these ranges reads as phone footage (realism.py; real reels and Harsh's AI winners, 21 Oct 2026).
+REAL_RANGES = {"shake_px": (0.5, 1.3), "sharpness": (40, 650)}
 
 
 # ---------------- files ----------------
@@ -86,6 +94,11 @@ def check_request(req: dict) -> list[str]:
     return bad
 
 
+def animation(script: dict) -> bool:
+    """A 3D-character reel (Blue Tea's ingredient characters): no phone camera, so no phone-setup words, wobble or realism gate."""
+    return script.get("style") == "animation"
+
+
 def lint_script(script: dict, facts: str) -> list[str]:
     """Rules from book-01 and senso-01: real numbers only, lines Omni can say in the clip, one product state per clip."""
     from .checks import claims_in
@@ -112,11 +125,21 @@ def lint_script(script: dict, facts: str) -> list[str]:
         for c in claims_in(f"{s.get('line', '')} {s.get('caption', '')}"):
             if c.lower() not in f:
                 bad.append(f"{sid}: '{c}' is not in the approved facts (never invent numbers or claims)")
+        for field in ("image_prompt", "video_prompt"):
+            slop = [w for w in SLOP_WORDS if w in str(s.get(field, "")).lower()]
+            if slop:
+                bad.append(f"{sid}: {field} uses AI-ad words {slop}: describe a real phone video instead")
+        if not animation(script) and not CAMERA_WORDS.search(str(s.get("video_prompt", ""))):
+            bad.append(f"{sid}: video_prompt must say how the phone films it (handheld selfie, propped phone, a friend holding it)")
         if s.get("product") and not re.search(r"\b(same|steady|keeps?|holds?|still)\b", s.get("video_prompt", ""), re.I):
             bad.append(f"{sid}: a product shot's video prompt must say how the product stays (e.g. 'holds the same box steady, "
                        "label to camera, never drops it')")
     if total > 60:
         bad.append(f"{total} s of clips: keep a reel under 60 s")
+    char = " ".join(str(v) for v in (script.get("character") or {}).values()).lower()
+    slop = [w for w in SLOP_WORDS if w in char]
+    if slop:
+        bad.append(f"character prompts use AI-ad words {slop}")
     return bad
 
 
@@ -384,13 +407,16 @@ def stage_edit(job: Job) -> int:
     for i, s in enumerate(script["shots"]):
         p = picks[s["id"]]
         take = next((t for t in clips.get(s["id"], []) if t.get("clean") == p["take"]), {})
-        heard = take.get("words") or []
+        # A shot with no line has no speech, whatever Whisper "hears" (mahalaxmi-01: it echoed its prompt over sizzle sounds)
+        heard = (take.get("words") or []) if str(s.get("line", "")).strip() else []
         dur = duration(p["take"])
         sp = (heard[0][1], heard[-1][2]) if heard else None
         start = p.get("start", max(0.0, sp[0] - 0.25) if sp else 0.0)
         end = p.get("end", min(dur, sp[1] + 0.35) if sp else dur)
-        place = caption_place(p["take"], tracker if s.get("product") else None)
+        # "caption": "top" | "bottom" in the script overrides the tracker (it cannot find a 3D-rendered box on an animated reel)
+        place = s.get("caption") or caption_place(p["take"], tracker if s.get("product") else None)
         plan_clips.append({"file": p["take"], "start": round(start, 2), "end": round(min(end, dur), 2), "max_end": round(dur, 3),
+                           "fixed": "start" in p or "end" in p,
                            "cap_margin": -1 if s.get("no_captions") else (TOP_MARK if place == "top" else BOTTOM_MARK)})
         speech.append(sp); heard_by_shot.append(heard)
     music = (req["local"].get("music") or [None])[0]
@@ -403,9 +429,10 @@ def stage_edit(job: Job) -> int:
         if i % 2 == 1 and len([w for w in heard_by_shot[i] if w[1] >= c["start"]]) >= 4:
             c["punch"] = beats.punch_window(heard_by_shot[i], c["start"], c["end"])
     plan = {"clips": plan_clips, "music": music, "music_db": script.get("music_db", -13), "language": script.get("language", "en"),
-            "script": " ".join(s["line"] for s in script["shots"]), "keywords": script.get("keywords", []),
+            "script": " ".join(s["line"] for s in script["shots"]), "lines": [s["line"] for s in script["shots"]],
+            "keywords": script.get("keywords", []),
             "phrases": script.get("phrases", [req["product_name"]]), "spelling": script.get("spelling", {}),
-            "out_dir": str(job.path("final")), "name": "reel"}
+            "out_dir": str(job.path("final")), "name": "reel", "phone_look": not animation(script)}
     _save(job.path("final", "edit-plan.json"), plan)
     out = render(plan)
     final = str(job.path("final", "reel_final.mp4"))
@@ -425,6 +452,12 @@ def stage_edit(job: Job) -> int:
     lufs = (out.get("loudness") or {}).get("lufs")
     if marks:
         note.append(f"sparkle may be left in {marks[:6]}")
+    from .realism import measure
+    real = measure(out["nocap"])
+    off = {k: real[k] for k, (lo, hi) in REAL_RANGES.items() if real.get(k) is None or not lo <= real[k] <= hi}
+    if off and not animation(script):
+        note.append(f"does not read as phone footage: {off} (phone range {REAL_RANGES})")
+        marks.append("realism")
     shots_ok = all(picks[s["id"]].get("by_hand") or
                    next((t["check"]["ok"] for t in clips.get(s["id"], []) if t.get("clean") == picks[s["id"]]["take"]), False)
                    for s in script["shots"])
@@ -432,7 +465,7 @@ def stage_edit(job: Job) -> int:
         note.append("at least one picked take did not pass the automatic checks: a person must watch it")
     status = "reel ready" if not marks and shots_ok else "needs a look"
     qc = {"status": status, "final": final, "duration": out["duration"], "lufs": lufs, "captions": captions,
-          "caption_pages": out["pages_count"], "sparkle_hits": marks, "note": "; ".join(note)}
+          "caption_pages": out["pages_count"], "sparkle_hits": [m for m in marks if m != "realism"], "realism": real, "note": "; ".join(note)}
     _save(job.path("final", "qc.json"), qc)
     print(json.dumps(qc, indent=1, ensure_ascii=False))
     return 0

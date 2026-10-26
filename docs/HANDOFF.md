@@ -3,6 +3,39 @@
 **Rewritten 6 October 2026 so a NEW Claude account/session can continue with no other context; last updated at the end of the 6 Oct desktop-app session (start with section 0.1 and 0.2).** Facts only. No secrets in this file (client ids and store ids are not secrets; the client secret and tokens are never written anywhere).
 Update this file at the end of every working session (Harsh's rule).
 
+**UPDATE 21 Oct 2026 evening (SENSO-02 MADE: Blue Tea concept B, 3D ingredient characters, PR #22).**
+`Downloads/dtj-ugc-senso-02/final/reel_final.mp4` (33.4 s, 1080x1920, -13.9 LUFS, Remotion captions in Roman Hindi): Haldi,
+Kesar, Kali Mirch + the real Senso Saffron Turmeric Latte box (Shopify CDN P-3.png). Made in Flow inside Claude's browser pane
+(Harsh: "use the google flow in your own browser"; project flow.google.com/project/f08904a3-...; 10 Omni clips = 120 credits).
+How the pane works (upload via a public CORS URL + Flow's hooked file input, downloads via flow-content signed URLs): memory
+`reference-flow-in-browser-pane`. Harsh's rule: clips 8 s by default, never 4 s. Code: script `"style": "animation"`, shot
+`"caption": "top"`, Roman captions retimed under Devanagari speech. Not done: a BUY NOW end button (Blue Tea has one), music.
+
+**UPDATE 21 Oct 2026 (REEL LIBRARY ENGINE + BLUE TEA PLAYBOOK FOR SENSO, branch `feature/reel-library`, PR #22, stacked on #18).**
+Harsh: scripts and visuals must sound like Instagram creators, not AI; learn from 30-50 proven reels per niche. The first F&B pull
+(51 random ads: Wagh Bakri, Red Label...) was rejected ("find direct DTC competitors for Senso"). Done:
+- `reel_factory/adlibrary.py`: Meta Ad Library collector (headless Chrome, no login). `--brand` keeps only the brand's own ads and
+  its creator partnerships; `--per-query`, `--dry-run` (counts per brand). 18 tea/wellness brands scanned, 80 ads downloaded to
+  `Downloads/dtj-reel-library/tea-wellness/`; Harsh then picked Blue Tea India only ("we can blindly copy them"): 25 kept.
+- `reel_factory/library.py` review (galleries + playable review.html) / analyze (Whisper medium on the GPU, ~2.5 min a reel on the
+  RTX 3050) / aggregate -> `style.json`. `reel_factory/slop.py`: AI-script tells + the niche's numbers.
+- Docs: `docs/ugc-reels/brands/senso/claims.md` (all 16 Senso products, allowed claims per flavour; Harsh allows flavour
+  benefit claims; "pure coconut" on hot chocolate is NOT supported: the fat is hydrogenated coconut), `blue-tea-playbook.md`
+  (numbers, look, 14 formats mapped to Senso concepts), `docs/ugc-reels/libraries/blue-tea/` (style.json + breakdowns of all 25).
+- Open: Harsh picks the first concepts (recommended B, D, C, E); Senso to confirm airline names, "no ads", Belgian chocolate,
+  16 vs 30 countries. Review page: preview server "reel-library" in the main checkout's `.claude/launch.json` (port 3410). Not
+  wired into the dtj-ugc-reel skill's job lint yet.
+
+**UPDATE 21 Oct 2026 (REEL REALISM, branch `feature/reel-realism`): Harsh asked for Higgsfield-level realism, no AI slop.**
+Measured (reel_factory/realism.py) real phone reels and Harsh's AI winners vs raw Omni Flash takes: our takes are locked off
+(hand wobble 0.20-0.26 px vs 0.73-0.86) and hyper-detailed (sharpness 1,058-1,517 vs 47-614); grain and colour were fine.
+The edit now adds an edge-keeping soften and a slow per-clip hand wobble (senso test: 0.94 px, sharpness 272; looked at side by
+side: not blurry, captions still). `job edit` refuses "reel ready" outside the phone range; lint refuses AI-ad words and clips
+with no phone setup. Rules for start pictures, prompts, emotion and a messy-voice script: skill reference `realism.md`.
+Found: Omni garbles pack fine print ("Seshets", "Not Quantity"): now a required check. Files: Downloads/dtj-ugc-senso-01/final/
+senso-01_v6_phone_look.mp4 (after) and senso-01_v6_before_phone_look.mp4. NOT done: new generations with the new prompt rules
+(needs a live Flow run), voice timbre, a waxy-skin check.
+
 **UPDATE 21 Oct 2026 (REEL FACTORY BUILT, branch `feature/reel-factory`): UGC ad reels from n8n, made in the browser (no API, Harsh's decision).**
 - n8n: **Reel Factory: New Reel** (id `dS36LVeRXLuIuajm`, PUBLISHED 21 Oct 2026 on Harsh's yes; live form
   https://n8n.srv2048145.hstgr.cloud/form/dtj-new-reel, opens only after an n8n login; PR #16 merged; table **dtj_reel_jobs** id

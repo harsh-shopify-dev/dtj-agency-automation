@@ -5,7 +5,9 @@ import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remo
 import { TheBoldFont } from "../load-font";
 import type { DtjPage } from "./index";
 
-const fontFamily = TheBoldFont;
+// TheBoldFont has Latin only; Gujarati/Hindi captions fall back to a font with those letters (Nirmala UI on Windows,
+// Noto Sans Gujarati/Devanagari from fonts-noto-core on the VPS). mahalaxmi-01, 22 Oct 2026.
+const fontFamily = `${TheBoldFont}, "Nirmala UI", "Noto Sans Gujarati", "Noto Sans Devanagari", sans-serif`;
 const DESIRED_FONT_SIZE = 96;
 const SPOKEN = "#FFD400"; // the word being said right now
 const KEYWORD = "#FFD400"; // keywords stay yellow after they are said

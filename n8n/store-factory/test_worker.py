@@ -403,5 +403,33 @@ class PageChat(Base):
         self.assertEqual(w.s.get("fails", 0), 0)  # a chat turn never stops new pages from starting
 
 
+class Reels(Base):
+    """Reel requests (25 Oct 2026): watched only with the reel bot's token, their taps through that bot, one reel at a time."""
+
+    def test_reel_workflow_needs_the_reel_bot(self):
+        self.worker(Runs(), environ=ATTENDED).workflow_ids()
+        self.assertNotIn("Reel Factory: New Reel", [a["query"] for t, a in self.n8n.calls if t == "search_workflows"])
+        self.worker(Runs(), environ=dict(ATTENDED, DTJ_REEL_BOT_TOKEN="reel-token")).workflow_ids()
+        self.assertIn("Reel Factory: New Reel", [a["query"] for t, a in self.n8n.calls if t == "search_workflows"])
+
+    def test_one_reel_at_a_time_and_its_own_bot(self):
+        seen = []
+        w = self.worker(Runs(), environ=ATTENDED, asker=lambda job, chat, state, save, rows=None: seen.append(job))
+        w.s["jobs"] = {"1": {"run": "1", "workflow": "Reel Factory: New Reel", "state": "running"},
+                       "2": {"run": "2", "workflow": "Reel Factory: New Reel", "state": "queued", "chat": "70"},
+                       "3": {"run": "3", "workflow": "Store Factory: New Store", "state": "queued", "chat": "70"}}
+        self.assertTrue(w.full(w.s["jobs"]["2"]))       # a second reel waits for the first (one Flow browser)
+        self.assertFalse(w.full(w.s["jobs"]["3"]))      # a store job still has its slot
+        w._ask(w.s["jobs"]["2"])
+        w._ask(w.s["jobs"]["3"])
+        self.assertEqual(seen, ["wr2", "w3"])
+
+    def test_reel_waits_and_stop_answer(self):
+        argv, _ = worker.wait_command("DTJ_WAIT: python n8n/reel-factory/reel_job.py pictures --job r42 --dir /x --round 2")
+        self.assertEqual(argv[-2:], ["--minutes", worker.WAIT_MINUTES])
+        self.assertIsNone(worker.wait_command("DTJ_WAIT: python n8n/reel-factory/reel_job.py tell --job r42 --text hi")[0])
+        self.assertEqual(worker.STOPPED["reel"], {"reel_status": "could not make"})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -37,6 +37,10 @@ def plan_cuts(clips: list[dict], speech: list[tuple[float, float] | None], beat:
     out, acc = [], 0.0
     for c, sp in zip(clips, speech):
         start, end0 = c.get("start", 0.0), c["end"]
+        if c.get("fixed"):                      # a person's trim (pick --start/--end) stays exactly as set
+            out.append(dict(c))
+            acc += end0 - start
+            continue
         if sp:
             first, last = sp
             if first - start > lead:
