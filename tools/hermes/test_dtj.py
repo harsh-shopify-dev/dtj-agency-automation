@@ -77,6 +77,30 @@ class Dtj(unittest.TestCase):
     def test_unknown_sub_command(self):
         self.assertFalse(self.run_dtj("deploy", "", FakeN8n())["ok"])
 
+    def test_photo_then_remake_uses_it(self):
+        import base64
+        dtj.PHOTOS_ROOT[0] = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: dtj.PHOTOS_ROOT.__setitem__(0, None))
+        jpg = base64.b64encode(bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b"\x00" * 64).decode()
+        saved = dtj.handle("7051933055", "Harsh", "photo", jpg, call=FakeN8n(), now=datetime.now(timezone.utc))
+        self.assertTrue(saved["ok"], saved)
+        self.assertIn("Photo saved (1 ", saved["say"])
+        fake = FakeN8n()
+        res = dtj.handle("7051933055", "Harsh", "remake", "https://www.instagram.com/reel/DZhYs5wu_n3/ Mahalaxmi Garam Masala",
+                         call=fake, now=datetime.now(timezone.utc), code_dir=Path(tempfile.mkdtemp()))
+        self.assertEqual(res["action"], "reel", res)
+        form = [a for t, a in fake.calls if t == "execute_workflow"][0]["inputs"]["formData"]
+        self.assertEqual(form["product_images"], saved["path"])          # a VPS path, no tg: and no HP: mark
+        self.assertEqual(form["product_name"], "Mahalaxmi Garam Masala")
+
+    def test_photo_refusals(self):
+        import base64
+        dtj.PHOTOS_ROOT[0] = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: dtj.PHOTOS_ROOT.__setitem__(0, None))
+        jpg = base64.b64encode(bytes([0xFF, 0xD8, 0xFF]) + b"x" * 10).decode()
+        self.assertIn("only for the DTJ team", dtj.handle("4242424", "X", "photo", jpg, call=FakeN8n(team=[]), now=NOW)["say"])
+        self.assertFalse(dtj.handle("7051933055", "Harsh", "photo", base64.b64encode(b"<html>").decode(), call=FakeN8n(), now=NOW)["ok"])
+
 
 if __name__ == "__main__":
     unittest.main()
