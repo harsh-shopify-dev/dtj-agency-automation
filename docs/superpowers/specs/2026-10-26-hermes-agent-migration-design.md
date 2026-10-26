@@ -41,10 +41,13 @@ pictures) and publishes it with the two taps; every parity test in section 7 pas
 | **n8n** | as today | Tables (`dtj_stores`, `dtj_bot_answers`, `dtj_bot_users`, briefs), Store Factory workflows, Brand Copy, Approve-tap answers. |
 | **DTJ bot (existing)** | n8n | Keeps sending and receiving the **Approve / Skip / Start / Stop / question buttons** that store_job.py and the worker send today (their callbacks land in n8n). |
 
-**Two bots (because a Telegram token has one consumer):** the team talks to **Hermes** (new bot, e.g. @DTJFactoryBot); the existing
-DTJ bot keeps doing what it does now: the buttons of a job. Each job message from the DTJ bot names the job, so the two chats read as
-one story. (Rejected: rebuilding every button flow inside Hermes's clarify buttons: it changes behaviour that works today, against the
-parity rule. Can be revisited once parity holds.)
+**One bot in the end, in two phases** (Harsh, 26 Oct 2026: "we will built the things in hermes telegram bot once the setup is done").
+A Telegram token has one consumer, so:
+- **Phase 1, setup:** Hermes on the VPS with its own new bot, its model, the locks, the `dtj` command and the moves off the laptop
+  (section 8). The existing DTJ bot keeps the job buttons meanwhile, so nothing that works today stops.
+- **Phase 2, one bot:** every button flow the DTJ bot carries today (questions, Start / Stop, Approve / Skip, progress, page chat,
+  publish) is rebuilt inside the Hermes bot, each with the same behaviour and a parity test; the answers keep landing in n8n's tables.
+  When every flow passes, the DTJ bot's flows are switched off (kept, not deleted) and the team uses only the Hermes bot.
 
 **Locks (Hermes learns, but never rewrites DTJ's rules):**
 - The repo is owned by `ai`; user `hermes` gets read-only access (group read, no write) to `.claude/skills`, `CLAUDE.md`, `RUNBOOK.md`.
