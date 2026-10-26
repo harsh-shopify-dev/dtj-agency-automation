@@ -3,6 +3,7 @@ in Telegram before anyone approves them, Harsh 25 Oct 2026).
 
     upload(token, "sendPhoto", {"chat_id": c, "caption": "..."}, {"photo": Path("p01.png")})
     album(token, chat, [Path(...), ...], captions)      up to 10 per message group (Telegram's limit), several groups if more
+    document(token, chat, Path("plan.md"), caption)     sendDocument (the full plan as a file under the short summary)
     video(token, chat, Path("reel.mp4"), caption)       sendVideo; a file over 48 MB is sent as a smaller copy (ffmpeg), the
                                                         full file stays on the VPS
 
@@ -66,6 +67,10 @@ def upload(token: str, method: str, fields: dict, files: dict[str, Path], post=_
         if status == 400:                    # a bad request does not get better on a retry
             break
     return {}
+
+
+def document(token: str, chat: str, path: Path, caption: str = "", post=_post) -> dict:
+    return upload(token, "sendDocument", {"chat_id": chat, "caption": caption[:1000]}, {"document": path}, post)
 
 
 def album(token: str, chat: str, pictures: list[Path], captions: list[str] | None = None, post=_post) -> list:

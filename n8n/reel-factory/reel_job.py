@@ -25,7 +25,9 @@ approved_by "<name> (Telegram Approve)". State: .work/reels/telegram/<job>/job.j
 from __future__ import annotations
 
 import argparse
+import html
 import json
+import re
 import os
 import sys
 from datetime import datetime, timezone
@@ -79,6 +81,22 @@ def _sender(tok: str):
                 return got.get("result") or {}
         return {}
     return send
+
+
+def plan_summary(text: str) -> str:
+    """5-10 short lines from a plan.md: its title, how many shots and how long, how many are moving clips, and its first points."""
+    lines = [l.strip() for l in text.splitlines()]
+    title = next((l.lstrip("# ").strip() for l in lines if l.startswith("#")), "The plan")
+    rows = [l for l in lines if l.startswith("|") and not set(l.replace("|", "").strip()) <= set("-: ")]
+    shots = [r for r in rows[1:] if re.match(r"^\|\s*\d+\s*\|", r)]
+    ends = [float(m.group(1)) for r in shots for m in [re.search(r"\|\s*[\d.]+\s*-\s*([\d.]+)\s*\|", r)] if m]
+    flow = sum(1 for r in shots if re.search(r"\bflow\b", r, re.I))
+    out = ["<b>📋 " + html.escape(title[:150]) + "</b>"]
+    if shots:
+        out.append(f"🎬 {len(shots)} shots" + (f", {ends[-1]:.0f} s" if ends else "") + f" · {flow} moving clips, {len(shots) - flow} stills")
+    points = [l[2:].strip() for l in lines if l.startswith(("- ", "* "))][:6]
+    out += ["• " + html.escape(re.sub(r"\*\*|`", "", pt))[:170] for pt in points]
+    return "\n".join(out)
 
 
 class ReelJob:
@@ -179,11 +197,18 @@ class ReelJob:
         return 0
 
     def plan(self, file: Path, rnd: int, minutes: float) -> int:
+        """A short summary people can read on a phone (Harsh, 26 Oct 2026: "its too cluttered"), the full plan as a file under it.
+        <plan>.summary.md (written by Claude: 5-8 plain lines) is used when it exists, else plan_summary() makes one."""
         text = file.read_text(encoding="utf-8").strip()
+        own = file.with_suffix(".summary.md")
+        summary = own.read_text(encoding="utf-8").strip()[:3500] if own.exists() else plan_summary(text)
 
         def show():
-            for start in range(0, len(text), 3800):        # Telegram's message limit is 4096
-                self.ask.tell(text[start:start + 3800])
+            self.ask.tell(summary)
+            doc = getattr(self.media, "document", None)
+            if not (doc and doc(self.tok, self.s.get("chat", ""), file, "The full plan, shot by shot")):
+                for start in range(0, len(text), 3800):    # no file in Telegram: the full text, in parts (limit 4096)
+                    self.ask.tell(text[start:start + 3800])
         return self.review("plan", rnd, show, minutes, self.watch)
 
     def pictures(self, folder: Path, names: list[str], rnd: int, minutes: float) -> int:
