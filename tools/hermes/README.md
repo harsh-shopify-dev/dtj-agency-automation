@@ -29,3 +29,12 @@ Safety:
 Phase 2 (the Hermes migration spec, docs/superpowers/specs/2026-10-26-hermes-agent-migration-design.md): the Start / Approve /
 question buttons move into the Hermes bot; until then they stay in @dtj_reels_bot. `/refs` and `/audience` follow the reel bot
 (off until "Reel Factory: Find References" is published).
+
+## One bot (26 Oct 2026, Harsh: "i want only that bot to handle everything")
+- The worker's `DTJ_REEL_BOT_TOKEN` (worker.env) is the Hermes reel bot's token, so the Start tap, every question, picture and the
+  final reel are sent by the Hermes bot.
+- Hermes plugin `plugin/dtj-reels` (installed in `/opt/data/plugins/dtj-reels`, enabled in `/opt/data/config.yaml` plugins.enabled)
+  registers handlers on that bot only: reel button taps, replies to reel questions, /remake /reel /refs /audience /reels -> `dtj tg`,
+  which runs the reel bot's own nodes and saves the answer in dtj_bot_answers (as the n8n bot did).
+- n8n "Reel Factory: Telegram Bot" (the old @dtj_reels_bot) is switched off, kept. "DTJ Reel Bot" credential = the Hermes bot's
+  token, so New Reel's "Send Result" also comes from the Hermes bot. Back: put the old token back in both and switch the workflow on.

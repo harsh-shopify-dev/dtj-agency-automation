@@ -10,6 +10,10 @@ pictures and the final reel there (phase 1; the buttons move into the Hermes bot
     dtj.py --ssh                                  ssh forced command: the request comes on stdin (tools/hermes/hermes_dtj.sh)
     dtj.py --user <telegram id> --name <name> <remake|reel|refs|audience|status|help> [text ...]   by hand, on the VPS
 
+`tg` (the Hermes plugin dtj-reels only): one Telegram update from the Hermes bot as JSON on stdin line 5: a button tap
+("a:<job>:<key>:<n>"), a reply to a reel question, or /remake /reel /refs /audience /status. It goes through the reel bot's own
+nodes like a message to the old bot did, and an answer is saved in dtj_bot_answers, where the worker and reel_job.py read it.
+`say` (the skill's fallback): a plain message that answers the open reel question in this chat.
 `photo` (Hermes only): a photo the person sent to the Hermes bot, base64 on stdin line 5; saved in ~/dtj/hermes/photos/<user>/ and
 used as a product picture by that person's next remake / reel within 30 minutes, exactly like photos sent to the reel bot.
 
@@ -36,14 +40,13 @@ BOT = ROOT / "n8n" / "reel-factory"
 BOT_WORKFLOW = "DRHXIhjKpwYjPjJO"        # Reel Factory: Telegram Bot (its live code nodes are the rules)
 NEW_REEL = "dS36LVeRXLuIuajm"            # Reel Factory: New Reel
 PROJECT = "NuKdhPFWwCCbm1K3"
-SUBS = ("remake", "reel", "refs", "audience", "status", "help", "photo")
+SUBS = ("remake", "reel", "refs", "audience", "status", "help", "photo", "tg", "say")
 ENV_FILE = Path.home() / ".config" / "dtj" / "worker.env"
 LOG = Path.home() / "dtj" / "hermes" / "dtj.log"
 PHOTOS = Path.home() / "dtj" / "hermes" / "photos"
 PHOTO_MINUTES = 30                       # the reel bot's own window for "photos sent just before"
 MAGIC = {bytes([0xFF, 0xD8, 0xFF]): ".jpg", bytes([0x89]) + b"PNG": ".png", b"RIFF": ".webp"}
 IST = timezone(timedelta(hours=5, minutes=30))
-REEL_BOT = "@dtj_reels_bot"
 
 
 def load_env(path: Path = ENV_FILE) -> None:
@@ -77,7 +80,7 @@ def live_code(call, names: tuple[str, ...]) -> dict[str, str]:
                 out[node["name"]] = node["parameters"]["jsCode"]
     except Exception:  # noqa: BLE001  n8n unreachable: the repo copy is the same code as deployed
         pass
-    files = {"Read the Message": "reel_bot_read.js", "Who Is It": "reel_bot_route.js"}
+    files = {"Read the Message": "reel_bot_read.js", "Who Is It": "reel_bot_route.js", "Say What Happened": "reel_bot_reply.js"}
     for n in names:
         out.setdefault(n, (BOT / files[n]).read_text(encoding="utf-8"))
     return out
@@ -168,9 +171,25 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
             return {"ok": False, "say": "This bot is only for the DTJ team. To get access, send Harsh this number: " + user}
         return save_photo(user, (text or "").strip(), now, PHOTOS_ROOT[0])
     name = re.sub(r"[\x00-\x1f]", " ", name or "").strip()[:60] or "there"
-    message = {"message": {"chat": {"id": int(user), "type": "private"}, "from": {"id": int(user), "first_name": name, "is_bot": False},
-                           "text": ("/" + sub + " " + (text or "")).strip()[:1600]}}
-    code = live_code(call, ("Read the Message", "Who Is It"))
+    who = {"id": int(user), "first_name": name, "is_bot": False}
+    chat = {"id": int(user), "type": "private"}
+    if sub == "tg":
+        try:
+            update = json.loads(text or "")
+        except ValueError:
+            return {"ok": False, "say": "That did not go through (the button could not be read). Please try again."}
+        part = update.get("callback_query") or update.get("message") or {}
+        if str((part.get("from") or {}).get("id")) != user:
+            return {"ok": False, "say": "That did not go through (the sender did not match)."}
+    elif sub == "say":
+        update = {"message": {"chat": chat, "from": who, "text": (text or "").strip()[:1600]}}
+    else:
+        update = {"message": {"chat": chat, "from": who, "text": ("/" + sub + " " + (text or "")).strip()[:1600]}}
+    return route(update, user, call, now, code_dir)
+
+
+def node_files(call, code_dir: Path | None) -> dict[str, Path]:
+    code = live_code(call, ("Read the Message", "Who Is It", "Say What Happened"))
     tmp = code_dir or (Path.home() / "dtj" / "hermes")
     tmp.mkdir(parents=True, exist_ok=True)
     files = {}
@@ -178,9 +197,17 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
         f = tmp / ("node_" + n.lower().replace(" ", "_") + ".js")
         f.write_text(js, encoding="utf-8")
         files[n] = f
-    read = run_node(files["Read the Message"], message)
+    return files
+
+
+def route(update: dict, user: str, call, now: datetime, code_dir: Path | None) -> dict:
+    """One Telegram update through the reel bot's own nodes, then what its workflow would do with the result."""
+    files = node_files(call, code_dir)
+    read = run_node(files["Read the Message"], update)
     if not read.get("ok"):
         return {"ok": False, "say": "That did not go through (reading the request). Please try again in a minute."}
+    if not read.get("out"):
+        return {"ok": True, "action": "none", "say": ""}
     msg = read["out"][0]["json"]
     refs = {"Read the Message": msg, **refs_for(call, str(user), now)}
     routed = run_node(files["Who Is It"], {}, refs)
@@ -188,21 +215,28 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
         return {"ok": False, "say": "That did not go through (checking the request). Please try again in a minute."}
     out = (routed.get("out") or [{}])[0].get("json", {})
     action = out.get("action")
+    if not action:
+        return {"ok": True, "action": "none", "say": ""}
     if action == "reply":
         return {"ok": True, "action": "reply", "say": plain(out.get("text"))}
-    if action == "reel":
+    done: dict = {}
+    if action in ("answer", "photo"):
+        row = {k: str(out.get(k) or "") for k in ("job", "key", "value", "choice", "by", "chat_id", "at")}
+        call("add_data_table_rows", {"dataTableId": tables(call)["dtj_bot_answers"], "projectId": PROJECT, "rows": [row]})
+    elif action == "reel":
         inputs = dict(out.get("inputs") or {})
         inputs["product_images"] = str(inputs.get("product_images", "")).replace("tg:HP:", "")   # Hermes photos: VPS paths
         res = call("execute_workflow", {"workflowId": NEW_REEL, "triggerNodeName": "New UGC Reel", "executionMode": "production",
                                         "inputs": {"formData": inputs}})
-        kind = "a remake" if inputs.get("reel_type") == "remake" else "a UGC reel"
-        return {"ok": True, "action": "reel", "run": res.get("executionId"),
-                "say": (f"Saved: {kind} for {inputs.get('product_name')}. In a minute {REEL_BOT} asks \"tap Start if you are watching\"; "
-                        f"nothing starts before someone taps it. Then you approve the plan, the pictures and the reel in {REEL_BOT}. "
-                        "(Open that bot once and press Start if you never have.)")}
-    if action == "refs":
-        return {"ok": True, "action": "refs", "say": f"Reference searches are not connected through Hermes yet: send the same /refs or /audience to {REEL_BOT}."}
-    return {"ok": True, "action": action or "none", "say": f"Do that in {REEL_BOT} (taps, answers, photos and /reels N stay there for now)."}
+        done["run"] = res.get("executionId")
+        out = {**out, "inputs": inputs}
+    elif action == "refs":
+        return {"ok": True, "action": "refs", "say": "Finding reference ads is not switched on yet. Send me the ad you want to copy instead."}
+    elif action == "limit":
+        return {"ok": True, "action": "limit", "say": "The daily limit is changed in n8n for now (table dtj_reel_settings, key daily_limit)."}
+    said = run_node(files["Say What Happened"], {"ok": True}, {"Who Is It": out})
+    text = (said.get("out") or [{}])[0].get("json", {}).get("text", "") if said.get("ok") else ""
+    return {"ok": True, "action": action, **done, "say": plain(text) or "Done."}
 
 
 def log(entry: dict) -> None:
@@ -235,6 +269,13 @@ def main(argv=None) -> int:
     except Exception as e:  # noqa: BLE001  one plain line for the person; the reason is in the log
         res = {"ok": False, "say": "That did not go through. Please try again in a minute.", "error": str(e)[:300]}
     shown = f"<photo, {len(text) * 3 // 4} bytes>" if sub == "photo" else text[:300]
+    if sub == "tg":
+        try:
+            u = json.loads(text)
+            cq = u.get("callback_query") or {}
+            shown = ("tap " + str(cq.get("data"))) if cq else ("message " + str((u.get("message") or {}).get("text", ""))[:200])
+        except ValueError:
+            shown = "<unreadable update>"
     log({"user": user.strip(), "name": name.strip()[:60], "platform": platform.strip()[:20], "sub": sub, "text": shown,
          "action": res.get("action"), "ok": res.get("ok"), "run": res.get("run"), "error": res.get("error")})
     res.pop("error", None)
