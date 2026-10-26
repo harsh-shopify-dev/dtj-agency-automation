@@ -1,5 +1,5 @@
 {
-  "$comment": "What Claude Code may run when n8n/store-factory/worker.py starts it on DTJ's VPS with nobody at the computer (Harsh, 22 Oct 2026: 'the n8n triggers it and same for the claude'). The worker runs claude -p --permission-mode dontAsk --settings .claude/vps-settings.json: anything not allowed here is refused, never asked. The project's .claude/settings.json deny list applies too. Store writes go only through DTJ's own tools (draft themes only, the copy through the install service after a Telegram Approve tap); the Shopify CLI itself, publishing, git pushes, network tools and the vault are never allowed.",
+  "$comment": "What Claude Code may run when n8n/store-factory/worker.py starts it on DTJ's VPS with nobody at the computer (Harsh, 22 Oct 2026: 'the n8n triggers it and same for the claude'). The worker runs claude -p --permission-mode dontAsk --settings .claude/vps-settings.json: anything not allowed here is refused, never asked. The project's .claude/settings.json deny list applies too. Store writes go only through DTJ's own tools (draft themes only, the copy through the install service after a Telegram Approve tap); the Shopify CLI itself, publishing, git pushes, network tools and the vault are never allowed. Reels (25 Oct 2026): reel code runs only through tools/vps/reel.sh (the reel Python, low CPU priority), pictures through tools/vps/codex_image.sh, Telegram through n8n/reel-factory/reel_job.py, Google Flow through the Playwright MCP attached to the reel Chrome (127.0.0.1:9222); downloads only through tools/remake/fetch.py (https, media files only).",
   "permissions": {
     "allow": [
       "Read",
@@ -49,7 +49,14 @@
       "Bash(python services/install-catcher/tools/add_shop.py:*)",
       "Bash(python services/install-catcher/tools/add_client.py:*)",
       "Bash(python services/install-catcher/tools/licence_call.py:*)",
-      "Bash(python .claude/skills/dtj-pdp-design-review/scripts/design_checks.py:*)"
+      "Bash(python .claude/skills/dtj-pdp-design-review/scripts/design_checks.py:*)",
+      "Bash(bash tools/vps/reel.sh:*)",
+      "Bash(bash tools/vps/codex_image.sh:*)",
+      "Bash(python n8n/reel-factory/reel_job.py:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(ffprobe:*)",
+      "mcp__playwright",
+      "Skill(dtj-ugc-reel)"
     ],
     "deny": [
       "Bash(shopify:*)",

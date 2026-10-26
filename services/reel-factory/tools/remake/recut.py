@@ -178,8 +178,21 @@ def overlay(dst, rgba, x, y):
     roi[:] = (roi * (1 - a) + rgba[:, :, :3] * a).astype(np.uint8)
 
 
+def _font(size):
+    """Arial on Windows, Noto/DejaVu on the VPS (Linux has no arial.ttf); Pillow's own font as the last resort."""
+    for name in ("arial.ttf", "NotoSans-Regular.ttf", "DejaVuSans.ttf", "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
 def label_img(text, dark):
-    font = ImageFont.truetype("arial.ttf", 26)
+    if not text:
+        return np.zeros((44, 520, 4), np.uint8)        # no label (the default since 25 Oct 2026: the AI label is added at posting)
+    font = _font(26)
     im = Image.new("RGBA", (520, 44), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     if not dark:

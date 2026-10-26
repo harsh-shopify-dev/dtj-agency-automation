@@ -38,6 +38,7 @@ OFFERED = ROOT / ".work" / "listen" / "offered.json"
 WORKFLOW = "Store Factory: Page Design"
 ADD_SHOP = "Store Factory: Add Shop"  # /addshop (21 Oct 2026): the same laptop takes every kind of request, oldest first
 NEW_STORE = "Store Factory: New Store"  # a store link (21 Oct 2026): the whole store
+REEL = "Reel Factory: New Reel"  # a reel from the reel bot (25 Oct 2026); its own Telegram bot (DTJ_REEL_BOT_TOKEN)
 DEFAULT_WORKFLOWS = (WORKFLOW, ADD_SHOP, NEW_STORE)
 KEEP = 500                # offered ids remembered (oldest dropped first)
 RETRY_DELAYS = (5, 15)    # seconds before the 2nd and the 3rd try; a 3rd failure in a row stops the listener

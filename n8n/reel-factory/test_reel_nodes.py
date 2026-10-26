@@ -34,25 +34,47 @@ class Nodes(unittest.TestCase):
         self.assertIn("Senso", json.loads(row["raw_json"])["product_name"])   # the raw answers are kept
 
     def test_labels_work_too_and_bad_input_is_refused_with_reasons(self):
-        out = self.run_node("take_reel_request.js", {"Product name": "X", "Language": "Gujarati",
+        out = self.run_node("take_reel_request.js", {"Product name": "X", "Language": "Klingon",
                                                      "Product pictures (links, one per line)": "http://insecure.example/a.png"})["out"][0]["json"]
         self.assertFalse(out["ok"])
         self.assertEqual(out["row"]["status"], "refused")
         for why in ("no reference reel", "language must be", "no approved facts", "not a https link"):
             self.assertIn(why, out["problems"])
+        self.assertEqual(self.run_node("take_reel_request.js", {**FORM, "language": "Gujarati"})["out"][0]["json"]["row"]["language"], "gu")
+
+    def test_a_remake_from_the_reel_bot(self):
+        # /remake: one reference, a bot photo, no language and no facts (music only); the form default stays a UGC reel
+        given = {"reel_type": "remake", "product_name": "Mahalaxmi Garam Masala", "product_images": "tg:AgACAgUAAxkBAAIB12345",
+                 "reference_reels": "https://www.instagram.com/reel/DZhYs5wu_n3/", "requested_by": "Harsh", "chat_id": "7051933055",
+                 "audience": "Gujarati home cooks 30-50"}
+        out = self.run_node("take_reel_request.js", given)["out"][0]["json"]
+        self.assertTrue(out["ok"], out)
+        self.assertEqual((out["row"]["reel_type"], out["row"]["language"], out["row"]["audience"]), ("remake", "none", "Gujarati home cooks 30-50"))
+        two = self.run_node("take_reel_request.js", {**given, "reference_reels": "https://a.com/1.mp4\nhttps://a.com/2.mp4"})["out"][0]["json"]
+        self.assertIn("exactly one reference", two["problems"])
+        self.assertEqual(self.run_node("take_reel_request.js", FORM)["out"][0]["json"]["row"]["reel_type"], "ugc")
+        row = {**out["row"], "id": 9}
+        text = self.run_node("request_reel.js", row)["out"][0]["json"]["instructions"]
+        for must in ("REMAKE ONE REFERENCE EDIT", "remake-a-reference-edit.md", "reel.sh remake reference", "measure_motion",
+                     "clean_brand", "codex_image.sh", "watcher.sh g1", "watcher.sh g2", "watcher.sh g3", "watcher.sh g4", "watcher.sh g5",
+                     'plan --file', "--watch", "DTJ_WAIT:", "reel_job.py photos --job r9", '"move": "ref"', 'label ""',
+                     "own soundtrack", "--chat \"7051933055\""):
+            self.assertIn(must, text)
 
     # ---- Request for Claude Code: Reel
     def test_the_request_is_a_complete_task_list_for_a_fresh_session(self):
         row = {**self.run_node("take_reel_request.js", FORM)["out"][0]["json"]["row"], "id": 7}
         out = self.run_node("request_reel.js", row)["out"][0]["json"]
         text = out["instructions"]
-        for must in ("dtj-ugc-reel", "reel_factory.job new --job ../../.work/reels/n8n-7-senso-instant-detox-green-tea-kahwa",
-                     "reel_factory.job lint", "reel_factory.job character", "reel_factory.job clips", "4 fps",
-                     f'reply.py --resume-url "{RESUME}" --body .work/reels/n8n-7-senso-instant-detox-green-tea-kahwa/result.json',
-                     "Just add hot water", "Never invent", "FRESH ChatGPT chat", "Do not post", "docs/HANDOFF.md"):
+        J = "/home/ai/dtj-agency-automation/.work/reels/n8n-7-senso-instant-detox-green-tea-kahwa"
+        for must in ("dtj-ugc-reel", "dtj-reel-watcher", f"bash tools/vps/reel.sh job new --job {J}", "reel.sh job lint",
+                     "reel.sh slop", "reel.sh job clips", "watcher.sh g1", "watcher.sh g4", "reel_job.py start --job r7",
+                     f'reply.py --resume-url "{RESUME}" --body {J}/result.json',
+                     "Just add hot water", "Never invent", "Nothing is posted", ".work/handoff/"):
             self.assertIn(must, text)
         self.assertEqual(out["request"]["reference_reels"], ["https://example.com/ref1.mp4", "https://example.com/ref2.mp4"])
         self.assertEqual(out["resume_url"], RESUME)
+        self.assertEqual(out["job_folder"], J)
 
     def test_no_row_stops(self):
         self.assertFalse(self.run_node("request_reel.js", {})["ok"])

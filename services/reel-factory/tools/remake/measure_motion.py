@@ -4,27 +4,29 @@ anchors = comma list of the time (s) inside each shot whose frame our picture wa
 Per frame: the similarity transform from the anchor frame (scale, angle, dx, dy as fractions of the frame), how many SIFT
 matches held (low = blurred or covered), the blur sigma that best turns the warped anchor into that frame, the leftover
 change after the move (= animated things: smoke, embers, a flash) and the mean brightness (flash frames).
+Also importable: measure(video, segments, anchors) -> {"fps", "shots"} (the watcher measures our own reel the same way).
 """
 import json
+import subprocess
 import sys
 
 import cv2
 import numpy as np
 
-ref, cut_p, anchors_s, out_p = sys.argv[1:5]
-cut = json.load(open(cut_p, encoding="utf-8"))
-anchors = [float(a) for a in anchors_s.split(",")]
-cap = cv2.VideoCapture(ref)
-FPS = cap.get(cv2.CAP_PROP_FPS)
-frames = []
-while True:
-    ok, f = cap.read()
-    if not ok:
-        break
-    frames.append(cv2.resize(f, (360, 640), interpolation=cv2.INTER_AREA))
-H, W = frames[0].shape[:2]
+W, H = 360, 640
 sift = cv2.SIFT_create(1500)
 bf = cv2.BFMatcher(cv2.NORM_L2)
+
+
+def read_frames(path: str) -> tuple[list, float]:
+    """Every frame at 360x640 (ffmpeg scales while decoding: fast on a 1080x1920 reel too)."""
+    cap = cv2.VideoCapture(path)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    cap.release()
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vf", f"scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
+                         capture_output=True, check=True).stdout
+    n = len(raw) // (W * H * 3)
+    return [np.frombuffer(raw, np.uint8, W * H * 3, i * W * H * 3).reshape(H, W, 3) for i in range(n)], fps
 
 
 def feats(img):
@@ -65,27 +67,38 @@ def blur_sigma(pred, real):
     return best, err0
 
 
-shots = []
-for k, s in enumerate(cut["segments"][:len(anchors)]):
-    i0, i1 = int(round(s["t0"] * FPS)), int(round(s["t1"] * FPS))
-    ia = min(max(int(round(anchors[k] * FPS)), i0), i1 - 1)
-    fa = feats(frames[ia])
-    rows, last = [], None
-    for i in range(i0, i1):
-        M, n = similarity(fa, feats(frames[i]))
-        if M is None or n < 12:
-            M = last                          # too blurred to match: keep the last good move (filled in below)
-        row = {"t": round(i / FPS, 3), "matches": n, "lum": round(float(frames[i].mean()), 1)}
-        if M is not None:
-            sc, ang, dx, dy = decompose(M)
-            pred = cv2.warpAffine(frames[ia], M, (W, H), borderMode=cv2.BORDER_REFLECT)
-            sig, err = blur_sigma(pred, frames[i])
-            row.update(scale=round(sc, 4), angle=round(ang, 3), dx=round(dx, 4), dy=round(dy, 4), blur=sig, residual=round(err, 1))
-            last = M if n >= 12 else last
-        rows.append(row)
-    shots.append({"shot": k + 1, "anchor": anchors[k], "frames": rows})
-    sc = [r.get("scale") for r in rows if "scale" in r]
-    print(f"shot {k + 1:2d}: {len(rows)} frames, scale {min(sc) if sc else 0:.3f}-{max(sc) if sc else 0:.3f}, "
-          f"weak matches {sum(r['matches'] < 12 for r in rows)}, max blur {max(r.get('blur', 0) for r in rows)}, "
-          f"lum {min(r['lum'] for r in rows)}-{max(r['lum'] for r in rows)}")
-json.dump({"fps": FPS, "shots": shots}, open(out_p, "w", encoding="utf-8"), indent=0)
+def measure(video: str, segments: list[dict], anchors: list[float], out=print) -> dict:
+    frames, fps = read_frames(video)
+    shots = []
+    for k, s in enumerate(segments[:len(anchors)]):
+        i0, i1 = int(round(s["t0"] * fps)), min(int(round(s["t1"] * fps)), len(frames))
+        if i1 <= i0:
+            break
+        ia = min(max(int(round(anchors[k] * fps)), i0), i1 - 1)
+        fa = feats(frames[ia])
+        rows, last = [], None
+        for i in range(i0, i1):
+            M, n = similarity(fa, feats(frames[i]))
+            if M is None or n < 12:
+                M = last                          # too blurred to match: keep the last good move
+            row = {"t": round(i / fps, 3), "matches": n, "lum": round(float(frames[i].mean()), 1)}
+            if M is not None:
+                sc, ang, dx, dy = decompose(M)
+                pred = cv2.warpAffine(frames[ia], M, (W, H), borderMode=cv2.BORDER_REFLECT)
+                sig, err = blur_sigma(pred, frames[i])
+                row.update(scale=round(sc, 4), angle=round(ang, 3), dx=round(dx, 4), dy=round(dy, 4), blur=sig, residual=round(err, 1))
+                last = M if n >= 12 else last
+            rows.append(row)
+        shots.append({"shot": k + 1, "anchor": anchors[k], "frames": rows})
+        sc = [r.get("scale") for r in rows if "scale" in r]
+        out(f"shot {k + 1:2d}: {len(rows)} frames, scale {min(sc) if sc else 0:.3f}-{max(sc) if sc else 0:.3f}, "
+            f"weak matches {sum(r['matches'] < 12 for r in rows)}, max blur {max(r.get('blur', 0) for r in rows)}, "
+            f"lum {min(r['lum'] for r in rows)}-{max(r['lum'] for r in rows)}")
+    return {"fps": fps, "shots": shots}
+
+
+if __name__ == "__main__":
+    ref, cut_p, anchors_s, out_p = sys.argv[1:5]
+    cut = json.load(open(cut_p, encoding="utf-8"))
+    res = measure(ref, cut["segments"], [float(a) for a in anchors_s.split(",")])
+    json.dump(res, open(out_p, "w", encoding="utf-8"), indent=0)

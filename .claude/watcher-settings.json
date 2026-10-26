@@ -1,0 +1,32 @@
+{
+  "$comment": "What the reel WATCHER (tools/vps/watcher.sh, skill dtj-reel-watcher) may do: read and judge only. It never writes, never runs reel code, never spends credits; watcher.sh itself saves its JSON answer. WebSearch/WebFetch and the HyperFrames catalog are allowed for its brainstorm (ready tools, trends). Harsh, 25 Oct 2026.",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "Skill(dtj-reel-watcher)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(npx hyperframes catalog:*)"
+    ],
+    "deny": [
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)",
+      "Bash(git:*)",
+      "Bash(sudo:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ]
+  }
+}

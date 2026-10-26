@@ -48,9 +48,10 @@ import listen  # noqa: E402
 STATE = ROOT / ".work" / "worker" / "jobs.json"
 SETTINGS = ROOT / ".claude" / "vps-settings.json"
 MCP = ROOT / "tools" / "vps" / "mcp.json"  # n8n's MCP server (the repo's .mcp.json is not in git); the token from the environment
-# the workflows taken; "Reel Factory: New Reel" ("Reel") joins once a person has watched its first live run (HANDOFF, 21 Oct 2026:
-# it spends Flow credits)
-STEPS = {listen.WORKFLOW: "Page Design", listen.ADD_SHOP: "Add Shop", listen.NEW_STORE: "New Store"}
+# the workflows taken; "Reel Factory: New Reel" ("Reel", Harsh 25 Oct 2026: "create the full n8n ai workflow and use claude on VPS")
+# is watched only when the reel bot's token is set (DTJ_REEL_BOT_TOKEN): its Start tap and questions go through that bot
+STEPS = {listen.WORKFLOW: "Page Design", listen.ADD_SHOP: "Add Shop", listen.NEW_STORE: "New Store", listen.REEL: "Reel"}
+REEL_BOT = "DTJ_REEL_BOT_TOKEN"
 POLL_SECONDS = 30          # how often n8n is asked for new requests
 WAIT_EVERY = 300           # a command that waits for a person is run again every 5 minutes
 WAIT_MINUTES = "0.2"       # ... and each run of it only looks (store_job.py --minutes): the loop never stops on one job
@@ -60,7 +61,8 @@ CLAUDE_HOURS = 4           # one Claude turn may take this long (a whole store's
 FAILS_TO_STOP = 3
 TIDY_ROUNDS = 10           # every 10 rounds (about 5 minutes) a Start question whose n8n run was answered elsewhere is closed
 WAIT_LINE = re.compile(r"^DTJ_WAIT:\s*(.+?)\s*$", re.M)
-WAIT_OK = re.compile(r"^python3? n8n/store-factory/(store_job\.py (start|draft|copy|apps|installs|approve|pages|menus)|page_questions\.py) ")
+WAIT_OK = re.compile(r"^python3? n8n/(store-factory/(store_job\.py (start|draft|copy|apps|installs|approve|pages|menus)|page_questions\.py)"
+                     r"|reel-factory/reel_job\.py (plan|pictures|final|person)) ")
 SHELL = re.compile(r"[;&|`$<>\\\n]")
 RESUME_URL = re.compile(r"https?://\S*webhook-waiting/\S+")
 
@@ -68,7 +70,7 @@ HEADLESS = """You run on DTJ's VPS: n8n/store-factory/worker.py started you. {wa
 Follow CLAUDE.md and the request below exactly, with these changes because nobody is at this computer:
 - Every question, answer and yes happens in Telegram through the job's own commands (store_job.py and its Approve taps). Never
   ask anyone at this computer for anything and never wait for a login here.
-- When a store_job.py or page_questions.py command exits 3 (it waits for a person in Telegram), do not wait yourself and do not run it again: end your
+- When a store_job.py, page_questions.py or reel_job.py command exits 3 (it waits for a person in Telegram), do not wait yourself and do not run it again: end your
   turn with this exact last line, the command exactly as you ran it:
   DTJ_WAIT: <the command>
   The worker runs it until the person answers, then resumes you with what it printed.
@@ -137,7 +139,8 @@ def wait_command(result: str) -> tuple[list[str] | None, str]:
         return None, ""
     line = found[-1].strip().strip("`")
     if SHELL.search(line) or not WAIT_OK.match(line):
-        return None, (f"refused DTJ_WAIT command (only store_job.py start/draft/copy/apps/installs/approve/pages/menus or page_questions.py, "
+        return None, (f"refused DTJ_WAIT command (only store_job.py start/draft/copy/apps/installs/approve/pages/menus, page_questions.py or "
+                      f"reel_job.py plan/pictures/final/person, "
                       f"no shell): {line[:200]}")
     argv = shlex.split(line)
     argv[0] = sys.executable
@@ -213,6 +216,8 @@ class Worker:
     def workflow_ids(self) -> dict[str, str]:
         if not self.ids:
             for name in STEPS:
+                if name == listen.REEL and not self.environ.get(REEL_BOT):
+                    continue  # no reel bot yet: reel requests stay waiting in n8n until it is set
                 try:
                     self.ids[listen.find_workflow(self.call, name)] = name
                 except listen.NotFound:
@@ -372,7 +377,7 @@ class Worker:
         """The attended gate: "tap Start if you are watching", asked once in the request's chat (else the admin chat); Claude starts
         when someone taps it, never before. Looked at once a round, so nothing else waits for it."""
         ask = self._ask(job)
-        what = {"New Store": "a whole store", "Add Shop": "a new shop", "Page Design": "a product page"}.get(STEPS[job["workflow"]],
+        what = {"New Store": "a whole store", "Add Shop": "a new shop", "Page Design": "a product page", "Reel": "a reel"}.get(STEPS[job["workflow"]],
                                                                                                           "a request")
         got = ask.choose("watch", f"New request for {what} (n8n run {job['run']}). Claude starts on DTJ's VPS as soon as the person "
                                   "who will watch it taps Start. You follow it here: its questions, the Approve taps and the "
@@ -382,7 +387,7 @@ class Worker:
         job["watched_by"] = got.get("by") or "a teammate"
         self.log(job["run"], f"Start tapped by {job['watched_by']}")
         busy = [j for j in self.s["jobs"].values() if j.get("state") == "running"]
-        if len(busy) >= self.parallel:
+        if self.full(job):
             job["state"] = "queued"
             self.save()
             ask.tell(f"Queued: {what} starts as soon as one of the {len(busy)} jobs running now is done. I tell you here when it starts.")
@@ -471,8 +476,8 @@ class Worker:
         """A queued job (Start tapped, every slot busy) begins when a slot is free, the oldest first."""
         queued = sorted((j for j in self.s["jobs"].values() if j.get("state") == "queued"), key=lambda j: j.get("started", ""))
         for job in queued:
-            if len([j for j in self.s["jobs"].values() if j.get("state") == "running"]) >= self.parallel:
-                return
+            if self.full(job):
+                continue
             try:
                 ask = self._ask(job)
                 ask.tell(f"Starting now (n8n run {job['run']}), watched by {job.get('watched_by') or 'a teammate'}.")
@@ -497,8 +502,17 @@ class Worker:
                 self._answers = []
         return [r for r in self._answers if r.get("job") == job]
 
+    def is_reel(self, job: dict) -> bool:
+        return STEPS.get(job.get("workflow", "")) == "Reel"
+
+    def full(self, job: dict) -> bool:
+        """No free slot for this job: every slot busy, or (a reel) another reel runs (one Flow browser on the VPS)."""
+        running = [j for j in self.s["jobs"].values() if j.get("state") == "running"]
+        return len(running) >= self.parallel or (self.is_reel(job) and any(self.is_reel(j) for j in running))
+
     def _ask(self, job: dict):
-        return self.asker(f"w{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save,
+        # a reel's Start / Stop taps go through the reel bot (job ids "wr<run>"; _asker picks the bot by that prefix)
+        return self.asker(f"{'wr' if self.is_reel(job) else 'w'}{job['run']}"[:24], job["chat"], job.setdefault("ask", {"asked": {}, "answers": {}}), self.save,
                           rows=self.rows)
 
     def look_at_stops(self) -> None:
@@ -645,7 +659,7 @@ def chat_of(req: dict) -> str:
 
 
 STOPPED = {"page_design": {"page_status": "could not build"}, "new_store": {"store_status": "partly done"},
-           "add_shop": {"shop_status": "could not add"}}
+           "add_shop": {"shop_status": "could not add"}, "reel": {"reel_status": "could not make"}}
 
 
 def _reply(req: dict, note: str) -> str:
@@ -666,7 +680,8 @@ def _asker(job: str, chat: str, state: dict, save: Callable[[], None], rows: Cal
     """The store job's own Telegram questions (bot_ask.Asker: the bot's buttons, answers through n8n's dtj_bot_answers)."""
     import store_job  # noqa: PLC0415
     from bot_ask import Asker  # noqa: PLC0415
-    return Asker(job, chat, send=store_job._sender(store_job._token()), rows=rows or store_job._rows, state=state, save=save,
+    token = os.environ.get(REEL_BOT, "") if job.startswith("wr") else store_job._token()
+    return Asker(job, chat, send=store_job._sender(token), rows=rows or store_job._rows, state=state, save=save,
                  add_row=store_job._add_row)
 
 
