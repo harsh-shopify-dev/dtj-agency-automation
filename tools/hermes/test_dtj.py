@@ -130,5 +130,16 @@ class Dtj(unittest.TestCase):
         self.assertIn("sender did not match", res["say"])
 
 
+    def test_plain_text_never_answers_a_store_question(self):
+        fake = FakeN8n()
+        fake.data["A"] = [{"job": "page-12", "key": "chat", "value": "", "choice": "open", "chat_id": "7051933055", "at": "2026-10-24T09:52:36Z"}]
+        res = self.run_dtj("say", "Start, and the reel is for diwali", fake)
+        self.assertNotEqual(res["action"], "answer")
+        self.assertEqual(len(fake.data["A"]), 1)
+        fake.data["A"].append({"job": "r42", "key": "plan1n", "value": "", "choice": "open", "chat_id": "7051933055", "at": "2026-10-26T09:00:00Z"})
+        res = self.run_dtj("say", "show all four flavours", fake)
+        self.assertEqual((res["action"], fake.data["A"][-1]["job"]), ("answer", "r42"))
+
+
 if __name__ == "__main__":
     unittest.main()
