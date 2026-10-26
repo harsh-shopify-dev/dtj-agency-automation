@@ -1,0 +1,16 @@
+# The reel machine's virtual screen :99 (no monitor on the VPS). The reel Chrome draws on it; dtj-novnc shows it.
+# A systemd USER service of the user ai; tools/vps/setup_reel.sh copies it to ~/.config/systemd/user/ and starts it.
+[Unit]
+Description=DTJ reel virtual screen (Xvfb :99)
+
+[Service]
+Type=simple
+Slice=dtj-reel.slice
+Nice=10
+OOMScoreAdjust=500
+ExecStart=/usr/bin/Xvfb :99 -screen 0 1600x900x24 -nolisten tcp
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

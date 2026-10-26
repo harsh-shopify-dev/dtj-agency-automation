@@ -1,0 +1,9 @@
+# Every reel process on the VPS (the virtual screen, the reel Chrome, the remote view, and reel jobs started with
+#     systemd-run --user --slice=dtj-reel.slice --nice=10 -p OOMScoreAdjust=500 -- <command>
+# ) shares at most 1.5 of the 2 cores, so n8n and the store factory worker always keep half a core (Harsh, 25 Oct 2026).
+# A systemd USER slice of the user ai; tools/vps/setup_reel.sh copies it to ~/.config/systemd/user/.
+[Unit]
+Description=DTJ reel machine (CPU cap so n8n stays responsive)
+
+[Slice]
+CPUQuota=150%

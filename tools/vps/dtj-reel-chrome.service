@@ -1,0 +1,21 @@
+# The reel Chrome on screen :99, with its own profile (Google Flow stays signed in there after a person signs in once).
+# Claude drives it over CDP through the Playwright MCP; DevTools listens on 127.0.0.1:9222 only, never a public port.
+# --password-store=basic: no keyring on the VPS, so Chrome always uses the same cookie key and the sign-in survives restarts.
+# A systemd USER service of the user ai; tools/vps/setup_reel.sh copies it to ~/.config/systemd/user/ and starts it.
+[Unit]
+Description=DTJ reel Chrome (CDP on 127.0.0.1:9222)
+Requires=dtj-xvfb.service
+After=dtj-xvfb.service
+
+[Service]
+Type=simple
+Slice=dtj-reel.slice
+Nice=10
+OOMScoreAdjust=500
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/google-chrome --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 --user-data-dir=%h/dtj/chrome-reel --no-first-run --no-default-browser-check --password-store=basic --window-position=0,0 --window-size=1600,900
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
