@@ -1729,3 +1729,10 @@ No pushes to `main`; no live-theme changes; no deleting data (the one deletion t
 - Open (each needs Harsh's yes): install `reel-engine.service`; deploy + publish the two workflows; one brand folder + first live
   reel (Flow credits). Not built: Drive sync/save, dtj_reel_jobs row. Left on the VPS from the checks: `/home/ai/gemini-home/work/check/`,
   `/tmp/agy.out`, Docker image `curlimages/curl:8.10.1` (deleting them was blocked: `rm -rf` rule).
+
+### 30 Oct 2026, later: reel engine installed, not published
+- PR #99 merged. On the VPS: `reel-engine.service` running (172.16.1.1:8091, n8n reaches it), Python `/home/ai/dtj/reel-venv`, token in
+  `/home/ai/.config/dtj/reel-engine.env` (copied from the Hermes profile, never printed), folders in `/home/ai/reel-engine/`.
+- n8n: "Reel Engine" `iVRMnLOlMEty6yur`, unpublished, a plain note on every node. No "Reel: <Brand>" yet (needs a brand).
+- Open: merge PR #100 (the installed service file already has its Python fix; the repo copy does not until then); one brand's folder;
+  publish; first live reel (Flow credits). No real reel has been made yet.

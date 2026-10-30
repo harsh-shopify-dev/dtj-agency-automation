@@ -48,7 +48,7 @@ class GeneratedCode(unittest.TestCase):
         code = deploy_engine.engine_code()
         for name in ("0 [NO AI] Take request", "1 [GEMINI] Style card", "2 [GEMINI] Script + scenes",
                      "3 [CHATGPT + CLAUDE] Scene pictures", "4 [PERSON] Approve script + pictures", "5 [FLOW + CLAUDE] Clips",
-                     "6 [CLAUDE] Edit", "7 [PERSON] Approve final reel", "8 [NO AI] Result"):
+                     "6 [NO AI] Edit", "7 [PERSON] Approve final reel", "8 [NO AI] Result"):
             self.assertIn(json.dumps(name), code)
         self.assertEqual(len(re.findall(r"url: '" + re.escape(deploy_engine.ENGINE) + "/stage'", code)), 9)
 
@@ -56,6 +56,23 @@ class GeneratedCode(unittest.TestCase):
         code = deploy_engine.engine_code()
         for stage in ("script", "pictures", "review", "clips", "edit", "result"):
             self.assertRegex(code, rf"stage: '{stage}'[^}}]*loop: \$json\.loop \|\| 0")
+
+    def test_every_node_has_a_plain_note(self):
+        for code in (deploy_engine.engine_code(), deploy_engine.brand_code("branda", "Brand A", "cinematic", "ENGINE_ID")):
+            names = re.findall(r"config: \{ name: (\"[^\"]+\"|'[^']+')", code)
+            self.assertGreater(len(names), 3)
+            notes = re.findall(r"notes: (\"(?:[^\"\\\\]|\\\\.)*\"|'[^']*')", code)
+            self.assertEqual(len(notes), len(names), names)
+            for note in notes:
+                for jargon in ("agy", "Codex", "stage", "422", "HTTP", "LUFS", "•"):
+                    self.assertNotIn(jargon, note)
+
+    def test_edit_step_says_it_uses_no_ai(self):
+        self.assertIn('"6 [NO AI] Edit"', deploy_engine.engine_code())
+
+    def test_service_uses_the_reel_python(self):
+        unit = (HERE.parents[1] / "services/reel-engine/reel-engine.service").read_text(encoding="utf-8")
+        self.assertIn("ExecStart=/home/ai/dtj/reel-venv/bin/python -m engine.server", unit)
 
     def test_brand_wrapper_starts_from_a_form(self):
         code = deploy_engine.brand_code("branda", "Brand A", "cinematic", "ENGINE_ID")

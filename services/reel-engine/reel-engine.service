@@ -19,7 +19,7 @@ Environment=REEL_ENGINE_PORT=8091
 Environment=GEMINI_HOME=/home/ai/gemini-home
 Environment=CODEX_HOME=/home/ai/codex-accounts/plus-3
 Environment=PATH=/home/ai/.local/bin:/home/ai/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/home/ai/dtj-agency-automation/.venv/bin/python -m engine.server
+ExecStart=/home/ai/dtj/reel-venv/bin/python -m engine.server
 Restart=on-failure
 RestartSec=10
 MemoryMax=3G
