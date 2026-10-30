@@ -130,5 +130,20 @@ class Claims(unittest.TestCase):
         self.assertEqual(checks.claims_in("Boil it. Ten whole minutes."), [])
 
 
+
+class SilentAndNonPhoneShots(unittest.TestCase):
+    def test_a_silent_shot_needs_no_words(self):
+        from reel_factory.checks import words_check
+        self.assertTrue(words_check([], "")["ok"])
+        self.assertFalse(words_check([], "Baked not fried")["ok"])
+
+    def test_cinematic_and_founder_are_not_phone_footage(self):
+        from reel_factory.job import animation
+        self.assertTrue(animation({"style": "cinematic"}))
+        self.assertTrue(animation({"style": "founder"}))
+        self.assertFalse(animation({"style": "ugc"}))
+        self.assertFalse(animation({}))
+
+
 if __name__ == "__main__":
     unittest.main()

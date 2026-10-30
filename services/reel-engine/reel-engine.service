@@ -1,0 +1,28 @@
+# systemd unit for the DTJ reel engine on the reel VPS (host, user ai). Install only with Harsh's yes:
+#   sudo cp services/reel-engine/reel-engine.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now reel-engine && curl -s http://172.16.1.1:8091/health
+# Listens on 172.16.1.1 (the gateway of n8n's Docker network n8n_default), not on the public address.
+[Unit]
+Description=DTJ reel engine (one stage per call from n8n's Reel Engine)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=ai
+WorkingDirectory=/home/ai/dtj-agency-automation/services/reel-engine
+EnvironmentFile=-/home/ai/.config/dtj/worker.env
+# DTJ_REEL_BOT_TOKEN=<the Hermes reel bot's token>, in its own file: worker.env keeps it commented out so the old reel worker stays off
+EnvironmentFile=-/home/ai/.config/dtj/reel-engine.env
+Environment=REEL_ENGINE_ROOT=/home/ai/reel-engine
+Environment=REEL_ENGINE_HOST=172.16.1.1
+Environment=REEL_ENGINE_PORT=8091
+Environment=GEMINI_HOME=/home/ai/gemini-home
+Environment=CODEX_HOME=/home/ai/codex-accounts/plus-3
+Environment=PATH=/home/ai/.local/bin:/home/ai/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/ai/dtj-agency-automation/.venv/bin/python -m engine.server
+Restart=on-failure
+RestartSec=10
+MemoryMax=3G
+
+[Install]
+WantedBy=multi-user.target

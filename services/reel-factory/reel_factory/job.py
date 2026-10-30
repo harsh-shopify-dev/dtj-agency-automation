@@ -95,8 +95,9 @@ def check_request(req: dict) -> list[str]:
 
 
 def animation(script: dict) -> bool:
-    """A 3D-character reel (Blue Tea's ingredient characters): no phone camera, so no phone-setup words, wobble or realism gate."""
-    return script.get("style") == "animation"
+    """Not phone footage (a 3D-character reel like Blue Tea's; the Reel Engine's cinematic and founder reels): no phone-setup words,
+    wobble or realism gate."""
+    return script.get("style") in ("animation", "cinematic", "founder")
 
 
 def lint_script(script: dict, facts: str) -> list[str]:
@@ -365,7 +366,7 @@ def stage_check(job: Job, only: str | None) -> int:
             heard = words(clean, lang, prompt=job.script.get("product_name") or req["product_name"])
             wc = words_check(heard, s["line"]) if lang == "en" else {"said": " ".join(w for w, _, _ in heard), "missing": [],
                                                                   "speech": (heard[0][1], heard[-1][2]) if heard else None,
-                                                                  "ok": bool(heard), "note": "Hindi/Hinglish: read 'said' against the line"}
+                                                                  "ok": bool(heard) or not str(s["line"]).strip(), "note": "Hindi/Hinglish: read 'said' against the line"}
             pt = tracker.take(clean, expect_product=bool(s.get("product")))
             t["words"] = heard
             d = duration(clean)

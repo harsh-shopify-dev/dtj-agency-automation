@@ -143,3 +143,60 @@ class Dtj(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BrandWorkflows(FakeN8n):
+    """n8n with two "Reel: <Brand>" workflows for `dtj make`."""
+    WFS = [{"id": "wfA", "name": "Reel: Brand A"}, {"id": "wfB", "name": "Reel: Tapri Special"}, {"id": "old", "name": "Reel Factory: New Reel"}]
+
+    def __call__(self, tool, args):
+        if tool == "search_workflows":
+            self.calls.append((tool, args))
+            return {"data": [w for w in self.WFS if args.get("query", "") in w["name"]]}
+        return super().__call__(tool, args)
+
+
+class Make(unittest.TestCase):
+    def test_reel_brand_runs_brand_workflow(self):
+        n8n = BrandWorkflows()
+        res = dtj.handle("7051933055", "Harsh", "make", "brand-a cinematic Diwali reel, the family shares the pack", call=n8n, now=NOW)
+        self.assertTrue(res["ok"], res)
+        tool, args = [c for c in n8n.calls if c[0] == "execute_workflow"][0]
+        self.assertEqual((args["workflowId"], args["triggerNodeName"], args["executionMode"]), ("wfA", "When called by Hermes", "production"))
+        form = args["inputs"]["formData"]
+        self.assertEqual((form["style"], form["request"], form["watcher"], form["chat"]),
+                         ("cinematic", "Diwali reel, the family shares the pack", "Harsh", "7051933055"))
+        self.assertIn("Brand A", res["say"])
+
+    def test_brand_name_with_spaces_matches(self):
+        n8n = BrandWorkflows()
+        res = dtj.handle("7051933055", "Harsh", "make", "tapri-special ugc chai at night", call=n8n, now=NOW)
+        self.assertEqual([c for c in n8n.calls if c[0] == "execute_workflow"][0][1]["workflowId"], "wfB")
+
+    def test_unknown_brand_lists_brands(self):
+        n8n = BrandWorkflows()
+        res = dtj.handle("7051933055", "Harsh", "make", "nobody cinematic x", call=n8n, now=NOW)
+        self.assertFalse(res["ok"])
+        self.assertIn("Brand A", res["say"])
+        self.assertIn("Tapri Special", res["say"])
+        self.assertNotIn("New Reel", res["say"])
+        self.assertFalse([c for c in n8n.calls if c[0] == "execute_workflow"])
+
+    def test_unknown_style_lists_styles(self):
+        res = dtj.handle("7051933055", "Harsh", "make", "brand-a anime x", call=BrandWorkflows(), now=NOW)
+        self.assertFalse(res["ok"])
+        self.assertIn("cinematic", res["say"])
+
+    def test_only_the_team(self):
+        res = dtj.handle("7051933055", "Harsh", "make", "brand-a ugc x", call=BrandWorkflows(team=[]), now=NOW)
+        self.assertFalse(res["ok"])
+        self.assertIn("only for the DTJ team", res["say"])
+
+    def test_engine_job_ids_count_as_reel_questions(self):
+        self.assertTrue(dtj.REEL_JOB.fullmatch("re-20261030-1215-abcd"))
+        self.assertFalse(dtj.REEL_JOB.fullmatch("page-12"))
+
+    def test_needs_an_idea(self):
+        res = dtj.handle("7051933055", "Harsh", "make", "brand-a ugc", call=BrandWorkflows(), now=NOW)
+        self.assertFalse(res["ok"])
+        self.assertIn("about", res["say"])

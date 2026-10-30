@@ -21,7 +21,8 @@ def words_check(heard: list[tuple[str, float, float]], line: str) -> dict:
     want = [bare(t) for t in line.split() if bare(t)]
     missing = [w for w in want if w not in said]
     span = (heard[0][1], heard[-1][2]) if heard else None
-    return {"said": " ".join(w for w, _, _ in heard), "missing": missing, "speech": span, "ok": not missing and bool(heard)}
+    return {"said": " ".join(w for w, _, _ in heard), "missing": missing, "speech": span,
+            "ok": not missing and (bool(heard) or not want)}   # a silent shot (no line) has nothing to hear
 
 
 class ProductTracker:
