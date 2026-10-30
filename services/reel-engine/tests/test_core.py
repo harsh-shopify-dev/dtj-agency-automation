@@ -108,6 +108,20 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertTrue(ans["cached"])
 
+    def test_same_stage_with_new_fields_runs_again(self):
+        self.post({"brand": "branda", "run": "r1", "stage": "take", "watcher": "Harsh"})
+        self.post({"brand": "branda", "run": "r1", "stage": "script", "round": 1})
+        code, ans = self.post({"brand": "branda", "run": "r1", "stage": "script", "round": 2, "note": "shorter"})
+        self.assertEqual(len(self.calls), 2)
+        self.assertNotIn("cached", ans)
+
+    def test_review_always_runs(self):
+        self.ctx.stages["review"] = lambda run, brand, body: self.calls.append(body) or {"ok": True, "waiting": True}
+        self.post({"brand": "branda", "run": "r1", "stage": "take", "watcher": "Harsh"})
+        self.post({"brand": "branda", "run": "r1", "stage": "review"})
+        self.post({"brand": "branda", "run": "r1", "stage": "review"})
+        self.assertEqual(len(self.calls), 2)
+
     def test_redo_runs_again(self):
         self.post({"brand": "branda", "run": "r1", "stage": "take", "watcher": "Harsh"})
         self.post({"brand": "branda", "run": "r1", "stage": "script"})

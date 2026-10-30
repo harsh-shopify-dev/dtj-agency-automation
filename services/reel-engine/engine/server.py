@@ -5,8 +5,9 @@
     GET  /outputs?brand=&run=      -> {"final": [...], "pictures": [...], "clips": [...]} (absolute paths on the host)
     POST /files?brand=&path=       body = the file (n8n's Drive sync); path stays inside the brand folder
 
-A finished stage is not run again when n8n retries the call ({"cached": true}); "redo": true runs it again. Stages listed in
-`rerun` (the person's answer, read every minute) always run. One reel at a time: a second call while a stage runs gets 409.
+A finished stage is not run again when n8n repeats the SAME call (a retry: {"cached": true}, so no second Flow spend); a call
+with other fields (a new round, a note, `only`) or "redo": true runs it. Stages in `rerun` (the person's answer, read every
+minute) always run. One reel at a time: a second call while a stage runs gets 409.
 A run refuses every stage until "take" has a watcher: a person taps Start and watches (CLAUDE.md rule 9).
 
     python -m engine.server            REEL_ENGINE_ROOT (default /home/ai/reel-engine), REEL_ENGINE_HOST, REEL_ENGINE_PORT (8091)
@@ -58,7 +59,8 @@ def handle(body: dict, ctx: Context) -> tuple[int, dict]:
             run.state["watcher"] = watcher
             run.save()
         saved = run.done(stage)
-        if saved and saved.get("ok") and not body.get("redo") and stage not in ctx.rerun:
+        sig = json.dumps({k: v for k, v in body.items() if k not in ("watcher", "redo")}, sort_keys=True, ensure_ascii=False)
+        if saved and saved.get("ok") and saved.get("_call") == sig and not body.get("redo") and stage not in ctx.rerun:
             return 200, {**saved, "cached": True}
         try:
             result = ctx.stages[stage](run, brand, body)
@@ -66,7 +68,7 @@ def handle(body: dict, ctx: Context) -> tuple[int, dict]:
             result = {"ok": False, "needs_person": True, "error": str(exc)[:500]}
         except NoReferences as exc:
             result = {"ok": False, "error": str(exc)}
-        run.record(stage, result)
+        run.record(stage, {**result, "_call": sig})
         return 200, {"run": run.run, "stage": stage, **result}
     except Exception as exc:  # noqa: BLE001 - n8n gets a readable answer, the log keeps the trace
         traceback.print_exc()
