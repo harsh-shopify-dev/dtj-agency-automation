@@ -43,7 +43,7 @@ class Plan(unittest.TestCase):
         self.assertIn("diwaliwatches", j["input"]["hashtags"])
         self.assertEqual(j["input"]["resultsType"], "reels")
         self.assertEqual((j["count"], j["niche"]), (3, "watches"))
-        self.assertEqual(run("find_plan.js", {"niche": "watches"})[0]["days"], 400)
+        self.assertEqual(run("find_plan.js", {"niche": "watches"})[0]["days"], 1100)
         self.assertLessEqual(j["max_usd"], 0.30)
         self.assertLessEqual(j["max_items"], 100)
 

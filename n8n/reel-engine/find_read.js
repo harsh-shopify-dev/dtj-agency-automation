@@ -9,7 +9,7 @@ const cutoff = Date.now() - plan.days * 86400000;
 const items = Array.isArray(a.body) ? a.body : [];
 const problem = (a.statusCode && a.statusCode >= 300) || a.error
   ? `Apify answered ${a.statusCode || ''} ${(a.error && (a.error.message || a.error)) || (a.body && a.body.error && a.body.error.message) || ''}`.trim() : '';
-const word = String(plan.niche || '').replace(/[^\p{L}\p{N} ]+/gu, ' ').trim().replace(/s\b/gi, '').split(/\s+/).filter(Boolean).join('|');
+const word = String(plan.niche || '').replace(/[^\p{L}\p{N} ]+/gu, ' ').trim().replace(/(ch|sh|x|ss)es\b/gi, '$1').replace(/([^s])s\b/gi, '$1').split(/\s+/).filter(Boolean).join('|');
 const NICHE = word ? new RegExp(word, 'i') : /$^/;
 const BRANDISH = /campaign|\bad\b|\bfilm\b|collection|presents|\bbrand\b|commercial|\bgift|\bshop\b|\bstore\b/i;
 const JOKE = /comedy|funny|\bmemes?\b|😂|🤣|😅|💀|kalesh|prank|roast|corporate|employee/i;
