@@ -13,7 +13,7 @@ VPS checks: `docs/ugc-reels/2026-10-30-engine-checks.md`.
 | 3 [CHATGPT + CLAUDE] Scene pictures | Codex + GPT Image (ChatGPT Plus, `CODEX_HOME`), Claude Code | below 7/10 redrawn (max 2) |
 | 4 [PERSON] Approve script + pictures | `n8n/reel-factory/reel_job.py` (reel bot) | Approve, or "3, 5: ..." redraws only those scenes |
 | 5 [FLOW + CLAUDE] Clips | `reel_factory.flow_cli` (Flow, Ultra plan, logged-in Chrome), Claude | 2 takes per scene, max 3 rounds; **spends Flow credits** |
-| 6 [CLAUDE] Edit | reel-factory `edit` | trims, beats, captions, -14 LUFS |
+| 6 [NO AI] Edit | reel-factory `edit` | trims, beats, captions, -14 LUFS |
 | 7 [PERSON] Approve final reel | `reel_job.py` | Approve; "2: ..." -> those clips again; any other note ends as "needs a look" with the note |
 | 8 [NO AI] Result | - | reel ready / needs a look, file path, credits |
 
