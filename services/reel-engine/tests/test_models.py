@@ -90,6 +90,12 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(kw["env"]["CODEX_HOME"], str(home))
         self.assertIn(f"--image={self.vid}", cmd)
 
+    def test_api_keys_never_reach_the_tools(self):
+        run = Fake(json.dumps({"is_error": False, "result": '{"a": 1}'}))
+        models.claude_json("p", [], self.tmp, run=run, env={"ANTHROPIC_API_KEY": "x", "GEMINI_API_KEY": "y", "GOOGLE_API_KEY": "z", "PATH": "/bin"})
+        env = run.calls[0][1]["env"]
+        self.assertFalse({"ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"} & set(env))
+
     def test_env_home_per_tool(self):
         run = Fake(agy('{"a": 1}'))
         models.gemini_json("p", [], self.tmp, run=run, env={"GEMINI_HOME": "/g", "PATH": "/bin"})

@@ -57,6 +57,19 @@ class GeneratedCode(unittest.TestCase):
         for stage in ("script", "pictures", "review", "clips", "edit", "result"):
             self.assertRegex(code, rf"stage: '{stage}'[^}}]*loop: \$json\.loop \|\| 0")
 
+    def test_brand_wrapper_starts_from_a_form(self):
+        code = deploy_engine.brand_code("branda", "Brand A", "cinematic", "ENGINE_ID")
+        self.assertIn("n8n-nodes-base.formTrigger", code)
+        self.assertIn('"dtj-reel-branda"', code)
+
+    def test_clips_may_run_for_hours(self):
+        code = deploy_engine.engine_code()
+        self.assertRegex(code, r"5 \[FLOW \+ CLAUDE\] Clips.*?timeout: 14400000")
+
+    def test_final_answer_never_goes_back_to_the_script(self):
+        code = deploy_engine.engine_code()
+        self.assertNotIn(".onCase(3, script)))", code)
+
     def test_brand_wrapper_fixes_the_brand(self):
         code = deploy_engine.brand_code("branda", "Brand A", "cinematic", "ENGINE_ID")
         self.assertIn('"value": "branda"', code)

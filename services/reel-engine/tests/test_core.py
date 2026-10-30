@@ -138,6 +138,17 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(code, 409)
         self.assertEqual(ans, {"ok": False, "busy": True})
 
+    def test_review_is_not_blocked_by_the_lock(self):
+        self.ctx.stages["review"] = lambda run, brand, body: {"ok": True, "waiting": True}
+        self.ctx.rerun = {"review"}
+        self.post({"brand": "branda", "run": "r1", "stage": "take", "watcher": "Harsh"})
+        self.ctx.lock.acquire()
+        try:
+            code, ans = self.post({"brand": "branda", "run": "r1", "stage": "review"})
+        finally:
+            self.ctx.lock.release()
+        self.assertEqual((code, ans.get("waiting")), (200, True))
+
     def test_unknown_stage(self):
         self.post({"brand": "branda", "run": "r1", "stage": "take", "watcher": "Harsh"})
         code, ans = self.post({"brand": "branda", "run": "r1", "stage": "nope"})

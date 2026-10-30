@@ -6,9 +6,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from engine import stages
+import os
+import re
+import time
+
+from engine import models, stages
 from engine.runs import Run
 from tests.test_core import make_brand
+
+REPO = Path(__file__).resolve().parents[3]
+JOB_RE = re.search(r'JOB_RE = re\.compile\(r"\^?(.+?)\$?"\)', (REPO / "n8n/store-factory/bot_ask.py").read_text(encoding="utf-8")).group(1)
 
 FACTS = "Baked, not fried. 30 g protein."
 
@@ -27,9 +34,15 @@ class Fakes:
         self.clip_ok = []             # Claude clip verdicts, popped per check (default True)
         self.person_answers = []      # (exit code, dict) popped per review call
         self.factory_calls = []
+        self.factory_codes = {}       # stage -> exit code (default 0)
+        self.flow_answers = []        # (code, dict) popped per clip (default: two good takes)
+        self.clip_files = []          # what Claude was shown for each clip check
+        self.gemini_fail = None
 
     def gemini_json(self, prompt, files, work, **kw):
         self.gemini_calls.append((prompt, [Path(f).name for f in files]))
+        if self.gemini_fail:
+            raise self.gemini_fail
         if "STYLE CARD" in prompt:
             return {"shots": ["wide", "close"], "pace": "slow"}
         return self.scripts.pop(0) if len(self.scripts) > 1 else self.scripts[0]
@@ -37,6 +50,7 @@ class Fakes:
     def claude_json(self, prompt, files, work, **kw):
         if "PICTURE CHECK" in prompt:
             return {"score": self.pic_scores.pop(0) if self.pic_scores else 9, "problems": ["label blurred"]}
+        self.clip_files.append([Path(f).name for f in files])
         ok = self.clip_ok.pop(0) if self.clip_ok else True
         return {"ok": ok, "problems": [] if ok else ["the pack melts"]}
 
@@ -48,6 +62,8 @@ class Fakes:
 
     def flow_clip(self, image, prompt_file, out_dir, products=(), seconds=8, **kw):
         self.flow_calls.append(Path(image).name)
+        if self.flow_answers:
+            return self.flow_answers.pop(0)
         Path(out_dir).mkdir(parents=True, exist_ok=True)
         files = []
         for k in (1, 2):
@@ -58,19 +74,26 @@ class Fakes:
 
     def person(self, args):
         self.person_calls.append(args)
+        assert re.fullmatch(JOB_RE, args[args.index("--job") + 1]), f"bot_ask refuses this job id: {args}"
         if args[0] in ("pictures", "final", "plan"):
             return self.person_answers.pop(0) if self.person_answers else (3, {})
         return 0, {"ok": True}
 
     def factory(self, stage, job_dir, shots=None):
         self.factory_calls.append((stage, shots))
+        if self.factory_codes.get(stage):
+            return self.factory_codes[stage]
         job = Path(job_dir)
         st = json.loads((job / "state.json").read_text(encoding="utf-8")) if (job / "state.json").is_file() else {}
         if stage == "check":
             for sid in (shots or "").split(","):
-                st.setdefault("pick", {}).setdefault(sid, {})["take"] = st["clips"][sid][0]["file"]
                 (job / "checks").mkdir(exist_ok=True)
-                (job / "checks" / f"{sid}_t1_sheet.jpg").write_bytes(b"jpg")
+                for t in st["clips"][sid]:          # as reel_factory.job.stage_check writes them
+                    stem = Path(t["file"]).stem
+                    t["clean"] = str(job / "clean" / f"{stem}.mp4")
+                    t["sheet"] = str(job / "checks" / f"{stem}_4fps.jpg")
+                    Path(t["sheet"]).write_bytes(b"jpg")
+                st.setdefault("pick", {}).setdefault(sid, {})["take"] = st["clips"][sid][0]["clean"]
         if stage == "edit":
             (job / "final").mkdir(exist_ok=True)
             (job / "final" / "reel_final.mp4").write_bytes(b"mp4")
@@ -214,6 +237,148 @@ class StageTests(unittest.TestCase):
         r = self.call("result")
         self.assertEqual(r["reel_status"], "reel ready")
         self.assertEqual(self.f.person_calls[-1][0], "finish")
+
+    # ---- the final review's findings ----
+    def test_job_id_fits_the_telegram_limit(self):
+        long = Run(self.tmp, "a_very_long_brand_name", "r20261030-1215-abcd")
+        self.assertRegex(stages._jid(long), "^" + JOB_RE + "$")
+        self.assertNotEqual(stages._jid(long), stages._jid(Run(self.tmp, "a_very_long_brand_name", "r20261030-1215-abce")))
+
+    def test_claude_sees_the_real_sheet_of_the_picked_take(self):
+        self.ready_pictures()
+        r = self.call("clips")
+        self.assertEqual(r["needs_look"], [])
+        self.assertEqual(len(self.f.flow_calls), 4)   # one round each, no extra Flow spend
+        self.assertTrue(self.f.clip_files[0][0].endswith("_4fps.jpg"))
+        self.assertTrue(self.f.clip_files[0][0].startswith("s1_"))
+
+    def test_check_crash_stops_without_more_flow(self):
+        self.ready_pictures()
+        self.f.factory_codes["check"] = 1
+        r = self.call("clips")
+        self.assertFalse(r["ok"])
+        self.assertEqual(len(self.f.flow_calls), 1)
+        self.assertIn("check", r["error"])
+
+    def test_retry_after_a_stop_skips_finished_scenes(self):
+        self.ready_pictures()
+        good = (0, {"ok": True, "files": [str(self.tmp / "a.mp4")], "assets": ["a"], "credits": 24})
+        self.f.flow_answers = [good, (1, {"ok": False, "needs_person": True, "error": "sign in"})]
+        self.assertTrue(self.call("clips")["needs_person"])
+        self.assertEqual(len(self.f.flow_calls), 2)
+        self.assertTrue(self.call("clips")["ok"])
+        names = [n.split("_")[0] for n in self.f.flow_calls]
+        self.assertEqual(names, ["s1", "s2", "s2", "s3", "s4"])
+
+    def test_picture_retry_skips_finished_scenes(self):
+        self.take(); self.call("style_card"); self.call("script")
+        real, calls = self.f.codex_image, []
+
+        def flaky(prompt, refs, out, **kw):
+            calls.append(Path(out).name)
+            if len(calls) == 2:
+                raise models.NeedsPerson("usage limit")
+            return real(prompt, refs, out, **kw)
+        self.d.codex_image = flaky
+        self.assertTrue(self.call("pictures")["needs_person"])
+        self.assertTrue(self.call("pictures")["ok"])
+        self.assertEqual([n.split("_")[0] for n in calls], ["s1", "s2", "s2", "s3", "s4"])
+
+    def test_any_failure_is_told_to_the_person(self):
+        self.take()
+        self.f.gemini_fail = models.ModelError("no JSON object in the answer")
+        r = self.call("style_card")
+        self.assertFalse(r["ok"])
+        self.assertEqual(self.f.person_calls[-1][0], "tell")
+        self.assertIn("no JSON", self.f.person_calls[-1][-1])
+
+    def test_no_references_is_told_in_telegram(self):
+        brand = make_brand(self.tmp, name="brandb", own=0, niche="none", niche_refs=0)
+        run = Run(self.tmp, "brandb", "r2")
+        r = stages.run_stage("take", run, brand, {"style": "founder", "request": "x", "chat": "123", "watcher": "H"}, deps=self.d)
+        self.assertFalse(r["ok"])
+        self.assertEqual([c[0] for c in self.f.person_calls], ["start", "tell"])
+
+    def test_take_refuses_empty_chat(self):
+        r = self.call("take", request="x", watcher="Harsh")
+        self.assertFalse(r["ok"])
+        self.assertIn("Telegram", r["error"])
+
+    def test_only_one_reel_at_a_time(self):
+        self.take()
+        other = Run(self.tmp, "branda", "r2")
+        body = {"style": "cinematic", "request": "x", "chat": "123", "watcher": "H"}
+        r = stages.run_stage("take", other, self.brand, body, deps=self.d)
+        self.assertFalse(r["ok"])
+        self.assertIn("r1", r["error"])
+        self.assertEqual(self.f.person_calls[-1][0], "tell")
+        old = time.time() - 7 * 3600                        # an abandoned run stops blocking
+        os.utime(self.run.dir / "state.json", (old, old))
+        self.assertTrue(stages.run_stage("take", other, self.brand, {**body, "redo": True}, deps=self.d)["ok"])
+
+    def test_a_failed_run_does_not_block_the_next(self):
+        self.take()
+        self.f.gemini_fail = models.ModelError("broken")
+        self.call("style_card")
+        self.f.gemini_fail = None
+        other = Run(self.tmp, "branda", "r2")
+        body = {"style": "cinematic", "request": "x", "chat": "123", "watcher": "H"}
+        self.assertTrue(stages.run_stage("take", other, self.brand, body, deps=self.d)["ok"])
+
+    def test_review_only_looks_once(self):
+        self.ready_pictures()
+        self.call("review", gate="pictures")
+        args = [c for c in self.f.person_calls if c[0] == "pictures"][-1]
+        self.assertEqual(args[args.index("--minutes") + 1], "0")
+
+    def test_review_gives_up_after_two_days(self):
+        self.ready_pictures()
+        self.call("review", gate="pictures")
+        self.run.state["review_since"]["pictures-1"] = time.time() - 49 * 3600
+        r = self.call("review", gate="pictures")
+        self.assertFalse(r["ok"])
+        self.assertIn("2 days", r["error"])
+
+    def test_final_change_reaches_the_result(self):
+        self.ready_pictures(); self.call("clips"); self.call("edit")
+        self.f.person_answers = [(0, {"ok": False, "by": "Harsh", "note": "make it feel warmer"})]
+        self.call("review", gate="final")
+        r = self.call("result", loop=1)
+        self.assertEqual(r["reel_status"], "needs a look")
+        self.assertIn("warmer", r["reel_note"])
+
+    def test_final_caption_note_never_respends(self):
+        self.ready_pictures()
+        self.f.person_answers = [(0, {"ok": False, "by": "Harsh", "note": "move the caption lower"})]
+        self.assertEqual(self.call("review", gate="final")["next"], "result")
+
+    def test_numbers_inside_the_note_are_not_scenes(self):
+        self.ready_pictures()
+        self.f.person_answers = [(0, {"ok": False, "by": "Harsh", "note": "3: show 2 diyas"})]
+        self.assertEqual(self.call("review", gate="pictures")["only"], ["s3"])
+        self.assertEqual(stages._route("scene 2 is too dark", ["s1", "s2"], "pictures")["only"], ["s2"])
+
+    def test_script_text_is_escaped_for_telegram(self):
+        self.ready_pictures()
+        sc = json.loads((self.run.dir / "job" / "script.json").read_text(encoding="utf-8"))
+        sc["shots"][0]["line"] = "Baked & <crisp>"
+        (self.run.dir / "job" / "script.json").write_text(json.dumps(sc), encoding="utf-8")
+        self.call("review", gate="pictures")
+        text = [c for c in self.f.person_calls if c[0] == "tell"][-1][-1]
+        self.assertIn("Baked &amp; &lt;crisp&gt;", text)
+
+    def test_cinematic_prompt_may_say_cinematic_but_ugc_may_not(self):
+        sc = script_json()
+        sc["shots"][0]["image_prompt"] = "cinematic wide shot of the pack"
+        sc["style"] = "cinematic"
+        self.assertEqual(stages._lint(sc, FACTS, "cinematic"), [])
+        sc["style"] = "ugc"
+        self.assertTrue(any("AI-ad" in e for e in stages._lint(sc, FACTS, "ugc")))
+
+    def test_script_carries_the_requested_style(self):
+        self.take(); self.call("style_card"); self.call("script")
+        sc = json.loads((self.run.dir / "job" / "script.json").read_text(encoding="utf-8"))
+        self.assertEqual(sc["style"], "cinematic")
 
 
 if __name__ == "__main__":

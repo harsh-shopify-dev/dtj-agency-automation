@@ -50,7 +50,8 @@ def extract_json(text: str) -> dict:
 
 def _env(env: dict | None, **extra: str) -> dict:
     base = dict(os.environ if env is None else env)
-    base.pop("OPENAI_API_KEY", None)
+    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        base.pop(key, None)                   # subscription logins only: a key in worker.env must never bill the API
     base.update(extra)
     return base
 

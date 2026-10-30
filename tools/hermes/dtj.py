@@ -46,7 +46,7 @@ STYLES = ("ugc", "cinematic", "founder")     # services/reel-engine/playbooks/
 ENV_FILE = Path.home() / ".config" / "dtj" / "worker.env"
 LOG = Path.home() / "dtj" / "hermes" / "dtj.log"
 PHOTOS = Path.home() / "dtj" / "hermes" / "photos"
-REEL_JOB = re.compile(r"(r|wr)\d{1,12}|refs-[a-z0-9-]{1,18}")   # reel job ids (reel_job.py, worker, Find References)
+REEL_JOB = re.compile(r"(r|wr)\d{1,12}|refs-[a-z0-9-]{1,18}|re-[a-z0-9-]{1,21}")   # reel job ids (reel_job.py, worker, Find References, Reel Engine)
 PHOTO_MINUTES = 30                       # the reel bot's own window for "photos sent just before"
 MAGIC = {bytes([0xFF, 0xD8, 0xFF]): ".jpg", bytes([0x89]) + b"PNG": ".png", b"RIFF": ".webp"}
 IST = timezone(timedelta(hours=5, minutes=30))

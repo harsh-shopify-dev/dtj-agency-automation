@@ -14,7 +14,7 @@ VPS checks: `docs/ugc-reels/2026-10-30-engine-checks.md`.
 | 4 [PERSON] Approve script + pictures | `n8n/reel-factory/reel_job.py` (reel bot) | Approve, or "3, 5: ..." redraws only those scenes |
 | 5 [FLOW + CLAUDE] Clips | `reel_factory.flow_cli` (Flow, Ultra plan, logged-in Chrome), Claude | 2 takes per scene, max 3 rounds; **spends Flow credits** |
 | 6 [CLAUDE] Edit | reel-factory `edit` | trims, beats, captions, -14 LUFS |
-| 7 [PERSON] Approve final reel | `reel_job.py` | Approve, or scene numbers -> those clips again |
+| 7 [PERSON] Approve final reel | `reel_job.py` | Approve; "2: ..." -> those clips again; any other note ends as "needs a look" with the note |
 | 8 [NO AI] Result | - | reel ready / needs a look, file path, credits |
 
 ## A brand's folder (on the VPS host)
@@ -31,6 +31,9 @@ Fill it with the VPS **File Browser** app or `POST http://172.16.1.1:8091/files?
 ## Run / test
 - Tests: `cd services/reel-engine && python -m unittest discover -s tests -t .` (fake models, Telegram and Flow).
 - Service: `reel-engine.service` (systemd, user `ai`, port 8091 on 172.16.1.1). `GET /health`, `POST /stage`, `GET /outputs`.
+  It needs `/home/ai/.config/dtj/reel-engine.env` holding `DTJ_REEL_BOT_TOKEN` (the Hermes reel bot's token) for the Telegram approvals.
+- One reel at a time: a new request is refused in Telegram while another runs (a run quiet for 6 h, stopped by a failure, or
+  unanswered for 2 days no longer blocks).
 - A failed step answers 422: the n8n run stops at that node and the person is told in Telegram. Fix, then **Retry** the node in n8n.
   Repeating the same call returns the saved answer (no second Flow spend); a new round, note or scene list runs again.
 

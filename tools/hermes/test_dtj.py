@@ -192,6 +192,10 @@ class Make(unittest.TestCase):
         self.assertFalse(res["ok"])
         self.assertIn("only for the DTJ team", res["say"])
 
+    def test_engine_job_ids_count_as_reel_questions(self):
+        self.assertTrue(dtj.REEL_JOB.fullmatch("re-20261030-1215-abcd"))
+        self.assertFalse(dtj.REEL_JOB.fullmatch("page-12"))
+
     def test_needs_an_idea(self):
         res = dtj.handle("7051933055", "Harsh", "make", "brand-a ugc", call=BrandWorkflows(), now=NOW)
         self.assertFalse(res["ok"])

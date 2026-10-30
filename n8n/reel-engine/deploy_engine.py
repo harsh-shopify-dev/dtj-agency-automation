@@ -10,7 +10,7 @@ Champfuel's brand-engine /onepass:
   When called by a brand -> Start run -> 0 [NO AI] Take request -> 1 [GEMINI] Style card -> 2 [GEMINI] Script + scenes
   -> 3 [CHATGPT + CLAUDE] Scene pictures -> 4 [PERSON] Approve script + pictures -> Pictures answer?
        waiting -> Wait 1 min -> 4 | clips -> 5 [FLOW + CLAUDE] Clips -> 6 [CLAUDE] Edit -> 7 [PERSON] Approve final reel -> Final answer?
-       pictures -> 3 | script -> 2                                waiting -> Wait 1 min -> 7 | done -> 8 [NO AI] Result | clips -> 5 | script -> 2
+       pictures -> 3 | script -> 2                                waiting -> Wait 1 min -> 7 | done -> 8 [NO AI] Result | clips -> 5
 The engine keeps the person's change (which scenes, the note); n8n only passes the loop counter it answers with.
 A stage that fails answers 422: the run stops at that node and the person is told in Telegram; fix, then Retry the node.
 "Reel: <Brand>": Run now / When called by Hermes -> Run settings (brand fixed) -> Reel Engine (waits for the reel).
@@ -29,7 +29,7 @@ sys.path.insert(0, str(HERE.parent / "store-factory"))
 
 ENGINE = "http://172.16.1.1:8091"     # the engine on the VPS host, on n8n's Docker gateway (not public)
 ENGINE_NAME = "Reel Engine"
-INPUTS = ("brand", "style", "request", "language", "chat", "watcher", "requested_by")
+HOURS_4 = 14400000                    # pictures and clips of a 10-scene reel on 2 vCPUs can outlast the usual hour
 STICKY = ("## Reel Engine (every brand)\n"
           "Started by a **Reel: <Brand>** workflow (Telegram /reel through Hermes, or Run now). Each numbered step is one call to the "
           "reel engine on the VPS (services/reel-engine): Gemini (agy) writes the style card and script, Codex draws the scene pictures "
@@ -43,11 +43,11 @@ def _body(stage: str, extra: str = "", loop: bool = True) -> str:
             + ("loop: $json.loop || 0 " if loop else "") + "}) }}")
 
 
-def _http(var: str, name: str, stage: str, pos: str, note: str, extra: str = "", loop: bool = True) -> str:
+def _http(var: str, name: str, stage: str, pos: str, note: str, extra: str = "", loop: bool = True, timeout: int = 3600000) -> str:
     return (f"const {var} = node({{ type: 'n8n-nodes-base.httpRequest', version: 4.2, config: {{ name: {json.dumps(name)}, "
             f"position: {pos}, notes: {json.dumps(note)}, notesInFlow: true, parameters: {{ method: 'POST', url: '{ENGINE}/stage', "
             f"sendBody: true, specifyBody: 'json', jsonBody: {json.dumps(_body(stage, extra, loop))}, "
-            "options: { timeout: 3600000 } } } });\n")
+            f"options: {{ timeout: {timeout} }} }} }} }});\n")
 
 
 def _rule(key: str, left: str, values: tuple[str, ...]) -> dict:
@@ -89,7 +89,7 @@ def engine_code() -> str:
         + _http("script", "2 [GEMINI] Script + scenes", "script", "[960, 200]",
                 "• AI: Gemini 3.8 Flash High (agy)\n• Brief + facts + style card + the request -> scenes; claims checked against facts.md")
         + _http("pictures", "3 [CHATGPT + CLAUDE] Scene pictures", "pictures", "[1200, 200]",
-                "• AI: Codex + GPT Image (ChatGPT Plus) draws, Claude scores vs the style card\n• Below 7/10 redrawn (max 2); only the named scenes on a change")
+                "• AI: Codex + GPT Image (ChatGPT Plus) draws, Claude scores vs the style card\n• Below 7/10 redrawn (max 2); only the named scenes on a change", timeout=HOURS_4)
         + _http("reviewPics", "4 [PERSON] Approve script + pictures", "review", "[1440, 200]",
                 "• AI: none\n• Script + numbered album in Telegram: Approve or 'Change something' (e.g. '3, 5: the diya is too small')", "gate: 'pictures', ")
         + _switch("picAnswer", "Pictures answer?", "[1680, 200]",
@@ -97,14 +97,13 @@ def engine_code() -> str:
                    _rule("rewrite", nxt, ("script",))])
         + _wait("waitPics", "Wait 1 min (pictures)", "[1680, 420]")
         + _http("clips", "5 [FLOW + CLAUDE] Clips", "clips", "[1920, 200]",
-                "• AI: Google Flow (Ultra plan, logged-in Chrome) + Claude checks the 4 fps sheets\n• 2 takes per scene; a bad scene is made again (max 3 rounds). SPENDS FLOW CREDITS")
+                "• AI: Google Flow (Ultra plan, logged-in Chrome) + Claude checks the 4 fps sheets\n• 2 takes per scene; a bad scene is made again (max 3 rounds). SPENDS FLOW CREDITS", timeout=HOURS_4)
         + _http("edit", "6 [CLAUDE] Edit", "edit", "[2160, 200]",
                 "• AI: none (reel-factory edit: trims, beats, captions, -14 LUFS)")
         + _http("reviewFinal", "7 [PERSON] Approve final reel", "review", "[2400, 200]",
-                "• AI: none\n• The reel in Telegram: Approve or 'Change something' (scene numbers -> those clips again)", "gate: 'final', ")
+                "• AI: none\n• The reel in Telegram: Approve or 'Change something' ('2: ...' -> that clip again; any other note ends as needs a look)", "gate: 'final', ")
         + _switch("finalAnswer", "Final answer?", "[2640, 200]",
-                  [_rule("waiting", waiting, ("true",)), _rule("done", nxt, ("save", "result")), _rule("clips", nxt, ("clips",)),
-                   _rule("rewrite", nxt, ("script",))])
+                  [_rule("waiting", waiting, ("true",)), _rule("done", nxt, ("save", "result")), _rule("clips", nxt, ("clips",))])
         + _wait("waitFinal", "Wait 1 min (final)", "[2640, 420]")
         + _http("result", "8 [NO AI] Result", "result", "[2880, 200]",
                 "• AI: none\n• reel ready / needs a look, the file on the VPS, credits used; the Telegram thread is closed")
@@ -115,12 +114,18 @@ def engine_code() -> str:
         "    .onCase(1, clips.to(edit).to(reviewFinal).to(finalAnswer\n"
         "      .onCase(0, waitFinal.to(reviewFinal))\n"
         "      .onCase(1, result)\n"
-        "      .onCase(2, clips)\n"
-        "      .onCase(3, script)))\n"
+        "      .onCase(2, clips)))\n"
         "    .onCase(2, pictures)\n"
         "    .onCase(3, script))\n"
         "  .add(about);\n"
     )
+
+
+def _form_fields() -> list[dict]:
+    spec = [("style", "Style (ugc, cinematic, founder)", False), ("request", "What is the reel about?", True),
+            ("language", "Language (en, hi, hinglish, gu)", False), ("watcher", "Who is watching this run?", True),
+            ("chat", "Telegram chat id (for approvals)", False), ("requested_by", "Asked by", False)]
+    return [{"fieldName": n, "fieldLabel": label, "fieldType": "text", "requiredField": req} for n, label, req in spec]
 
 
 def brand_code(slug: str, name: str, style: str, engine_id: str) -> str:
@@ -135,10 +140,13 @@ def brand_code(slug: str, name: str, style: str, engine_id: str) -> str:
     return (
         "import { workflow, node, trigger } from '@n8n/workflow-sdk';\n\n"
         "const runNow = trigger({ type: 'n8n-nodes-base.manualTrigger', version: 1, config: { name: 'Run now', position: [0, 0], "
-        "notes: 'Type the request in Run settings first (what the reel is about), then click Execute.', notesInFlow: true } });\n"
-        "const hermes = trigger({ type: 'n8n-nodes-base.executeWorkflowTrigger', version: 1.1, config: { name: 'When called by Hermes', "
-        "position: [0, 200], notes: 'Telegram /reel <brand> <style> <idea> -> Hermes -> here (style, request, language, chat, watcher).', "
-        "notesInFlow: true, parameters: { inputSource: 'passthrough' } } });\n"
+        "notes: 'Type the request and your Telegram id (chat) in Run settings first: approvals come to Telegram. Then click Execute.', notesInFlow: true } });\n"
+        "const hermes = trigger({ type: 'n8n-nodes-base.formTrigger', version: 2.6, config: { name: 'When called by Hermes', "
+        "position: [0, 200], notes: 'Telegram: dtj make <brand> <style> <idea> (Hermes) fills this form through n8n; it also works by hand (n8n login).', "
+        "notesInFlow: true, parameters: { authentication: 'n8nUserAuth', formTitle: " + json.dumps(f"New reel: {name}") + ", "
+        f"formFields: {{ values: {json.dumps(_form_fields())} }}, responseMode: 'onReceived', "
+        f"options: {{ appendAttribution: false, path: {json.dumps('dtj-reel-' + slug)}, respondWithOptions: {{ values: {{ respondWith: 'text', "
+        "formSubmittedText: 'Started. The person on duty approves the script, pictures and reel in Telegram.' } } } } } });\n"
         "const settings = node({ type: 'n8n-nodes-base.set', version: 3.4, config: { name: 'Run settings', position: [240, 100], "
         f"notes: {json.dumps(note)}, notesInFlow: true, "
         f"parameters: {{ mode: 'manual', includeOtherFields: false, assignments: {{ assignments: {json.dumps(fields)} }} }} }} }});\n"

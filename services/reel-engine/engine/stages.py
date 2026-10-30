@@ -10,22 +10,27 @@
     edit        reel-factory's edit (trims, beats, captions, -14 LUFS) -> run/final/reel.mp4
     result      the answer for n8n (reel_status, final_path, ...) and the Telegram finish
 
-The person's change note decides what is redone ("next"): scene numbers -> only those scenes; words about the line/script ->
-the script; anything else on the final -> the edit. Nothing is deleted: every picture, take and script version stays.
+The person's change note decides what is redone ("next"). On the pictures: "3, 5: ..." -> only those scenes; words about the
+line/script -> the script. On the final: "2: ..." -> those clips; anything else ends the run as "needs a look" with the note for a
+person (no stage can redo "make it warmer", and nothing re-spends Flow on a guess). A retry after a stop skips the scenes already
+finished in this round. One reel at a time; nothing is deleted: every picture, take and script version stays.
 """
 from __future__ import annotations
 
+import html
 import json
 import re
 import shutil
 import subprocess
 import sys
+import time
+import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from . import models
-from .brands import Brand
+from .brands import Brand, NoReferences
 from .runs import Run
 
 ENGINE = Path(__file__).resolve().parents[1]
@@ -38,6 +43,8 @@ from reel_factory.job import lint_script  # noqa: E402
 PASS_SCORE = 7
 MAX_REDRAWS = 2
 CLIP_ROUNDS = 3
+ACTIVE_HOURS = 6                    # a run quiet for longer no longer blocks the next reel (one Flow Chrome on the VPS)
+REVIEW_DAYS = 2                     # no answer at a gate: the run stops and says so (n8n would ask every minute for ever)
 WORD_NOTE = re.compile(r"\b(line|lines|script|say|says|said|word|words|caption|captions|voice|dialogue|hook|speak)\b", re.I)
 
 
@@ -84,7 +91,8 @@ def _job(run: Run) -> Path:
 
 
 def _jid(run: Run) -> str:
-    return f"re-{run.brand}-{run.run}"[:48]
+    """The Telegram job id: bot_ask.JOB_RE allows lowercase, digits and - only, at most 24 characters."""
+    return "re-" + re.sub(r"[^a-z0-9-]", "-", run.run)[-21:]
 
 
 def _load(p: Path, default=None):
@@ -130,16 +138,37 @@ def _set_job_state(run: Run, **kv) -> None:
     _save(p, st)
 
 
+def _other_active(run: Run) -> str | None:
+    """Another reel still going (started, no result, not stopped by a failure, and not quiet for ACTIVE_HOURS)."""
+    for f in run.dir.parents[2].glob("runs/*/*/state.json"):
+        if f.parent == run.dir or time.time() - f.stat().st_mtime > ACTIVE_HOURS * 3600:
+            continue
+        st = _load(f, {})
+        if st.get("request") and not st.get("failed") and "result" not in st.get("stages", {}):
+            return f"{f.parent.parent.name}/{f.parent.name}"
+    return None
+
+
 # ---------------- stages ----------------
 def take(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
     d = _deps(deps)
     style = str(body.get("style") or brand.info.get("default_style") or "ugc")
     req = {"idea": str(body.get("request") or "").strip(), "style": style, "language": body.get("language") or "en",
            "chat": str(body.get("chat") or ""), "requested_by": body.get("requested_by") or body.get("watcher")}
+    run.state["request"] = req
+    run.save()
     if not req["idea"]:
         return {"ok": False, "error": "no request: say what the reel is about (e.g. 'Diwali reel, the family shares the pack')"}
+    if not req["chat"]:
+        return {"ok": False, "error": "no Telegram chat: the script, pictures and reel are approved in Telegram; put your Telegram id in Run settings"}
+    code, ans = d.person(["start", "--job", _jid(run), "--chat", req["chat"], "--title", f"Reel: {brand.info.get('name', brand.name)} ({style})"])
+    if code != 0:
+        return {"ok": False, "error": ans.get("error") or f"could not start the Telegram thread (exit {code})"}
+    busy = _other_active(run)
+    if busy:
+        return {"ok": False, "error": f"another reel is still running ({busy}); one at a time. Ask again when it has finished."}
     if not brand.products:
-        return {"ok": False, "error": f"{brand.name} has no product photos in products/: add the real pack pictures to its Drive folder"}
+        return {"ok": False, "error": f"{brand.name} has no product photos in products/: add the real pack pictures to its folder"}
     refs = brand.references(style, d.niche_root)
     music = sorted((brand.dir / "music").glob("*")) if (brand.dir / "music").is_dir() else []
     products = [str(p) for p in brand.products]
@@ -147,10 +176,6 @@ def take(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
         "product_name": brand.info.get("product_name") or brand.info.get("name") or brand.name, "language": req["language"],
         "product_images": products, "reference_reels": [str(r) for r in refs],
         "local": {"product_images": products, "music": [str(m) for m in music[:1]]}})
-    run.state["request"] = req
-    run.save()
-    if req["chat"]:
-        d.person(["start", "--job", _jid(run), "--chat", req["chat"], "--title", f"Reel: {brand.info.get('name', brand.name)} ({style})"])
     return {"ok": True, "run": run.run, "style": style, "references": len(refs)}
 
 
@@ -194,8 +219,8 @@ and the same", "product": true|false}}]}}. 3 to 10 shots, under 60 s, at most 3 
 
 
 def _lint(script: dict, facts: str, style: str) -> list[str]:
-    bad = lint_script(script, facts)
-    return [b for b in bad if style == "ugc" or "how the phone films it" not in b]
+    # the phone-camera rule follows script["style"] (reel_factory.job.animation); the "AI-ad words" rule is for UGC only
+    return [b for b in lint_script(script, facts) if style == "ugc" or "AI-ad words" not in b]
 
 
 def script(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
@@ -213,6 +238,7 @@ def script(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict
         for i, s in enumerate(data.get("shots") or []):
             s["id"] = f"s{i + 1}"
         data.setdefault("language", req["language"])
+        data["style"] = req["style"]
         _save(_version(_job(run), "script", ".json"), data)
         errors = _lint(data, brand.facts, req["style"])
         if not errors:
@@ -236,10 +262,12 @@ def pictures(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> di
     only, note = _change(run, body, "pictures")
     only = set(only or [s["id"] for s in sc["shots"]])
     current = run.state.setdefault("pictures", {})
-    scores, redrawn, needs_look = {}, [], []
+    scores, done = run.state.setdefault("pic_scores", {}), run.state.setdefault("pic_done", {})
+    loop = int(run.state.get("loop", 0))
+    redrawn = []
     folder = run.dir / "pictures"
     for s in sc["shots"]:
-        if s["id"] not in only:
+        if s["id"] not in only or (done.get(s["id"]) == loop and not body.get("redo")):
             continue
         prompt = s["image_prompt"] + (f"\nChange asked by the team: {note}" if note else "")
         for attempt in range(MAX_REDRAWS + 1):
@@ -252,32 +280,40 @@ def pictures(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> di
             if attempt < MAX_REDRAWS:
                 redrawn.append(s["id"])
                 prompt += "\nFix: " + "; ".join(verdict.get("problems") or [])
-        else:
-            needs_look.append(s["id"])
         current[s["id"]] = str(out)
-    run.save()
-    picks = _load(_job(run) / "state.json", {}).get("pick", {})
-    for sid, path in current.items():
-        picks.setdefault(sid, {})["image"] = path
-    _set_job_state(run, pick=picks)
+        done[s["id"]] = loop
+        run.save()                                  # scene by scene: a retry after a stop does not draw it again
+        picks = _load(_job(run) / "state.json", {}).get("pick", {})
+        picks.setdefault(s["id"], {})["image"] = str(out)
+        _set_job_state(run, pick=picks)
+    needs_look = [sid for sid, n in scores.items() if n < PASS_SCORE]
     return {"ok": True, "pictures": current, "scores": scores, "redrawn": sorted(set(redrawn)), "needs_look": needs_look}
 
 
+def _scenes(note: str, ids: list[str]) -> list[str]:
+    """The scenes a note names: its leading "3, 5:" or "scene 3"; a number inside the words ("show 2 diyas") is not a scene."""
+    m = re.match(r"\s*(?:scenes?\s*)?(\d{1,2}(?:\s*(?:,|&|and)\s*\d{1,2})*)\s*[:\-\u2013]", note, re.I)
+    nums = re.findall(r"\d{1,2}", m.group(1)) if m else re.findall(r"\bscenes?\s+(\d{1,2})", note, re.I)
+    wanted = {f"s{int(n)}" for n in nums}
+    return [i for i in ids if i in wanted]
+
+
 def _route(note: str, ids: list[str], gate: str) -> dict:
-    nums = [f"s{n}" for n in re.findall(r"\b(\d{1,2})\b", note) if f"s{n}" in ids]
-    only = sorted(set(nums), key=ids.index)
+    only = _scenes(note, ids)
     if gate == "pictures":
         if WORD_NOTE.search(note) and not only:
             return {"next": "script"}
         return {"next": "pictures", "only": only or ids}
     if only:
         return {"next": "clips", "only": only}
-    # "make it warmer" on the final cannot be redone by a stage: the reel ends with the note for a person to finish by hand
-    return {"next": "script" if WORD_NOTE.search(note) else "result"}
+    # "make it warmer" or "move the caption lower" on the final: no stage can redo it, and a script rewrite would re-spend every
+    # picture and clip. The reel ends as "needs a look" with the note, for a person to finish by hand.
+    return {"next": "result"}
 
 
 def _summary(sc: dict) -> str:
-    return "Script:\n" + "\n".join(f"{s['id'][1:]}. ({s['seconds']} s) {s.get('line') or '(no words)'}" for s in sc.get("shots", []))
+    # Telegram HTML: a line with & or < would otherwise be refused and the person would approve without seeing the script
+    return "Script:\n" + "\n".join(f"{s['id'][1:]}. ({s['seconds']} s) {html.escape(str(s.get('line') or '(no words)'))}" for s in sc.get("shots", []))
 
 
 def review(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
@@ -297,10 +333,14 @@ def review(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict
             d.person(["tell", "--job", _jid(run), "--text", _summary(sc)])
             told.append(key)
             run.save()
-        code, ans = d.person(["pictures", "--job", _jid(run), "--dir", str(folder), "--round", str(rnd)])
+        code, ans = d.person(["pictures", "--job", _jid(run), "--dir", str(folder), "--round", str(rnd), "--minutes", "0"])
     else:
-        code, ans = d.person(["final", "--job", _jid(run), "--file", str(run.dir / "final" / "reel.mp4"), "--round", str(rnd)])
+        code, ans = d.person(["final", "--job", _jid(run), "--file", str(run.dir / "final" / "reel.mp4"), "--round", str(rnd), "--minutes", "0"])
     if code == 3:
+        since = run.state.setdefault("review_since", {}).setdefault(f"{gate}-{rnd}", time.time())
+        run.save()
+        if time.time() - since > REVIEW_DAYS * 86400:
+            return {"ok": False, "error": f"no answer at the {gate} approval in {REVIEW_DAYS} days: this reel has stopped"}
         return {"ok": True, "waiting": True}
     if code != 0:
         return {"ok": False, "error": ans.get("error") or f"reel_job.py {gate} failed (exit {code})"}
@@ -325,9 +365,11 @@ def clips(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
     sc, style, job = _script(run), run.state["request"]["style"], _job(run)
     only, note = _change(run, body, "clips")
     only = set(only or [s["id"] for s in sc["shots"]])
-    credits, needs_look, problems = 0, [], {}
+    credits, problems = 0, {}
+    done, look = run.state.setdefault("clip_done", {}), run.state.setdefault("clip_look", [])
+    loop = int(run.state.get("loop", 0))
     for s in sc["shots"]:
-        if s["id"] not in only:
+        if s["id"] not in only or (done.get(s["id"]) == loop and not body.get("redo")):
             continue
         prompt = s["video_prompt"] + (f"\nChange asked by the team: {note}" if note else "")
         for rnd in range(1, CLIP_ROUNDS + 1):
@@ -341,17 +383,22 @@ def clips(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
                 problems[s["id"]] = [ans.get("error", "Flow failed")]
                 continue
             credits += ans.get("credits") or 0
+            run.state["credits"] = run.state.get("credits", 0) + (ans.get("credits") or 0)
             if ans.get("project"):
                 run.state["flow_project"] = ans["project"]
+            run.save()
             st = _load(job / "state.json", {})
             st.setdefault("clips", {})[s["id"]] = [{"file": f, "asset": a} for f, a in zip(ans["files"], ans.get("assets") or [])]
             st.get("pick", {}).get(s["id"], {}).pop("take", None)
             _save(job / "state.json", st)
-            d.factory("check", job, shots=s["id"])
-            take = _load(job / "state.json", {}).get("pick", {}).get(s["id"], {}).get("take")
-            sheets = sorted((job / "checks").glob(f"{s['id']}*sheet*.jpg")) if (job / "checks").is_dir() else []
-            if take and sheets:
-                verdict = d.claude_json(CLIP_CHECK.format(sid=s["id"], style=style, prompt=s["video_prompt"]), sheets[-2:],
+            code = d.factory("check", job, shots=s["id"])
+            if code != 0:      # a crash is not a bad take: stop here, more rounds would only spend Flow credits
+                raise models.ModelError(f"the automatic check crashed on {s['id']} (exit {code}): the takes are kept, retry after a look")
+            st = _load(job / "state.json", {})
+            take = st.get("pick", {}).get(s["id"], {}).get("take")
+            sheet = next((t.get("sheet") for t in st["clips"][s["id"]] if t.get("clean") == take), None) if take else None
+            if sheet:
+                verdict = d.claude_json(CLIP_CHECK.format(sid=s["id"], style=style, prompt=s["video_prompt"]), [sheet],
                                         run.dir / "claude")
                 if verdict.get("ok"):
                     problems.pop(s["id"], None)
@@ -361,10 +408,16 @@ def clips(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
             else:
                 problems[s["id"]] = ["no take passed the automatic checks"]
         else:
-            needs_look.append(s["id"])
-    run.state["credits"] = run.state.get("credits", 0) + credits
-    run.save()
-    return {"ok": True, "credits": credits, "needs_look": needs_look, "problems": problems}
+            if s["id"] not in look:
+                look.append(s["id"])
+            done[s["id"]] = loop
+            run.save()
+            continue
+        if s["id"] in look:
+            look.remove(s["id"])
+        done[s["id"]] = loop
+        run.save()                                  # scene by scene: a retry after a stop does not spend on it again
+    return {"ok": True, "credits": credits, "needs_look": sorted(look, key=lambda i: int(i[1:])), "problems": problems}
 
 
 def edit(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
@@ -391,7 +444,12 @@ def result(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict
     clip_look = (run.done("clips") or {}).get("needs_look") or []
     final = run.dir / "final" / "reel.mp4"
     status = "could not make" if not final.is_file() else ("needs a look" if clip_look or qc.get("status") != "reel ready" else "reel ready")
-    note = "; ".join(filter(None, [qc.get("note"), f"scenes to watch closely: {clip_look}" if clip_look else ""]))
+    pending = run.state.get("pending") or {}
+    asked = str(pending.get("note") or "") if pending.get("next") == "result" else ""
+    if asked and status == "reel ready":
+        status = "needs a look"
+    note = "; ".join(filter(None, [f"change asked on the final, to do by hand: {asked}" if asked else "", qc.get("note"),
+                                   f"scenes to watch closely: {clip_look}" if clip_look else ""]))
     if run.state.get("request", {}).get("chat"):
         d.person(["finish", "--job", _jid(run), "--ok" if status != "could not make" else "--stopped", "--note", note or status])
     return {"ok": True, "reel_status": status, "final_path": str(final) if final.is_file() else "", "duration_s": qc.get("duration"),
@@ -410,12 +468,26 @@ def run_stage(name: str, run: Run, brand: Brand, body: dict, deps: Deps | None =
         res = STAGES[name](run, brand, body, deps=d)
     except models.NeedsPerson as exc:
         res = {"ok": False, "needs_person": True, "error": str(exc)[:500]}
+    except (models.ModelError, NoReferences) as exc:
+        res = {"ok": False, "error": str(exc)[:500]}
+    except Exception as exc:  # noqa: BLE001 - a timeout, a missing file: the person hears it, the log keeps the trace
+        traceback.print_exc()
+        res = {"ok": False, "error": f"{type(exc).__name__}: {str(exc)[:400]}"}
     res.setdefault("loop", int(run.state.get("loop", 0)))
+    if res.get("ok"):
+        run.state.pop("failed", None)
+    else:
+        run.state["failed"] = True
+    run.save()
     if not res.get("ok") and run.state.get("request", {}).get("chat"):
         why = res.get("error") or "; ".join(res.get("errors") or []) or "unknown"
-        d.person(["tell", "--job", _jid(run), "--text", f"The reel stopped at '{name}': {why[:600]}\n"
-                  + ("A person must fix this (sign in / look at the window), then retry the step in n8n."
-                     if res.get("needs_person") else "Retry the step in n8n after the fix.")])
+        text = f"The reel stopped at '{name}': {html.escape(why[:600])}\n" + (
+            "A person must fix this (sign in / look at the window), then retry the step in n8n."
+            if res.get("needs_person") else "Retry the step in n8n after the fix.")
+        try:
+            d.person(["tell", "--job", _jid(run), "--text", text])
+        except Exception:  # noqa: BLE001 - the n8n run still stops at this step with the same error
+            traceback.print_exc()
     return res
 
 

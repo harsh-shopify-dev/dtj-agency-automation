@@ -11,6 +11,8 @@ Wants=network-online.target
 User=ai
 WorkingDirectory=/home/ai/dtj-agency-automation/services/reel-engine
 EnvironmentFile=-/home/ai/.config/dtj/worker.env
+# DTJ_REEL_BOT_TOKEN=<the Hermes reel bot's token>, in its own file: worker.env keeps it commented out so the old reel worker stays off
+EnvironmentFile=-/home/ai/.config/dtj/reel-engine.env
 Environment=REEL_ENGINE_ROOT=/home/ai/reel-engine
 Environment=REEL_ENGINE_HOST=172.16.1.1
 Environment=REEL_ENGINE_PORT=8091

@@ -52,7 +52,9 @@ def handle(body: dict, ctx: Context) -> tuple[int, dict]:
     watcher = str(body.get("watcher") or run.state.get("watcher") or "").strip()
     if not watcher:
         return 400, {"ok": False, "error": "no watcher: a person must tap Start and watch this run (rule 9)"}
-    if not ctx.lock.acquire(blocking=False):
+    # the person's answer and a new reel's "take" (which refuses in Telegram while another reel runs) never wait for the lock
+    locked = stage not in ctx.rerun and stage != "take"
+    if locked and not ctx.lock.acquire(blocking=False):
         return 409, {"ok": False, "busy": True}
     try:
         if run.state.get("watcher") != watcher:
@@ -75,7 +77,8 @@ def handle(body: dict, ctx: Context) -> tuple[int, dict]:
         traceback.print_exc()
         return 500, {"ok": False, "error": f"{type(exc).__name__}: {str(exc)[:400]}"}
     finally:
-        ctx.lock.release()
+        if locked:
+            ctx.lock.release()
 
 
 def save_file(ctx: Context, brand: str, rel: str, data: bytes) -> tuple[int, dict]:
