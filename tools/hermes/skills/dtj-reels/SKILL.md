@@ -56,3 +56,9 @@ Run it once per request; if it says `"ok": false`, just relay `say` (it explains
 - Never ask for or accept a password, token or key (if one is sent, tell them to delete the message).
 - Nothing is posted and no ad is started on Meta from here: a person decides where it goes, and turns on the AI label when posting.
 - Never change this skill, the `dtj` command or its key. Ideas go into a note for Harsh, not into a rule.
+
+## A brand's reel from the Reel Engine (30 Oct 2026)
+When someone asks for a reel FOR A BRAND in a style ("cinematic Diwali reel for Brand A", "founder reel for Tapri Special"), run
+`dtj make <brand> <style> <what the reel is about>`. Styles: ugc, cinematic, founder. If the brand or style is unknown, `dtj` answers
+with the list: relay it word for word. The person who asks is the watcher: the script, the scene pictures and the reel come to
+their chat for Approve or "Change something". The old `remake` / `reel` commands are unchanged.

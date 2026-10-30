@@ -40,7 +40,8 @@ BOT = ROOT / "n8n" / "reel-factory"
 BOT_WORKFLOW = "DRHXIhjKpwYjPjJO"        # Reel Factory: Telegram Bot (its live code nodes are the rules)
 NEW_REEL = "dS36LVeRXLuIuajm"            # Reel Factory: New Reel
 PROJECT = "NuKdhPFWwCCbm1K3"
-SUBS = ("remake", "reel", "refs", "audience", "status", "help", "photo", "tg", "say")
+SUBS = ("remake", "reel", "refs", "audience", "status", "help", "photo", "tg", "say", "make")
+STYLES = ("ugc", "cinematic", "founder")     # services/reel-engine/playbooks/
 ENV_FILE = Path.home() / ".config" / "dtj" / "worker.env"
 LOG = Path.home() / "dtj" / "hermes" / "dtj.log"
 PHOTOS = Path.home() / "dtj" / "hermes" / "photos"
@@ -170,11 +171,13 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
         return {"ok": False, "say": "Reels start from Telegram (your Telegram account says who you are). Please send this from the Hermes bot."}
     if sub not in SUBS:
         return {"ok": False, "say": "Unknown request. Use: remake, reel, refs, audience, status or help."}
+    if sub in ("photo", "make") and not is_member(call, user):
+        return {"ok": False, "say": "This bot is only for the DTJ team. To get access, send Harsh this number: " + user}
     if sub == "photo":
-        if not is_member(call, user):
-            return {"ok": False, "say": "This bot is only for the DTJ team. To get access, send Harsh this number: " + user}
         return save_photo(user, (text or "").strip(), now, PHOTOS_ROOT[0])
     name = re.sub(r"[\x00-\x1f]", " ", name or "").strip()[:60] or "there"
+    if sub == "make":
+        return make(user, name, text, call)
     who = {"id": int(user), "first_name": name, "is_bot": False}
     chat = {"id": int(user), "type": "private"}
     if sub == "tg":
@@ -190,6 +193,33 @@ def handle(user: str, name: str, sub: str, text: str, call=mcp_call, now: dateti
     else:
         update = {"message": {"chat": chat, "from": who, "text": ("/" + sub + " " + (text or "")).strip()[:1600]}}
     return route(update, user, call, now, code_dir)
+
+
+def _key(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def make(user: str, name: str, text: str, call) -> dict:
+    """`make <brand> <style> <idea>`: starts that brand's "Reel: <Brand>" workflow (the multi-brand Reel Engine, 30 Oct 2026).
+    The asker is the watcher (rule 9): they approve the script, pictures and reel in this chat."""
+    parts = (text or "").split(maxsplit=2)
+    brands = {w["name"][len("Reel: "):]: w["id"] for w in call("search_workflows", {"query": "Reel: "}).get("data", [])
+              if str(w.get("name", "")).startswith("Reel: ")}
+    usage = "Send: make <brand> <style> <what the reel is about>, e.g. make brand-a cinematic Diwali reel, the family shares the pack."
+    hit = next((b for b in brands if parts and _key(b) == _key(parts[0])), None)
+    if not hit:
+        return {"ok": False, "say": usage + "\nBrands: " + (", ".join(sorted(brands)) or "none yet (ask Harsh to add one)")}
+    style = parts[1].lower() if len(parts) > 1 else ""
+    if style not in STYLES:
+        return {"ok": False, "say": f"Which style? {', '.join(STYLES)}.\n" + usage}
+    idea = parts[2].strip() if len(parts) > 2 else ""
+    if not idea:
+        return {"ok": False, "say": "What is the reel about? " + usage}
+    res = call("execute_workflow", {"workflowId": brands[hit], "triggerNodeName": "When called by Hermes", "executionMode": "production",
+                                    "inputs": {"formData": {"style": style, "request": idea[:1500], "language": "en", "watcher": name,
+                                                            "chat": user, "requested_by": name}}})
+    return {"ok": True, "action": "make", "run": res.get("executionId"),
+            "say": f"Started a {style} reel for {hit}. I will send the script and the scene pictures here for your Approve."}
 
 
 def node_files(call, code_dir: Path | None) -> dict[str, Path]:
