@@ -1,0 +1,50 @@
+{
+  "skill_name": "dtj-seo",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "how is our website doing on google? run the seo check and tell me what to fix first",
+      "expected_output": "Runs the free site check (run_weekly, no --live), then a plain-English summary: counts by priority with the source, the one thing to fix first, the fixes batch waiting for a yes, the AI-assistant check status (not run: no keys), and a single next step. No invented numbers.",
+      "files": [],
+      "assertions": [
+        "Ran the free website check (a scan.json and report.md exist in the outputs)",
+        "Did not run anything paid (no --live, no paid API)",
+        "The answer's fix-now / soon / later counts match scan.json exactly",
+        "The answer names where its numbers come from (the sitemap scan / report file)",
+        "The answer says the AI-assistant check did not run and why (no keys)",
+        "The answer recommends one concrete thing to fix first",
+        "The answer opens with the result in plain words, not with process or jargon"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "show me this week's seo fixes and what you need from me to apply them",
+      "expected_output": "Reads the newest fixes.json (fix-2026-10-14): a table of the 4 auto changes in plain words, the 6 manual tasks separately, then asks for a named yes for this batch id, and states what applying needs (WordPress Editor password, kill switch on, dry run off, or the GitHub 'SEO apply fixes' route). Does not apply anything.",
+      "files": [],
+      "assertions": [
+        "Names the batch id fix-2026-10-14",
+        "Shows all 4 ready-to-apply changes, each with its page",
+        "Shows the 6 tasks for a person separately from the applyable changes",
+        "Asks for a yes by name for this specific batch",
+        "Says a teammate may approve by name when Harsh is not reachable",
+        "Explains what applying needs (WordPress Editor app password, kill switch on, dry run off) or the GitHub 'SEO apply fixes' route",
+        "Nothing was applied (no applied-*.json, no apply_batch or gh workflow run)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "write a blog article for our website on 'meta ads running but no sales' - founders keep asking this. add a featured image too",
+      "expected_output": "Brief from the engine, top-3 outline research, article.json in the writer schema following writer.md, a featured picture prompt checked by blog_image.py (dry run or browser route prepared, since no key), page_gate PASSED, draft.html + preview + images.md, WordPress not touched (shadow mode). No numbers outside approved facts, no mention of AI.",
+      "files": [],
+      "assertions": [
+        "An article was produced in the outputs",
+        "The article passes the engine's own gate (gates.check) with no blocks",
+        "No number in the article is outside DTJ's approved facts",
+        "The article never mentions AI, ChatGPT, Claude or automation",
+        "The article opens with a short answer of 60 words or fewer and uses question headings plus an FAQ",
+        "A featured-image prompt is prepared that asks for no text, numbers, logos or real people, with alt text",
+        "The answer says honestly that the picture still needs a key or a browser step, and that WordPress was not touched"
+      ]
+    }
+  ]
+}
