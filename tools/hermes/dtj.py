@@ -9,6 +9,7 @@ pictures and the final reel there (phase 1; the buttons move into the Hermes bot
 
     dtj.py --ssh                                  ssh forced command: the request comes on stdin (tools/hermes/hermes_dtj.sh)
     dtj.py --user <telegram id> --name <name> <remake|reel|refs|audience|status|help> [text ...]   by hand, on the VPS
+    dtj.py --user <telegram id> --name <name> make <brand> <style> <idea>   a brand's reel: n8n "Reel: <Brand>" -> Reel Engine
 
 `tg` (the Hermes plugin dtj-reels only): one Telegram update from the Hermes bot as JSON on stdin line 5: a button tap
 ("a:<job>:<key>:<n>"), a reply to a reel question, or /remake /reel /refs /audience /status. It goes through the reel bot's own
