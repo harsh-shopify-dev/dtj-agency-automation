@@ -1719,3 +1719,13 @@ No pushes to `main`; no live-theme changes; no deleting data (the one deletion t
 - A command containing `rm -rf` is blocked by the deny rules: use fresh folders instead of cleaning up.
 - Reading the Shopify CLI's login file (`%APPDATA%\shopify-cli-kit-nodejs\Config\config.json`), even keys only, was blocked as credential exploration. Do not retry; ask Harsh to run the command in his own terminal instead.
 - **`shopify auth login` cannot be done from the assistant's shell (tried 6 Oct 2026, at Harsh's request, no other route attempted).** Non-interactive runs fail: plain `auth login` needs `--alias`; with `--alias elevate-harsh` or `--alias <the org owner's login email>` it still dies with "Failed to prompt: Which account would you like to use?". `auth login --help` says `--alias` only picks an EXISTING session and is "required if non interactive", so a new browser sign-in is impossible there, and no stored session matched. (`auth login` takes no `--no-color`.) No sign-in completed, nothing was replaced. Do not retry; the deploy and any theme command stay with Harsh's own PowerShell.
+
+## 30 Oct 2026: multi-brand reel engine (branch feature/reel-multibrand-spec)
+- Built: `services/reel-engine` (one stage per call, Champfuel pattern), `reel_factory/flow_cli.py` (Flow as one command),
+  n8n `Reel Engine` + `Reel: <Brand>` (`n8n/reel-engine/deploy_engine.py`), Hermes `dtj make <brand> <style> <idea>`.
+  Tests: reel-engine 45, reel-factory 37, n8n nodes 6, Hermes 16; both workflows pass n8n's validate. Nothing deployed.
+- VPS facts (docs/ugc-reels/2026-10-30-engine-checks.md): the old Gemini CLI login is refused by Google, use `agy` (Antigravity CLI,
+  Gemini 3.8 Flash only); the Flow Chrome listens on 127.0.0.1:9222 so the engine runs on the host (systemd), not in Docker.
+- Open (each needs Harsh's yes): install `reel-engine.service`; deploy + publish the two workflows; one brand folder + first live
+  reel (Flow credits). Not built: Drive sync/save, dtj_reel_jobs row. Left on the VPS from the checks: `/home/ai/gemini-home/work/check/`,
+  `/tmp/agy.out`, Docker image `curlimages/curl:8.10.1` (deleting them was blocked: `rm -rf` rule).
