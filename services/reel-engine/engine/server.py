@@ -69,7 +69,8 @@ def handle(body: dict, ctx: Context) -> tuple[int, dict]:
         except NoReferences as exc:
             result = {"ok": False, "error": str(exc)}
         run.record(stage, {**result, "_call": sig})
-        return 200, {"run": run.run, "stage": stage, **result}
+        # 422 stops the n8n run at this node (the person was told); fix, then "Retry" the node in n8n
+        return (200 if result.get("ok") else 422), {"run": run.run, "stage": stage, **result}
     except Exception as exc:  # noqa: BLE001 - n8n gets a readable answer, the log keeps the trace
         traceback.print_exc()
         return 500, {"ok": False, "error": f"{type(exc).__name__}: {str(exc)[:400]}"}
@@ -147,9 +148,9 @@ def serve(ctx: Context, host: str, port: int) -> None:
 
 
 def main() -> None:
-    from .stages import STAGES, RERUN  # noqa: PLC0415 - the stages pull in reel-factory; tests use their own
+    from .stages import RERUN, SERVER_STAGES  # noqa: PLC0415 - the stages pull in reel-factory; tests use their own
     root = Path(os.environ.get("REEL_ENGINE_ROOT", "/home/ai/reel-engine"))
-    serve(Context(root, STAGES, RERUN), os.environ.get("REEL_ENGINE_HOST", "172.16.1.1"),
+    serve(Context(root, SERVER_STAGES, RERUN), os.environ.get("REEL_ENGINE_HOST", "172.16.1.1"),
           int(os.environ.get("REEL_ENGINE_PORT", "8091")))
 
 

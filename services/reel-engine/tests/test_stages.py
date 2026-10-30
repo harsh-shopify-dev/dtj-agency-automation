@@ -93,7 +93,7 @@ class StageTests(unittest.TestCase):
         self.d = self.f.deps()
 
     def call(self, stage, **body):
-        return stages.STAGES[stage](self.run, self.brand, {"style": "cinematic", **body}, deps=self.d)
+        return stages.run_stage(stage, self.run, self.brand, {"style": "cinematic", **body}, deps=self.d)
 
     def take(self):
         return self.call("take", request="Diwali reel", language="en", chat="123", watcher="Harsh")
@@ -145,7 +145,7 @@ class StageTests(unittest.TestCase):
 
     def test_review_waiting_until_answer(self):
         self.ready_pictures()
-        self.assertEqual(self.call("review", gate="pictures", round=1), {"ok": True, "waiting": True})
+        self.assertEqual(self.call("review", gate="pictures", round=1), {"ok": True, "waiting": True, "loop": 0})
         self.f.person_answers = [(0, {"ok": True, "by": "Harsh"})]
         r = self.call("review", gate="pictures", round=1)
         self.assertEqual((r["approved"], r["by"], r["next"]), (True, "Harsh", "clips"))
@@ -160,6 +160,31 @@ class StageTests(unittest.TestCase):
         after = {sid: Path(p).read_bytes() for sid, p in self.run.state["pictures"].items()}
         self.assertEqual([s for s in before if before[s] != after[s]], ["s3", "s4"])
         self.assertIn("diya is too small", self.f.codex_calls[-1][1])
+
+    def test_loop_counter_carries_the_change_to_the_next_stage(self):
+        self.ready_pictures()
+        self.f.person_answers = [(0, {"ok": False, "by": "Harsh", "note": "2: no rangoli"})]
+        r = self.call("review", gate="pictures")
+        self.assertEqual(r["loop"], 1)
+        n = len(self.f.codex_calls)
+        p = self.call("pictures", loop=r["loop"])           # n8n passes only the loop counter
+        self.assertEqual(len(self.f.codex_calls), n + 1)     # only scene 2 redrawn
+        self.assertIn("no rangoli", self.f.codex_calls[-1][1])
+        self.assertEqual(p["loop"], 1)
+
+    def test_failure_tells_the_person(self):
+        self.f.scripts = [script_json(line="Now 50% off!")]
+        self.take(); self.call("style_card")
+        r = stages.run_stage("script", self.run, self.brand, {}, deps=self.d)
+        self.assertFalse(r["ok"])
+        self.assertEqual(self.f.person_calls[-1][0], "tell")
+        self.assertIn("50%", self.f.person_calls[-1][-1])
+
+    def test_final_note_without_scenes_or_words_ends_with_the_note(self):
+        self.ready_pictures()
+        self.f.person_answers = [(0, {"ok": False, "by": "Harsh", "note": "make it feel warmer"})]
+        r = self.call("review", gate="final")
+        self.assertEqual(r["next"], "result")
 
     def test_note_about_words_routes_to_script(self):
         self.ready_pictures()

@@ -113,6 +113,16 @@ def _script(run: Run) -> dict:
     return _load(_job(run) / "script.json", {})
 
 
+def _change(run: Run, body: dict, stage: str) -> tuple[list[str] | None, str]:
+    """(only, note) for this call: given in the body, or the person's last change when n8n passes its loop counter."""
+    if body.get("only") or body.get("note"):
+        return body.get("only"), str(body.get("note") or "").strip()
+    p = run.state.get("pending") or {}
+    if int(body.get("loop") or 0) > 0 and p.get("next") == stage and p.get("loop") == int(body["loop"]):
+        return p.get("only"), str(p.get("note") or "")
+    return None, ""
+
+
 def _set_job_state(run: Run, **kv) -> None:
     p = _job(run) / "state.json"
     st = _load(p, {})
@@ -192,7 +202,7 @@ def script(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict
     d = _deps(deps)
     req = run.state["request"]
     card = _load(brand.style_card_path(req["style"]), {})
-    note = str(body.get("note") or "").strip()
+    _, note = _change(run, body, "script")
     fix = f"The person asked for this change to the last version: {note}\nLast version:\n{json.dumps(_script(run))}" if note else ""
     errors: list[str] = []
     for attempt in (1, 2):
@@ -223,8 +233,8 @@ def pictures(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> di
     d = _deps(deps)
     sc, style = _script(run), run.state["request"]["style"]
     card = json.dumps(_load(brand.style_card_path(style), {}), ensure_ascii=False)[:3000]
-    only = set(body.get("only") or [s["id"] for s in sc["shots"]])
-    note = str(body.get("note") or "").strip()
+    only, note = _change(run, body, "pictures")
+    only = set(only or [s["id"] for s in sc["shots"]])
     current = run.state.setdefault("pictures", {})
     scores, redrawn, needs_look = {}, [], []
     folder = run.dir / "pictures"
@@ -262,7 +272,8 @@ def _route(note: str, ids: list[str], gate: str) -> dict:
         return {"next": "pictures", "only": only or ids}
     if only:
         return {"next": "clips", "only": only}
-    return {"next": "script" if WORD_NOTE.search(note) else "edit"}
+    # "make it warmer" on the final cannot be redone by a stage: the reel ends with the note for a person to finish by hand
+    return {"next": "script" if WORD_NOTE.search(note) else "result"}
 
 
 def _summary(sc: dict) -> str:
@@ -271,7 +282,7 @@ def _summary(sc: dict) -> str:
 
 def review(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
     d = _deps(deps)
-    gate, rnd = str(body.get("gate") or "pictures"), int(body.get("round") or 1)
+    gate, rnd = str(body.get("gate") or "pictures"), int(run.state.get("loop", 0)) + 1
     sc = _script(run)
     ids = [s["id"] for s in sc.get("shots", [])]
     told = run.state.setdefault("told", [])
@@ -296,7 +307,11 @@ def review(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict
     if ans.get("ok"):
         return {"ok": True, "approved": True, "by": ans.get("by"), "next": "clips" if gate == "pictures" else "save"}
     note = str(ans.get("note") or "")
-    return {"ok": True, "approved": False, "by": ans.get("by"), "note": note, **_route(note, ids, gate)}
+    route = _route(note, ids, gate)
+    loop = int(run.state.get("loop", 0)) + 1
+    run.state.update(loop=loop, pending={**route, "note": note, "loop": loop})
+    run.save()
+    return {"ok": True, "approved": False, "by": ans.get("by"), "note": note, **route}
 
 
 CLIP_CHECK = """CLIP CHECK. These are 4 frames-per-second contact sheets of the picked take for scene {sid} of a {style} reel.
@@ -308,8 +323,8 @@ to a wrist; a different product; a face or body that morphs; a line cut off. JSO
 def clips(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
     d = _deps(deps)
     sc, style, job = _script(run), run.state["request"]["style"], _job(run)
-    only = set(body.get("only") or [s["id"] for s in sc["shots"]])
-    note = str(body.get("note") or "").strip()
+    only, note = _change(run, body, "clips")
+    only = set(only or [s["id"] for s in sc["shots"]])
     credits, needs_look, problems = 0, [], {}
     for s in sc["shots"]:
         if s["id"] not in only:
@@ -386,3 +401,22 @@ def result(run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict
 STAGES = {"take": take, "style_card": style_card, "script": script, "pictures": pictures, "review": review, "clips": clips,
           "edit": edit, "result": result}
 RERUN = {"review"}
+
+
+def run_stage(name: str, run: Run, brand: Brand, body: dict, deps: Deps | None = None) -> dict:
+    """One stage as n8n calls it: every answer carries the loop counter; a failure is also told to the person in Telegram."""
+    d = _deps(deps)
+    try:
+        res = STAGES[name](run, brand, body, deps=d)
+    except models.NeedsPerson as exc:
+        res = {"ok": False, "needs_person": True, "error": str(exc)[:500]}
+    res.setdefault("loop", int(run.state.get("loop", 0)))
+    if not res.get("ok") and run.state.get("request", {}).get("chat"):
+        why = res.get("error") or "; ".join(res.get("errors") or []) or "unknown"
+        d.person(["tell", "--job", _jid(run), "--text", f"The reel stopped at '{name}': {why[:600]}\n"
+                  + ("A person must fix this (sign in / look at the window), then retry the step in n8n."
+                     if res.get("needs_person") else "Retry the step in n8n after the fix.")])
+    return res
+
+
+SERVER_STAGES = {n: (lambda run, brand, body, n=n: run_stage(n, run, brand, body)) for n in STAGES}
