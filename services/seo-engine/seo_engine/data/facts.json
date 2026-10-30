@@ -1,0 +1,33 @@
+{
+  "_about": "The ONLY facts about DTJ an article may state. Copied from .claude/skills/dtj-landing-variants/references/claims-and-proof.md (14 Oct 2026). A number in a draft that is not in an 'approved' fact below blocks the draft. 'needs_source' facts are listed so the gate can name them; they may not be used until DTJ gives their source.",
+  "brand": {
+    "name": "Digital Tushar Joshi",
+    "short_name": "DTJ",
+    "site": "https://digitaltusharjoshi.com",
+    "audit_url": "https://digitaltusharjoshi.com/free-growth-audit",
+    "founder": "Tushar Joshi"
+  },
+  "facts": [
+    {"id": "offer-audit", "status": "approved", "text": "DTJ offers a free growth audit of a brand's ads, store and funnel, to see where sales are leaking.", "source": "main page /"},
+    {"id": "promise-honest", "status": "approved", "text": "If we don't see a clear opportunity, we'll tell you.", "source": "main page /"},
+    {"id": "next-step", "status": "approved", "text": "After the audit form, DTJ checks the details first, then the team gets in touch by call, WhatsApp or email.", "source": "Harsh, 10 Oct 2026"},
+    {"id": "what-we-do", "status": "approved", "text": "DTJ looks at the whole journey, from ads and targeting to the website, product pages and checkout, to find where potential customers are lost, and fixes it.", "source": "main page /"},
+    {"id": "ads-approach", "status": "approved", "text": "DTJ makes different ad versions, from customer-style videos to product demos, and keeps testing to find what brings in more buyers, optimising for profitable growth rather than clicks.", "source": "main page /"},
+    {"id": "store-approach", "status": "approved", "text": "DTJ builds and improves Shopify stores and product pages so more visitors have a reason to buy.", "source": "main page /"},
+    {"id": "seo-approach", "status": "approved", "text": "When people search for products a brand sells, the brand should show up without paying for every click.", "source": "main page /"},
+    {"id": "amazon-approach", "status": "approved", "text": "DTJ improves how products show up on Amazon, how they are presented, and what shoppers see before they buy.", "source": "main page /"},
+    {"id": "proof-royal-dosa", "status": "approved", "text": "The Royal Dosa Paper: ₹5.28Cr in sales and 1.68L orders, from almost no sales when DTJ started in March 2025 (the brand's own Shopify sales report).", "source": "components/case-studies/CaseStudies.tsx"},
+    {"id": "proof-pro-effex", "status": "approved", "text": "Pro Effex: ₹1.5L → ₹40.18L in sales and 3,071 orders (the brand's own Shopify sales report).", "source": "components/proof/RealResults.tsx, CaseStudies.tsx"},
+    {"id": "proof-pdp-cvr", "status": "approved", "text": "After DTJ rebuilt a Pro Effex product page, its conversion rate went from 1.4% to 2.8% with the same traffic.", "source": "public/images/shopify/cvr-lift.webp"},
+    {"id": "proof-little-rituals", "status": "approved", "text": "Little Rituals: ₹46.7L → ₹1.92Cr in sales (the brand's own Shopify sales report).", "source": "components/proof/RealResults.tsx"},
+    {"id": "proof-sindhoi", "status": "approved", "text": "Sindhoi Patola Arts: ₹52.7L → ₹2.78Cr in sales (the brand's own Shopify sales report).", "source": "components/proof/RealResults.tsx"},
+    {"id": "proof-saatvi", "status": "approved", "text": "Saatvi: ₹37.6L → ₹1.07Cr in sales (the brand's own Shopify sales report).", "source": "components/proof/RealResults.tsx"},
+    {"id": "proof-zebein", "status": "approved", "text": "Zebein: ₹9L → ₹3.56Cr in sales (the brand's own Shopify sales report).", "source": "components/proof/RealResults.tsx"},
+    {"id": "proof-dadu-search", "status": "approved", "text": "Dadu Fresh showed as the first organic Google result for \"healthy juice\".", "source": "public/images/results/google-search.webp (date not known: never say 'today' or 'still')"},
+    {"id": "stat-ad-spend", "status": "needs_source", "text": "₹70Cr+ ad spend managed", "source": "main page stat, not sourced"},
+    {"id": "stat-brands", "status": "needs_source", "text": "90+ D2C brands", "source": "main page stat, not sourced"},
+    {"id": "stat-roi", "status": "needs_source", "text": "16X peak reported ROI", "source": "main page stat, not sourced"},
+    {"id": "stat-reviews", "status": "needs_source", "text": "208+ five-star reviews", "source": "main page stat, not sourced"}
+  ],
+  "unknown": ["fees and pricing", "minimum ad spend", "contract length", "who works on the account", "time to results", "response time", "office address", "whether DTJ fixes COD returns / RTO"]
+}

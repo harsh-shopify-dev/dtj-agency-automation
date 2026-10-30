@@ -1,0 +1,24 @@
+{
+  "_about": "Starting words for the monthly keyword research (keywords.py). The DATA decides what gets written: DataForSEO returns real searches around these seeds, the filters keep only winnable ones, and pages are made from groups of keywords that share the same Google results. Services = the six service pages on digitaltusharjoshi.com. Places = DTJ's real offices (contact page, 14 Oct 2026), then Gujarat, then India. Pains = the Halo research (14 Oct 2026).",
+  "services": {
+    "performance-marketing": {"page": "https://digitaltusharjoshi.com/performance-marketing-agency-in-india/", "phrases": ["performance marketing agency", "meta ads agency", "facebook ads agency", "google ads agency", "d2c marketing agency", "digital marketing agency"]},
+    "ecommerce-marketing": {"page": "https://digitaltusharjoshi.com/ecommerce-marketing-agency-in-india/", "phrases": ["ecommerce marketing agency", "amazon marketing agency"]},
+    "shopify-development": {"page": "https://digitaltusharjoshi.com/shopify-website-development-company-in-india/", "phrases": ["shopify website development company", "shopify developer", "ecommerce website development company"]},
+    "social-media-marketing": {"page": "https://digitaltusharjoshi.com/social-media-marketing-agency-in-india/", "phrases": ["social media marketing agency"]},
+    "seo": {"page": "https://digitaltusharjoshi.com/seo-agency-in-india/", "phrases": ["seo agency", "seo company"]},
+    "influencer-marketing": {"page": "https://digitaltusharjoshi.com/influencer-marketing-agency-in-india/", "phrases": ["influencer marketing agency"]}
+  },
+  "places": {"local": ["Rajkot", "Ahmedabad"], "state": ["Gujarat", "Surat", "Vadodara"], "national": ["India"]},
+  "pains": [
+    "facebook ads not getting sales", "facebook ads no orders", "instagram ads not converting", "shopify store no sales",
+    "add to cart but no purchase", "how to increase shopify conversion rate", "how to sell on own website instead of amazon",
+    "amazon seller fees too high", "how to reduce rto in ecommerce", "how to choose a digital marketing agency",
+    "how to scale a d2c brand", "meta ads for d2c brands", "ecommerce profit margin india", "how much to spend on facebook ads"
+  ],
+  "must_contain_one": ["marketing", "ads", "ad", "agency", "shopify", "ecommerce", "e-commerce", "d2c", "seo", "website", "store",
+                       "amazon", "facebook", "instagram", "meta", "google", "sales", "orders", "brand", "influencer", "social media",
+                       "conversion", "cart", "rto", "cod", "profit", "developer", "online"],
+  "exclude_words": ["job", "jobs", "salary", "course", "courses", "internship", "certification", "certificate", "pdf", "free download",
+                    "login", "app download", "apk", "syllabus", "training", "institute", "class", "classes", "vacancy", "hiring",
+                    "meaning in hindi", "meaning in gujarati", "wikipedia"]
+}

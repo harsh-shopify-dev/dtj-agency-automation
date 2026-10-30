@@ -1,0 +1,22 @@
+{
+  "_about": "Real proof per city. A city service page is built ONLY when its city has at least one client below with consent: true, plus one more piece (an office, a review or a photo). No proof = no page (Google treats proof-less city pages as copies). Offices: from the contact page (14 Oct 2026). Fill clients and reviews from DTJ's own records, each with where it came from. Never invent one.",
+  "cities": {
+    "Rajkot": {
+      "office": {"address": "1124, RK Empire, Mavdi Chowkdi, 150ft. Ring Road, Rajkot", "phone": "+91 9737888822", "head_office": true, "source": "digitaltusharjoshi.com/contact-us/"},
+      "clients": [],
+      "reviews": [],
+      "photos": []
+    },
+    "Ahmedabad": {
+      "office": {"address": "619, Shivalik Shilp - II, opp. ITC Hotel, Satellite, Ahmedabad", "phone": "+91 9737888822", "source": "digitaltusharjoshi.com/contact-us/"},
+      "clients": [],
+      "reviews": [],
+      "photos": []
+    },
+    "Surat": {"office": null, "clients": [], "reviews": [], "photos": []},
+    "Vadodara": {"office": null, "clients": [], "reviews": [], "photos": []}
+  },
+  "_example_client": {"name": "Brand name", "result": "₹X → ₹Y in sales (the brand's own Shopify sales report)", "service": "performance-marketing", "consent": true, "source": "where this came from"},
+  "_example_review": {"author": "Name, Brand", "text": "exact words", "source": "Google review link"},
+  "_example_photo": {"url": "https://digitaltusharjoshi.com/wp-content/uploads/...", "alt": "what it shows"}
+}
